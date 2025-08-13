@@ -54,29 +54,29 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                         <CollapsibleContent>
                             <SidebarMenuSub>
                                 <SidebarMenuSubItem>
-                                    <Link href="/" passHref legacyBehavior>
-                                        <SidebarMenuSubButton as="a" href="/" isActive={pathname === '/'}>
+                                    <Link href="/">
+                                        <SidebarMenuSubButton isActive={pathname === '/'}>
                                             {t.dashboard.myProducts}
                                         </SidebarMenuSubButton>
                                     </Link>
                                 </SidebarMenuSubItem>
                                 <SidebarMenuSubItem>
-                                     <Link href="/add-product" passHref legacyBehavior>
-                                        <SidebarMenuSubButton as="a" href="/add-product" isActive={pathname === '/add-product'}>
+                                     <Link href="/add-product">
+                                        <SidebarMenuSubButton isActive={pathname === '/add-product'}>
                                             {t.dashboard.addItem}
                                         </SidebarMenuSubButton>
                                     </Link>
                                 </SidebarMenuSubItem>
                                 <SidebarMenuSubItem>
-                                    <Link href="/bulk" passHref legacyBehavior>
-                                        <SidebarMenuSubButton as="a" href="/bulk" isActive={pathname === '/bulk'}>
+                                    <Link href="/bulk">
+                                        <SidebarMenuSubButton isActive={pathname === '/bulk'}>
                                             {t.dashboard.bulk}
                                         </SidebarMenuSubButton>
                                     </Link>
                                 </SidebarMenuSubItem>
                                 <SidebarMenuSubItem>
-                                    <Link href="/stock-in" passHref legacyBehavior>
-                                        <SidebarMenuSubButton as="a" href="/stock-in" isActive={pathname === '/stock-in'}>
+                                    <Link href="/stock-in">
+                                        <SidebarMenuSubButton isActive={pathname === '/stock-in'}>
                                             {t.dashboard.stockIn}
                                         </SidebarMenuSubButton>
                                     </Link>
@@ -91,7 +91,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             <Separator className="my-2" />
             <SidebarMenu>
                 <SidebarMenuItem>
-                    <Link href="/settings" passHref>
+                    <Link href="/settings">
                         <SidebarMenuButton isActive={pathname === '/settings'}>
                             <Settings />
                             {t.sidebar.settings}

@@ -206,7 +206,7 @@ const Sidebar = React.forwardRef<
             }
             side={side}
           >
-            <SheetHeader className="p-2 sr-only">
+            <SheetHeader className="p-2">
               <SheetTitle>Sidebar Menu</SheetTitle>
             </SheetHeader>
             <div className="flex h-full w-full flex-col">{children}</div>
@@ -710,7 +710,7 @@ SidebarMenuSubItem.displayName = "SidebarMenuSubItem"
 
 const SidebarMenuSubButton = React.forwardRef<
   HTMLDivElement,
-  React.ComponentProps<"a"> & {
+  React.HTMLAttributes<HTMLDivElement> & {
     size?: "sm" | "md"
     isActive?: boolean
   }
