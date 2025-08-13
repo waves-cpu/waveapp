@@ -16,7 +16,6 @@ import {
 import {
   Package,
   PlusCircle,
-  Filter,
 } from 'lucide-react';
 import { InventoryProvider, useInventory } from '@/hooks/use-inventory';
 import { InventoryTable } from './inventory-table';
@@ -28,7 +27,6 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 
 function DashboardContent() {
-  const { categories } = useInventory();
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
 
   const [isAddItemOpen, setAddItemOpen] = useState(false);
@@ -54,30 +52,7 @@ function DashboardContent() {
             <Logo />
           </SidebarHeader>
           <SidebarContent>
-            <SidebarMenu>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  onClick={() => setActiveCategory(null)}
-                  isActive={activeCategory === null}
-                  tooltip="All Categories"
-                >
-                  <Filter />
-                  All Categories
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              {categories.map((category) => (
-                <SidebarMenuItem key={category}>
-                  <SidebarMenuButton
-                    onClick={() => setActiveCategory(category)}
-                    isActive={activeCategory === category}
-                    tooltip={category}
-                  >
-                    <Package />
-                    {category}
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
+             {/* The category filter has been moved to the inventory table component */}
           </SidebarContent>
           <SidebarFooter>
             <Separator className="my-2" />
@@ -97,7 +72,7 @@ function DashboardContent() {
               <div className="flex items-center gap-4">
                  <SidebarTrigger className="md:hidden" />
                  <h1 className="text-2xl md:text-3xl font-bold font-headline text-foreground">
-                    {activeCategory || 'All Items'}
+                    Inventory
                 </h1>
               </div>
               <div className="hidden md:flex items-center gap-2">
@@ -111,7 +86,6 @@ function DashboardContent() {
                 <InventoryTable
                 onUpdateStock={handleUpdateStock}
                 onShowHistory={handleShowHistory}
-                categoryFilter={activeCategory}
                 />
             </div>
           </div>

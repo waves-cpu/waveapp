@@ -14,6 +14,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import {
   Edit,
   History,
   FileDown,
@@ -24,12 +31,12 @@ import type { InventoryItem } from '@/types';
 interface InventoryTableProps {
   onUpdateStock: (itemId: string) => void;
   onShowHistory: (itemId: string) => void;
-  categoryFilter: string | null;
 }
 
-export function InventoryTable({ onUpdateStock, onShowHistory, categoryFilter }: InventoryTableProps) {
-  const { items } = useInventory();
+export function InventoryTable({ onUpdateStock, onShowHistory }: InventoryTableProps) {
+  const { items, categories } = useInventory();
   const [searchTerm, setSearchTerm] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
 
   const filteredItems = useMemo(() => {
     return items
@@ -65,16 +72,31 @@ export function InventoryTable({ onUpdateStock, onShowHistory, categoryFilter }:
   return (
     <div className="h-full flex flex-col bg-card rounded-lg border shadow-sm">
       <div className="p-4 flex flex-col md:flex-row gap-4 justify-between items-center border-b">
-        <div className="relative w-full md:w-auto">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search items..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10 w-full md:w-64"
-          />
+        <div className="flex flex-col md:flex-row gap-4 w-full md:w-auto">
+          <div className="relative w-full md:w-auto">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search items..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10 w-full md:w-64"
+            />
+          </div>
+          <Select onValueChange={(value) => setCategoryFilter(value === 'all' ? null : value)} defaultValue="all">
+            <SelectTrigger className="w-full md:w-[180px]">
+              <SelectValue placeholder="Select a category" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Categories</SelectItem>
+              {categories.map((category) => (
+                <SelectItem key={category} value={category}>
+                  {category}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
-        <Button onClick={downloadCSV} variant="outline" size="sm">
+        <Button onClick={downloadCSV} variant="outline" size="sm" className="w-full md:w-auto">
           <FileDown className="mr-2 h-4 w-4" />
           Export CSV
         </Button>
