@@ -58,7 +58,14 @@ function DashboardContent() {
             <Logo />
           </SidebarHeader>
           <SidebarContent>
-             {/* The category filter has been moved to the inventory table component */}
+            <SidebarMenu>
+                <SidebarMenuItem>
+                    <SidebarMenuButton onClick={() => setAddItemOpen(true)}>
+                        <PlusCircle />
+                        {t.dashboard.addItem}
+                    </SidebarMenuButton>
+                </SidebarMenuItem>
+            </SidebarMenu>
           </SidebarContent>
           <SidebarFooter>
             <Separator className="my-2" />
@@ -79,7 +86,7 @@ function DashboardContent() {
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center gap-4">
                  <SidebarTrigger className="md:hidden" />
-                 <h1 className="text-2xl md:text-3xl font-bold font-headline text-foreground">
+                 <h1 className="text-xl md:text-2xl font-bold font-headline text-foreground">
                     {t.dashboard.inventory}
                 </h1>
               </div>

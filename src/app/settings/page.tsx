@@ -19,7 +19,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Button } from "@/components/ui/button"
-import { ChevronLeft, Settings } from "lucide-react"
+import { ChevronLeft, PlusCircle, Settings } from "lucide-react"
 import { useTheme } from "next-themes"
 import { useLanguage, Language } from "@/hooks/use-language";
 import { translations } from "@/types/language";
@@ -59,16 +59,25 @@ function SettingsContent() {
                     <Logo />
                 </SidebarHeader>
                 <SidebarContent>
-                    {/* Add any additional sidebar content here if needed */}
-                </SidebarContent>
-                <SidebarFooter>
-                    <Separator className="my-2" />
                     <SidebarMenu>
                         <SidebarMenuItem>
                             <Link href="/" className="w-full">
                                 <SidebarMenuButton>
                                     <ChevronLeft />
                                     {t.settings.back}
+                                </SidebarMenuButton>
+                            </Link>
+                        </SidebarMenuItem>
+                    </SidebarMenu>
+                </SidebarContent>
+                <SidebarFooter>
+                    <Separator className="my-2" />
+                    <SidebarMenu>
+                        <SidebarMenuItem>
+                            <Link href="/settings" className="w-full">
+                                <SidebarMenuButton>
+                                    <Settings />
+                                    {t.sidebar.settings}
                                 </SidebarMenuButton>
                             </Link>
                         </SidebarMenuItem>
@@ -80,7 +89,7 @@ function SettingsContent() {
                     <div className="mx-auto grid w-full max-w-6xl gap-2">
                         <div className="flex items-center gap-4">
                             <SidebarTrigger className="md:hidden" />
-                            <h1 className="flex-1 shrink-0 whitespace-nowrap text-xl font-semibold tracking-tight sm:grow-0">
+                            <h1 className="flex-1 shrink-0 whitespace-nowrap text-lg font-semibold tracking-tight sm:grow-0">
                                 {t.settings.title}
                             </h1>
                         </div>
@@ -89,7 +98,7 @@ function SettingsContent() {
                         <div className="grid gap-6">
                             <Card>
                                 <CardHeader>
-                                    <CardTitle>{t.settings.appearance}</CardTitle>
+                                    <CardTitle className="text-xl">{t.settings.appearance}</CardTitle>
                                     <CardDescription>
                                         {t.settings.appearanceDescription}
                                     </CardDescription>
@@ -116,7 +125,7 @@ function SettingsContent() {
                             </Card>
                             <Card>
                                 <CardHeader>
-                                    <CardTitle>{t.settings.language}</CardTitle>
+                                    <CardTitle className="text-xl">{t.settings.language}</CardTitle>
                                     <CardDescription>
                                         {t.settings.languageDescription}
                                     </CardDescription>
