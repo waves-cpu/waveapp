@@ -51,21 +51,21 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                         <CollapsibleContent>
                             <SidebarMenuSub>
                                 <SidebarMenuSubItem>
-                                    <Link href="/" passHref>
+                                    <Link href="/" passHref asChild>
                                         <SidebarMenuSubButton>
                                             {t.dashboard.myProducts}
                                         </SidebarMenuSubButton>
                                     </Link>
                                 </SidebarMenuSubItem>
                                 <SidebarMenuSubItem>
-                                    <Link href="/bulk" passHref>
+                                    <Link href="/bulk" passHref asChild>
                                         <SidebarMenuSubButton>
                                             {t.dashboard.bulk}
                                         </SidebarMenuSubButton>
                                     </Link>
                                 </SidebarMenuSubItem>
                                 <SidebarMenuSubItem>
-                                    <Link href="/stock-in" passHref>
+                                    <Link href="/stock-in" passHref asChild>
                                         <SidebarMenuSubButton>
                                             {t.dashboard.stockIn}
                                         </SidebarMenuSubButton>
@@ -81,7 +81,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             <Separator className="my-2" />
             <SidebarMenu>
                 <SidebarMenuItem>
-                    <Link href="/settings" passHref>
+                    <Link href="/settings" passHref asChild>
                         <SidebarMenuButton>
                             <Settings />
                             {t.sidebar.settings}
