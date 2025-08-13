@@ -16,7 +16,6 @@ import {
 import {
   Package,
   PlusCircle,
-  Sparkles,
   Filter,
 } from 'lucide-react';
 import { InventoryProvider, useInventory } from '@/hooks/use-inventory';
@@ -24,7 +23,6 @@ import { InventoryTable } from './inventory-table';
 import { AddItemDialog } from './add-item-dialog';
 import { UpdateStockDialog } from './update-stock-dialog';
 import { StockHistorySheet } from './stock-history-sheet';
-import { AIInsightsSheet } from './ai-insights-sheet';
 import { Logo } from './logo';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -36,7 +34,6 @@ function DashboardContent() {
   const [isAddItemOpen, setAddItemOpen] = useState(false);
   const [isUpdateStockOpen, setUpdateStockOpen] = useState(false);
   const [isHistoryOpen, setHistoryOpen] = useState(false);
-  const [isAiInsightsOpen, setAiInsightsOpen] = useState(false);
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
 
   const handleUpdateStock = (itemId: string) => {
@@ -91,12 +88,6 @@ function DashboardContent() {
                   Add New Item
                 </SidebarMenuButton>
               </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton onClick={() => setAiInsightsOpen(true)}>
-                  <Sparkles />
-                  AI Stock Insights
-                </SidebarMenuButton>
-              </SidebarMenuItem>
             </SidebarMenu>
           </SidebarFooter>
         </Sidebar>
@@ -113,10 +104,6 @@ function DashboardContent() {
                 <Button onClick={() => setAddItemOpen(true)} variant="outline">
                     <PlusCircle className="mr-2 h-4 w-4" />
                     Add Item
-                </Button>
-                <Button onClick={() => setAiInsightsOpen(true)}>
-                    <Sparkles className="mr-2 h-4 w-4" />
-                    Get AI Insights
                 </Button>
               </div>
             </div>
@@ -142,7 +129,6 @@ function DashboardContent() {
         onOpenChange={setHistoryOpen}
         itemId={selectedItemId}
       />
-      <AIInsightsSheet open={isAiInsightsOpen} onOpenChange={setAiInsightsOpen} />
     </>
   );
 }
