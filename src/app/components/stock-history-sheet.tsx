@@ -20,6 +20,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { useLanguage } from '@/hooks/use-language';
 import { translations } from '@/types/language';
+import { InventoryItem, InventoryItemVariant } from '@/types';
 
 interface StockHistorySheetProps {
   open: boolean;
@@ -28,12 +29,12 @@ interface StockHistorySheetProps {
 }
 
 export function StockHistorySheet({ open, onOpenChange, itemId }: StockHistorySheetProps) {
-  const { getItem } = useInventory();
+  const { getHistory, getItem } = useInventory();
   const { language } = useLanguage();
   const t = translations[language];
   
   const item = itemId ? getItem(itemId) : null;
-  const history = item ? item.history : [];
+  const history = itemId ? getHistory(itemId) : [];
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -56,9 +57,9 @@ export function StockHistorySheet({ open, onOpenChange, itemId }: StockHistorySh
                 </TableRow>
                 </TableHeader>
                 <TableBody>
-                {history.map((entry, index) => (
+                {history.length > 0 ? history.map((entry, index) => (
                     <TableRow key={index}>
-                    <TableCell>{entry.date.toLocaleDateString()}</TableCell>
+                    <TableCell>{new Date(entry.date).toLocaleDateString()}</TableCell>
                     <TableCell>{entry.reason}</TableCell>
                     <TableCell className="text-right">
                         <Badge variant={entry.change > 0 ? 'default' : 'destructive'} className={entry.change > 0 ? 'bg-green-600' : 'bg-red-600'}>
@@ -67,7 +68,11 @@ export function StockHistorySheet({ open, onOpenChange, itemId }: StockHistorySh
                     </TableCell>
                     <TableCell className="text-right">{entry.newStockLevel}</TableCell>
                     </TableRow>
-                ))}
+                )) : (
+                    <TableRow>
+                        <TableCell colSpan={4} className="h-24 text-center">No history for this item.</TableCell>
+                    </TableRow>
+                )}
                 </TableBody>
             </Table>
         </ScrollArea>

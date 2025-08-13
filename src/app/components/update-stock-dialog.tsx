@@ -26,6 +26,7 @@ import { useInventory } from '@/hooks/use-inventory';
 import { useToast } from '@/hooks/use-toast';
 import { useLanguage } from '@/hooks/use-language';
 import { translations } from '@/types/language';
+import type { InventoryItem, InventoryItemVariant } from '@/types';
 
 const formSchema = z.object({
   change: z.coerce.number().int().refine(val => val !== 0, {message: 'Change cannot be zero.'}),
@@ -53,6 +54,8 @@ export function UpdateStockDialog({ open, onOpenChange, itemId }: UpdateStockDia
   });
 
   const item = itemId ? getItem(itemId) : null;
+  const stock = item ? ('stock' in item ? item.stock : undefined) : undefined;
+
 
   useEffect(() => {
     if (!open) {
@@ -76,7 +79,7 @@ export function UpdateStockDialog({ open, onOpenChange, itemId }: UpdateStockDia
         <DialogHeader>
           <DialogTitle>{t.updateStockDialog.title} {item?.name}</DialogTitle>
           <DialogDescription>
-            {t.updateStockDialog.description} {item?.stock}
+             {t.updateStockDialog.description} {stock}
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -109,7 +112,7 @@ export function UpdateStockDialog({ open, onOpenChange, itemId }: UpdateStockDia
             />
             <DialogFooter>
                 <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>{t.common.cancel}</Button>
-                <Button type="submit">{t.updateStockDialog.updateStock}</Button>
+                <Button type="submit" disabled={stock === undefined}>{t.updateStockDialog.updateStock}</Button>
             </DialogFooter>
           </form>
         </Form>

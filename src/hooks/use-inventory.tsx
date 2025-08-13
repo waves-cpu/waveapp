@@ -1,42 +1,98 @@
 "use client";
 
 import React, { createContext, useContext, useState, ReactNode } from 'react';
-import type { InventoryItem, AdjustmentHistory } from '@/types';
+import type { InventoryItem, AdjustmentHistory, InventoryItemVariant } from '@/types';
 
 interface InventoryContextType {
   items: InventoryItem[];
-  addItem: (item: Omit<InventoryItem, 'id' | 'history'>) => void;
+  addItem: (item: Omit<InventoryItem, 'id' | 'history' | 'variants'>) => void;
   updateStock: (itemId: string, change: number, reason: string) => void;
   getHistory: (itemId: string) => AdjustmentHistory[];
-  getItem: (itemId: string) => InventoryItem | undefined;
+  getItem: (itemId: string) => InventoryItem | InventoryItemVariant | undefined;
   categories: string[];
 }
 
 const InventoryContext = createContext<InventoryContextType | undefined>(undefined);
 
 const initialItems: InventoryItem[] = [
-  { id: '1', name: 'Organic Green Tea', category: 'Beverages', stock: 150, price: 5, size: '250g', history: [{ date: new Date(), change: 150, reason: 'Initial Stock', newStockLevel: 150 }] },
-  { id: '2', name: 'Whole Wheat Bread', category: 'Bakery', stock: 75, price: 3, size: '500g', history: [{ date: new Date(), change: 75, reason: 'Initial Stock', newStockLevel: 75 }] },
-  { id: '3', name: 'Almond Milk', category: 'Dairy & Alternatives', stock: 120, price: 4, size: '1L', history: [{ date: new Date(), change: 120, reason: 'Initial Stock', newStockLevel: 120 }] },
-  { id: '4', name: 'Avocados', category: 'Produce', stock: 200, price: 2, size: 'Per piece', history: [{ date: new Date(), change: 200, reason: 'Initial Stock', newStockLevel: 200 }] },
-  { id: '5', name: 'Quinoa', category: 'Grains', stock: 100, price: 8, size: '1kg', history: [{ date: new Date(), change: 100, reason: 'Initial Stock', newStockLevel: 100 }] },
-  { id: '6', name: 'Dark Chocolate Bar', category: 'Snacks', stock: 80, price: 3.5, size: '100g', history: [{ date: new Date(), change: 80, reason: 'Initial Stock', newStockLevel: 80 }] },
+  { 
+    id: '1', 
+    name: 'Organic Green Tea', 
+    category: 'Beverages', 
+    sku: 'TEA-GRN-ORG',
+    imageUrl: 'https://placehold.co/40x40.png',
+    variants: [
+      { id: '1-1', name: '250g Box', sku: 'TEA-GRN-ORG-250', stock: 150, price: 5, history: [{ date: new Date(), change: 150, reason: 'Initial Stock', newStockLevel: 150 }] },
+      { id: '1-2', name: '500g Pouch', sku: 'TEA-GRN-ORG-500', stock: 80, price: 9, history: [{ date: new Date(), change: 80, reason: 'Initial Stock', newStockLevel: 80 }] },
+    ]
+  },
+  { 
+    id: '2', 
+    name: 'Whole Wheat Bread', 
+    category: 'Bakery',
+    sku: 'BAK-BRD-WW',
+    imageUrl: 'https://placehold.co/40x40.png',
+    variants: [
+        { id: '2-1', name: '500g Loaf', sku: 'BAK-BRD-WW-500', stock: 75, price: 3, history: [{ date: new Date(), change: 75, reason: 'Initial Stock', newStockLevel: 75 }] }
+    ]
+  },
+  { 
+    id: '3', 
+    name: 'Almond Milk', 
+    category: 'Dairy & Alternatives',
+    sku: 'DRY-AMILK',
+    imageUrl: 'https://placehold.co/40x40.png',
+    variants: [
+        { id: '3-1', name: '1L Carton', sku: 'DRY-AMILK-1L', stock: 120, price: 4, history: [{ date: new Date(), change: 120, reason: 'Initial Stock', newStockLevel: 120 }] }
+    ]
+  },
+  { 
+    id: '4', 
+    name: 'Avocados', 
+    category: 'Produce', 
+    stock: 200, 
+    price: 2, 
+    size: 'Per piece', 
+    history: [{ date: new Date(), change: 200, reason: 'Initial Stock', newStockLevel: 200 }],
+    imageUrl: 'https://placehold.co/40x40.png'
+  },
+  { 
+    id: '5', 
+    name: 'Quinoa', 
+    category: 'Grains', 
+    stock: 100, 
+    price: 8, 
+    size: '1kg', 
+    history: [{ date: new Date(), change: 100, reason: 'Initial Stock', newStockLevel: 100 }],
+    imageUrl: 'https://placehold.co/40x40.png'
+  },
+  { 
+    id: '6', 
+    name: 'Dark Chocolate Bar', 
+    category: 'Snacks', 
+    stock: 80, 
+    price: 3.5, 
+    size: '100g', 
+    history: [{ date: new Date(), change: 80, reason: 'Initial Stock', newStockLevel: 80 }],
+    imageUrl: 'https://placehold.co/40x40.png'
+  },
 ];
 
 
 export const InventoryProvider = ({ children }: { children: ReactNode }) => {
   const [items, setItems] = useState<InventoryItem[]>(initialItems);
 
-  const addItem = (item: Omit<InventoryItem, 'id' | 'history'>) => {
+  const addItem = (item: Omit<InventoryItem, 'id' | 'history' | 'variants'>) => {
     const newItem: InventoryItem = {
       ...item,
       id: new Date().getTime().toString(),
-      history: [{
+      history: item.stock !== undefined ? [{
         date: new Date(),
         change: item.stock,
         reason: 'Initial Stock',
         newStockLevel: item.stock
-      }]
+      }] : [],
+      variants: item.stock === undefined ? [] : undefined
     };
     setItems(prevItems => [...prevItems, newItem]);
   };
@@ -44,7 +100,8 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
   const updateStock = (itemId: string, change: number, reason: string) => {
     setItems(prevItems =>
       prevItems.map(item => {
-        if (item.id === itemId) {
+        // Check if it's a simple item
+        if (item.id === itemId && item.stock !== undefined) {
           const newStockLevel = item.stock + change;
           const newHistory: AdjustmentHistory = {
             date: new Date(),
@@ -55,7 +112,30 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
           return {
             ...item,
             stock: newStockLevel,
-            history: [newHistory, ...item.history],
+            history: [newHistory, ...(item.history || [])],
+          };
+        }
+        // Check if it's a variant
+        if (item.variants) {
+          return {
+            ...item,
+            variants: item.variants.map(variant => {
+              if (variant.id === itemId) {
+                const newStockLevel = variant.stock + change;
+                const newHistory: AdjustmentHistory = {
+                  date: new Date(),
+                  change,
+                  reason,
+                  newStockLevel,
+                };
+                return {
+                  ...variant,
+                  stock: newStockLevel,
+                  history: [newHistory, ...variant.history],
+                };
+              }
+              return variant;
+            })
           };
         }
         return item;
@@ -63,13 +143,34 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
     );
   };
   
-  const getHistory = (itemId: string) => {
-    const item = items.find(i => i.id === itemId);
-    return item ? item.history : [];
+  const getHistory = (itemId: string): AdjustmentHistory[] => {
+    for (const item of items) {
+      if (item.id === itemId) {
+        return item.history || [];
+      }
+      if (item.variants) {
+        const variant = item.variants.find(v => v.id === itemId);
+        if (variant) {
+          return variant.history;
+        }
+      }
+    }
+    return [];
   };
 
-  const getItem = (itemId: string) => {
-    return items.find(i => i.id === itemId);
+  const getItem = (itemId: string): InventoryItem | InventoryItemVariant | undefined => {
+    for (const item of items) {
+      if (item.id === itemId) {
+        return item;
+      }
+      if (item.variants) {
+        const variant = item.variants.find(v => v.id === itemId);
+        if (variant) {
+          return variant;
+        }
+      }
+    }
+    return undefined;
   };
   
   const categories = [...new Set(items.map(item => item.category))].sort();

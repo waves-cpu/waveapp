@@ -29,6 +29,8 @@ import {
 import type { InventoryItem } from '@/types';
 import { useLanguage } from '@/hooks/use-language';
 import { translations } from '@/types/language';
+import { Badge } from '@/components/ui/badge';
+import Image from 'next/image';
 
 interface InventoryTableProps {
   onUpdateStock: (itemId: string) => void;
@@ -48,19 +50,23 @@ export function InventoryTable({ onUpdateStock, onShowHistory }: InventoryTableP
         categoryFilter ? item.category === categoryFilter : true
       )
       .filter((item) =>
-        item.name.toLowerCase().includes(searchTerm.toLowerCase())
+        item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        item.variants?.some(v => v.name.toLowerCase().includes(searchTerm.toLowerCase()))
       );
   }, [items, categoryFilter, searchTerm]);
 
   const downloadCSV = () => {
-    const headers = ['ID', 'Name', 'Size', 'Category', 'Price', 'Stock'];
-    const csvRows = [
-      headers.join(','),
-      ...filteredItems.map(item => 
-        [item.id, `"${item.name}"`, item.size || '', item.category, item.price, item.stock].join(',')
-      )
-    ];
-    const csvString = csvRows.join('\n');
+    const headers = ['ID', 'Name', 'SKU', 'Category', 'Price', 'Stock', 'Is Parent'];
+    const rows: string[] = [];
+    
+    filteredItems.forEach(item => {
+      rows.push([item.id, `"${item.name}"`, item.sku || '', item.category, '', '', 'TRUE'].join(','));
+      item.variants?.forEach(variant => {
+        rows.push([variant.id, `"${variant.name}"`, variant.sku || '', item.category, variant.price, variant.stock, 'FALSE'].join(','));
+      });
+    });
+
+    const csvString = [headers.join(','), ...rows].join('\n');
     const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
@@ -109,7 +115,7 @@ export function InventoryTable({ onUpdateStock, onShowHistory }: InventoryTableP
         <Table>
           <TableHeader className="sticky top-0 bg-card">
             <TableRow>
-              <TableHead>{t.inventoryTable.name}</TableHead>
+              <TableHead className="w-[40%]">{t.inventoryTable.name}</TableHead>
               <TableHead>{t.inventoryTable.price}</TableHead>
               <TableHead className="text-right">{t.inventoryTable.currentStock}</TableHead>
               <TableHead className="text-center">{t.inventoryTable.actions}</TableHead>
@@ -117,25 +123,49 @@ export function InventoryTable({ onUpdateStock, onShowHistory }: InventoryTableP
           </TableHeader>
           <TableBody>
             {filteredItems.length > 0 ? (
-              filteredItems.map((item) => (
-                <TableRow key={item.id}>
-                  <TableCell>
-                    <div className="font-medium">{item.name}</div>
-                    <div className="text-xs text-muted-foreground">{item.size}</div>
-                  </TableCell>
-                  <TableCell>{`$${item.price.toFixed(2)}`}</TableCell>
-                  <TableCell className="text-right">{item.stock}</TableCell>
-                  <TableCell className="text-center">
-                    <div className="flex justify-center gap-2">
-                        <Button variant="ghost" size="icon" onClick={() => onUpdateStock(item.id)} aria-label={t.inventoryTable.updateStock}>
-                            <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="icon" onClick={() => onShowHistory(item.id)} aria-label={t.inventoryTable.viewHistory}>
-                            <History className="h-4 w-4" />
-                        </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
+              filteredItems.flatMap((item) => (
+                <React.Fragment key={item.id}>
+                    <TableRow className="bg-muted/20">
+                        <TableCell>
+                            <div className="flex items-center gap-4">
+                                <Image 
+                                    src={item.imageUrl || 'https://placehold.co/40x40.png'} 
+                                    alt={item.name} 
+                                    width={40} height={40} 
+                                    className="rounded-sm" 
+                                    data-ai-hint="product image"
+                                />
+                                <div>
+                                    <div className="font-medium text-primary">{item.name}</div>
+                                    <div className="text-xs text-muted-foreground">SKU: {item.sku}</div>
+                                </div>
+                            </div>
+                        </TableCell>
+                        <TableCell></TableCell>
+                        <TableCell></TableCell>
+                        <TableCell></TableCell>
+                    </TableRow>
+                    {item.variants?.map((variant) => (
+                        <TableRow key={variant.id}>
+                            <TableCell className="pl-16">
+                                <div className="font-medium">{variant.name}</div>
+                                <div className="text-xs text-muted-foreground">SKU: {variant.sku}</div>
+                            </TableCell>
+                            <TableCell>{`$${variant.price.toFixed(2)}`}</TableCell>
+                            <TableCell className="text-right">{variant.stock}</TableCell>
+                            <TableCell className="text-center">
+                                <div className="flex justify-center gap-2">
+                                    <Button variant="ghost" size="icon" onClick={() => onUpdateStock(variant.id)} aria-label={t.inventoryTable.updateStock}>
+                                        <Edit className="h-4 w-4" />
+                                    </Button>
+                                    <Button variant="ghost" size="icon" onClick={() => onShowHistory(variant.id)} aria-label={t.inventoryTable.viewHistory}>
+                                        <History className="h-4 w-4" />
+                                    </Button>
+                                </div>
+                            </TableCell>
+                        </TableRow>
+                    ))}
+                </React.Fragment>
               ))
             ) : (
               <TableRow>
