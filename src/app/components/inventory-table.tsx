@@ -110,6 +110,7 @@ export function InventoryTable({ onUpdateStock, onShowHistory }: InventoryTableP
           <TableHeader className="sticky top-0 bg-card">
             <TableRow>
               <TableHead>{t.inventoryTable.name}</TableHead>
+              <TableHead>{t.inventoryTable.size}</TableHead>
               <TableHead>{t.inventoryTable.price}</TableHead>
               <TableHead className="text-right">{t.inventoryTable.currentStock}</TableHead>
               <TableHead className="text-center">{t.inventoryTable.actions}</TableHead>
@@ -119,10 +120,8 @@ export function InventoryTable({ onUpdateStock, onShowHistory }: InventoryTableP
             {filteredItems.length > 0 ? (
               filteredItems.map((item) => (
                 <TableRow key={item.id}>
-                  <TableCell className="font-medium">
-                    <div>{item.name}</div>
-                    {item.size && <div className="text-xs text-muted-foreground">({item.size})</div>}
-                  </TableCell>
+                  <TableCell className="font-medium">{item.name}</TableCell>
+                  <TableCell>{item.size}</TableCell>
                   <TableCell>{`$${item.price.toFixed(2)}`}</TableCell>
                   <TableCell className="text-right">{item.stock}</TableCell>
                   <TableCell className="text-center">
@@ -139,7 +138,7 @@ export function InventoryTable({ onUpdateStock, onShowHistory }: InventoryTableP
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={4} className="h-24 text-center">
+                <TableCell colSpan={5} className="h-24 text-center">
                   {t.inventoryTable.noItems}
                 </TableCell>
               </TableRow>
