@@ -18,7 +18,8 @@ import { useToast } from '@/hooks/use-toast';
 import { useLanguage } from '@/hooks/use-language';
 import { translations } from '@/types/language';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { PlusCircle, Trash2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
@@ -159,66 +160,86 @@ export function AddProductForm() {
                 {hasVariants ? (
                     <Card>
                         <CardHeader>
-                            <CardTitle className="flex justify-between items-center">
-                                <span>Variants</span>
-                                <Button type="button" size="sm" variant="outline" onClick={() => append({ name: '', sku: '', price: 0, stock: 0 })}>
-                                    <PlusCircle className="mr-2 h-4 w-4" />
-                                    Add Variant
-                                </Button>
-                            </CardTitle>
+                            <CardTitle>Variants</CardTitle>
+                            <CardDescription>
+                                Add variants for your product. Each variant can have its own SKU, price, and stock level.
+                            </CardDescription>
                         </CardHeader>
-                        <CardContent className="space-y-4">
-                            {fields.map((field, index) => (
-                                <div key={field.id} className="grid grid-cols-1 md:grid-cols-[1fr,1fr,1fr,1fr,auto] gap-4 items-end border p-4 rounded-md relative">
-                                    <FormField
-                                        control={form.control}
-                                        name={`variants.${index}.name`}
-                                        render={({ field }) => (
-                                            <FormItem>
-                                                <FormLabel>Name</FormLabel>
-                                                <FormControl><Input placeholder="e.g., Large" {...field} /></FormControl>
-                                                <FormMessage/>
-                                            </FormItem>
-                                        )}
-                                    />
-                                    <FormField
-                                        control={form.control}
-                                        name={`variants.${index}.sku`}
-                                        render={({ field }) => (
-                                            <FormItem>
-                                                <FormLabel>SKU</FormLabel>
-                                                <FormControl><Input placeholder="e.g., VAR-LG" {...field} /></FormControl>
-                                                <FormMessage/>
-                                            </FormItem>
-                                        )}
-                                    />
-                                    <FormField
-                                        control={form.control}
-                                        name={`variants.${index}.price`}
-                                        render={({ field }) => (
-                                            <FormItem>
-                                                <FormLabel>Price</FormLabel>
-                                                <FormControl><Input type="number" placeholder="9.99" {...field} /></FormControl>
-                                                <FormMessage/>
-                                            </FormItem>
-                                        )}
-                                    />
-                                    <FormField
-                                        control={form.control}
-                                        name={`variants.${index}.stock`}
-                                        render={({ field }) => (
-                                            <FormItem>
-                                                <FormLabel>Stock</FormLabel>
-                                                <FormControl><Input type="number" placeholder="50" {...field} /></FormControl>
-                                                <FormMessage/>
-                                            </FormItem>
-                                        )}
-                                    />
-                                    <Button type="button" variant="ghost" size="icon" className="text-destructive hover:text-destructive-foreground hover:bg-destructive" onClick={() => remove(index)}>
-                                        <Trash2 className="h-4 w-4" />
-                                    </Button>
-                                </div>
-                            ))}
+                        <CardContent>
+                             <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Name</TableHead>
+                                        <TableHead>SKU</TableHead>
+                                        <TableHead>Price</TableHead>
+                                        <TableHead>Stock</TableHead>
+                                        <TableHead className="w-[50px]"></TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {fields.map((field, index) => (
+                                        <TableRow key={field.id}>
+                                            <TableCell>
+                                                 <FormField
+                                                    control={form.control}
+                                                    name={`variants.${index}.name`}
+                                                    render={({ field }) => (
+                                                        <FormItem>
+                                                            <FormControl><Input placeholder="e.g., Large" {...field} /></FormControl>
+                                                            <FormMessage/>
+                                                        </FormItem>
+                                                    )}
+                                                />
+                                            </TableCell>
+                                            <TableCell>
+                                                <FormField
+                                                    control={form.control}
+                                                    name={`variants.${index}.sku`}
+                                                    render={({ field }) => (
+                                                        <FormItem>
+                                                            <FormControl><Input placeholder="e.g., VAR-LG" {...field} /></FormControl>
+                                                            <FormMessage/>
+                                                        </FormItem>
+                                                    )}
+                                                />
+                                            </TableCell>
+                                            <TableCell>
+                                                <FormField
+                                                    control={form.control}
+                                                    name={`variants.${index}.price`}
+                                                    render={({ field }) => (
+                                                        <FormItem>
+                                                            <FormControl><Input type="number" placeholder="9.99" {...field} /></FormControl>
+                                                            <FormMessage/>
+                                                        </FormItem>
+                                                    )}
+                                                />
+                                            </TableCell>
+                                            <TableCell>
+                                                <FormField
+                                                    control={form.control}
+                                                    name={`variants.${index}.stock`}
+                                                    render={({ field }) => (
+                                                        <FormItem>
+                                                            <FormControl><Input type="number" placeholder="50" {...field} /></FormControl>
+                                                            <FormMessage/>
+                                                        </FormItem>
+                                                    )}
+                                                />
+                                            </TableCell>
+                                            <TableCell>
+                                                <Button type="button" variant="ghost" size="icon" className="text-destructive hover:text-destructive-foreground hover:bg-destructive" onClick={() => remove(index)}>
+                                                    <Trash2 className="h-4 w-4" />
+                                                </Button>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                             </Table>
+                             <Button type="button" size="sm" variant="outline" className="mt-4" onClick={() => append({ name: '', sku: '', price: 0, stock: 0 })}>
+                                <PlusCircle className="mr-2 h-4 w-4" />
+                                Add Variant
+                            </Button>
                              <FormMessage>{form.formState.errors.variants?.message}</FormMessage>
                         </CardContent>
                     </Card>
