@@ -14,10 +14,10 @@ import {
   SidebarTrigger,
 } from '@/components/ui/sidebar';
 import {
-  Package,
   PlusCircle,
+  Settings,
 } from 'lucide-react';
-import { InventoryProvider, useInventory } from '@/hooks/use-inventory';
+import { InventoryProvider } from '@/hooks/use-inventory';
 import { InventoryTable } from './inventory-table';
 import { AddItemDialog } from './add-item-dialog';
 import { UpdateStockDialog } from './update-stock-dialog';
@@ -27,8 +27,6 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 
 function DashboardContent() {
-  const [activeCategory, setActiveCategory] = useState<string | null>(null);
-
   const [isAddItemOpen, setAddItemOpen] = useState(false);
   const [isUpdateStockOpen, setUpdateStockOpen] = useState(false);
   const [isHistoryOpen, setHistoryOpen] = useState(false);
@@ -58,9 +56,9 @@ function DashboardContent() {
             <Separator className="my-2" />
             <SidebarMenu>
               <SidebarMenuItem>
-                <SidebarMenuButton onClick={() => setAddItemOpen(true)}>
-                  <PlusCircle />
-                  Add New Item
+                <SidebarMenuButton>
+                  <Settings />
+                  Pengaturan
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>
