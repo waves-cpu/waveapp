@@ -51,7 +51,8 @@ export function InventoryTable({ onUpdateStock, onShowHistory }: InventoryTableP
       )
       .filter((item) =>
         item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.variants?.some(v => v.name.toLowerCase().includes(searchTerm.toLowerCase()))
+        item.sku?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        item.variants?.some(v => v.name.toLowerCase().includes(searchTerm.toLowerCase()) || v.sku?.toLowerCase().includes(searchTerm.toLowerCase()))
       );
   }, [items, categoryFilter, searchTerm]);
 
@@ -60,10 +61,14 @@ export function InventoryTable({ onUpdateStock, onShowHistory }: InventoryTableP
     const rows: string[] = [];
     
     filteredItems.forEach(item => {
-      rows.push([item.id, `"${item.name}"`, item.sku || '', item.category, '', '', 'TRUE'].join(','));
-      item.variants?.forEach(variant => {
-        rows.push([variant.id, `"${variant.name}"`, variant.sku || '', item.category, variant.price, variant.stock, 'FALSE'].join(','));
-      });
+      if (item.variants && item.variants.length > 0) {
+        rows.push([item.id, `"${item.name}"`, item.sku || '', item.category, '', '', 'TRUE'].join(','));
+        item.variants.forEach(variant => {
+          rows.push([variant.id, `"${variant.name}"`, variant.sku || '', item.category, variant.price, variant.stock, 'FALSE'].join(','));
+        });
+      } else {
+        rows.push([item.id, `"${item.name}"`, item.sku || '', item.category, item.price, item.stock, 'FALSE'].join(','))
+      }
     });
 
     const csvString = [headers.join(','), ...rows].join('\n');
@@ -123,50 +128,90 @@ export function InventoryTable({ onUpdateStock, onShowHistory }: InventoryTableP
           </TableHeader>
           <TableBody>
             {filteredItems.length > 0 ? (
-              filteredItems.flatMap((item) => (
-                <React.Fragment key={item.id}>
-                    <TableRow className="bg-muted/20">
-                        <TableCell>
-                            <div className="flex items-center gap-4">
-                                <Image 
-                                    src={item.imageUrl || 'https://placehold.co/40x40.png'} 
-                                    alt={item.name} 
-                                    width={40} height={40} 
-                                    className="rounded-sm" 
-                                    data-ai-hint="product image"
-                                />
-                                <div>
-                                    <div className="font-medium text-primary">{item.name}</div>
-                                    <div className="text-xs text-muted-foreground">SKU: {item.sku}</div>
+              filteredItems.flatMap((item) => {
+                const totalStock = item.variants?.reduce((sum, v) => sum + v.stock, 0);
+
+                if (item.variants && item.variants.length > 0) {
+                    return (
+                        <React.Fragment key={item.id}>
+                            <TableRow className="bg-muted/20">
+                                <TableCell>
+                                    <div className="flex items-center gap-4">
+                                        <Image 
+                                            src={item.imageUrl || 'https://placehold.co/40x40.png'} 
+                                            alt={item.name} 
+                                            width={40} height={40} 
+                                            className="rounded-sm" 
+                                            data-ai-hint="product image"
+                                        />
+                                        <div>
+                                            <div className="font-medium text-primary">{item.name}</div>
+                                            <div className="text-xs text-muted-foreground">SKU: {item.sku}</div>
+                                        </div>
+                                    </div>
+                                </TableCell>
+                                <TableCell></TableCell>
+                                <TableCell className="text-right">
+                                    <Badge variant="secondary">Total: {totalStock}</Badge>
+                                </TableCell>
+                                <TableCell></TableCell>
+                            </TableRow>
+                            {item.variants?.map((variant) => (
+                                <TableRow key={variant.id}>
+                                    <TableCell className="pl-16">
+                                        <div className="font-medium">{variant.name}</div>
+                                        <div className="text-xs text-muted-foreground">SKU: {variant.sku}</div>
+                                    </TableCell>
+                                    <TableCell>{`$${variant.price.toFixed(2)}`}</TableCell>
+                                    <TableCell className="text-right">{variant.stock}</TableCell>
+                                    <TableCell className="text-center">
+                                        <div className="flex justify-center gap-2">
+                                            <Button variant="ghost" size="icon" onClick={() => onUpdateStock(variant.id)} aria-label={t.inventoryTable.updateStock}>
+                                                <Edit className="h-4 w-4" />
+                                            </Button>
+                                            <Button variant="ghost" size="icon" onClick={() => onShowHistory(variant.id)} aria-label={t.inventoryTable.viewHistory}>
+                                                <History className="h-4 w-4" />
+                                            </Button>
+                                        </div>
+                                    </TableCell>
+                                </TableRow>
+                            ))}
+                        </React.Fragment>
+                    )
+                } else {
+                    return (
+                        <TableRow key={item.id}>
+                            <TableCell>
+                                <div className="flex items-center gap-4">
+                                        <Image 
+                                            src={item.imageUrl || 'https://placehold.co/40x40.png'} 
+                                            alt={item.name} 
+                                            width={40} height={40} 
+                                            className="rounded-sm" 
+                                            data-ai-hint="product image"
+                                        />
+                                    <div>
+                                        <div className="font-medium">{item.name}</div>
+                                        <div className="text-xs text-muted-foreground">SKU: {item.sku}</div>
+                                    </div>
                                 </div>
-                            </div>
-                        </TableCell>
-                        <TableCell></TableCell>
-                        <TableCell></TableCell>
-                        <TableCell></TableCell>
-                    </TableRow>
-                    {item.variants?.map((variant) => (
-                        <TableRow key={variant.id}>
-                            <TableCell className="pl-16">
-                                <div className="font-medium">{variant.name}</div>
-                                <div className="text-xs text-muted-foreground">SKU: {variant.sku}</div>
                             </TableCell>
-                            <TableCell>{`$${variant.price.toFixed(2)}`}</TableCell>
-                            <TableCell className="text-right">{variant.stock}</TableCell>
-                            <TableCell className="text-center">
+                             <TableCell>{item.price ? `$${item.price.toFixed(2)}` : '-'}</TableCell>
+                            <TableCell className="text-right">{item.stock}</TableCell>
+                             <TableCell className="text-center">
                                 <div className="flex justify-center gap-2">
-                                    <Button variant="ghost" size="icon" onClick={() => onUpdateStock(variant.id)} aria-label={t.inventoryTable.updateStock}>
+                                    <Button variant="ghost" size="icon" onClick={() => onUpdateStock(item.id)} aria-label={t.inventoryTable.updateStock}>
                                         <Edit className="h-4 w-4" />
                                     </Button>
-                                    <Button variant="ghost" size="icon" onClick={() => onShowHistory(variant.id)} aria-label={t.inventoryTable.viewHistory}>
+                                    <Button variant="ghost" size="icon" onClick={() => onShowHistory(item.id)} aria-label={t.inventoryTable.viewHistory}>
                                         <History className="h-4 w-4" />
                                     </Button>
                                 </div>
                             </TableCell>
                         </TableRow>
-                    ))}
-                </React.Fragment>
-              ))
+                    )
+                }
+            })
             ) : (
               <TableRow>
                 <TableCell colSpan={4} className="h-24 text-center">
