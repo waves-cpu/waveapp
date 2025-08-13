@@ -83,14 +83,18 @@ function SettingsContent() {
                                             </Link>
                                         </SidebarMenuSubItem>
                                         <SidebarMenuSubItem>
-                                            <SidebarMenuSubButton onClick={() => console.log("Bulk")}>
-                                                {t.dashboard.bulk}
-                                            </SidebarMenuSubButton>
+                                             <Link href="/">
+                                                <SidebarMenuSubButton>
+                                                    {t.dashboard.bulk}
+                                                </SidebarMenuSubButton>
+                                            </Link>
                                         </SidebarMenuSubItem>
                                         <SidebarMenuSubItem>
-                                            <SidebarMenuSubButton onClick={() => console.log("Stock In")}>
-                                                {t.dashboard.stockIn}
-                                            </SidebarMenuSubButton>
+                                            <Link href="/">
+                                                <SidebarMenuSubButton>
+                                                    {t.dashboard.stockIn}
+                                                </SidebarMenuSubButton>
+                                            </Link>
                                         </SidebarMenuSubItem>
                                     </SidebarMenuSub>
                                 </CollapsibleContent>
