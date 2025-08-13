@@ -159,9 +159,9 @@ export function AddProductForm() {
                 {hasVariants ? (
                     <Card>
                         <CardHeader>
-                            <CardTitle className="flex justify-between items-center text-base">
+                            <CardTitle className="flex justify-between items-center">
                                 <span>Variants</span>
-                                <Button type="button" size="sm" variant="outline" onClick={() => append({ name: '', price: 0, stock: 0 })}>
+                                <Button type="button" size="sm" variant="outline" onClick={() => append({ name: '', sku: '', price: 0, stock: 0 })}>
                                     <PlusCircle className="mr-2 h-4 w-4" />
                                     Add Variant
                                 </Button>
@@ -169,7 +169,7 @@ export function AddProductForm() {
                         </CardHeader>
                         <CardContent className="space-y-4">
                             {fields.map((field, index) => (
-                                <div key={field.id} className="grid grid-cols-1 md:grid-cols-4 gap-4 items-start border p-4 rounded-md relative">
+                                <div key={field.id} className="grid grid-cols-1 md:grid-cols-[1fr,1fr,1fr,1fr,auto] gap-4 items-end border p-4 rounded-md relative">
                                     <FormField
                                         control={form.control}
                                         name={`variants.${index}.name`}
@@ -177,6 +177,17 @@ export function AddProductForm() {
                                             <FormItem>
                                                 <FormLabel>Name</FormLabel>
                                                 <FormControl><Input placeholder="e.g., Large" {...field} /></FormControl>
+                                                <FormMessage/>
+                                            </FormItem>
+                                        )}
+                                    />
+                                    <FormField
+                                        control={form.control}
+                                        name={`variants.${index}.sku`}
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>SKU</FormLabel>
+                                                <FormControl><Input placeholder="e.g., VAR-LG" {...field} /></FormControl>
                                                 <FormMessage/>
                                             </FormItem>
                                         )}
