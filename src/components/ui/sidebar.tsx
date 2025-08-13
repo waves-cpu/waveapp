@@ -344,7 +344,7 @@ const SidebarInput = React.forwardRef<
       ref={ref}
       data-sidebar="input"
       className={cn(
-        "h-8 w-full bg-background shadow-none focus-visible:ring-2 focus-visible:ring-sidebar-ring",
+        "h-8 w-full bg-background shadow-none focus-visible:ring-2 focus-visible:ring-sidebar-ring text-sm",
         className
       )}
       {...props}
@@ -710,13 +710,13 @@ SidebarMenuSubItem.displayName = "SidebarMenuSubItem"
 
 const SidebarMenuSubButton = React.forwardRef<
   HTMLDivElement,
-  React.HTMLAttributes<HTMLDivElement> & {
+  React.ComponentProps<typeof Slot> & {
     size?: "sm" | "md"
     isActive?: boolean
   }
 >(({ size = "md", isActive, className, ...props }, ref) => {
   return (
-    <div
+    <Slot
       ref={ref as React.Ref<HTMLDivElement>}
       data-sidebar="menu-sub-button"
       data-size={size}

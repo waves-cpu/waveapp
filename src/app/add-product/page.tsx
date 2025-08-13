@@ -7,7 +7,7 @@ export default function AddProductPage() {
             <div className="w-full max-w-4xl">
                 <div className="flex items-center gap-4 mb-6">
                     <SidebarTrigger className="md:hidden" />
-                    <h1 className="text-xl font-bold">Add New Product</h1>
+                    <h1 className="text-lg font-bold">Add New Product</h1>
                 </div>
                 <AddProductForm />
             </div>

@@ -159,7 +159,7 @@ export function AddProductForm() {
                 {hasVariants ? (
                     <Card>
                         <CardHeader>
-                            <CardTitle className="flex justify-between items-center">
+                            <CardTitle className="flex justify-between items-center text-base">
                                 <span>Variants</span>
                                 <Button type="button" size="sm" variant="outline" onClick={() => append({ name: '', price: 0, stock: 0 })}>
                                     <PlusCircle className="mr-2 h-4 w-4" />

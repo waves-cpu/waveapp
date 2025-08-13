@@ -145,7 +145,7 @@ export function InventoryTable({ onUpdateStock, onShowHistory }: InventoryTableP
                                             data-ai-hint="product image"
                                         />
                                         <div>
-                                            <div className="font-medium text-primary">{item.name}</div>
+                                            <div className="font-medium text-primary text-sm">{item.name}</div>
                                             <div className="text-xs text-muted-foreground">SKU: {item.sku}</div>
                                         </div>
                                     </div>
@@ -159,7 +159,7 @@ export function InventoryTable({ onUpdateStock, onShowHistory }: InventoryTableP
                             {item.variants?.map((variant) => (
                                 <TableRow key={variant.id}>
                                     <TableCell className="pl-16">
-                                        <div className="font-medium">{variant.name}</div>
+                                        <div className="font-medium text-sm">{variant.name}</div>
                                         <div className="text-xs text-muted-foreground">SKU: {variant.sku}</div>
                                     </TableCell>
                                     <TableCell>{`$${variant.price.toFixed(2)}`}</TableCell>
@@ -191,7 +191,7 @@ export function InventoryTable({ onUpdateStock, onShowHistory }: InventoryTableP
                                             data-ai-hint="product image"
                                         />
                                     <div>
-                                        <div className="font-medium">{item.name}</div>
+                                        <div className="font-medium text-sm">{item.name}</div>
                                         <div className="text-xs text-muted-foreground">SKU: {item.sku}</div>
                                     </div>
                                 </div>

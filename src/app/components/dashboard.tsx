@@ -38,7 +38,7 @@ function DashboardContent() {
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-4">
              <SidebarTrigger className="md:hidden" />
-             <h1 className="text-sm md:text-base font-bold font-headline text-foreground">
+             <h1 className="text-lg md:text-xl font-bold font-headline text-foreground">
                 {t.dashboard.inventory}
             </h1>
           </div>

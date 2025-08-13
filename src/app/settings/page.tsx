@@ -39,7 +39,7 @@ function SettingsContent() {
             <div className="mx-auto grid w-full max-w-6xl gap-2">
                 <div className="flex items-center gap-4">
                     <SidebarTrigger className="md:hidden" />
-                    <h1 className="flex-1 shrink-0 whitespace-nowrap text-sm font-semibold tracking-tight sm:grow-0">
+                    <h1 className="flex-1 shrink-0 whitespace-nowrap text-lg font-semibold tracking-tight sm:grow-0">
                         {t.settings.title}
                     </h1>
                 </div>
@@ -49,22 +49,22 @@ function SettingsContent() {
                     <Card>
                         <CardHeader>
                             <CardTitle className="text-base">{t.settings.appearance}</CardTitle>
-                            <CardDescription className="text-xs">
+                            <CardDescription>
                                 {t.settings.appearanceDescription}
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
                             <div className="space-y-2">
-                                <Label htmlFor="theme" className="text-xs">{t.settings.theme}</Label>
+                                <Label htmlFor="theme">{t.settings.theme}</Label>
                                 {mounted ? (
                                     <Select value={theme} onValueChange={(value) => setTheme(value)}>
-                                        <SelectTrigger id="theme" className="w-[280px] text-xs">
+                                        <SelectTrigger id="theme" className="w-[280px]">
                                             <SelectValue placeholder={t.settings.selectThemePlaceholder} />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="light" className="text-xs">{t.settings.light}</SelectItem>
-                                            <SelectItem value="dark" className="text-xs">{t.settings.dark}</SelectItem>
-                                            <SelectItem value="system" className="text-xs">{t.settings.system}</SelectItem>
+                                            <SelectItem value="light">{t.settings.light}</SelectItem>
+                                            <SelectItem value="dark">{t.settings.dark}</SelectItem>
+                                            <SelectItem value="system">{t.settings.system}</SelectItem>
                                         </SelectContent>
                                     </Select>
                                 ) : (
@@ -76,21 +76,21 @@ function SettingsContent() {
                     <Card>
                         <CardHeader>
                             <CardTitle className="text-base">{t.settings.language}</CardTitle>
-                            <CardDescription className="text-xs">
+                            <CardDescription>
                                 {t.settings.languageDescription}
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
                             <div className="space-y-2">
-                                <Label htmlFor="language" className="text-xs">{t.settings.language}</Label>
+                                <Label htmlFor="language">{t.settings.language}</Label>
                                 {mounted ? (
                                     <Select value={language} onValueChange={(value) => setLanguage(value as Language)}>
-                                        <SelectTrigger id="language" className="w-[280px] text-xs">
+                                        <SelectTrigger id="language" className="w-[280px]">
                                             <SelectValue placeholder={t.settings.selectLanguagePlaceholder} />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="en" className="text-xs">English</SelectItem>
-                                            <SelectItem value="id" className="text-xs">Bahasa Indonesia</SelectItem>
+                                            <SelectItem value="en">English</SelectItem>
+                                            <SelectItem value="id">Bahasa Indonesia</SelectItem>
                                         </SelectContent>
                                     </Select>
                                 ) : (
