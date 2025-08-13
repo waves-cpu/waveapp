@@ -21,7 +21,6 @@ import {
   Settings,
   Store,
   ChevronDown,
-  PlusSquare,
 } from 'lucide-react';
 import { Logo } from './logo';
 import { Separator } from '@/components/ui/separator';
