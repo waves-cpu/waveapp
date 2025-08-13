@@ -152,7 +152,7 @@ export function InventoryTable({ onUpdateStock, onShowHistory }: InventoryTableP
                                 </TableCell>
                                 <TableCell></TableCell>
                                 <TableCell>
-                                    <Badge variant="secondary">Total: {totalStock}</Badge>
+                                    Total: {totalStock}
                                 </TableCell>
                                 <TableCell></TableCell>
                             </TableRow>
