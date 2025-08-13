@@ -6,6 +6,10 @@ export const translations = {
         dashboard: {
             inventory: "Inventory",
             addItem: "Add Item",
+            inventoryMenu: "Inventory Menu",
+            myProducts: "My Products",
+            bulk: "Bulk",
+            stockIn: "Stock In",
         },
         inventoryTable: {
             searchPlaceholder: "Search items...",
@@ -78,6 +82,10 @@ export const translations = {
         dashboard: {
             inventory: "Inventaris",
             addItem: "Tambah Barang",
+            inventoryMenu: "Menu Inventaris",
+            myProducts: "Produk Saya",
+            bulk: "Massal",
+            stockIn: "Stok Masuk",
         },
         inventoryTable: {
             searchPlaceholder: "Cari barang...",

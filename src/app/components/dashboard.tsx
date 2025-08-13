@@ -11,12 +11,17 @@ import {
   SidebarMenu,
   SidebarMenuItem,
   SidebarMenuButton,
+  SidebarMenuSub,
+  SidebarMenuSubItem,
+  SidebarMenuSubButton,
   SidebarInset,
   SidebarTrigger,
 } from '@/components/ui/sidebar';
 import {
   PlusCircle,
   Settings,
+  Store,
+  ChevronDown
 } from 'lucide-react';
 import { InventoryProvider } from '@/hooks/use-inventory';
 import { InventoryTable } from './inventory-table';
@@ -30,6 +35,7 @@ import { useLanguage } from '@/hooks/use-language';
 import { translations } from '@/types/language';
 import { LanguageProvider } from '@/hooks/use-language';
 import { ThemeProvider } from './theme-provider';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
 function DashboardContent() {
   const { language } = useLanguage();
@@ -58,12 +64,36 @@ function DashboardContent() {
             <Logo />
           </SidebarHeader>
           <SidebarContent>
-            <SidebarMenu>
+             <SidebarMenu>
                 <SidebarMenuItem>
-                    <SidebarMenuButton onClick={() => setAddItemOpen(true)}>
-                        <PlusCircle />
-                        {t.dashboard.addItem}
-                    </SidebarMenuButton>
+                    <Collapsible>
+                        <CollapsibleTrigger className='w-full'>
+                            <SidebarMenuButton>
+                                <Store />
+                                {t.dashboard.inventoryMenu}
+                                <ChevronDown className="ml-auto h-4 w-4 transition-transform group-data-[state=open]:rotate-180" />
+                            </SidebarMenuButton>
+                        </CollapsibleTrigger>
+                        <CollapsibleContent>
+                            <SidebarMenuSub>
+                                <SidebarMenuSubItem>
+                                    <SidebarMenuSubButton onClick={() => console.log("My Products")}>
+                                        {t.dashboard.myProducts}
+                                    </SidebarMenuSubButton>
+                                </SidebarMenuSubItem>
+                                <SidebarMenuSubItem>
+                                    <SidebarMenuSubButton onClick={() => console.log("Bulk")}>
+                                        {t.dashboard.bulk}
+                                    </SidebarMenuSubButton>
+                                </SidebarMenuSubItem>
+                                <SidebarMenuSubItem>
+                                    <SidebarMenuSubButton onClick={() => console.log("Stock In")}>
+                                        {t.dashboard.stockIn}
+                                    </SidebarMenuSubButton>
+                                </SidebarMenuSubItem>
+                            </SidebarMenuSub>
+                        </CollapsibleContent>
+                    </Collapsible>
                 </SidebarMenuItem>
             </SidebarMenu>
           </SidebarContent>
@@ -86,7 +116,7 @@ function DashboardContent() {
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center gap-4">
                  <SidebarTrigger className="md:hidden" />
-                 <h1 className="text-lg md:text-xl font-bold font-headline text-foreground">
+                 <h1 className="text-sm md:text-base font-bold font-headline text-foreground">
                     {t.dashboard.inventory}
                 </h1>
               </div>
