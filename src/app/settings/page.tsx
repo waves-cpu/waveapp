@@ -19,7 +19,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Button } from "@/components/ui/button"
-import { ChevronLeft, PlusCircle, Settings } from "lucide-react"
+import { ChevronDown, PlusCircle, Settings, Store } from "lucide-react"
 import { useTheme } from "next-themes"
 import { useLanguage, Language } from "@/hooks/use-language";
 import { translations } from "@/types/language";
@@ -33,6 +33,9 @@ import {
   SidebarMenu,
   SidebarMenuItem,
   SidebarMenuButton,
+  SidebarMenuSub,
+  SidebarMenuSubButton,
+  SidebarMenuSubItem,
   SidebarProvider,
   SidebarTrigger
 } from "@/components/ui/sidebar";
@@ -40,6 +43,7 @@ import { Logo } from "../components/logo";
 import { Separator } from "@/components/ui/separator";
 import { LanguageProvider } from "@/hooks/use-language";
 import { ThemeProvider } from "../components/theme-provider";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 
 function SettingsContent() {
@@ -61,12 +65,36 @@ function SettingsContent() {
                 <SidebarContent>
                     <SidebarMenu>
                         <SidebarMenuItem>
-                            <Link href="/" className="w-full">
-                                <SidebarMenuButton>
-                                    <ChevronLeft />
-                                    {t.settings.back}
-                                </SidebarMenuButton>
-                            </Link>
+                            <Collapsible>
+                                <CollapsibleTrigger asChild>
+                                    <SidebarMenuButton>
+                                        <Store />
+                                        {t.dashboard.inventoryMenu}
+                                        <ChevronDown className="ml-auto h-4 w-4 transition-transform group-data-[state=open]:rotate-180" />
+                                    </SidebarMenuButton>
+                                </CollapsibleTrigger>
+                                <CollapsibleContent>
+                                    <SidebarMenuSub>
+                                        <SidebarMenuSubItem>
+                                            <Link href="/">
+                                                <SidebarMenuSubButton>
+                                                    {t.dashboard.myProducts}
+                                                </SidebarMenuSubButton>
+                                            </Link>
+                                        </SidebarMenuSubItem>
+                                        <SidebarMenuSubItem>
+                                            <SidebarMenuSubButton onClick={() => console.log("Bulk")}>
+                                                {t.dashboard.bulk}
+                                            </SidebarMenuSubButton>
+                                        </SidebarMenuSubItem>
+                                        <SidebarMenuSubItem>
+                                            <SidebarMenuSubButton onClick={() => console.log("Stock In")}>
+                                                {t.dashboard.stockIn}
+                                            </SidebarMenuSubButton>
+                                        </SidebarMenuSubItem>
+                                    </SidebarMenuSub>
+                                </CollapsibleContent>
+                            </Collapsible>
                         </SidebarMenuItem>
                     </SidebarMenu>
                 </SidebarContent>
@@ -89,7 +117,7 @@ function SettingsContent() {
                     <div className="mx-auto grid w-full max-w-6xl gap-2">
                         <div className="flex items-center gap-4">
                             <SidebarTrigger className="md:hidden" />
-                            <h1 className="flex-1 shrink-0 whitespace-nowrap text-lg font-semibold tracking-tight sm:grow-0">
+                            <h1 className="flex-1 shrink-0 whitespace-nowrap text-sm font-semibold tracking-tight sm:grow-0">
                                 {t.settings.title}
                             </h1>
                         </div>
@@ -98,53 +126,53 @@ function SettingsContent() {
                         <div className="grid gap-6">
                             <Card>
                                 <CardHeader>
-                                    <CardTitle className="text-xl">{t.settings.appearance}</CardTitle>
-                                    <CardDescription>
+                                    <CardTitle className="text-base">{t.settings.appearance}</CardTitle>
+                                    <CardDescription className="text-xs">
                                         {t.settings.appearanceDescription}
                                     </CardDescription>
                                 </CardHeader>
                                 <CardContent>
                                     <div className="space-y-2">
-                                        <Label htmlFor="theme">{t.settings.theme}</Label>
+                                        <Label htmlFor="theme" className="text-xs">{t.settings.theme}</Label>
                                         {mounted ? (
                                             <Select value={theme} onValueChange={(value) => setTheme(value)}>
-                                                <SelectTrigger id="theme" className="w-[280px]">
+                                                <SelectTrigger id="theme" className="w-[280px] text-xs">
                                                     <SelectValue placeholder={t.settings.selectThemePlaceholder} />
                                                 </SelectTrigger>
                                                 <SelectContent>
-                                                    <SelectItem value="light">{t.settings.light}</SelectItem>
-                                                    <SelectItem value="dark">{t.settings.dark}</SelectItem>
-                                                    <SelectItem value="system">{t.settings.system}</SelectItem>
+                                                    <SelectItem value="light" className="text-xs">{t.settings.light}</SelectItem>
+                                                    <SelectItem value="dark" className="text-xs">{t.settings.dark}</SelectItem>
+                                                    <SelectItem value="system" className="text-xs">{t.settings.system}</SelectItem>
                                                 </SelectContent>
                                             </Select>
                                         ) : (
-                                            <Skeleton className="w-[280px] h-10" />
+                                            <Skeleton className="w-[280px] h-9" />
                                         )}
                                     </div>
                                 </CardContent>
                             </Card>
                             <Card>
                                 <CardHeader>
-                                    <CardTitle className="text-xl">{t.settings.language}</CardTitle>
-                                    <CardDescription>
+                                    <CardTitle className="text-base">{t.settings.language}</CardTitle>
+                                    <CardDescription className="text-xs">
                                         {t.settings.languageDescription}
                                     </CardDescription>
                                 </CardHeader>
                                 <CardContent>
                                     <div className="space-y-2">
-                                        <Label htmlFor="language">{t.settings.language}</Label>
+                                        <Label htmlFor="language" className="text-xs">{t.settings.language}</Label>
                                         {mounted ? (
                                             <Select value={language} onValueChange={(value) => setLanguage(value as Language)}>
-                                                <SelectTrigger id="language" className="w-[280px]">
+                                                <SelectTrigger id="language" className="w-[280px] text-xs">
                                                     <SelectValue placeholder={t.settings.selectLanguagePlaceholder} />
                                                 </SelectTrigger>
                                                 <SelectContent>
-                                                    <SelectItem value="en">English</SelectItem>
-                                                    <SelectItem value="id">Bahasa Indonesia</SelectItem>
+                                                    <SelectItem value="en" className="text-xs">English</SelectItem>
+                                                    <SelectItem value="id" className="text-xs">Bahasa Indonesia</SelectItem>
                                                 </SelectContent>
                                             </Select>
                                         ) : (
-                                            <Skeleton className="w-[280px] h-10" />
+                                            <Skeleton className="w-[280px] h-9" />
                                         )}
                                     </div>
                                 </CardContent>

@@ -67,7 +67,7 @@ function DashboardContent() {
              <SidebarMenu>
                 <SidebarMenuItem>
                     <Collapsible>
-                        <CollapsibleTrigger className='w-full'>
+                        <CollapsibleTrigger asChild>
                             <SidebarMenuButton>
                                 <Store />
                                 {t.dashboard.inventoryMenu}
@@ -111,8 +111,8 @@ function DashboardContent() {
             </SidebarMenu>
           </SidebarFooter>
         </Sidebar>
-        <SidebarInset className="bg-muted/40">
-          <div className="p-4 sm:p-6 lg:p-8 flex flex-col h-full">
+        <SidebarInset>
+          <main className="flex min-h-[calc(100vh_-_theme(spacing.16))] flex-1 flex-col gap-4 bg-muted/40 p-4 md:gap-8 md:p-10">
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center gap-4">
                  <SidebarTrigger className="md:hidden" />
@@ -120,7 +120,7 @@ function DashboardContent() {
                     {t.dashboard.inventory}
                 </h1>
               </div>
-              <div className="hidden md:flex items-center gap-2">
+              <div className="flex items-center gap-2">
                 <Button onClick={() => setAddItemOpen(true)} variant="outline" size="sm">
                     <PlusCircle className="mr-2 h-4 w-4" />
                     {t.dashboard.addItem}
@@ -133,7 +133,7 @@ function DashboardContent() {
                 onShowHistory={handleShowHistory}
                 />
             </div>
-          </div>
+          </main>
         </SidebarInset>
       </SidebarProvider>
 
