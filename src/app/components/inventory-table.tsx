@@ -53,11 +53,11 @@ export function InventoryTable({ onUpdateStock, onShowHistory }: InventoryTableP
   }, [items, categoryFilter, searchTerm]);
 
   const downloadCSV = () => {
-    const headers = ['ID', 'Name', 'Category', 'Stock'];
+    const headers = ['ID', 'Name', 'Category', 'Price', 'Stock'];
     const csvRows = [
       headers.join(','),
       ...filteredItems.map(item => 
-        [item.id, `"${item.name}"`, item.category, item.stock].join(',')
+        [item.id, `"${item.name}"`, item.category, item.price, item.stock].join(',')
       )
     ];
     const csvString = csvRows.join('\n');
@@ -110,7 +110,7 @@ export function InventoryTable({ onUpdateStock, onShowHistory }: InventoryTableP
           <TableHeader className="sticky top-0 bg-card">
             <TableRow>
               <TableHead>{t.inventoryTable.name}</TableHead>
-              <TableHead>{t.inventoryTable.category}</TableHead>
+              <TableHead>{t.inventoryTable.price}</TableHead>
               <TableHead className="text-right">{t.inventoryTable.currentStock}</TableHead>
               <TableHead className="text-center">{t.inventoryTable.actions}</TableHead>
             </TableRow>
@@ -120,7 +120,7 @@ export function InventoryTable({ onUpdateStock, onShowHistory }: InventoryTableP
               filteredItems.map((item) => (
                 <TableRow key={item.id}>
                   <TableCell className="font-medium">{item.name}</TableCell>
-                  <TableCell>{item.category}</TableCell>
+                  <TableCell>{`$${item.price.toFixed(2)}`}</TableCell>
                   <TableCell className="text-right">{item.stock}</TableCell>
                   <TableCell className="text-center">
                     <div className="flex justify-center gap-2">

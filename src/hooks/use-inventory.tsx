@@ -5,7 +5,7 @@ import type { InventoryItem, AdjustmentHistory } from '@/types';
 
 interface InventoryContextType {
   items: InventoryItem[];
-  addItem: (item: Omit<InventoryItem, 'id' | 'history' | 'stock'> & { stock: number }) => void;
+  addItem: (item: Omit<InventoryItem, 'id' | 'history'>) => void;
   updateStock: (itemId: string, change: number, reason: string) => void;
   getHistory: (itemId: string) => AdjustmentHistory[];
   getItem: (itemId: string) => InventoryItem | undefined;
@@ -15,19 +15,19 @@ interface InventoryContextType {
 const InventoryContext = createContext<InventoryContextType | undefined>(undefined);
 
 const initialItems: InventoryItem[] = [
-  { id: '1', name: 'Organic Green Tea', category: 'Beverages', stock: 150, history: [{ date: new Date(), change: 150, reason: 'Initial Stock', newStockLevel: 150 }] },
-  { id: '2', name: 'Whole Wheat Bread', category: 'Bakery', stock: 75, history: [{ date: new Date(), change: 75, reason: 'Initial Stock', newStockLevel: 75 }] },
-  { id: '3', name: 'Almond Milk', category: 'Dairy & Alternatives', stock: 120, history: [{ date: new Date(), change: 120, reason: 'Initial Stock', newStockLevel: 120 }] },
-  { id: '4', name: 'Avocados', category: 'Produce', stock: 200, history: [{ date: new Date(), change: 200, reason: 'Initial Stock', newStockLevel: 200 }] },
-  { id: '5', name: 'Quinoa', category: 'Grains', stock: 100, history: [{ date: new Date(), change: 100, reason: 'Initial Stock', newStockLevel: 100 }] },
-  { id: '6', name: 'Dark Chocolate Bar', category: 'Snacks', stock: 80, history: [{ date: new Date(), change: 80, reason: 'Initial Stock', newStockLevel: 80 }] },
+  { id: '1', name: 'Organic Green Tea', category: 'Beverages', stock: 150, price: 5, history: [{ date: new Date(), change: 150, reason: 'Initial Stock', newStockLevel: 150 }] },
+  { id: '2', name: 'Whole Wheat Bread', category: 'Bakery', stock: 75, price: 3, history: [{ date: new Date(), change: 75, reason: 'Initial Stock', newStockLevel: 75 }] },
+  { id: '3', name: 'Almond Milk', category: 'Dairy & Alternatives', stock: 120, price: 4, history: [{ date: new Date(), change: 120, reason: 'Initial Stock', newStockLevel: 120 }] },
+  { id: '4', name: 'Avocados', category: 'Produce', stock: 200, price: 2, history: [{ date: new Date(), change: 200, reason: 'Initial Stock', newStockLevel: 200 }] },
+  { id: '5', name: 'Quinoa', category: 'Grains', stock: 100, price: 8, history: [{ date: new Date(), change: 100, reason: 'Initial Stock', newStockLevel: 100 }] },
+  { id: '6', name: 'Dark Chocolate Bar', category: 'Snacks', stock: 80, price: 3.5, history: [{ date: new Date(), change: 80, reason: 'Initial Stock', newStockLevel: 80 }] },
 ];
 
 
 export const InventoryProvider = ({ children }: { children: ReactNode }) => {
   const [items, setItems] = useState<InventoryItem[]>(initialItems);
 
-  const addItem = (item: Omit<InventoryItem, 'id' | 'history' | 'stock'> & { stock: number }) => {
+  const addItem = (item: Omit<InventoryItem, 'id' | 'history'>) => {
     const newItem: InventoryItem = {
       ...item,
       id: new Date().getTime().toString(),
