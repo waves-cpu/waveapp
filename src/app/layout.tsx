@@ -1,8 +1,7 @@
 import type { Metadata } from 'next';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster"
-import { ThemeProvider } from './components/theme-provider';
-import { LanguageProvider } from '@/hooks/use-language';
+import { AppLayout } from './components/app-layout';
 
 export const metadata: Metadata = {
   title: 'WaveApp',
@@ -22,17 +21,10 @@ export default function RootLayout({
         <link href="https://fonts.googleapis.com/css2?family=Inter&display=swap" rel="stylesheet" />
       </head>
       <body className="font-body antialiased h-full">
-          <LanguageProvider>
-            <ThemeProvider
-              attribute="class"
-              defaultTheme="system"
-              enableSystem
-              disableTransitionOnChange
-            >
-              <main>{children}</main>
-              <Toaster />
-            </ThemeProvider>
-          </LanguageProvider>
+            <AppLayout>
+              {children}
+            </AppLayout>
+            <Toaster />
       </body>
     </html>
   );
