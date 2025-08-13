@@ -40,7 +40,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         <SidebarContent>
             <SidebarMenu>
                 <SidebarMenuItem>
-                    <Collapsible>
+                    <Collapsible defaultOpen={true}>
                         <CollapsibleTrigger asChild>
                             <SidebarMenuButton>
                                 <Store />
