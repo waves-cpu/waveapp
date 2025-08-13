@@ -26,8 +26,15 @@ import { StockHistorySheet } from './stock-history-sheet';
 import { Logo } from './logo';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
+import { useLanguage } from '@/hooks/use-language';
+import { translations } from '@/types/language';
+import { LanguageProvider } from '@/hooks/use-language';
+import { ThemeProvider } from './theme-provider';
 
 function DashboardContent() {
+  const { language } = useLanguage();
+  const t = translations[language];
+
   const [isAddItemOpen, setAddItemOpen] = useState(false);
   const [isUpdateStockOpen, setUpdateStockOpen] = useState(false);
   const [isHistoryOpen, setHistoryOpen] = useState(false);
@@ -60,7 +67,7 @@ function DashboardContent() {
                     <Link href="/settings" className="w-full">
                         <SidebarMenuButton>
                             <Settings />
-                            Pengaturan
+                            {t.sidebar.settings}
                         </SidebarMenuButton>
                     </Link>
                 </SidebarMenuItem>
@@ -73,13 +80,13 @@ function DashboardContent() {
               <div className="flex items-center gap-4">
                  <SidebarTrigger className="md:hidden" />
                  <h1 className="text-2xl md:text-3xl font-bold font-headline text-foreground">
-                    Inventory
+                    {t.dashboard.inventory}
                 </h1>
               </div>
               <div className="hidden md:flex items-center gap-2">
                 <Button onClick={() => setAddItemOpen(true)} variant="outline">
                     <PlusCircle className="mr-2 h-4 w-4" />
-                    Add Item
+                    {t.dashboard.addItem}
                 </Button>
               </div>
             </div>
@@ -111,8 +118,17 @@ function DashboardContent() {
 
 export default function Dashboard() {
     return (
-        <InventoryProvider>
-            <DashboardContent />
-        </InventoryProvider>
+      <ThemeProvider
+        attribute="class"
+        defaultTheme="system"
+        enableSystem
+        disableTransitionOnChange
+      >
+        <LanguageProvider>
+            <InventoryProvider>
+                <DashboardContent />
+            </InventoryProvider>
+        </LanguageProvider>
+      </ThemeProvider>
     )
 }

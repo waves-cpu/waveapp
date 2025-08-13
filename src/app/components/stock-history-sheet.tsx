@@ -18,6 +18,8 @@ import {
 } from '@/components/ui/table';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
+import { useLanguage } from '@/hooks/use-language';
+import { translations } from '@/types/language';
 
 interface StockHistorySheetProps {
   open: boolean;
@@ -27,6 +29,8 @@ interface StockHistorySheetProps {
 
 export function StockHistorySheet({ open, onOpenChange, itemId }: StockHistorySheetProps) {
   const { getItem } = useInventory();
+  const { language } = useLanguage();
+  const t = translations[language];
   
   const item = itemId ? getItem(itemId) : null;
   const history = item ? item.history : [];
@@ -35,9 +39,9 @@ export function StockHistorySheet({ open, onOpenChange, itemId }: StockHistorySh
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="sm:max-w-lg w-full flex flex-col">
         <SheetHeader>
-          <SheetTitle>Stock History: {item?.name}</SheetTitle>
+          <SheetTitle>{t.stockHistory.title}: {item?.name}</SheetTitle>
           <SheetDescription>
-            A log of all stock adjustments for this item.
+            {t.stockHistory.description}
           </SheetDescription>
         </SheetHeader>
         <div className="flex-grow overflow-hidden">
@@ -45,10 +49,10 @@ export function StockHistorySheet({ open, onOpenChange, itemId }: StockHistorySh
             <Table>
                 <TableHeader>
                 <TableRow>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Reason</TableHead>
-                    <TableHead className="text-right">Change</TableHead>
-                    <TableHead className="text-right">New Total</TableHead>
+                    <TableHead>{t.stockHistory.date}</TableHead>
+                    <TableHead>{t.stockHistory.reason}</TableHead>
+                    <TableHead className="text-right">{t.stockHistory.change}</TableHead>
+                    <TableHead className="text-right">{t.stockHistory.newTotal}</TableHead>
                 </TableRow>
                 </TableHeader>
                 <TableBody>

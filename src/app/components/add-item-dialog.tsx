@@ -23,6 +23,8 @@ import {
 } from '@/components/ui/form';
 import { useInventory } from '@/hooks/use-inventory';
 import { useToast } from '@/hooks/use-toast';
+import { useLanguage } from '@/hooks/use-language';
+import { translations } from '@/types/language';
 
 const formSchema = z.object({
   name: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
@@ -36,6 +38,8 @@ interface AddItemDialogProps {
 }
 
 export function AddItemDialog({ open, onOpenChange }: AddItemDialogProps) {
+  const { language } = useLanguage();
+  const t = translations[language];
   const { addItem } = useInventory();
   const { toast } = useToast();
   
@@ -51,8 +55,8 @@ export function AddItemDialog({ open, onOpenChange }: AddItemDialogProps) {
   function onSubmit(values: z.infer<typeof formSchema>) {
     addItem(values);
     toast({
-      title: 'Item Added',
-      description: `${values.name} has been added to the inventory.`,
+      title: t.addItemDialog.itemAdded,
+      description: `${values.name} ${t.addItemDialog.hasBeenAdded}`,
     });
     form.reset();
     onOpenChange(false);
@@ -62,9 +66,9 @@ export function AddItemDialog({ open, onOpenChange }: AddItemDialogProps) {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Add New Item</DialogTitle>
+          <DialogTitle>{t.addItemDialog.title}</DialogTitle>
           <DialogDescription>
-            Enter the details of the new inventory item.
+            {t.addItemDialog.description}
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -74,9 +78,9 @@ export function AddItemDialog({ open, onOpenChange }: AddItemDialogProps) {
               name="name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Item Name</FormLabel>
+                  <FormLabel>{t.addItemDialog.itemName}</FormLabel>
                   <FormControl>
-                    <Input placeholder="e.g., Organic Green Tea" {...field} />
+                    <Input placeholder={t.addItemDialog.itemNamePlaceholder} {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -87,9 +91,9 @@ export function AddItemDialog({ open, onOpenChange }: AddItemDialogProps) {
               name="category"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Category</FormLabel>
+                  <FormLabel>{t.addItemDialog.category}</FormLabel>
                   <FormControl>
-                    <Input placeholder="e.g., Beverages" {...field} />
+                    <Input placeholder={t.addItemDialog.categoryPlaceholder} {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -100,17 +104,17 @@ export function AddItemDialog({ open, onOpenChange }: AddItemDialogProps) {
               name="stock"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Initial Stock</FormLabel>
+                  <FormLabel>{t.addItemDialog.initialStock}</FormLabel>
                   <FormControl>
-                    <Input type="number" placeholder="e.g., 100" {...field} />
+                    <Input type="number" placeholder={t.addItemDialog.initialStockPlaceholder} {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
             <DialogFooter>
-                <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
-                <Button type="submit">Add Item</Button>
+                <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>{t.common.cancel}</Button>
+                <Button type="submit">{t.addItemDialog.addItem}</Button>
             </DialogFooter>
           </form>
         </Form>

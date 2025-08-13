@@ -24,6 +24,8 @@ import {
 } from '@/components/ui/form';
 import { useInventory } from '@/hooks/use-inventory';
 import { useToast } from '@/hooks/use-toast';
+import { useLanguage } from '@/hooks/use-language';
+import { translations } from '@/types/language';
 
 const formSchema = z.object({
   change: z.coerce.number().int().refine(val => val !== 0, {message: 'Change cannot be zero.'}),
@@ -39,6 +41,8 @@ interface UpdateStockDialogProps {
 export function UpdateStockDialog({ open, onOpenChange, itemId }: UpdateStockDialogProps) {
   const { updateStock, getItem } = useInventory();
   const { toast } = useToast();
+  const { language } = useLanguage();
+  const t = translations[language];
   
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -60,8 +64,8 @@ export function UpdateStockDialog({ open, onOpenChange, itemId }: UpdateStockDia
     if (!itemId) return;
     updateStock(itemId, values.change, values.reason);
     toast({
-      title: 'Stock Updated',
-      description: `Stock for ${item?.name} has been adjusted.`,
+      title: t.updateStockDialog.stockUpdated,
+      description: `${t.updateStockDialog.stockFor} ${item?.name} ${t.updateStockDialog.hasBeenAdjusted}`,
     });
     onOpenChange(false);
   }
@@ -70,9 +74,9 @@ export function UpdateStockDialog({ open, onOpenChange, itemId }: UpdateStockDia
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Update Stock for {item?.name}</DialogTitle>
+          <DialogTitle>{t.updateStockDialog.title} {item?.name}</DialogTitle>
           <DialogDescription>
-            Enter a positive value to add stock or a negative value to remove it. Current stock: {item?.stock}
+            {t.updateStockDialog.description} {item?.stock}
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -82,9 +86,9 @@ export function UpdateStockDialog({ open, onOpenChange, itemId }: UpdateStockDia
               name="change"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Stock Adjustment</FormLabel>
+                  <FormLabel>{t.updateStockDialog.stockAdjustment}</FormLabel>
                   <FormControl>
-                    <Input type="number" placeholder="e.g., -10 or 50" {...field} />
+                    <Input type="number" placeholder={t.updateStockDialog.stockAdjustmentPlaceholder} {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -95,17 +99,17 @@ export function UpdateStockDialog({ open, onOpenChange, itemId }: UpdateStockDia
               name="reason"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Reason for Adjustment</FormLabel>
+                  <FormLabel>{t.updateStockDialog.reason}</FormLabel>
                   <FormControl>
-                    <Input placeholder="e.g., Sale, New Shipment" {...field} />
+                    <Input placeholder={t.updateStockDialog.reasonPlaceholder} {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
             <DialogFooter>
-                <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
-                <Button type="submit">Update Stock</Button>
+                <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>{t.common.cancel}</Button>
+                <Button type="submit">{t.updateStockDialog.updateStock}</Button>
             </DialogFooter>
           </form>
         </Form>

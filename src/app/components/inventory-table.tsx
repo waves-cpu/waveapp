@@ -27,6 +27,8 @@ import {
   Search,
 } from 'lucide-react';
 import type { InventoryItem } from '@/types';
+import { useLanguage } from '@/hooks/use-language';
+import { translations } from '@/types/language';
 
 interface InventoryTableProps {
   onUpdateStock: (itemId: string) => void;
@@ -37,6 +39,8 @@ export function InventoryTable({ onUpdateStock, onShowHistory }: InventoryTableP
   const { items, categories } = useInventory();
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
+  const { language } = useLanguage();
+  const t = translations[language];
 
   const filteredItems = useMemo(() => {
     return items
@@ -76,7 +80,7 @@ export function InventoryTable({ onUpdateStock, onShowHistory }: InventoryTableP
           <div className="relative w-full md:w-auto">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Search items..."
+              placeholder={t.inventoryTable.searchPlaceholder}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-10 w-full md:w-64"
@@ -84,10 +88,10 @@ export function InventoryTable({ onUpdateStock, onShowHistory }: InventoryTableP
           </div>
           <Select onValueChange={(value) => setCategoryFilter(value === 'all' ? null : value)} defaultValue="all">
             <SelectTrigger className="w-full md:w-[180px]">
-              <SelectValue placeholder="Select a category" />
+              <SelectValue placeholder={t.inventoryTable.selectCategoryPlaceholder} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Categories</SelectItem>
+              <SelectItem value="all">{t.inventoryTable.allCategories}</SelectItem>
               {categories.map((category) => (
                 <SelectItem key={category} value={category}>
                   {category}
@@ -98,17 +102,17 @@ export function InventoryTable({ onUpdateStock, onShowHistory }: InventoryTableP
         </div>
         <Button onClick={downloadCSV} variant="outline" size="sm" className="w-full md:w-auto">
           <FileDown className="mr-2 h-4 w-4" />
-          Export CSV
+          {t.inventoryTable.exportCsv}
         </Button>
       </div>
       <ScrollArea className="flex-grow">
         <Table>
           <TableHeader className="sticky top-0 bg-card">
             <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead>Category</TableHead>
-              <TableHead className="text-right">Current Stock</TableHead>
-              <TableHead className="text-center">Actions</TableHead>
+              <TableHead>{t.inventoryTable.name}</TableHead>
+              <TableHead>{t.inventoryTable.category}</TableHead>
+              <TableHead className="text-right">{t.inventoryTable.currentStock}</TableHead>
+              <TableHead className="text-center">{t.inventoryTable.actions}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -120,10 +124,10 @@ export function InventoryTable({ onUpdateStock, onShowHistory }: InventoryTableP
                   <TableCell className="text-right">{item.stock}</TableCell>
                   <TableCell className="text-center">
                     <div className="flex justify-center gap-2">
-                        <Button variant="ghost" size="icon" onClick={() => onUpdateStock(item.id)} aria-label="Update Stock">
+                        <Button variant="ghost" size="icon" onClick={() => onUpdateStock(item.id)} aria-label={t.inventoryTable.updateStock}>
                             <Edit className="h-4 w-4" />
                         </Button>
-                        <Button variant="ghost" size="icon" onClick={() => onShowHistory(item.id)} aria-label="View History">
+                        <Button variant="ghost" size="icon" onClick={() => onShowHistory(item.id)} aria-label={t.inventoryTable.viewHistory}>
                             <History className="h-4 w-4" />
                         </Button>
                     </div>
@@ -133,7 +137,7 @@ export function InventoryTable({ onUpdateStock, onShowHistory }: InventoryTableP
             ) : (
               <TableRow>
                 <TableCell colSpan={4} className="h-24 text-center">
-                  No items found.
+                  {t.inventoryTable.noItems}
                 </TableCell>
               </TableRow>
             )}
