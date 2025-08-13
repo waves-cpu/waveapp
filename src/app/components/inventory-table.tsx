@@ -122,14 +122,14 @@ export function InventoryTable({ onUpdateStock, onShowHistory }: InventoryTableP
             <TableRow>
               <TableHead className="w-[40%]">{t.inventoryTable.name}</TableHead>
               <TableHead>{t.inventoryTable.price}</TableHead>
-              <TableHead className="text-right">{t.inventoryTable.currentStock}</TableHead>
+              <TableHead>{t.inventoryTable.currentStock}</TableHead>
               <TableHead className="text-center">{t.inventoryTable.actions}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {filteredItems.length > 0 ? (
               filteredItems.flatMap((item) => {
-                const totalStock = item.variants?.reduce((sum, v) => sum + v.stock, 0);
+                const totalStock = item.variants?.reduce((sum, v) => sum + v.stock, 0) ?? item.stock;
 
                 if (item.variants && item.variants.length > 0) {
                     return (
@@ -151,7 +151,7 @@ export function InventoryTable({ onUpdateStock, onShowHistory }: InventoryTableP
                                     </div>
                                 </TableCell>
                                 <TableCell></TableCell>
-                                <TableCell className="text-right">
+                                <TableCell>
                                     <Badge variant="secondary">Total: {totalStock}</Badge>
                                 </TableCell>
                                 <TableCell></TableCell>
@@ -163,7 +163,7 @@ export function InventoryTable({ onUpdateStock, onShowHistory }: InventoryTableP
                                         <div className="text-xs text-muted-foreground">SKU: {variant.sku}</div>
                                     </TableCell>
                                     <TableCell>{`$${variant.price.toFixed(2)}`}</TableCell>
-                                    <TableCell className="text-right">{variant.stock}</TableCell>
+                                    <TableCell>{variant.stock}</TableCell>
                                     <TableCell className="text-center">
                                         <div className="flex justify-center gap-2">
                                             <Button variant="ghost" size="icon" onClick={() => onUpdateStock(variant.id)} aria-label={t.inventoryTable.updateStock}>
@@ -197,7 +197,7 @@ export function InventoryTable({ onUpdateStock, onShowHistory }: InventoryTableP
                                 </div>
                             </TableCell>
                              <TableCell>{item.price ? `$${item.price.toFixed(2)}` : '-'}</TableCell>
-                            <TableCell className="text-right">{item.stock}</TableCell>
+                            <TableCell>{item.stock}</TableCell>
                              <TableCell className="text-center">
                                 <div className="flex justify-center gap-2">
                                     <Button variant="ghost" size="icon" onClick={() => onUpdateStock(item.id)} aria-label={t.inventoryTable.updateStock}>
