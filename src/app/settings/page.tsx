@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useEffect } from "react";
 import Link from "next/link"
 import {
   Card,
@@ -21,12 +22,18 @@ import { ChevronLeft } from "lucide-react"
 import { useTheme } from "next-themes"
 import { useLanguage, Language } from "@/hooks/use-language";
 import { translations } from "@/types/language";
+import { Skeleton } from "@/components/ui/skeleton";
 
 
 export default function SettingsPage() {
     const { theme, setTheme } = useTheme();
     const { language, setLanguage } = useLanguage();
     const t = translations[language];
+    const [mounted, setMounted] = useState(false);
+
+    useEffect(() => {
+        setMounted(true);
+    }, []);
 
     return (
     <div className="flex min-h-screen w-full flex-col">
@@ -56,16 +63,20 @@ export default function SettingsPage() {
               <CardContent>
                 <div className="space-y-2">
                   <Label htmlFor="theme">{t.settings.theme}</Label>
-                  <Select value={theme} onValueChange={(value) => setTheme(value)}>
-                    <SelectTrigger id="theme" className="w-[280px]">
-                      <SelectValue placeholder={t.settings.selectThemePlaceholder} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="light">{t.settings.light}</SelectItem>
-                      <SelectItem value="dark">{t.settings.dark}</SelectItem>
-                      <SelectItem value="system">{t.settings.system}</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  {mounted ? (
+                    <Select value={theme} onValueChange={(value) => setTheme(value)}>
+                        <SelectTrigger id="theme" className="w-[280px]">
+                        <SelectValue placeholder={t.settings.selectThemePlaceholder} />
+                        </SelectTrigger>
+                        <SelectContent>
+                        <SelectItem value="light">{t.settings.light}</SelectItem>
+                        <SelectItem value="dark">{t.settings.dark}</SelectItem>
+                        <SelectItem value="system">{t.settings.system}</SelectItem>
+                        </SelectContent>
+                    </Select>
+                  ) : (
+                    <Skeleton className="w-[280px] h-10" />
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -79,15 +90,19 @@ export default function SettingsPage() {
               <CardContent>
                 <div className="space-y-2">
                   <Label htmlFor="language">{t.settings.language}</Label>
-                  <Select value={language} onValueChange={(value) => setLanguage(value as Language)}>
-                    <SelectTrigger id="language" className="w-[280px]">
-                      <SelectValue placeholder={t.settings.selectLanguagePlaceholder} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="en">English</SelectItem>
-                      <SelectItem value="id">Bahasa Indonesia</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  {mounted ? (
+                    <Select value={language} onValueChange={(value) => setLanguage(value as Language)}>
+                        <SelectTrigger id="language" className="w-[280px]">
+                        <SelectValue placeholder={t.settings.selectLanguagePlaceholder} />
+                        </SelectTrigger>
+                        <SelectContent>
+                        <SelectItem value="en">English</SelectItem>
+                        <SelectItem value="id">Bahasa Indonesia</SelectItem>
+                        </SelectContent>
+                    </Select>
+                  ) : (
+                    <Skeleton className="w-[280px] h-10" />
+                  )}
                 </div>
               </CardContent>
             </Card>
