@@ -76,23 +76,23 @@ function SettingsContent() {
                                 <CollapsibleContent>
                                     <SidebarMenuSub>
                                         <SidebarMenuSubItem>
-                                            <Link href="/">
-                                                <SidebarMenuSubButton>
-                                                    {t.dashboard.myProducts}
+                                            <Link href="/" legacyBehavior passHref>
+                                                <SidebarMenuSubButton asChild>
+                                                   <a>{t.dashboard.myProducts}</a>
                                                 </SidebarMenuSubButton>
                                             </Link>
                                         </SidebarMenuSubItem>
                                         <SidebarMenuSubItem>
-                                             <Link href="/bulk">
-                                                <SidebarMenuSubButton>
-                                                    {t.dashboard.bulk}
+                                             <Link href="/bulk" legacyBehavior passHref>
+                                                <SidebarMenuSubButton asChild>
+                                                    <a>{t.dashboard.bulk}</a>
                                                 </SidebarMenuSubButton>
                                             </Link>
                                         </SidebarMenuSubItem>
                                         <SidebarMenuSubItem>
-                                            <Link href="/stock-in">
-                                                <SidebarMenuSubButton>
-                                                    {t.dashboard.stockIn}
+                                            <Link href="/stock-in" legacyBehavior passHref>
+                                                <SidebarMenuSubButton asChild>
+                                                    <a>{t.dashboard.stockIn}</a>
                                                 </SidebarMenuSubButton>
                                             </Link>
                                         </SidebarMenuSubItem>
