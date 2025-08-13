@@ -11,5 +11,6 @@ export interface InventoryItem {
   category: string;
   stock: number;
   price: number;
+  size?: string;
   history: AdjustmentHistory[];
 }

@@ -29,6 +29,7 @@ import { translations } from '@/types/language';
 const formSchema = z.object({
   name: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
   category: z.string().min(2, { message: 'Category must be at least 2 characters.' }),
+  size: z.string().optional(),
   price: z.coerce.number().min(0, { message: 'Price must be a non-negative number.' }),
   stock: z.coerce.number().int().min(0, { message: 'Stock must be a non-negative number.' }),
 });
@@ -49,6 +50,7 @@ export function AddItemDialog({ open, onOpenChange }: AddItemDialogProps) {
     defaultValues: {
       name: '',
       category: '',
+      size: '',
       price: 0,
       stock: 0,
     },
@@ -96,6 +98,19 @@ export function AddItemDialog({ open, onOpenChange }: AddItemDialogProps) {
                   <FormLabel>{t.addItemDialog.category}</FormLabel>
                   <FormControl>
                     <Input placeholder={t.addItemDialog.categoryPlaceholder} {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+             <FormField
+              control={form.control}
+              name="size"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Size Variation</FormLabel>
+                  <FormControl>
+                    <Input placeholder="e.g., 250g, 1L, Large" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

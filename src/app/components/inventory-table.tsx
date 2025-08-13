@@ -53,11 +53,11 @@ export function InventoryTable({ onUpdateStock, onShowHistory }: InventoryTableP
   }, [items, categoryFilter, searchTerm]);
 
   const downloadCSV = () => {
-    const headers = ['ID', 'Name', 'Category', 'Price', 'Stock'];
+    const headers = ['ID', 'Name', 'Size', 'Category', 'Price', 'Stock'];
     const csvRows = [
       headers.join(','),
       ...filteredItems.map(item => 
-        [item.id, `"${item.name}"`, item.category, item.price, item.stock].join(',')
+        [item.id, `"${item.name}"`, item.size || '', item.category, item.price, item.stock].join(',')
       )
     ];
     const csvString = csvRows.join('\n');
@@ -119,7 +119,10 @@ export function InventoryTable({ onUpdateStock, onShowHistory }: InventoryTableP
             {filteredItems.length > 0 ? (
               filteredItems.map((item) => (
                 <TableRow key={item.id}>
-                  <TableCell className="font-medium">{item.name}</TableCell>
+                  <TableCell className="font-medium">
+                    <div>{item.name}</div>
+                    {item.size && <div className="text-xs text-muted-foreground">({item.size})</div>}
+                  </TableCell>
                   <TableCell>{`$${item.price.toFixed(2)}`}</TableCell>
                   <TableCell className="text-right">{item.stock}</TableCell>
                   <TableCell className="text-center">
