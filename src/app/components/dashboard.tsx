@@ -12,12 +12,12 @@ import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/hooks/use-language';
 import { translations } from '@/types/language';
 import { SidebarTrigger } from '@/components/ui/sidebar';
+import Link from 'next/link';
 
 function DashboardContent() {
   const { language } = useLanguage();
   const t = translations[language];
 
-  const [isAddItemOpen, setAddItemOpen] = useState(false);
   const [isUpdateStockOpen, setUpdateStockOpen] = useState(false);
   const [isHistoryOpen, setHistoryOpen] = useState(false);
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
@@ -43,9 +43,11 @@ function DashboardContent() {
             </h1>
           </div>
           <div className="flex items-center gap-2">
-            <Button onClick={() => setAddItemOpen(true)} variant="outline" size="sm">
+            <Button asChild variant="outline" size="sm">
+              <Link href="/add-product">
                 <PlusCircle className="mr-2 h-4 w-4" />
                 {t.dashboard.addItem}
+              </Link>
             </Button>
           </div>
         </div>
@@ -57,7 +59,6 @@ function DashboardContent() {
         </div>
       </main>
 
-      <AddItemDialog open={isAddItemOpen} onOpenChange={setAddItemOpen} />
       <UpdateStockDialog
         open={isUpdateStockOpen}
         onOpenChange={setUpdateStockOpen}

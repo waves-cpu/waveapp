@@ -20,7 +20,8 @@ import {
 import {
   Settings,
   Store,
-  ChevronDown
+  ChevronDown,
+  PlusSquare,
 } from 'lucide-react';
 import { Logo } from './logo';
 import { Separator } from '@/components/ui/separator';
@@ -53,22 +54,29 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                         <CollapsibleContent>
                             <SidebarMenuSub>
                                 <SidebarMenuSubItem>
-                                    <Link href="/" passHref>
-                                        <SidebarMenuSubButton isActive={pathname === '/'}>
+                                    <Link href="/" passHref legacyBehavior>
+                                        <SidebarMenuSubButton as="a" href="/" isActive={pathname === '/'}>
                                             {t.dashboard.myProducts}
                                         </SidebarMenuSubButton>
                                     </Link>
                                 </SidebarMenuSubItem>
                                 <SidebarMenuSubItem>
-                                    <Link href="/bulk" passHref>
-                                        <SidebarMenuSubButton isActive={pathname === '/bulk'}>
+                                     <Link href="/add-product" passHref legacyBehavior>
+                                        <SidebarMenuSubButton as="a" href="/add-product" isActive={pathname === '/add-product'}>
+                                            {t.dashboard.addItem}
+                                        </SidebarMenuSubButton>
+                                    </Link>
+                                </SidebarMenuSubItem>
+                                <SidebarMenuSubItem>
+                                    <Link href="/bulk" passHref legacyBehavior>
+                                        <SidebarMenuSubButton as="a" href="/bulk" isActive={pathname === '/bulk'}>
                                             {t.dashboard.bulk}
                                         </SidebarMenuSubButton>
                                     </Link>
                                 </SidebarMenuSubItem>
                                 <SidebarMenuSubItem>
-                                    <Link href="/stock-in" passHref>
-                                        <SidebarMenuSubButton isActive={pathname === '/stock-in'}>
+                                    <Link href="/stock-in" passHref legacyBehavior>
+                                        <SidebarMenuSubButton as="a" href="/stock-in" isActive={pathname === '/stock-in'}>
                                             {t.dashboard.stockIn}
                                         </SidebarMenuSubButton>
                                     </Link>

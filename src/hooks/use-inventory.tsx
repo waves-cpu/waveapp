@@ -1,11 +1,11 @@
-"use client";
+'use client';
 
 import React, { createContext, useContext, useState, ReactNode } from 'react';
 import type { InventoryItem, AdjustmentHistory, InventoryItemVariant } from '@/types';
 
 interface InventoryContextType {
   items: InventoryItem[];
-  addItem: (item: Omit<InventoryItem, 'id' | 'history' | 'variants'>) => void;
+  addItem: (item: any) => void; // Changed to any to support new form structure
   updateStock: (itemId: string, change: number, reason: string) => void;
   getHistory: (itemId: string) => AdjustmentHistory[];
   getItem: (itemId: string) => InventoryItem | InventoryItemVariant | undefined;
@@ -82,18 +82,43 @@ const initialItems: InventoryItem[] = [
 export const InventoryProvider = ({ children }: { children: ReactNode }) => {
   const [items, setItems] = useState<InventoryItem[]>(initialItems);
 
-  const addItem = (item: Omit<InventoryItem, 'id' | 'history' | 'variants'>) => {
+  const addItem = (itemData: any) => {
+    const parentId = new Date().getTime().toString();
+    
     const newItem: InventoryItem = {
-      ...item,
-      id: new Date().getTime().toString(),
-      history: item.stock !== undefined ? [{
-        date: new Date(),
-        change: item.stock,
-        reason: 'Initial Stock',
-        newStockLevel: item.stock
-      }] : [],
-      variants: item.stock === undefined ? [] : undefined
+      id: parentId,
+      name: itemData.name,
+      category: itemData.category,
+      sku: itemData.sku,
+      imageUrl: 'https://placehold.co/40x40.png',
     };
+
+    if (itemData.hasVariants && itemData.variants) {
+        newItem.variants = itemData.variants.map((variant: any, index: number) => ({
+            id: `${parentId}-${index}`,
+            name: variant.name,
+            sku: variant.sku,
+            price: variant.price,
+            stock: variant.stock,
+            history: [{
+                date: new Date(),
+                change: variant.stock,
+                reason: 'Initial Stock',
+                newStockLevel: variant.stock
+            }]
+        }));
+    } else {
+        newItem.stock = itemData.stock;
+        newItem.price = itemData.price;
+        newItem.size = itemData.size;
+        newItem.history = [{
+            date: new Date(),
+            change: itemData.stock,
+            reason: 'Initial Stock',
+            newStockLevel: itemData.stock
+        }];
+    }
+
     setItems(prevItems => [...prevItems, newItem]);
   };
 
