@@ -81,17 +81,17 @@ function DashboardContent() {
             </SidebarMenu>
           </SidebarFooter>
         </Sidebar>
-        <SidebarInset>
+        <SidebarInset className="bg-muted/40">
           <div className="p-4 sm:p-6 lg:p-8 flex flex-col h-full">
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center gap-4">
                  <SidebarTrigger className="md:hidden" />
-                 <h1 className="text-xl md:text-2xl font-bold font-headline text-foreground">
+                 <h1 className="text-lg md:text-xl font-bold font-headline text-foreground">
                     {t.dashboard.inventory}
                 </h1>
               </div>
               <div className="hidden md:flex items-center gap-2">
-                <Button onClick={() => setAddItemOpen(true)} variant="outline">
+                <Button onClick={() => setAddItemOpen(true)} variant="outline" size="sm">
                     <PlusCircle className="mr-2 h-4 w-4" />
                     {t.dashboard.addItem}
                 </Button>
