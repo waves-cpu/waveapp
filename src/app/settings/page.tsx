@@ -83,14 +83,14 @@ function SettingsContent() {
                                             </Link>
                                         </SidebarMenuSubItem>
                                         <SidebarMenuSubItem>
-                                             <Link href="/">
+                                             <Link href="/bulk">
                                                 <SidebarMenuSubButton>
                                                     {t.dashboard.bulk}
                                                 </SidebarMenuSubButton>
                                             </Link>
                                         </SidebarMenuSubItem>
                                         <SidebarMenuSubItem>
-                                            <Link href="/">
+                                            <Link href="/stock-in">
                                                 <SidebarMenuSubButton>
                                                     {t.dashboard.stockIn}
                                                 </SidebarMenuSubButton>

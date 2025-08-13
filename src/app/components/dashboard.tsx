@@ -77,19 +77,25 @@ function DashboardContent() {
                         <CollapsibleContent>
                             <SidebarMenuSub>
                                 <SidebarMenuSubItem>
-                                    <SidebarMenuSubButton onClick={() => console.log("My Products")}>
-                                        {t.dashboard.myProducts}
-                                    </SidebarMenuSubButton>
+                                    <Link href="/">
+                                        <SidebarMenuSubButton>
+                                            {t.dashboard.myProducts}
+                                        </SidebarMenuSubButton>
+                                    </Link>
                                 </SidebarMenuSubItem>
                                 <SidebarMenuSubItem>
-                                    <SidebarMenuSubButton onClick={() => console.log("Bulk")}>
-                                        {t.dashboard.bulk}
-                                    </SidebarMenuSubButton>
+                                    <Link href="/bulk">
+                                        <SidebarMenuSubButton>
+                                            {t.dashboard.bulk}
+                                        </SidebarMenuSubButton>
+                                    </Link>
                                 </SidebarMenuSubItem>
                                 <SidebarMenuSubItem>
-                                    <SidebarMenuSubButton onClick={() => console.log("Stock In")}>
-                                        {t.dashboard.stockIn}
-                                    </SidebarMenuSubButton>
+                                    <Link href="/stock-in">
+                                        <SidebarMenuSubButton>
+                                            {t.dashboard.stockIn}
+                                        </SidebarMenuSubButton>
+                                    </Link>
                                 </SidebarMenuSubItem>
                             </SidebarMenuSub>
                         </CollapsibleContent>
