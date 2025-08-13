@@ -76,23 +76,23 @@ function SettingsContent() {
                                 <CollapsibleContent>
                                     <SidebarMenuSub>
                                         <SidebarMenuSubItem>
-                                            <Link href="/" legacyBehavior passHref>
-                                                <SidebarMenuSubButton asChild>
-                                                   <a>{t.dashboard.myProducts}</a>
+                                            <Link href="/">
+                                                <SidebarMenuSubButton>
+                                                   {t.dashboard.myProducts}
                                                 </SidebarMenuSubButton>
                                             </Link>
                                         </SidebarMenuSubItem>
                                         <SidebarMenuSubItem>
-                                             <Link href="/bulk" legacyBehavior passHref>
-                                                <SidebarMenuSubButton asChild>
-                                                    <a>{t.dashboard.bulk}</a>
+                                             <Link href="/bulk">
+                                                <SidebarMenuSubButton>
+                                                    {t.dashboard.bulk}
                                                 </SidebarMenuSubButton>
                                             </Link>
                                         </SidebarMenuSubItem>
                                         <SidebarMenuSubItem>
-                                            <Link href="/stock-in" legacyBehavior passHref>
-                                                <SidebarMenuSubButton asChild>
-                                                    <a>{t.dashboard.stockIn}</a>
+                                            <Link href="/stock-in">
+                                                <SidebarMenuSubButton>
+                                                    {t.dashboard.stockIn}
                                                 </SidebarMenuSubButton>
                                             </Link>
                                         </SidebarMenuSubItem>
@@ -106,7 +106,7 @@ function SettingsContent() {
                     <Separator className="my-2" />
                     <SidebarMenu>
                         <SidebarMenuItem>
-                            <Link href="/settings" className="w-full">
+                            <Link href="/settings">
                                 <SidebarMenuButton>
                                     <Settings />
                                     {t.sidebar.settings}
