@@ -2,6 +2,9 @@ import type { Metadata } from 'next';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster"
 import { AppLayout } from './components/app-layout';
+import { ThemeProvider } from './components/theme-provider';
+import { LanguageProvider } from '@/hooks/use-language';
+import { InventoryProvider } from '@/hooks/use-inventory';
 
 export const metadata: Metadata = {
   title: 'WaveApp',
@@ -21,10 +24,21 @@ export default function RootLayout({
         <link href="https://fonts.googleapis.com/css2?family=Inter&display=swap" rel="stylesheet" />
       </head>
       <body className="font-body antialiased h-full">
-            <AppLayout>
-              {children}
-            </AppLayout>
-            <Toaster />
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <LanguageProvider>
+            <InventoryProvider>
+              <AppLayout>
+                {children}
+              </AppLayout>
+            </InventoryProvider>
+          </LanguageProvider>
+        </ThemeProvider>
+        <Toaster />
       </body>
     </html>
   );

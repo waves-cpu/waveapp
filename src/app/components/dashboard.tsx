@@ -3,7 +3,6 @@
 import React, { useState } from 'react';
 import {
   PlusCircle,
-  SidebarTrigger,
 } from 'lucide-react';
 import { InventoryTable } from './inventory-table';
 import { AddItemDialog } from './add-item-dialog';
@@ -12,6 +11,7 @@ import { StockHistorySheet } from './stock-history-sheet';
 import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/hooks/use-language';
 import { translations } from '@/types/language';
+import { SidebarTrigger } from '@/components/ui/sidebar';
 
 function DashboardContent() {
   const { language } = useLanguage();
