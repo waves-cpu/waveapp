@@ -53,21 +53,21 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                         <CollapsibleContent>
                             <SidebarMenuSub>
                                 <SidebarMenuSubItem>
-                                    <Link href="/" passHref asChild>
+                                    <Link href="/" passHref>
                                         <SidebarMenuSubButton isActive={pathname === '/'}>
                                             {t.dashboard.myProducts}
                                         </SidebarMenuSubButton>
                                     </Link>
                                 </SidebarMenuSubItem>
                                 <SidebarMenuSubItem>
-                                    <Link href="/bulk" passHref asChild>
+                                    <Link href="/bulk" passHref>
                                         <SidebarMenuSubButton isActive={pathname === '/bulk'}>
                                             {t.dashboard.bulk}
                                         </SidebarMenuSubButton>
                                     </Link>
                                 </SidebarMenuSubItem>
                                 <SidebarMenuSubItem>
-                                    <Link href="/stock-in" passHref asChild>
+                                    <Link href="/stock-in" passHref>
                                         <SidebarMenuSubButton isActive={pathname === '/stock-in'}>
                                             {t.dashboard.stockIn}
                                         </SidebarMenuSubButton>
@@ -83,7 +83,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             <Separator className="my-2" />
             <SidebarMenu>
                 <SidebarMenuItem>
-                    <Link href="/settings" passHref asChild>
+                    <Link href="/settings" passHref>
                         <SidebarMenuButton isActive={pathname === '/settings'}>
                             <Settings />
                             {t.sidebar.settings}
