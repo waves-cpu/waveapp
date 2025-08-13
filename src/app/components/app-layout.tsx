@@ -2,6 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import {
   SidebarProvider,
   Sidebar,
@@ -30,6 +31,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 export function AppLayout({ children }: { children: React.ReactNode }) {
     const { language } = useLanguage();
     const t = translations[language];
+    const pathname = usePathname();
 
   return (
     <SidebarProvider>
@@ -52,21 +54,21 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                             <SidebarMenuSub>
                                 <SidebarMenuSubItem>
                                     <Link href="/" passHref asChild>
-                                        <SidebarMenuSubButton>
+                                        <SidebarMenuSubButton isActive={pathname === '/'}>
                                             {t.dashboard.myProducts}
                                         </SidebarMenuSubButton>
                                     </Link>
                                 </SidebarMenuSubItem>
                                 <SidebarMenuSubItem>
                                     <Link href="/bulk" passHref asChild>
-                                        <SidebarMenuSubButton>
+                                        <SidebarMenuSubButton isActive={pathname === '/bulk'}>
                                             {t.dashboard.bulk}
                                         </SidebarMenuSubButton>
                                     </Link>
                                 </SidebarMenuSubItem>
                                 <SidebarMenuSubItem>
                                     <Link href="/stock-in" passHref asChild>
-                                        <SidebarMenuSubButton>
+                                        <SidebarMenuSubButton isActive={pathname === '/stock-in'}>
                                             {t.dashboard.stockIn}
                                         </SidebarMenuSubButton>
                                     </Link>
@@ -82,7 +84,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             <SidebarMenu>
                 <SidebarMenuItem>
                     <Link href="/settings" passHref asChild>
-                        <SidebarMenuButton>
+                        <SidebarMenuButton isActive={pathname === '/settings'}>
                             <Settings />
                             {t.sidebar.settings}
                         </SidebarMenuButton>
