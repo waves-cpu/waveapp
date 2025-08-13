@@ -152,7 +152,7 @@ export function InventoryTable({ onUpdateStock, onShowHistory }: InventoryTableP
                                 </TableCell>
                                 <TableCell></TableCell>
                                 <TableCell>
-                                    Total: {totalStock}
+                                    {totalStock}
                                 </TableCell>
                                 <TableCell></TableCell>
                             </TableRow>
