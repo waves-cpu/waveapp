@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import Link from 'next/link';
 import {
   SidebarProvider,
   Sidebar,
@@ -55,12 +56,14 @@ function DashboardContent() {
           <SidebarFooter>
             <Separator className="my-2" />
             <SidebarMenu>
-              <SidebarMenuItem>
-                <SidebarMenuButton>
-                  <Settings />
-                  Pengaturan
-                </SidebarMenuButton>
-              </SidebarMenuItem>
+                <SidebarMenuItem>
+                    <Link href="/settings" className="w-full">
+                        <SidebarMenuButton>
+                            <Settings />
+                            Pengaturan
+                        </SidebarMenuButton>
+                    </Link>
+                </SidebarMenuItem>
             </SidebarMenu>
           </SidebarFooter>
         </Sidebar>
