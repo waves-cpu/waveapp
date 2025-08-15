@@ -34,18 +34,28 @@ const PosProductGrid = ({
     onProductSelect, 
     onSkuSubmit, 
     isSubmitting,
-    isVariantDialogOpen
+    isVariantDialogOpen,
+    cart
 }: { 
     onProductSelect: (item: InventoryItem) => void,
     onSkuSubmit: (sku: string) => void;
     isSubmitting: boolean;
     isVariantDialogOpen: boolean;
+    cart: PosCartItem[];
 }) => {
     const { items, loading, allSales } = useInventory();
     const [searchTerm, setSearchTerm] = useState('');
     const debouncedSearchTerm = useDebounce(searchTerm, 300);
     const skuInputRef = useRef<HTMLInputElement>(null);
     const [currentPage, setCurrentPage] = useState(1);
+
+    const cartQuantityMap = React.useMemo(() => {
+        const map = new Map<string, number>();
+        cart.forEach(item => {
+            map.set(item.sku, item.quantity);
+        });
+        return map;
+    }, [cart]);
 
     const soldCounts = React.useMemo(() => {
         const counts = new Map<string, number>();
@@ -69,8 +79,8 @@ const PosProductGrid = ({
         
         return items.filter(item => {
             const hasStock = item.variants 
-                ? item.variants.some(v => v.stock > 0)
-                : (item.stock ?? 0) > 0;
+                ? item.variants.some(v => v.stock - (cartQuantityMap.get(v.sku!) || 0) > 0)
+                : (item.stock ?? 0) - (cartQuantityMap.get(item.sku!) || 0) > 0;
 
             if (!hasStock) return false;
             
@@ -84,7 +94,7 @@ const PosProductGrid = ({
 
             return matchesName || matchesSku || matchesVariant;
         });
-    }, [items, debouncedSearchTerm]);
+    }, [items, debouncedSearchTerm, cartQuantityMap]);
 
     const totalPages = Math.ceil(availableItems.length / ITEMS_PER_PAGE);
 
@@ -149,10 +159,12 @@ const PosProductGrid = ({
                                 priceDisplay = prices.length > 0 
                                     ? (minPrice === maxPrice ? `Rp${minPrice.toLocaleString('id-ID')}` : `Rp${minPrice.toLocaleString('id-ID')} - Rp${maxPrice.toLocaleString('id-ID')}`)
                                     : '-';
-                                stockDisplay = `Stok: ${item.variants!.reduce((acc, v) => acc + v.stock, 0)}`;
+                                const totalStock = item.variants!.reduce((acc, v) => acc + v.stock - (cartQuantityMap.get(v.sku!) || 0), 0);
+                                stockDisplay = `Stok: ${totalStock}`;
                             } else {
                                 priceDisplay = `Rp${(item.price ?? 0).toLocaleString('id-ID')}`;
-                                stockDisplay = `Stok: ${item.stock}`;
+                                const availableStock = (item.stock ?? 0) - (cartQuantityMap.get(item.sku!) || 0);
+                                stockDisplay = `Stok: ${availableStock}`;
                             }
                             
                             const totalSold = soldCounts.get(item.id) || 0;
@@ -202,7 +214,7 @@ export default function PosSalesPage() {
   const t = translations[language];
   const { recordSale, getProductBySku, items } = useInventory();
   const { toast } = useToast();
-
+  const [mounted, setMounted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const skuInputRef = useRef<HTMLInputElement>(null);
 
@@ -211,10 +223,28 @@ export default function PosSalesPage() {
   
   const [cart, setCart] = useState<PosCartItem[]>([]);
 
+  // Load cart from localStorage on mount
   useEffect(() => {
-    // Focus the SKU input on page load
-    skuInputRef.current?.focus();
+    try {
+        const savedCart = localStorage.getItem('posCart');
+        if (savedCart) {
+            setCart(JSON.parse(savedCart));
+        }
+    } catch (error) {
+        console.error("Could not load cart from local storage", error);
+        localStorage.removeItem('posCart');
+    }
+    setMounted(true);
   }, []);
+
+  // Save cart to localStorage whenever it changes
+  useEffect(() => {
+    // Only run on client after initial mount
+    if (mounted) {
+        localStorage.setItem('posCart', JSON.stringify(cart));
+    }
+  }, [cart, mounted]);
+
 
   const findItemBySku = (skuToFind: string): (InventoryItemVariant & { parentName: string, parentImageUrl?: string }) | (InventoryItem & { isVariant: false }) | null => {
      for (const item of items) {
@@ -249,7 +279,8 @@ export default function PosSalesPage() {
         return;
     }
     
-    if (itemDetails.stock <= 0 || (existingCartItemIndex !== -1 && cart[existingCartItemIndex].quantity >= itemDetails.stock)) {
+    const cartQuantity = existingCartItemIndex !== -1 ? cart[existingCartItemIndex].quantity : 0;
+    if (itemDetails.stock <= 0 || cartQuantity >= itemDetails.stock) {
         toast({
             variant: 'destructive',
             title: 'Stok Tidak Cukup',
@@ -283,8 +314,13 @@ export default function PosSalesPage() {
   }, [cart, items, toast]);
   
   const handleProductSelect = useCallback((item: InventoryItem) => {
+    const cartQuantityMap = new Map<string, number>();
+    cart.forEach(item => {
+        cartQuantityMap.set(item.sku, item.quantity);
+    });
+
     if (item.variants && item.variants.length > 0) {
-        const availableVariants = item.variants.filter(v => v.stock > 0);
+        const availableVariants = item.variants.filter(v => v.stock - (cartQuantityMap.get(v.sku!) || 0) > 0);
         if(availableVariants.length === 0) {
             toast({
                 variant: 'destructive',
@@ -311,7 +347,7 @@ export default function PosSalesPage() {
             description: `Produk "${item.name}" tidak memiliki SKU untuk ditambahkan.`
         });
     }
-  }, [handleAddToCart, toast]);
+  }, [handleAddToCart, toast, cart]);
 
 
   const handleSkuSubmit = async (skuValue: string) => {
@@ -364,6 +400,7 @@ export default function PosSalesPage() {
             description: `${cart.length} jenis item berhasil terjual.`
         });
         setCart([]);
+        localStorage.removeItem('posCart');
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Terjadi kesalahan.';
         toast({
@@ -399,6 +436,7 @@ export default function PosSalesPage() {
                     onSkuSubmit={handleSkuSubmit}
                     isSubmitting={isSubmitting}
                     isVariantDialogOpen={isVariantDialogOpen}
+                    cart={cart}
                   />
               </div>
               <div className="lg:col-span-2 h-full overflow-hidden">
