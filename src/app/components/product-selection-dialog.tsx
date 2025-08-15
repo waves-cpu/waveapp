@@ -17,45 +17,49 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Search } from 'lucide-react';
-
-interface Product {
-    id: string;
-    name: string;
-    category: string;
-    stock: number;
-    sku?: string;
-}
+import type { InventoryItem } from '@/types';
+import { useLanguage } from '@/hooks/use-language';
+import { translations } from '@/types/language';
+import Image from 'next/image';
 
 interface ProductSelectionDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSelect: (selectedIds: string[]) => void;
-  allItems: Product[];
+  availableItems: InventoryItem[];
   categories: string[];
 }
 
 const ITEMS_PER_PAGE = 10;
 
-export function ProductSelectionDialog({ open, onOpenChange, onSelect, allItems, categories }: ProductSelectionDialogProps) {
+export function ProductSelectionDialog({ open, onOpenChange, onSelect, availableItems, categories }: ProductSelectionDialogProps) {
+  const { language } = useLanguage();
+  const t = translations[language];
+  
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
 
   const filteredItems = useMemo(() => {
-    return allItems
+    return availableItems
       .filter((item) =>
         categoryFilter ? item.category === categoryFilter : true
       )
       .filter((item) =>
         item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (item.sku && item.sku.toLowerCase().includes(searchTerm.toLowerCase()))
+        item.sku?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        item.variants?.some(v => v.name.toLowerCase().includes(searchTerm.toLowerCase()) || v.sku?.toLowerCase().includes(searchTerm.toLowerCase()))
       );
-  }, [allItems, categoryFilter, searchTerm]);
+  }, [availableItems, categoryFilter, searchTerm]);
 
-  const paginatedItems = useMemo(() => {
+  const { paginatedItems, selectableItemIdsOnPage } = useMemo(() => {
     const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-    return filteredItems.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+    const paginated = filteredItems.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+    const selectableIds = paginated.flatMap(item => 
+        item.variants && item.variants.length > 0 ? item.variants.map(v => v.id) : (item.stock !== undefined ? [item.id] : [])
+    );
+    return { paginatedItems: paginated, selectableItemIdsOnPage: selectableIds };
   }, [filteredItems, currentPage]);
 
   const totalPages = Math.ceil(filteredItems.length / ITEMS_PER_PAGE);
@@ -72,11 +76,11 @@ export function ProductSelectionDialog({ open, onOpenChange, onSelect, allItems,
   const handleSelectAllOnPage = (checked: boolean | 'indeterminate') => {
     if (checked === true) {
       const newSelectedIds = new Set(selectedIds);
-      paginatedItems.forEach(item => newSelectedIds.add(item.id));
+      selectableItemIdsOnPage.forEach(id => newSelectedIds.add(id));
       setSelectedIds(newSelectedIds);
     } else {
       const newSelectedIds = new Set(selectedIds);
-      paginatedItems.forEach(item => newSelectedIds.delete(item.id));
+      selectableItemIdsOnPage.forEach(id => newSelectedIds.delete(id));
       setSelectedIds(newSelectedIds);
     }
   };
@@ -96,8 +100,8 @@ export function ProductSelectionDialog({ open, onOpenChange, onSelect, allItems,
     onOpenChange(false);
   };
 
-  const isPageAllSelected = paginatedItems.length > 0 && paginatedItems.every(item => selectedIds.has(item.id));
-  const isPagePartiallySelected = paginatedItems.some(item => selectedIds.has(item.id)) && !isPageAllSelected;
+  const isPageAllSelected = selectableItemIdsOnPage.length > 0 && selectableItemIdsOnPage.every(id => selectedIds.has(id));
+  const isPagePartiallySelected = selectableItemIdsOnPage.some(id => selectedIds.has(id)) && !isPageAllSelected;
 
 
   return (
@@ -114,7 +118,7 @@ export function ProductSelectionDialog({ open, onOpenChange, onSelect, allItems,
                 <div className="relative w-full md:w-auto flex-grow">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
-                    placeholder="Search products..."
+                    placeholder={t.inventoryTable.searchPlaceholder}
                     value={searchTerm}
                     onChange={(e) => {
                         setSearchTerm(e.target.value);
@@ -128,10 +132,10 @@ export function ProductSelectionDialog({ open, onOpenChange, onSelect, allItems,
                     setCurrentPage(1);
                 }} defaultValue="all">
                     <SelectTrigger className="w-full md:w-[200px]">
-                    <SelectValue placeholder="Select a category" />
+                    <SelectValue placeholder={t.inventoryTable.selectCategoryPlaceholder} />
                     </SelectTrigger>
                     <SelectContent>
-                    <SelectItem value="all">All Categories</SelectItem>
+                    <SelectItem value="all">{t.inventoryTable.allCategories}</SelectItem>
                     {categories.map((category) => (
                         <SelectItem key={category} value={category}>
                         {category}
@@ -145,41 +149,91 @@ export function ProductSelectionDialog({ open, onOpenChange, onSelect, allItems,
                     <Table>
                         <TableHeader className="sticky top-0 bg-card z-10">
                         <TableRow>
-                            <TableHead className="w-[50px]">
+                            <TableHead className="w-[60px]">
                             <Checkbox 
                                 checked={isPageAllSelected ? true : (isPagePartiallySelected ? 'indeterminate' : false)}
                                 onCheckedChange={handleSelectAllOnPage}
                                 aria-label="Select all on this page"
                             />
                             </TableHead>
-                            <TableHead>Product Name</TableHead>
-                            <TableHead>Category</TableHead>
-                            <TableHead className="text-right">Current Stock</TableHead>
+                            <TableHead>{t.inventoryTable.name}</TableHead>
+                            <TableHead className="text-right">{t.inventoryTable.currentStock}</TableHead>
                         </TableRow>
                         </TableHeader>
                         <TableBody>
                         {paginatedItems.length > 0 ? (
-                            paginatedItems.map((item) => (
-                            <TableRow key={item.id} data-state={selectedIds.has(item.id) && "selected"}>
-                                <TableCell>
-                                <Checkbox
-                                    checked={selectedIds.has(item.id)}
-                                    onCheckedChange={(checked) => handleSelectRow(item.id, !!checked)}
-                                    aria-label={`Select ${item.name}`}
-                                />
-                                </TableCell>
-                                <TableCell>
-                                    <div className="font-medium">{item.name}</div>
-                                    <div className="text-xs text-muted-foreground">{item.sku}</div>
-                                </TableCell>
-                                <TableCell>{item.category}</TableCell>
-                                <TableCell className="text-right">{item.stock}</TableCell>
-                            </TableRow>
-                            ))
+                            paginatedItems.flatMap((item) => {
+                                if (item.variants && item.variants.length > 0) {
+                                    return [
+                                        <TableRow key={item.id} className="bg-muted/20 hover:bg-muted/40 font-semibold">
+                                            <TableCell></TableCell>
+                                            <TableCell>
+                                                <div className="flex items-center gap-4">
+                                                    <Image 
+                                                        src={item.imageUrl || 'https://placehold.co/40x40.png'} 
+                                                        alt={item.name} 
+                                                        width={40} height={40} 
+                                                        className="rounded-sm"
+                                                        data-ai-hint="product image"
+                                                    />
+                                                    <div>
+                                                        <div className="font-medium text-primary text-sm">{item.name}</div>
+                                                        <div className="text-xs text-muted-foreground">SKU: {item.sku}</div>
+                                                    </div>
+                                                </div>
+                                            </TableCell>
+                                            <TableCell></TableCell>
+                                        </TableRow>,
+                                        ...item.variants.map(variant => (
+                                            <TableRow key={variant.id} data-state={selectedIds.has(variant.id) && "selected"}>
+                                                <TableCell>
+                                                    <Checkbox
+                                                        checked={selectedIds.has(variant.id)}
+                                                        onCheckedChange={(checked) => handleSelectRow(variant.id, !!checked)}
+                                                        aria-label={`Select ${item.name} - ${variant.name}`}
+                                                    />
+                                                </TableCell>
+                                                <TableCell className="pl-16">
+                                                    <div className="font-medium text-sm">{variant.name}</div>
+                                                    <div className="text-xs text-muted-foreground">SKU: {variant.sku}</div>
+                                                </TableCell>
+                                                <TableCell className="text-right">{variant.stock}</TableCell>
+                                            </TableRow>
+                                        ))
+                                    ];
+                                }
+                                return (
+                                    <TableRow key={item.id} data-state={selectedIds.has(item.id) && "selected"}>
+                                        <TableCell>
+                                            <Checkbox
+                                                checked={selectedIds.has(item.id)}
+                                                onCheckedChange={(checked) => handleSelectRow(item.id, !!checked)}
+                                                aria-label={`Select ${item.name}`}
+                                            />
+                                        </TableCell>
+                                        <TableCell>
+                                            <div className="flex items-center gap-4">
+                                                <Image 
+                                                    src={item.imageUrl || 'https://placehold.co/40x40.png'} 
+                                                    alt={item.name} 
+                                                    width={40} height={40} 
+                                                    className="rounded-sm"
+                                                    data-ai-hint="product image"
+                                                />
+                                                <div>
+                                                    <div className="font-medium text-sm">{item.name}</div>
+                                                    <div className="text-xs text-muted-foreground">SKU: {item.sku}</div>
+                                                </div>
+                                            </div>
+                                        </TableCell>
+                                        <TableCell className="text-right">{item.stock}</TableCell>
+                                    </TableRow>
+                                );
+                            })
                         ) : (
                             <TableRow>
-                            <TableCell colSpan={4} className="h-24 text-center">
-                                No products found.
+                            <TableCell colSpan={3} className="h-24 text-center">
+                                {t.inventoryTable.noItems}
                             </TableCell>
                             </TableRow>
                         )}
@@ -215,7 +269,7 @@ export function ProductSelectionDialog({ open, onOpenChange, onSelect, allItems,
             </div>
         </div>
         <DialogFooter>
-          <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
+          <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>{t.common.cancel}</Button>
           <Button type="button" onClick={handleSave}>Add {selectedIds.size} Items</Button>
         </DialogFooter>
       </DialogContent>

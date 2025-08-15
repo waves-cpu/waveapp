@@ -22,7 +22,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { PlusCircle, Trash2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import type { InventoryItem, InventoryItemVariant } from '@/types';
+import type { InventoryItem } from '@/types';
 import { useState, useMemo } from 'react';
 import { ProductSelectionDialog } from './product-selection-dialog';
 
@@ -52,39 +52,49 @@ export function StockInForm() {
     },
   });
 
-  const { fields, append, remove, replace } = useFieldArray({
+  const { fields, append } = useFieldArray({
     control: form.control,
     name: "stockInItems"
   });
 
-  const allItemsAndVariants = useMemo(() => items.flatMap(item => {
-    if (item.variants && item.variants.length > 0) {
-        return item.variants.map(variant => ({
-            id: variant.id,
-            name: `${item.name} - ${variant.name}`,
-            category: item.category,
-            stock: variant.stock,
-            sku: variant.sku,
-        }));
-    }
-    return {
-        id: item.id,
-        name: item.name,
-        category: item.category,
-        stock: item.stock ?? 0,
-        sku: item.sku,
-    }
-  }), [items]);
+  const allItemsAndVariantsByName = useMemo(() => {
+    const map = new Map<string, {name: string}>();
+    items.forEach(item => {
+        if (item.variants && item.variants.length > 0) {
+            item.variants.forEach(variant => {
+                map.set(variant.id, { name: `${item.name} - ${variant.name}` });
+            });
+        } else if (item.stock !== undefined) {
+             map.set(item.id, { name: item.name });
+        }
+    });
+    return map;
+  }, [items]);
 
   const existingItemIds = useMemo(() => new Set(fields.map(field => field.itemId)), [fields]);
-  const availableItems = useMemo(() => allItemsAndVariants.filter(item => !existingItemIds.has(item.id)), [allItemsAndVariants, existingItemIds]);
+  const availableItems = useMemo(() => items.filter(item => {
+    if (item.variants && item.variants.length > 0) {
+        // Include parent if any variant is not already selected
+        return item.variants.some(v => !existingItemIds.has(v.id));
+    }
+    // Include simple item if not already selected
+    return item.stock !== undefined && !existingItemIds.has(item.id);
+  }).map(item => {
+      // Filter out already selected variants from the parent item
+      if (item.variants) {
+          return {
+              ...item,
+              variants: item.variants.filter(v => !existingItemIds.has(v.id))
+          }
+      }
+      return item;
+  }), [items, existingItemIds]);
+
 
   const handleProductsSelected = (selectedIds: string[]) => {
-    const existingIds = new Set(fields.map(field => field.itemId));
     const newItems = selectedIds
-        .filter(id => !existingIds.has(id))
         .map(id => {
-            const item = allItemsAndVariants.find(i => i.id === id);
+            const item = allItemsAndVariantsByName.get(id);
             return {
                 itemId: id,
                 itemName: item?.name || 'Unknown Item',
@@ -95,6 +105,12 @@ export function StockInForm() {
     
     append(newItems);
   };
+
+  const removeField = (index: number) => {
+    const currentItems = form.getValues('stockInItems');
+    const newItems = currentItems.filter((_, i) => i !== index);
+    form.setValue('stockInItems', newItems, { shouldValidate: true, shouldDirty: true });
+  }
 
 
   function onSubmit(values: z.infer<typeof formSchema>) {
@@ -167,7 +183,7 @@ export function StockInForm() {
                                         />
                                     </TableCell>
                                     <TableCell>
-                                        <Button type="button" variant="ghost" size="icon" className="text-destructive hover:text-destructive-foreground hover:bg-destructive" onClick={() => remove(index)}>
+                                        <Button type="button" variant="ghost" size="icon" className="text-destructive hover:text-destructive-foreground hover:bg-destructive" onClick={() => removeField(index)}>
                                             <Trash2 className="h-4 w-4" />
                                         </Button>
                                     </TableCell>
@@ -197,7 +213,7 @@ export function StockInForm() {
         open={isProductSelectionOpen}
         onOpenChange={setProductSelectionOpen}
         onSelect={handleProductsSelected}
-        allItems={availableItems}
+        availableItems={availableItems}
         categories={categories}
     />
     </>
