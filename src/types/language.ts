@@ -134,7 +134,7 @@ export const translations = {
         dashboard: {
             inventory: "Produk Saya",
             addItem: "Tambah Barang",
-            inventoryMenu: "Menu Produk Saya",
+            inventoryMenu: "Inventaris",
             myProducts: "Produk Saya",
             bulk: "Impor Massal",
             stockIn: "Stok Masuk",
