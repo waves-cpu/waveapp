@@ -17,9 +17,9 @@ import { useInventory } from '@/hooks/use-inventory';
 import { useToast } from '@/hooks/use-toast';
 import { useLanguage } from '@/hooks/use-language';
 import { translations } from '@/types/language';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { PlusCircle, Trash2, PackagePlus, ShoppingBag, Package } from 'lucide-react';
+import { Trash2, ShoppingBag, Store } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import type { InventoryItem } from '@/types';
 import { ProductSelectionDialog } from './product-selection-dialog';
@@ -78,7 +78,7 @@ export function StockInForm({
     },
   });
 
-  const { fields, append, remove, update } = useFieldArray({
+  const { fields, append, remove } = useFieldArray({
     control: form.control,
     name: "stockInItems"
   });
@@ -233,6 +233,11 @@ export function StockInForm({
     }
     setBulkSelectedIds(newSelectedIds);
   };
+  
+  const handleRemove = (indices: number[]) => {
+    const sortedIndices = [...indices].sort((a,b) => b-a);
+    sortedIndices.forEach(index => remove(index));
+  }
 
   function onSubmit(values: z.infer<typeof formSchema>) {
     values.stockInItems.forEach(item => {
@@ -297,7 +302,7 @@ export function StockInForm({
                                                 aria-label={`Select ${field.itemName}`}
                                             />
                                         </TableCell>
-                                        <TableCell className="align-middle">
+                                        <TableCell>
                                             <div className="flex items-center gap-4">
                                                 <Image 
                                                     src={field.parentImageUrl || 'https://placehold.co/40x40.png'} 
@@ -312,7 +317,7 @@ export function StockInForm({
                                                 </div>
                                             </div>
                                         </TableCell>
-                                        <TableCell className="align-middle">
+                                        <TableCell>
                                             <FormField
                                                 control={form.control}
                                                 name={`stockInItems.${field.originalIndex}.quantity`}
@@ -321,7 +326,7 @@ export function StockInForm({
                                                 )}
                                             />
                                         </TableCell>
-                                        <TableCell className="align-middle">
+                                        <TableCell>
                                             <FormField
                                                 control={form.control}
                                                 name={`stockInItems.${field.originalIndex}.reason`}
@@ -330,8 +335,8 @@ export function StockInForm({
                                                 )}
                                             />
                                         </TableCell>
-                                        <TableCell className="align-middle">
-                                            <Button type="button" variant="ghost" size="icon" className="text-destructive hover:text-destructive-foreground hover:bg-destructive" onClick={() => remove(field.originalIndex)}>
+                                        <TableCell>
+                                            <Button type="button" variant="ghost" size="icon" className="text-destructive hover:text-destructive-foreground hover:bg-destructive" onClick={() => handleRemove([field.originalIndex])}>
                                                 <Trash2 className="h-4 w-4" />
                                             </Button>
                                         </TableCell>
@@ -354,7 +359,7 @@ export function StockInForm({
                                                     aria-label={`Select all variants for ${parentName}`}
                                                 />
                                             </TableCell>
-                                             <TableCell className="align-middle">
+                                             <TableCell>
                                                 <div className="flex items-center gap-4 font-semibold text-primary">
                                                     <Image 
                                                         src={parent.parentImageUrl || 'https://placehold.co/40x40.png'} 
@@ -386,7 +391,7 @@ export function StockInForm({
                                                 </div>
                                              </TableCell>
                                              <TableCell>
-                                                <Button type="button" variant="ghost" size="icon" className="text-destructive hover:text-destructive-foreground hover:bg-destructive" onClick={() => variants.forEach(v => remove(v.originalIndex))}>
+                                                <Button type="button" variant="ghost" size="icon" className="text-destructive hover:text-destructive-foreground hover:bg-destructive" onClick={() => handleRemove(variants.map(v => v.originalIndex))}>
                                                     <Trash2 className="h-4 w-4" />
                                                 </Button>
                                              </TableCell>
@@ -400,10 +405,10 @@ export function StockInForm({
                                                         aria-label={`Select ${field.itemName}`}
                                                     />
                                                 </TableCell>
-                                                <TableCell className="align-middle">
+                                                <TableCell>
                                                     <div className="flex items-center gap-4">
                                                         <div className="flex h-10 w-10 items-center justify-center rounded-sm bg-muted text-muted-foreground">
-                                                            <Package className="h-5 w-5" />
+                                                            <Store className="h-5 w-5" />
                                                         </div>
                                                         <div>
                                                             <div className="font-medium text-sm">{field.variantName}</div>
@@ -411,7 +416,7 @@ export function StockInForm({
                                                         </div>
                                                     </div>
                                                 </TableCell>
-                                                <TableCell className="align-middle">
+                                                <TableCell>
                                                     <FormField
                                                         control={form.control}
                                                         name={`stockInItems.${field.originalIndex}.quantity`}
@@ -420,7 +425,7 @@ export function StockInForm({
                                                         )}
                                                     />
                                                 </TableCell>
-                                                <TableCell className="align-middle">
+                                                <TableCell>
                                                     <FormField
                                                         control={form.control}
                                                         name={`stockInItems.${field.originalIndex}.reason`}
@@ -429,8 +434,8 @@ export function StockInForm({
                                                 )}
                                                     />
                                                 </TableCell>
-                                                <TableCell className="align-middle">
-                                                    <Button type="button" variant="ghost" size="icon" className="text-destructive hover:text-destructive-foreground hover:bg-destructive" onClick={() => remove(field.originalIndex)}>
+                                                <TableCell>
+                                                    <Button type="button" variant="ghost" size="icon" className="text-destructive hover:text-destructive-foreground hover:bg-destructive" onClick={() => handleRemove([field.originalIndex])}>
                                                         <Trash2 className="h-4 w-4" />
                                                     </Button>
                                                 </TableCell>
