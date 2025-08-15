@@ -182,7 +182,7 @@ export function AddProductForm({ existingItem }: AddProductFormProps) {
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>{t.addItemDialog.category}</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value}>
+                          <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value}>
                             <FormControl>
                               <SelectTrigger>
                                 <SelectValue placeholder={t.addItemDialog.categoryPlaceholder} />

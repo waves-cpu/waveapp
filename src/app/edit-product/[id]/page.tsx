@@ -34,7 +34,7 @@ export default function EditProductPage() {
     const { language } = useLanguage();
     const t = translations[language];
     const params = useParams();
-    const { getItem, loading: inventoryLoading } = useInventory(); 
+    const { items, loading: inventoryLoading } = useInventory(); 
     const [item, setItem] = useState<InventoryItem | undefined>(undefined);
     const [pageLoading, setPageLoading] = useState(true);
 
@@ -42,11 +42,22 @@ export default function EditProductPage() {
 
     useEffect(() => {
         if (!inventoryLoading && id) {
-            const fetchedItem = getItem(id);
-            setItem(fetchedItem);
+            let foundItem: InventoryItem | undefined;
+            // The ID could be a parent product or a variant
+            foundItem = items.find(i => i.id === id);
+            if (!foundItem) {
+                // If not found, it might be a variant ID. Find its parent.
+                 for (const parentItem of items) {
+                    if (parentItem.variants?.some(v => v.id === id)) {
+                        foundItem = parentItem;
+                        break;
+                    }
+                }
+            }
+            setItem(foundItem);
             setPageLoading(false);
         }
-    }, [id, getItem, inventoryLoading]);
+    }, [id, items, inventoryLoading]);
 
 
     return (
