@@ -26,11 +26,27 @@ import { useDebounce } from '@/hooks/use-debounce';
 import Image from 'next/image';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Search } from 'lucide-react';
+import { Pagination } from '@/components/ui/pagination';
 
-const PosProductGrid = ({ onProductSelect }: { onProductSelect: (item: InventoryItem) => void }) => {
+const ITEMS_PER_PAGE = 9;
+
+const PosProductGrid = ({ 
+    onProductSelect, 
+    onSkuSubmit, 
+    isSubmitting,
+    isVariantDialogOpen
+}: { 
+    onProductSelect: (item: InventoryItem) => void,
+    onSkuSubmit: (sku: string) => void;
+    isSubmitting: boolean;
+    isVariantDialogOpen: boolean;
+}) => {
     const { items, loading, allSales } = useInventory();
     const [searchTerm, setSearchTerm] = useState('');
+    const [skuInput, setSkuInput] = useState('');
     const debouncedSearchTerm = useDebounce(searchTerm, 300);
+    const skuInputRef = useRef<HTMLInputElement>(null);
+    const [currentPage, setCurrentPage] = useState(1);
 
     const soldCounts = React.useMemo(() => {
         const counts = new Map<string, number>();
@@ -71,11 +87,30 @@ const PosProductGrid = ({ onProductSelect }: { onProductSelect: (item: Inventory
         });
     }, [items, debouncedSearchTerm]);
 
+    const totalPages = Math.ceil(availableItems.length / ITEMS_PER_PAGE);
+
+    const paginatedItems = React.useMemo(() => {
+         const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+         return availableItems.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+    }, [availableItems, currentPage]);
+
+    const handleSkuFormSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+        e.preventDefault();
+        if (skuInput) {
+            onSkuSubmit(skuInput);
+            setSkuInput('');
+        }
+    };
+    
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [debouncedSearchTerm]);
+
 
     if (loading) {
         return (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-                {Array.from({ length: 10 }).map((_, i) => (
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                {Array.from({ length: 9 }).map((_, i) => (
                     <Skeleton key={i} className="h-48 w-full" />
                 ))}
             </div>
@@ -84,19 +119,35 @@ const PosProductGrid = ({ onProductSelect }: { onProductSelect: (item: Inventory
     
     return (
         <div className="flex flex-col h-full">
-             <div className="relative mb-4">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                    placeholder="Cari produk atau SKU..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10 w-full"
-                />
+             <div className="flex flex-col sm:flex-row gap-4 mb-4">
+                 <form onSubmit={handleSkuFormSubmit} className="flex-grow">
+                  <div className="relative">
+                      <ScanLine className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                          ref={skuInputRef}
+                          placeholder="Scan atau masukkan SKU, lalu tekan Enter"
+                          value={skuInput}
+                          onChange={(e) => setSkuInput(e.target.value)}
+                          className="pl-10 w-full"
+                          disabled={isSubmitting || isVariantDialogOpen}
+                      />
+                  </div>
+              </form>
+                <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                        placeholder="Cari produk..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="pl-10 w-full"
+                    />
+                </div>
             </div>
-            <ScrollArea className="flex-grow">
-                {availableItems.length > 0 ? (
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 pr-4">
-                        {availableItems.map(item => {
+            <ScrollArea className="flex-grow -mx-2">
+                <div className="px-2">
+                {paginatedItems.length > 0 ? (
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 pr-4">
+                        {paginatedItems.map(item => {
                             const hasVariants = item.variants && item.variants.length > 0;
                             let priceDisplay;
                             let stockDisplay;
@@ -140,7 +191,17 @@ const PosProductGrid = ({ onProductSelect }: { onProductSelect: (item: Inventory
                         <p className="text-sm text-center">Coba kata kunci lain atau periksa stok produk.</p>
                     </div>
                 )}
+                </div>
             </ScrollArea>
+             {totalPages > 1 && (
+                <div className="mt-4 shrink-0">
+                    <Pagination
+                        totalPages={totalPages}
+                        currentPage={currentPage}
+                        onPageChange={setCurrentPage}
+                    />
+                </div>
+            )}
         </div>
     );
 };
@@ -353,9 +414,14 @@ export default function PosSalesPage() {
           </div>
         </header>
 
-        <div className="flex-1 grid grid-cols-1 lg:grid-cols-3 gap-8 p-4 lg:p-8 overflow-hidden">
-              <div className="lg:col-span-2 flex flex-col gap-4 h-full overflow-hidden">
-                  <PosProductGrid onProductSelect={handleProductSelect} />
+        <div className="flex-1 grid grid-cols-1 lg:grid-cols-4 gap-4 p-4 overflow-hidden">
+              <div className="lg:col-span-3 flex flex-col gap-4 h-full overflow-hidden">
+                  <PosProductGrid 
+                    onProductSelect={handleProductSelect}
+                    onSkuSubmit={handleSkuSubmit}
+                    isSubmitting={isSubmitting}
+                    isVariantDialogOpen={isVariantDialogOpen}
+                  />
               </div>
               <div className="lg:col-span-1 h-full overflow-hidden">
                   <PosOrderSummary 
@@ -363,7 +429,6 @@ export default function PosSalesPage() {
                       setCart={setCart}
                       onCheckout={handleCheckout}
                       isSubmitting={isSubmitting}
-                      onSkuSubmit={handleSkuSubmit}
                   />
               </div>
         </div>
@@ -379,5 +444,3 @@ export default function PosSalesPage() {
     </>
   );
 }
-
-    
