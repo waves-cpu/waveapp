@@ -169,7 +169,7 @@ export function ProductSelectionDialog({ open, onOpenChange, onSelect, available
                                 const isPartiallySelected = selectedCount > 0 && !isAllSelected;
 
                                 return [
-                                    <TableRow key={item.id} className="bg-muted/20 hover:bg-muted/40 font-semibold" data-state={isAllSelected ? "selected" : ""}>
+                                    <TableRow key={`product-${item.id}`} className="bg-muted/20 hover:bg-muted/40 font-semibold" data-state={isAllSelected ? "selected" : ""}>
                                         <TableCell>
                                              <Checkbox
                                                 checked={isAllSelected ? true : (isPartiallySelected ? 'indeterminate' : false)}
@@ -195,7 +195,7 @@ export function ProductSelectionDialog({ open, onOpenChange, onSelect, available
                                         <TableCell></TableCell>
                                     </TableRow>,
                                     ...item.variants.map(variant => (
-                                        <TableRow key={variant.id} data-state={selectedIds.has(variant.id) && "selected"}>
+                                        <TableRow key={`variant-${variant.id}`} data-state={selectedIds.has(variant.id) && "selected"}>
                                             <TableCell></TableCell>
                                             <TableCell className="pl-16">
                                                 <div className="font-medium text-sm">{variant.name}</div>
@@ -207,7 +207,7 @@ export function ProductSelectionDialog({ open, onOpenChange, onSelect, available
                                 ];
                             }
                             return (
-                                <TableRow key={item.id} data-state={selectedIds.has(item.id) && "selected"}>
+                                <TableRow key={`product-${item.id}`} data-state={selectedIds.has(item.id) && "selected"}>
                                     <TableCell>
                                         <Checkbox
                                             checked={selectedIds.has(item.id)}
@@ -281,5 +281,7 @@ export function ProductSelectionDialog({ open, onOpenChange, onSelect, available
   );
 }
  
+
+    
 
     
