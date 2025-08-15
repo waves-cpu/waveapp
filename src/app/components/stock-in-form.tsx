@@ -270,7 +270,7 @@ export function StockInForm({
   return (
     <>
     <Card>
-        <CardContent className="pt-6">
+        <CardContent className="p-0">
             <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                 <div className="border rounded-md">
