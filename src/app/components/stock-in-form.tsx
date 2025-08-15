@@ -313,7 +313,7 @@ export function StockInForm({
                                                     data-ai-hint="product image"
                                                 />
                                                 <div>
-                                                    <span className="font-medium">{field.itemName}</span>
+                                                    <span className="font-medium text-sm">{field.itemName}</span>
                                                     <div className="text-xs text-muted-foreground">SKU: {field.parentSku}</div>
                                                 </div>
                                             </div>
@@ -370,7 +370,7 @@ export function StockInForm({
                                                         data-ai-hint="product image"
                                                     />
                                                     <div>
-                                                        <span>{parentName}</span>
+                                                        <span className="text-sm">{parentName}</span>
                                                         <div className="text-xs text-muted-foreground font-normal">SKU: {parent.parentSku}</div>
                                                     </div>
                                                 </div>
@@ -408,7 +408,7 @@ export function StockInForm({
                                                 </TableCell>
                                                 <TableCell>
                                                     <div className="flex items-center gap-4">
-                                                        <div className="flex h-10 w-10 items-center justify-center rounded-sm bg-muted">
+                                                        <div className="flex h-10 w-10 items-center justify-center rounded-sm">
                                                             <Store className="h-5 w-5 text-gray-400" />
                                                         </div>
                                                         <div>
