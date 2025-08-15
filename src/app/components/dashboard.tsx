@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState } from 'react';
@@ -6,7 +7,6 @@ import {
 } from 'lucide-react';
 import { InventoryTable } from './inventory-table';
 import { UpdateStockDialog } from './update-stock-dialog';
-import { StockHistorySheet } from './stock-history-sheet';
 import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/hooks/use-language';
 import { translations } from '@/types/language';
@@ -18,17 +18,11 @@ function DashboardContent() {
   const t = translations[language];
 
   const [isUpdateStockOpen, setUpdateStockOpen] = useState(false);
-  const [isHistoryOpen, setHistoryOpen] = useState(false);
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
 
   const handleUpdateStock = (itemId: string) => {
     setSelectedItemId(itemId);
     setUpdateStockOpen(true);
-  };
-
-  const handleShowHistory = (itemId: string) => {
-    setSelectedItemId(itemId);
-    setHistoryOpen(true);
   };
 
   return (
@@ -53,7 +47,6 @@ function DashboardContent() {
         <div className="flex-grow overflow-hidden">
             <InventoryTable
             onUpdateStock={handleUpdateStock}
-            onShowHistory={handleShowHistory}
             />
         </div>
       </main>
@@ -61,11 +54,6 @@ function DashboardContent() {
       <UpdateStockDialog
         open={isUpdateStockOpen}
         onOpenChange={setUpdateStockOpen}
-        itemId={selectedItemId}
-      />
-      <StockHistorySheet
-        open={isHistoryOpen}
-        onOpenChange={setHistoryOpen}
         itemId={selectedItemId}
       />
     </>

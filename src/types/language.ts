@@ -61,6 +61,8 @@ export const translations = {
             reason: "Reason",
             change: "Change",
             newTotal: "New Total",
+            searchPlaceholder: "Search by product name or reason...",
+            dateRange: "Date Range",
         },
         stockInForm: {
             title: "Create Stock In Record",
@@ -175,6 +177,8 @@ export const translations = {
             reason: "Alasan",
             change: "Perubahan",
             newTotal: "Total Baru",
+            searchPlaceholder: "Cari berdasarkan nama produk atau alasan...",
+            dateRange: "Rentang Tanggal",
         },
         stockInForm: {
             title: "Buat Catatan Stok Masuk",

@@ -23,6 +23,7 @@ import {
   Package,
   ArrowRightLeft,
   ChevronDown,
+  History,
 } from 'lucide-react';
 import { Logo } from './logo';
 import { Separator } from '@/components/ui/separator';
@@ -84,6 +85,14 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                                     <SidebarMenuButton variant="ghost" size="sm" isActive={pathname === '/stock-in'}>
                                         <ArrowRightLeft />
                                         {t.dashboard.stockIn}
+                                    </SidebarMenuButton>
+                                </Link>
+                            </SidebarMenuItem>
+                            <SidebarMenuItem>
+                                <Link href="/history">
+                                    <SidebarMenuButton variant="ghost" size="sm" isActive={pathname === '/history'}>
+                                        <History />
+                                        {t.stockHistory.title}
                                     </SidebarMenuButton>
                                 </Link>
                             </SidebarMenuItem>

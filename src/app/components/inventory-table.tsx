@@ -29,7 +29,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import {
   Edit,
-  History,
   FileDown,
   Search,
   Pencil,
@@ -38,17 +37,16 @@ import {
 import type { InventoryItem } from '@/types';
 import { useLanguage } from '@/hooks/use-language';
 import { translations } from '@/types/language';
-import { Badge } from '@/components/ui/badge';
 import Image from 'next/image';
 import Link from 'next/link';
 import { BulkEditVariantsDialog } from './bulk-edit-variants-dialog';
+import { useRouter } from 'next/navigation';
 
 interface InventoryTableProps {
   onUpdateStock: (itemId: string) => void;
-  onShowHistory: (itemId: string) => void;
 }
 
-export function InventoryTable({ onUpdateStock, onShowHistory }: InventoryTableProps) {
+export function InventoryTable({ onUpdateStock }: InventoryTableProps) {
   const { items, categories } = useInventory();
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
@@ -56,6 +54,7 @@ export function InventoryTable({ onUpdateStock, onShowHistory }: InventoryTableP
   const t = translations[language];
   const [isBulkEditDialogOpen, setBulkEditDialogOpen] = useState(false);
   const [selectedBulkEditItem, setSelectedBulkEditItem] = useState<InventoryItem | null>(null);
+  const router = useRouter();
 
   const handleBulkEdit = (item: InventoryItem) => {
     setSelectedBulkEditItem(item);
@@ -220,19 +219,6 @@ export function InventoryTable({ onUpdateStock, onShowHistory }: InventoryTableP
                                         </div>
                                     </TableCell>
                                     <TableCell className="text-center">
-                                        <DropdownMenu>
-                                            <DropdownMenuTrigger asChild>
-                                                <Button variant="ghost" size="icon">
-                                                    <MoreVertical className="h-4 w-4" />
-                                                </Button>
-                                            </DropdownMenuTrigger>
-                                            <DropdownMenuContent align="end">
-                                                <DropdownMenuItem onClick={() => onShowHistory(variant.id)}>
-                                                    <History className="mr-2 h-4 w-4" />
-                                                    <span>{t.inventoryTable.viewHistory}</span>
-                                                </DropdownMenuItem>
-                                            </DropdownMenuContent>
-                                        </DropdownMenu>
                                     </TableCell>
                                 </TableRow>
                             ))}
@@ -278,10 +264,6 @@ export function InventoryTable({ onUpdateStock, onShowHistory }: InventoryTableP
                                                 <Pencil className="mr-2 h-4 w-4" />
                                                 <span>{t.inventoryTable.editProduct}</span>
                                             </Link>
-                                        </DropdownMenuItem>
-                                        <DropdownMenuItem onClick={() => onShowHistory(item.id)}>
-                                            <History className="mr-2 h-4 w-4" />
-                                            <span>{t.inventoryTable.viewHistory}</span>
                                         </DropdownMenuItem>
                                     </DropdownMenuContent>
                                 </DropdownMenu>
