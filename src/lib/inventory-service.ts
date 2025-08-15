@@ -161,7 +161,6 @@ export async function addBulkProducts(products: any[]) {
             let productRecord = findProductBySkuStmt.get(productData.sku) as { id: number } | undefined;
             if (productRecord) {
                 const updateValues: (string | null)[] = [];
-                let updateQuery = 'UPDATE products SET ';
                 const updateClauses: string[] = [];
 
                 if(productData.name) {
@@ -178,8 +177,7 @@ export async function addBulkProducts(products: any[]) {
                 }
 
                 if (updateClauses.length > 0) {
-                    updateQuery += updateClauses.join(', ');
-                    updateQuery += ' WHERE sku = ?';
+                    const updateQuery = `UPDATE products SET ${updateClauses.join(', ')} WHERE sku = ?`;
                     updateValues.push(productData.sku);
                     db.prepare(updateQuery).run(...updateValues);
                 }
@@ -194,7 +192,7 @@ export async function addBulkProducts(products: any[]) {
                 productRecord = findProductBySkuStmt.get(productData.sku) as { id: number };
             }
             
-            const productId = productRecord.id;
+            const productId = productRecord!.id;
 
             productData.variants.forEach((variant: any) => {
                  if (!variant.sku) throw new Error(`Variant SKU is required for variant "${variant.name}" under product SKU "${productData.sku}".`);
