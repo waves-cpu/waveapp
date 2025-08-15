@@ -34,6 +34,7 @@ import {
   Pencil,
   PlusCircle,
   MoreVertical,
+  Store,
 } from 'lucide-react';
 import type { InventoryItem } from '@/types';
 import { useLanguage } from '@/hooks/use-language';
@@ -251,9 +252,16 @@ export function InventoryTable({ onUpdateStock }: InventoryTableProps) {
                             </TableRow>
                             {item.variants?.map((variant) => (
                                 <TableRow key={variant.id}>
-                                    <TableCell className="pl-16">
-                                        <div className="font-medium text-sm">{variant.name}</div>
-                                        <div className="text-xs text-muted-foreground">SKU: {variant.sku}</div>
+                                    <TableCell className="pl-8">
+                                        <div className="flex items-center gap-4">
+                                            <div className="flex h-10 w-10 items-center justify-center rounded-sm shrink-0">
+                                                <Store className="h-5 w-5 text-gray-400" />
+                                            </div>
+                                            <div>
+                                                <div className="font-medium text-sm">{variant.name}</div>
+                                                <div className="text-xs text-muted-foreground">SKU: {variant.sku}</div>
+                                            </div>
+                                        </div>
                                     </TableCell>
                                     <TableCell>{`Rp${Math.round(variant.price)}`}</TableCell>
                                     <TableCell>
