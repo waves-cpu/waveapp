@@ -261,32 +261,32 @@ export function AddProductForm({ existingItem }: AddProductFormProps) {
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
-                             <Table className="table-fixed">
+                             <Table className="table-fixed border">
                                 <TableHeader>
                                     <TableRow>
-                                        <TableHead className="w-1/3">{t.inventoryTable.name}</TableHead>
-                                        <TableHead className="w-1/4">SKU</TableHead>
-                                        <TableHead className="w-1/4">{t.inventoryTable.price}</TableHead>
-                                        <TableHead className="w-1/4">{t.inventoryTable.currentStock}</TableHead>
+                                        <TableHead className="w-1/3 border-r">{t.inventoryTable.name}</TableHead>
+                                        <TableHead className="w-1/4 border-r">SKU</TableHead>
+                                        <TableHead className="w-1/4 border-r">{t.inventoryTable.price}</TableHead>
+                                        <TableHead className="w-1/4 border-r">{t.inventoryTable.currentStock}</TableHead>
                                         <TableHead className="w-[50px]"></TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
                                     {fields.map((field, index) => (
                                         <TableRow key={field.id} className="align-top">
-                                            <TableCell className="p-1">
+                                            <TableCell className="p-1 border-r">
                                                  <FormField
                                                     control={form.control}
                                                     name={`variants.${index}.name`}
                                                     render={({ field }) => (
                                                         <FormItem>
-                                                            <FormControl><Input placeholder="e.g., Large" {...field} className="border-none focus-visible:ring-1" /></FormControl>
+                                                            <FormControl><Input placeholder={t.bulkStockInDialog.variantName} {...field} className="border-none focus-visible:ring-1" /></FormControl>
                                                             <FormMessage className="px-2 py-1"/>
                                                         </FormItem>
                                                     )}
                                                 />
                                             </TableCell>
-                                            <TableCell className="p-1">
+                                            <TableCell className="p-1 border-r">
                                                 <FormField
                                                     control={form.control}
                                                     name={`variants.${index}.sku`}
@@ -298,7 +298,7 @@ export function AddProductForm({ existingItem }: AddProductFormProps) {
                                                     )}
                                                 />
                                             </TableCell>
-                                            <TableCell className="p-1">
+                                            <TableCell className="p-1 border-r">
                                                 <FormField
                                                     control={form.control}
                                                     name={`variants.${index}.price`}
@@ -310,7 +310,7 @@ export function AddProductForm({ existingItem }: AddProductFormProps) {
                                                     )}
                                                 />
                                             </TableCell>
-                                            <TableCell className="p-1">
+                                            <TableCell className="p-1 border-r">
                                                 <FormField
                                                     control={form.control}
                                                     name={`variants.${index}.stock`}
