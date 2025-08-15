@@ -417,21 +417,31 @@ export async function revertSale(saleId: string) {
 }
 
 
-export async function revertSaleByTransaction(transactionId: string) {
-    const getSalesStmt = db.prepare('SELECT * FROM sales WHERE transactionId = ?');
-    const deleteSalesStmt = db.prepare('DELETE FROM sales WHERE transactionId = ?');
+export async function revertSaleByTransaction(id: string) {
+    const isSingleSale = id.startsWith('sale-');
 
-    db.transaction(() => {
-        const sales = getSalesStmt.all(transactionId) as { id: number, productId: number, variantId?: number, quantity: number, channel: string }[];
-        if (!sales || sales.length === 0) {
-            throw new Error('Transaction not found.');
-        }
+    if (isSingleSale) {
+        // Handle old sales without transactionId
+        const saleId = id.replace('sale-', '');
+        revertSale(saleId);
+    } else {
+        // Handle new sales with transactionId
+        const getSalesStmt = db.prepare('SELECT * FROM sales WHERE transactionId = ?');
+        const deleteSalesStmt = db.prepare('DELETE FROM sales WHERE transactionId = ?');
 
-        sales.forEach(sale => {
-            const idToAdjust = sale.variantId ? sale.variantId.toString() : sale.productId.toString();
-            adjustStock(idToAdjust, sale.quantity, `Cancelled Transaction #${transactionId} (${sale.channel})`);
-        });
+        db.transaction(() => {
+            const sales = getSalesStmt.all(id) as { id: number, productId: number, variantId?: number, quantity: number, channel: string }[];
+            if (!sales || sales.length === 0) {
+                // This shouldn't happen if called correctly, but as a safeguard.
+                throw new Error('Transaction not found.');
+            }
 
-        deleteSalesStmt.run(transactionId);
-    })();
+            sales.forEach(sale => {
+                const idToAdjust = sale.variantId ? sale.variantId.toString() : sale.productId.toString();
+                adjustStock(idToAdjust, sale.quantity, `Cancelled Transaction #${id} (${sale.channel})`);
+            });
+
+            deleteSalesStmt.run(id);
+        })();
+    }
 }

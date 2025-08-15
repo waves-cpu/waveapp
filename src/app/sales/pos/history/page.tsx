@@ -48,6 +48,7 @@ interface GroupedSale {
     totalAmount: number;
     totalItems: number;
     items: Sale[];
+    isSingleSale: boolean; // To identify legacy sales
 }
 
 export default function PosHistoryPage() {
@@ -81,7 +82,10 @@ export default function PosHistoryPage() {
       const salesByTransaction = new Map<string, GroupedSale>();
 
       salesData.forEach(sale => {
-          const txId = sale.transactionId!;
+          // Use transactionId if available, otherwise use sale.id for legacy data
+          const txId = sale.transactionId || `sale-${sale.id}`; 
+          const isSingle = !sale.transactionId;
+
           if (!salesByTransaction.has(txId)) {
               salesByTransaction.set(txId, {
                   transactionId: txId,
@@ -89,6 +93,7 @@ export default function PosHistoryPage() {
                   totalAmount: 0,
                   totalItems: 0,
                   items: [],
+                  isSingleSale: isSingle,
               });
           }
           const tx = salesByTransaction.get(txId)!;
@@ -214,7 +219,11 @@ export default function PosHistoryPage() {
                                         </TableCell>
                                         <TableCell>{format(sale.saleDate, 'HH:mm:ss')}</TableCell>
                                         <TableCell>
-                                            <Badge variant="secondary">{sale.transactionId}</Badge>
+                                            {sale.isSingleSale ? (
+                                                <Badge variant="outline">Tidak Ada ID</Badge>
+                                            ) : (
+                                                <Badge variant="secondary">{sale.transactionId}</Badge>
+                                            )}
                                         </TableCell>
                                         <TableCell>{sale.totalItems} item</TableCell>
                                         <TableCell className="font-semibold">{`Rp${sale.totalAmount.toLocaleString('id-ID')}`}</TableCell>
