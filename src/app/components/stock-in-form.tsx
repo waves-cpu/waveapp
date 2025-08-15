@@ -130,11 +130,11 @@ export function StockInForm() {
   const openBulkStockInDialog = (parentName: string) => {
     const variantsForBulkEdit = fields
         .filter(field => field.parentName === parentName)
-        .map(field => ({
+        .map((field, index) => ({
             itemId: field.itemId,
             variantName: field.variantName || field.itemName,
-            quantity: field.quantity,
-            reason: field.reason,
+            quantity: form.getValues(`stockInItems.${fields.findIndex(f => f.id === field.id)}.quantity`),
+            reason: form.getValues(`stockInItems.${fields.findIndex(f => f.id === field.id)}.reason`),
         }));
     
     setBulkEditProduct({ name: parentName, variants: variantsForBulkEdit });
@@ -267,6 +267,7 @@ export function StockInForm() {
                                 ))}
                                 {Array.from(groupedItems.groups.entries()).map(([parentName, variants]) => {
                                     const parent = variants[0];
+                                    const totalQuantity = variants.reduce((sum, variant) => sum + Number(form.getValues(`stockInItems.${variant.originalIndex}.quantity`)), 0);
                                     return (
                                     <React.Fragment key={parentName}>
                                         <TableRow className="bg-muted/20 hover:bg-muted/40">
@@ -286,7 +287,12 @@ export function StockInForm() {
                                                 </div>
                                                 <div className="text-xs text-muted-foreground ml-14">SKU: {parent.parentSku}</div>
                                              </TableCell>
-                                             <TableCell colSpan={3}></TableCell>
+                                             <TableCell>
+                                                <div className="font-semibold text-sm">
+                                                    {totalQuantity}
+                                                </div>
+                                             </TableCell>
+                                             <TableCell colSpan={2}></TableCell>
                                         </TableRow>
                                         {variants.map((field) => (
                                             <TableRow key={field.itemId}>
@@ -356,3 +362,5 @@ export function StockInForm() {
     </>
   );
 }
+
+    
