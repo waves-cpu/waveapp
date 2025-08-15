@@ -236,10 +236,7 @@ export function StockInForm() {
     <>
     <Card>
         <CardHeader>
-            <div className="flex justify-between items-start">
-                <div>
-                    <CardTitle>{t.stockInForm.title}</CardTitle>
-                </div>
+            <div className="flex justify-end items-start">
                  <div className="flex gap-2">
                     <Button type="button" variant="outline" onClick={() => setBulkStockInOpen(true)} disabled={bulkSelectedIds.size === 0}>
                         <PackagePlus className="mr-2 h-4 w-4" />
