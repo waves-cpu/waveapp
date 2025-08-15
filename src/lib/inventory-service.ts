@@ -168,7 +168,7 @@ export async function addBulkProducts(products: any[]) {
                         name = ?, 
                         category = ?, 
                         imageUrl = ? 
-                    WHERE sku = ?
+                    WHERE sku = ? AND (name IS NULL OR category IS NULL OR imageUrl IS NULL)
                 `).run(productData.name, productData.category, productData.imageUrl || 'https://placehold.co/100x100.png', productData.sku);
             } else {
                  productRecord = upsertProductStmt.get({

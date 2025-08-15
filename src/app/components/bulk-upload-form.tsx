@@ -23,7 +23,7 @@ const templateData = [
     ['TSHIRT-BLK', 'T-Shirt Basic Black', 'T-Shirt Oversize', 'https://placehold.co/100x100.png', 'TSHIRT-BLK-L', 'Large', 150000, 75],
     ['HOODIE-GRY', 'Classic Hoodie Grey', 'Hoodie', 'https://placehold.co/100x100.png', 'HOODIE-GRY-L', 'Large', 350000, 30],
     ['HOODIE-GRY', 'Classic Hoodie Grey', 'Hoodie', 'https://placehold.co/100x100.png', 'HOODIE-GRY-XL', 'X-Large', 350000, 25],
-    ['CAP-NAVY', 'Navy Blue Cap', 'Caps', '', 'CAP-NAVY-OS', 'One Size', 120000, 60]
+    ['CAP-NAVY', 'Navy Blue Cap', 'Caps', 'https://placehold.co/100x100.png', 'CAP-NAVY-OS', 'One Size', 120000, 60]
 ];
 
 export function BulkUploadForm() {
@@ -135,11 +135,6 @@ export function BulkUploadForm() {
                 
                 const product = productsMap.get(parentSku)!;
 
-                // Update product details from the first row encountered for this SKU
-                if (!product.name) product.name = row.product_name;
-                if (!product.category) product.category = row.category;
-                if (!product.imageUrl) product.imageUrl = row.image_url;
-
                 product.variants.push({
                     sku: row.variant_sku,
                     name: row.variant_name,
@@ -176,9 +171,9 @@ export function BulkUploadForm() {
                 <CardHeader>
                     <CardTitle>Bulk Import Products</CardTitle>
                     <CardDescription>
-                        Unggah file Excel (.xlsx) untuk menambahkan beberapa produk dan variannya sekaligus.
+                        Unggah file Excel (.xlsx) untuk menambahkan produk dan variannya sekaligus.
                         Setiap baris dalam file mewakili satu varian produk. Gunakan `parent_sku` yang sama untuk semua varian dari produk induk yang sama.
-                        Unduh template untuk melihat format yang diperlukan.
+                        Kolom `product_name`, `category`, dan `image_url` hanya perlu diisi pada baris pertama setiap produk induk.
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
