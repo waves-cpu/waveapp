@@ -35,6 +35,7 @@ import {
   PlusCircle,
   MoreVertical,
   Store,
+  ShoppingBag,
 } from 'lucide-react';
 import type { InventoryItem } from '@/types';
 import { useLanguage } from '@/hooks/use-language';
@@ -409,8 +410,14 @@ export function InventoryTable({ onUpdateStock }: InventoryTableProps) {
             })
             ) : (
               <TableRow>
-                <TableCell colSpan={4} className="h-24 text-center">
-                  {t.inventoryTable.noItems}
+                <TableCell colSpan={4} className="h-48 text-center">
+                  <div className="flex flex-col items-center justify-center gap-4 text-muted-foreground">
+                    <ShoppingBag className="h-16 w-16" />
+                    <div className="text-center">
+                      <p className="font-semibold">{t.inventoryTable.noItems}</p>
+                      <p className="text-sm">Coba ubah filter atau tambahkan produk baru.</p>
+                    </div>
+                  </div>
                 </TableCell>
               </TableRow>
             )}
@@ -429,5 +436,7 @@ export function InventoryTable({ onUpdateStock }: InventoryTableProps) {
     </>
   );
 }
+
+    
 
     
