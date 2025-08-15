@@ -29,7 +29,7 @@ interface InventoryContextType {
   recordSale: (sku: string, channel: string, quantity: number) => Promise<void>;
   fetchSales: (channel: string, date: Date) => Promise<Sale[]>;
   cancelSale: (saleId: string) => Promise<void>;
-  getProductBySku: (sku: string) => Promise<{ id: string; stock?: number; variants?: { id: string; stock: number }[] } | null>;
+  getProductBySku: (sku: string) => Promise<InventoryItem | null>;
 }
 
 const InventoryContext = createContext<InventoryContextType | undefined>(undefined);

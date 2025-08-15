@@ -25,7 +25,7 @@ import { useLanguage } from '@/hooks/use-language';
 import { translations } from '@/types/language';
 import { cn } from '@/lib/utils';
 import { SidebarTrigger } from '@/components/ui/sidebar';
-import type { Sale } from '@/types';
+import type { Sale, InventoryItem } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import {
   AlertDialog,
@@ -37,7 +37,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from "@/components/ui/alert-dialog"
+} from "@/components/ui/alert-dialog";
+import { VariantSelectionDialog } from '@/app/components/variant-selection-dialog';
 
 export default function ShopeeSalesPage() {
   const { language } = useLanguage();
@@ -51,6 +52,10 @@ export default function ShopeeSalesPage() {
   const [sku, setSku] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const skuInputRef = useRef<HTMLInputElement>(null);
+
+  const [productForVariantSelection, setProductForVariantSelection] = useState<InventoryItem | null>(null);
+  const [isVariantDialogOpen, setIsVariantDialogOpen] = useState(false);
+
 
   const loadSales = useCallback(async (selectedDate: Date) => {
     setLoading(true);
@@ -85,41 +90,82 @@ export default function ShopeeSalesPage() {
     skuInputRef.current?.focus();
   }, []);
 
+  const handleRecordSale = useCallback(async (saleSku: string) => {
+    if (!date) return;
+    setIsSubmitting(true);
+    try {
+        await recordSale(saleSku, 'shopee', 1);
+        toast({
+            title: 'Penjualan Berhasil',
+            description: `1 item dengan SKU ${saleSku} berhasil terjual.`,
+        });
+        setSku(''); // Clear main input
+        loadSales(date);
+    } catch (error) {
+        const message = error instanceof Error ? error.message : 'Terjadi kesalahan saat mencatat penjualan.';
+        toast({
+            variant: 'destructive',
+            title: 'Penjualan Gagal',
+            description: message,
+        });
+    } finally {
+        setIsSubmitting(false);
+        skuInputRef.current?.focus();
+    }
+  }, [date, recordSale, toast, loadSales]);
+
   const handleSkuSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!sku || isSubmitting || !date) return;
+    if (!sku || isSubmitting) return;
 
     setIsSubmitting(true);
     try {
       const product = await getProductBySku(sku);
-      if (!product || (product.stock !== undefined && product.stock <= 0)) {
-         toast({
+
+      if (!product) {
+        toast({
             variant: 'destructive',
-            title: 'Penjualan Gagal',
-            description: `SKU "${sku}" tidak ditemukan atau stok kosong.`,
+            title: 'SKU Tidak Ditemukan',
+            description: `Produk dengan SKU "${sku}" tidak ditemukan.`,
         });
         return;
       }
-
-      await recordSale(sku, 'shopee', 1);
-      toast({
-        title: 'Penjualan Berhasil',
-        description: `1 item dengan SKU ${sku} berhasil terjual.`,
-      });
-      setSku('');
-      // Reload sales for the current date
-      loadSales(date); 
+      
+      if (product.hasVariants && product.variants && product.variants.length > 0) {
+        // Parent SKU entered, open variant selection dialog
+        setProductForVariantSelection(product);
+        setIsVariantDialogOpen(true);
+      } else {
+        // Simple product SKU entered, record sale directly
+        if (product.stock !== undefined && product.stock <= 0) {
+            toast({
+                variant: 'destructive',
+                title: 'Stok Habis',
+                description: `Stok untuk produk dengan SKU "${sku}" sudah habis.`,
+            });
+            return;
+        }
+        await handleRecordSale(sku);
+      }
     } catch (error) {
-      console.error('Failed to record sale:', error);
+      console.error('Failed to process SKU:', error);
       toast({
         variant: 'destructive',
-        title: 'Penjualan Gagal',
-        description: 'Terjadi kesalahan saat mencatat penjualan.',
+        title: 'Error',
+        description: 'Terjadi kesalahan saat memproses SKU.',
       });
     } finally {
       setIsSubmitting(false);
-      // Refocus for next scan
-      skuInputRef.current?.focus();
+    }
+  };
+
+  const handleVariantSelect = (variantSku: string | null) => {
+    setIsVariantDialogOpen(false);
+    setProductForVariantSelection(null);
+    if (variantSku) {
+        handleRecordSale(variantSku);
+    } else {
+        skuInputRef.current?.focus();
     }
   };
   
@@ -144,6 +190,7 @@ export default function ShopeeSalesPage() {
 
 
   return (
+    <>
     <main className="flex min-h-[calc(100vh_-_theme(spacing.16))] flex-1 flex-col gap-4 bg-muted/40 p-4 md:gap-8 md:p-10">
       <div className="flex items-center gap-4">
         <SidebarTrigger className="md:hidden" />
@@ -163,7 +210,7 @@ export default function ShopeeSalesPage() {
                         value={sku}
                         onChange={(e) => setSku(e.target.value)}
                         className="pl-10 w-full"
-                        disabled={isSubmitting}
+                        disabled={isSubmitting || isVariantDialogOpen}
                     />
                 </div>
             </form>
@@ -253,5 +300,15 @@ export default function ShopeeSalesPage() {
         </div>
       </div>
     </main>
+    {productForVariantSelection && (
+        <VariantSelectionDialog
+            open={isVariantDialogOpen}
+            onOpenChange={setIsVariantDialogOpen}
+            item={productForVariantSelection}
+            onSelect={handleVariantSelect}
+        />
+    )}
+    </>
   );
 }
+

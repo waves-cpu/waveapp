@@ -99,6 +99,10 @@ export const translations = {
             page: "page",
             of: "of",
         },
+        variantSelectionDialog: {
+            title: "Select Variant",
+            description: "This product has multiple variants. Please select one to continue the sale."
+        },
         settings: {
             back: "Back",
             title: "Settings",
@@ -232,6 +236,10 @@ export const translations = {
             next: "Berikutnya",
             page: "halaman",
             of: "dari",
+        },
+        variantSelectionDialog: {
+            title: "Pilih Varian",
+            description: "Produk ini memiliki beberapa varian. Silakan pilih salah satu untuk melanjutkan penjualan."
         },
         settings: {
             back: "Kembali",

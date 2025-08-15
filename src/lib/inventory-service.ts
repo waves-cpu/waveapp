@@ -280,20 +280,45 @@ export async function adjustStock(itemId: string, change: number, reason: string
     })();
 }
 
-export async function findProductBySku(sku: string): Promise<{ id: string; stock?: number; variants?: {id: string, stock: number}[] } | null> {
-    const getProductStmt = db.prepare('SELECT id, stock, hasVariants FROM products WHERE sku = ?');
-    const getVariantStmt = db.prepare('SELECT id, stock, productId FROM variants WHERE sku = ?');
-    
-    const variant = getVariantStmt.get(sku) as { id: number, stock: number, productId: number } | undefined;
+export async function findProductBySku(sku: string): Promise<InventoryItem | null> {
+    const getProductBySkuStmt = db.prepare('SELECT * FROM products WHERE sku = ?');
+    const getVariantBySkuStmt = db.prepare('SELECT * FROM variants WHERE sku = ?');
+    const getProductByIdStmt = db.prepare('SELECT * FROM products WHERE id = ?');
+    const getVariantsByProductIdStmt = db.prepare('SELECT * FROM variants WHERE productId = ?');
+
+    let product: any = getProductBySkuStmt.get(sku);
+
+    if (product) {
+        if (product.hasVariants) {
+            const variants = getVariantsByProductIdStmt.all(product.id) as any[];
+            product.variants = variants.map(v => ({ ...v, id: v.id.toString() }));
+        }
+        return { ...product, id: product.id.toString() };
+    }
+
+    const variant: any = getVariantBySkuStmt.get(sku);
     if (variant) {
-        return { id: variant.productId.toString(), variants: [{ id: variant.id.toString(), stock: variant.stock }] };
+        const parentProduct = getProductByIdStmt.get(variant.productId) as any;
+        if (!parentProduct) return null;
+        
+        // Return only the specific variant that was found
+        const foundVariant: InventoryItemVariant = {
+            ...variant,
+            id: variant.id.toString(),
+            history: [],
+        };
+        // Construct a product-like object for the single variant
+        return {
+            id: parentProduct.id.toString(),
+            name: `${parentProduct.name} - ${variant.name}`,
+            category: parentProduct.category,
+            sku: variant.sku,
+            imageUrl: parentProduct.imageUrl,
+            stock: variant.stock,
+            price: variant.price,
+        };
     }
-
-    const product = getProductStmt.get(sku) as { id: number, stock: number, hasVariants: number } | undefined;
-    if (product && !product.hasVariants) {
-        return { id: product.id.toString(), stock: product.stock };
-    }
-
+    
     return null;
 }
 
@@ -307,7 +332,6 @@ export async function performSale(sku: string, channel: string, quantity: number
             if (variant.stock < quantity) {
                 throw new Error('Insufficient stock for variant.');
             }
-            const newStock = variant.stock - quantity;
             adjustStock(variant.id.toString(), -quantity, `Sale (${channel})`);
             db.prepare('INSERT INTO sales (productId, variantId, channel, quantity, priceAtSale, saleDate) VALUES (?, ?, ?, ?, ?, ?)')
               .run(variant.productId, variant.id, channel, quantity, variant.price, new Date().toISOString());
@@ -317,7 +341,6 @@ export async function performSale(sku: string, channel: string, quantity: number
                  if (product.stock < quantity) {
                     throw new Error('Insufficient stock for product.');
                 }
-                const newStock = product.stock - quantity;
                 adjustStock(product.id.toString(), -quantity, `Sale (${channel})`);
                 db.prepare('INSERT INTO sales (productId, variantId, channel, quantity, priceAtSale, saleDate) VALUES (?, ?, ?, ?, ?, ?)')
                   .run(product.id, null, channel, quantity, product.price, new Date().toISOString());
