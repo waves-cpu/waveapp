@@ -86,9 +86,9 @@ export function DailySalesDetailDialog({ open, onOpenChange, sales }: DailySales
             <Table>
                 <TableHeader>
                     <TableRow>
-                        <TableHead>Produk</TableHead>
-                        <TableHead>Saluran</TableHead>
+                        <TableHead className="w-[60%]">Produk</TableHead>
                         <TableHead className="text-right">Jumlah</TableHead>
+                        <TableHead>Saluran</TableHead>
                     </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -99,17 +99,18 @@ export function DailySalesDetailDialog({ open, onOpenChange, sales }: DailySales
                                 {sale.variantName && <div className="text-xs text-muted-foreground">{sale.variantName}</div>}
                                 {sale.sku && <div className="text-xs text-muted-foreground">SKU: {sale.sku}</div>}
                             </TableCell>
+                            <TableCell className="text-right">{sale.quantity}</TableCell>
                             <TableCell>
                                 <Badge variant="secondary" className="capitalize">{sale.channel}</Badge>
                             </TableCell>
-                            <TableCell className="text-right">{sale.quantity}</TableCell>
                         </TableRow>
                     ))}
                 </TableBody>
                  <TableFooter>
                     <TableRow>
-                        <TableCell colSpan={2} className="text-right font-bold">Total Terjual</TableCell>
+                        <TableCell className="text-right font-bold">Total Terjual</TableCell>
                         <TableCell className="text-right font-bold">{totalQuantity}</TableCell>
+                        <TableCell></TableCell>
                     </TableRow>
                 </TableFooter>
             </Table>
