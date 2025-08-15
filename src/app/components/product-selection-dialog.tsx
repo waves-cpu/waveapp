@@ -113,104 +113,59 @@ export function ProductSelectionDialog({ open, onOpenChange, onSelect, available
             Choose products to add to the stock in list. You can search, filter, and select multiple items.
           </DialogDescription>
         </DialogHeader>
-        <div className="flex-grow flex flex-col gap-4 overflow-hidden">
-            <div className="flex flex-col md:flex-row gap-4">
-                <div className="relative w-full md:w-auto flex-grow">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                    placeholder={t.inventoryTable.searchPlaceholder}
-                    value={searchTerm}
-                    onChange={(e) => {
-                        setSearchTerm(e.target.value);
-                        setCurrentPage(1);
-                    }}
-                    className="pl-10 w-full"
-                    />
-                </div>
-                <Select onValueChange={(value) => {
-                    setCategoryFilter(value === 'all' ? null : value);
+        <div className="flex flex-col md:flex-row gap-4">
+            <div className="relative w-full md:w-auto flex-grow">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                placeholder={t.inventoryTable.searchPlaceholder}
+                value={searchTerm}
+                onChange={(e) => {
+                    setSearchTerm(e.target.value);
                     setCurrentPage(1);
-                }} defaultValue="all">
-                    <SelectTrigger className="w-full md:w-[200px]">
-                    <SelectValue placeholder={t.inventoryTable.selectCategoryPlaceholder} />
-                    </SelectTrigger>
-                    <SelectContent>
-                    <SelectItem value="all">{t.inventoryTable.allCategories}</SelectItem>
-                    {categories.map((category) => (
-                        <SelectItem key={category} value={category}>
-                        {category}
-                        </SelectItem>
-                    ))}
-                    </SelectContent>
-                </Select>
+                }}
+                className="pl-10 w-full"
+                />
             </div>
-            <div className="flex-grow overflow-hidden border rounded-md">
-                <ScrollArea className="h-full">
-                    <Table>
-                        <TableHeader className="sticky top-0 bg-card z-10">
-                        <TableRow>
-                            <TableHead className="w-[60px]">
-                            <Checkbox 
-                                checked={isPageAllSelected ? true : (isPagePartiallySelected ? 'indeterminate' : false)}
-                                onCheckedChange={handleSelectAllOnPage}
-                                aria-label="Select all on this page"
-                            />
-                            </TableHead>
-                            <TableHead>{t.inventoryTable.name}</TableHead>
-                            <TableHead className="text-right">{t.inventoryTable.currentStock}</TableHead>
-                        </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                        {paginatedItems.length > 0 ? (
-                            paginatedItems.flatMap((item) => {
-                                if (item.variants && item.variants.length > 0) {
-                                    return [
-                                        <TableRow key={item.id} className="bg-muted/20 hover:bg-muted/40 font-semibold">
-                                            <TableCell></TableCell>
-                                            <TableCell>
-                                                <div className="flex items-center gap-4">
-                                                    <Image 
-                                                        src={item.imageUrl || 'https://placehold.co/40x40.png'} 
-                                                        alt={item.name} 
-                                                        width={40} height={40} 
-                                                        className="rounded-sm"
-                                                        data-ai-hint="product image"
-                                                    />
-                                                    <div>
-                                                        <div className="font-medium text-primary text-sm">{item.name}</div>
-                                                        <div className="text-xs text-muted-foreground">SKU: {item.sku}</div>
-                                                    </div>
-                                                </div>
-                                            </TableCell>
-                                            <TableCell></TableCell>
-                                        </TableRow>,
-                                        ...item.variants.map(variant => (
-                                            <TableRow key={variant.id} data-state={selectedIds.has(variant.id) && "selected"}>
-                                                <TableCell>
-                                                    <Checkbox
-                                                        checked={selectedIds.has(variant.id)}
-                                                        onCheckedChange={(checked) => handleSelectRow(variant.id, !!checked)}
-                                                        aria-label={`Select ${item.name} - ${variant.name}`}
-                                                    />
-                                                </TableCell>
-                                                <TableCell className="pl-16">
-                                                    <div className="font-medium text-sm">{variant.name}</div>
-                                                    <div className="text-xs text-muted-foreground">SKU: {variant.sku}</div>
-                                                </TableCell>
-                                                <TableCell className="text-right">{variant.stock}</TableCell>
-                                            </TableRow>
-                                        ))
-                                    ];
-                                }
-                                return (
-                                    <TableRow key={item.id} data-state={selectedIds.has(item.id) && "selected"}>
-                                        <TableCell>
-                                            <Checkbox
-                                                checked={selectedIds.has(item.id)}
-                                                onCheckedChange={(checked) => handleSelectRow(item.id, !!checked)}
-                                                aria-label={`Select ${item.name}`}
-                                            />
-                                        </TableCell>
+            <Select onValueChange={(value) => {
+                setCategoryFilter(value === 'all' ? null : value);
+                setCurrentPage(1);
+            }} defaultValue="all">
+                <SelectTrigger className="w-full md:w-[200px]">
+                <SelectValue placeholder={t.inventoryTable.selectCategoryPlaceholder} />
+                </SelectTrigger>
+                <SelectContent>
+                <SelectItem value="all">{t.inventoryTable.allCategories}</SelectItem>
+                {categories.map((category) => (
+                    <SelectItem key={category} value={category}>
+                    {category}
+                    </SelectItem>
+                ))}
+                </SelectContent>
+            </Select>
+        </div>
+        <div className="flex-grow overflow-hidden border rounded-md">
+            <ScrollArea className="h-full">
+                <Table>
+                    <TableHeader className="sticky top-0 bg-card z-10">
+                    <TableRow>
+                        <TableHead className="w-[60px]">
+                        <Checkbox 
+                            checked={isPageAllSelected ? true : (isPagePartiallySelected ? 'indeterminate' : false)}
+                            onCheckedChange={handleSelectAllOnPage}
+                            aria-label="Select all on this page"
+                        />
+                        </TableHead>
+                        <TableHead>{t.inventoryTable.name}</TableHead>
+                        <TableHead className="text-right">{t.inventoryTable.currentStock}</TableHead>
+                    </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                    {paginatedItems.length > 0 ? (
+                        paginatedItems.flatMap((item) => {
+                            if (item.variants && item.variants.length > 0) {
+                                return [
+                                    <TableRow key={item.id} className="bg-muted/20 hover:bg-muted/40 font-semibold">
+                                        <TableCell></TableCell>
                                         <TableCell>
                                             <div className="flex items-center gap-4">
                                                 <Image 
@@ -221,51 +176,95 @@ export function ProductSelectionDialog({ open, onOpenChange, onSelect, available
                                                     data-ai-hint="product image"
                                                 />
                                                 <div>
-                                                    <div className="font-medium text-sm">{item.name}</div>
+                                                    <div className="font-medium text-primary text-sm">{item.name}</div>
                                                     <div className="text-xs text-muted-foreground">SKU: {item.sku}</div>
                                                 </div>
                                             </div>
                                         </TableCell>
-                                        <TableCell className="text-right">{item.stock}</TableCell>
-                                    </TableRow>
-                                );
-                            })
-                        ) : (
-                            <TableRow>
-                            <TableCell colSpan={3} className="h-24 text-center">
-                                {t.inventoryTable.noItems}
-                            </TableCell>
-                            </TableRow>
-                        )}
-                        </TableBody>
-                    </Table>
-                </ScrollArea>
+                                        <TableCell></TableCell>
+                                    </TableRow>,
+                                    ...item.variants.map(variant => (
+                                        <TableRow key={variant.id} data-state={selectedIds.has(variant.id) && "selected"}>
+                                            <TableCell>
+                                                <Checkbox
+                                                    checked={selectedIds.has(variant.id)}
+                                                    onCheckedChange={(checked) => handleSelectRow(variant.id, !!checked)}
+                                                    aria-label={`Select ${item.name} - ${variant.name}`}
+                                                />
+                                            </TableCell>
+                                            <TableCell className="pl-16">
+                                                <div className="font-medium text-sm">{variant.name}</div>
+                                                <div className="text-xs text-muted-foreground">SKU: {variant.sku}</div>
+                                            </TableCell>
+                                            <TableCell className="text-right">{variant.stock}</TableCell>
+                                        </TableRow>
+                                    ))
+                                ];
+                            }
+                            return (
+                                <TableRow key={item.id} data-state={selectedIds.has(item.id) && "selected"}>
+                                    <TableCell>
+                                        <Checkbox
+                                            checked={selectedIds.has(item.id)}
+                                            onCheckedChange={(checked) => handleSelectRow(item.id, !!checked)}
+                                            aria-label={`Select ${item.name}`}
+                                            disabled={item.stock === undefined}
+                                        />
+                                    </TableCell>
+                                    <TableCell>
+                                        <div className="flex items-center gap-4">
+                                            <Image 
+                                                src={item.imageUrl || 'https://placehold.co/40x40.png'} 
+                                                alt={item.name} 
+                                                width={40} height={40} 
+                                                className="rounded-sm"
+                                                data-ai-hint="product image"
+                                            />
+                                            <div>
+                                                <div className="font-medium text-sm">{item.name}</div>
+                                                <div className="text-xs text-muted-foreground">SKU: {item.sku}</div>
+                                            </div>
+                                        </div>
+                                    </TableCell>
+                                    <TableCell className="text-right">{item.stock}</TableCell>
+                                </TableRow>
+                            );
+                        })
+                    ) : (
+                        <TableRow>
+                        <TableCell colSpan={3} className="h-24 text-center">
+                            {t.inventoryTable.noItems}
+                        </TableCell>
+                        </TableRow>
+                    )}
+                    </TableBody>
+                </Table>
+            </ScrollArea>
+        </div>
+        <div className="flex items-center justify-between pt-4">
+            <div className="text-sm text-muted-foreground">
+                {selectedIds.size} item(s) selected.
             </div>
-            <div className="flex items-center justify-between">
-                <div className="text-sm text-muted-foreground">
-                    {selectedIds.size} item(s) selected.
-                </div>
-                <div className="flex items-center space-x-2">
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                        disabled={currentPage === 1}
-                    >
-                        Previous
-                    </Button>
-                    <span className="text-sm">
-                        Page {currentPage} of {totalPages}
-                    </span>
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                        disabled={currentPage === totalPages}
-                    >
-                        Next
-                    </Button>
-                </div>
+            <div className="flex items-center space-x-2">
+                <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                    disabled={currentPage === 1}
+                >
+                    Previous
+                </Button>
+                <span className="text-sm">
+                    Page {currentPage} of {totalPages}
+                </span>
+                <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                    disabled={currentPage === totalPages}
+                >
+                    Next
+                </Button>
             </div>
         </div>
         <DialogFooter>
@@ -276,3 +275,4 @@ export function ProductSelectionDialog({ open, onOpenChange, onSelect, available
     </Dialog>
   );
 }
+ 
