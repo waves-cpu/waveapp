@@ -28,15 +28,31 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Search } from 'lucide-react';
 
 const PosProductGrid = ({ onProductSelect }: { onProductSelect: (item: InventoryItem) => void }) => {
-    const { items, loading } = useInventory();
+    const { items, loading, allSales } = useInventory();
     const [searchTerm, setSearchTerm] = useState('');
     const debouncedSearchTerm = useDebounce(searchTerm, 300);
+
+    const soldCounts = React.useMemo(() => {
+        const counts = new Map<string, number>();
+        allSales.forEach(sale => {
+            const currentCount = counts.get(sale.productId) || 0;
+            counts.set(sale.productId, currentCount + sale.quantity);
+        });
+        return counts;
+    }, [allSales]);
+
+    const formatSoldCount = (count: number): string => {
+        if (!count) return '';
+        if (count >= 1000) {
+            return `${Math.floor(count / 1000)}RB+ terjual`;
+        }
+        return `${count} terjual`;
+    };
 
     const availableItems = React.useMemo(() => {
         const lowerCaseSearch = debouncedSearchTerm.toLowerCase();
         
         return items.filter(item => {
-            // Item is available if it has stock or its variants have stock
             const hasStock = item.variants 
                 ? item.variants.some(v => v.stock > 0)
                 : (item.stock ?? 0) > 0;
@@ -60,7 +76,7 @@ const PosProductGrid = ({ onProductSelect }: { onProductSelect: (item: Inventory
         return (
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
                 {Array.from({ length: 10 }).map((_, i) => (
-                    <Skeleton key={i} className="h-44 w-full" />
+                    <Skeleton key={i} className="h-48 w-full" />
                 ))}
             </div>
         );
@@ -97,6 +113,8 @@ const PosProductGrid = ({ onProductSelect }: { onProductSelect: (item: Inventory
                                 priceDisplay = `Rp${(item.price ?? 0).toLocaleString('id-ID')}`;
                                 stockDisplay = `Stok: ${item.stock}`;
                             }
+                            
+                            const totalSold = soldCounts.get(item.id) || 0;
 
                             return (
                                 <button key={item.id} onClick={() => onProductSelect(item)} className="border bg-card rounded-lg p-2 text-left hover:bg-accent transition-colors flex flex-col">
@@ -107,7 +125,10 @@ const PosProductGrid = ({ onProductSelect }: { onProductSelect: (item: Inventory
                                         <p className="font-semibold text-sm leading-tight line-clamp-2" title={item.name}>{item.name}</p>
                                         <p className="text-xs text-muted-foreground">{stockDisplay}</p>
                                     </div>
-                                    <p className="font-bold text-primary text-sm mt-1">{priceDisplay}</p>
+                                    <div className="mt-1">
+                                        <p className="font-bold text-primary text-sm">{priceDisplay}</p>
+                                        <p className="text-xs text-muted-foreground">{formatSoldCount(totalSold)}</p>
+                                    </div>
                                 </button>
                             );
                         })}
@@ -212,8 +233,24 @@ export default function PosSalesPage() {
   
   const handleProductSelect = useCallback((item: InventoryItem) => {
     if (item.variants && item.variants.length > 0) {
-        setProductForVariantSelection(item);
-        setIsVariantDialogOpen(true);
+        const availableVariants = item.variants.filter(v => v.stock > 0);
+        if(availableVariants.length === 0) {
+            toast({
+                variant: 'destructive',
+                title: 'Stok Habis',
+                description: `Semua varian untuk produk "${item.name}" sudah habis.`
+            });
+            return;
+        }
+        if (availableVariants.length === 1) {
+            handleAddToCart(availableVariants[0].sku!);
+        } else {
+            setProductForVariantSelection({
+                ...item,
+                variants: availableVariants
+            });
+            setIsVariantDialogOpen(true);
+        }
     } else if (item.sku) {
         handleAddToCart(item.sku);
     } else {
@@ -342,3 +379,5 @@ export default function PosSalesPage() {
     </>
   );
 }
+
+    
