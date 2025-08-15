@@ -16,7 +16,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Package, Search } from 'lucide-react';
+import { Store, Search } from 'lucide-react';
 import type { InventoryItem } from '@/types';
 import { useLanguage } from '@/hooks/use-language';
 import { translations } from '@/types/language';
@@ -220,7 +220,7 @@ export function ProductSelectionDialog({ open, onOpenChange, onSelect, available
                                             <TableCell>
                                                 <div className="flex items-center gap-4">
                                                     <div className="flex h-10 w-10 items-center justify-center rounded-sm bg-muted text-muted-foreground">
-                                                        <Package className="h-5 w-5" />
+                                                        <Store className="h-5 w-5" />
                                                     </div>
                                                     <div>
                                                         <div className="font-medium text-sm">{variant.name}</div>
