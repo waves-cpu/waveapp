@@ -113,7 +113,8 @@ export default function HistoryPage() {
             reason: 'Penjualan Harian',
             change: totalChange,
             sales: dailySales,
-            itemCategory: 'Penjualan' // Assign a category for filtering
+            itemCategory: 'Penjualan', // Assign a category for filtering
+            newStockLevel: undefined, // Explicitly undefined for sales summary
         });
     });
 
