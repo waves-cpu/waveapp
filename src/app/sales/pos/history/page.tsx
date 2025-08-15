@@ -191,18 +191,20 @@ export default function PosHistoryPage() {
                         <TableHead className="text-center">Aksi</TableHead>
                     </TableRow>
                 </TableHeader>
-                <TableBody>
+                
                     {loading ? (
-                        Array.from({ length: 10 }).map((_, i) => (
-                            <TableRow key={i}>
-                                <TableCell colSpan={6}><Skeleton className="h-8 w-full" /></TableCell>
-                            </TableRow>
-                        ))
+                         <TableBody>
+                            {Array.from({ length: 10 }).map((_, i) => (
+                                <TableRow key={i}>
+                                    <TableCell colSpan={6}><Skeleton className="h-8 w-full" /></TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
                     ) : groupedSales.length > 0 ? (
                         groupedSales.map((sale) => (
                             <Collapsible asChild key={sale.transactionId} open={openCollapsibles.has(sale.transactionId)} onOpenChange={() => toggleCollapsible(sale.transactionId)}>
-                                <React.Fragment>
-                                    <TableRow className="cursor-pointer hover:bg-muted/50">
+                                <tbody className='[&_tr:last-child]:border-0'>
+                                    <TableRow className="cursor-pointer hover:bg-muted/50 border-b">
                                         <TableCell>
                                             <CollapsibleTrigger asChild>
                                                 <Button variant="ghost" size="icon" className="h-8 w-8">
@@ -271,23 +273,24 @@ export default function PosHistoryPage() {
                                             </td>
                                         </tr>
                                     </CollapsibleContent>
-                                </React.Fragment>
+                                </tbody>
                             </Collapsible>
                         ))
                     ) : (
-                    <TableRow>
-                        <TableCell colSpan={6} className="h-48 text-center">
-                            <div className="flex flex-col items-center justify-center gap-4 text-muted-foreground">
-                                <ShoppingCart className="h-16 w-16" />
-                                <div className="text-center">
-                                    <p className="font-semibold">Tidak Ada Penjualan</p>
-                                    <p className="text-sm">Tidak ada penjualan yang tercatat pada tanggal yang dipilih.</p>
+                    <TableBody>
+                        <TableRow>
+                            <TableCell colSpan={6} className="h-48 text-center">
+                                <div className="flex flex-col items-center justify-center gap-4 text-muted-foreground">
+                                    <ShoppingCart className="h-16 w-16" />
+                                    <div className="text-center">
+                                        <p className="font-semibold">Tidak Ada Penjualan</p>
+                                        <p className="text-sm">Tidak ada penjualan yang tercatat pada tanggal yang dipilih.</p>
+                                    </div>
                                 </div>
-                            </div>
-                        </TableCell>
-                    </TableRow>
+                            </TableCell>
+                        </TableRow>
+                    </TableBody>
                     )}
-                </TableBody>
                 </Table>
             </div>
         </div>
