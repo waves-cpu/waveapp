@@ -247,13 +247,13 @@ export default function HistoryPage() {
             </TableBody>
             <TableFooter>
                 <TableRow>
-                    <TableCell colSpan={3} className="font-semibold text-right">Total Perubahan</TableCell>
-                    <TableCell colSpan={2}>
-                        <div className="flex items-center gap-4 font-semibold">
+                    <TableCell colSpan={3} className="font-semibold text-right">Total Perubahan:</TableCell>
+                    <TableCell colSpan={2} className="font-semibold">
+                        <div className="flex items-center gap-x-4 gap-y-1 flex-wrap">
                             <span className="text-green-600">Masuk: {historyTotals.totalIn}</span>
                             <span className="text-red-600">Keluar: {historyTotals.totalOut}</span>
                             <span>Net: 
-                                <span className={cn(historyTotals.netChange >= 0 ? "text-green-600" : "text-red-600")}>
+                                <span className={cn(historyTotals.netChange >= 0 ? "text-green-600" : "text-red-600", "ml-1")}>
                                     {historyTotals.netChange > 0 && '+'}{historyTotals.netChange}
                                 </span>
                             </span>
@@ -267,4 +267,3 @@ export default function HistoryPage() {
     </main>
   );
 }
-
