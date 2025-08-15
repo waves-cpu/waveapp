@@ -158,91 +158,38 @@ export function ProductSelectionDialog({ open, onOpenChange, onSelect, available
                 </SelectContent>
             </Select>
         </div>
-        <div className="flex-grow overflow-hidden border rounded-md relative flex flex-col">
-           <ScrollArea className="flex-grow">
-            <div>
-                <Table>
-                    <TableHeader className="sticky top-0 bg-card z-10">
-                    <TableRow>
-                        <TableHead className="w-[60px]">
-                        <Checkbox 
-                            checked={isPageAllSelected ? true : (isPagePartiallySelected ? 'indeterminate' : false)}
-                            onCheckedChange={handleSelectAllOnPage}
-                            aria-label="Select all on this page"
-                        />
-                        </TableHead>
-                        <TableHead>{t.inventoryTable.name}</TableHead>
-                        <TableHead className="text-center">{t.inventoryTable.currentStock}</TableHead>
-                    </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                    {paginatedItems.length > 0 ? (
-                        paginatedItems.flatMap((item) => {
-                            if (item.variants && item.variants.length > 0) {
-                                const variantIds = item.variants.map(v => v.id);
-                                const selectedCount = variantIds.filter(id => selectedIds.has(id)).length;
-                                const isAllSelected = selectedCount === variantIds.length;
-                                const isPartiallySelected = selectedCount > 0 && !isAllSelected;
+        <div className="flex-grow overflow-hidden border rounded-md">
+           <ScrollArea className="h-full">
+            <Table>
+                <TableHeader className="sticky top-0 bg-card z-10">
+                <TableRow>
+                    <TableHead className="w-[60px]">
+                    <Checkbox 
+                        checked={isPageAllSelected ? true : (isPagePartiallySelected ? 'indeterminate' : false)}
+                        onCheckedChange={handleSelectAllOnPage}
+                        aria-label="Select all on this page"
+                    />
+                    </TableHead>
+                    <TableHead>{t.inventoryTable.name}</TableHead>
+                    <TableHead className="text-center">{t.inventoryTable.currentStock}</TableHead>
+                </TableRow>
+                </TableHeader>
+                <TableBody>
+                {paginatedItems.length > 0 ? (
+                    paginatedItems.flatMap((item) => {
+                        if (item.variants && item.variants.length > 0) {
+                            const variantIds = item.variants.map(v => v.id);
+                            const selectedCount = variantIds.filter(id => selectedIds.has(id)).length;
+                            const isAllSelected = selectedCount === variantIds.length;
+                            const isPartiallySelected = selectedCount > 0 && !isAllSelected;
 
-                                return [
-                                    <TableRow key={`product-${item.id}`} className="bg-muted/20 hover:bg-muted/40 font-semibold" data-state={isAllSelected ? "selected" : ""}>
-                                        <TableCell>
-                                             <Checkbox
-                                                checked={isAllSelected ? true : (isPartiallySelected ? 'indeterminate' : false)}
-                                                onCheckedChange={(checked) => handleSelectRow(item, !!checked)}
-                                                aria-label={`Select ${item.name}`}
-                                            />
-                                        </TableCell>
-                                        <TableCell>
-                                            <div className="flex items-center gap-4">
-                                                <Image 
-                                                    src={item.imageUrl || 'https://placehold.co/40x40.png'} 
-                                                    alt={item.name} 
-                                                    width={40} height={40} 
-                                                    className="rounded-sm"
-                                                    data-ai-hint="product image"
-                                                />
-                                                <div>
-                                                    <div className="font-medium text-sm text-primary">{item.name}</div>
-                                                    <div className="text-xs text-muted-foreground font-normal">SKU: {item.sku}</div>
-                                                </div>
-                                            </div>
-                                        </TableCell>
-                                        <TableCell className='text-center'></TableCell>
-                                    </TableRow>,
-                                    ...item.variants.map(variant => (
-                                        <TableRow key={`variant-${variant.id}`} data-state={selectedIds.has(variant.id) ? "selected" : ""}>
-                                            <TableCell>
-                                                 <Checkbox
-                                                    checked={selectedIds.has(variant.id)}
-                                                    onCheckedChange={(checked) => handleSelectVariant(variant.id, !!checked)}
-                                                    aria-label={`Select ${variant.name}`}
-                                                />
-                                            </TableCell>
-                                            <TableCell>
-                                                <div className="flex items-center gap-4">
-                                                    <div className="flex h-10 w-10 items-center justify-center rounded-sm">
-                                                        <Store className="h-5 w-5 text-gray-400" />
-                                                    </div>
-                                                    <div>
-                                                        <div className="font-medium text-sm">{variant.name}</div>
-                                                        <div className="text-xs text-muted-foreground">SKU: {variant.sku}</div>
-                                                    </div>
-                                                </div>
-                                            </TableCell>
-                                            <TableCell className="text-center">{variant.stock}</TableCell>
-                                        </TableRow>
-                                    ))
-                                ];
-                            }
-                            return (
-                                <TableRow key={`product-${item.id}`} data-state={selectedIds.has(item.id) ? "selected" : ""}>
+                            return [
+                                <TableRow key={`product-${item.id}`} className="bg-muted/20 hover:bg-muted/40 font-semibold" data-state={isAllSelected ? "selected" : ""}>
                                     <TableCell>
-                                        <Checkbox
-                                            checked={selectedIds.has(item.id)}
+                                            <Checkbox
+                                            checked={isAllSelected ? true : (isPartiallySelected ? 'indeterminate' : false)}
                                             onCheckedChange={(checked) => handleSelectRow(item, !!checked)}
                                             aria-label={`Select ${item.name}`}
-                                            disabled={item.stock === undefined}
                                         />
                                     </TableCell>
                                     <TableCell>
@@ -255,29 +202,78 @@ export function ProductSelectionDialog({ open, onOpenChange, onSelect, available
                                                 data-ai-hint="product image"
                                             />
                                             <div>
-                                                <div className="font-medium text-sm">{item.name}</div>
-                                                <div className="text-xs text-muted-foreground">SKU: {item.sku}</div>
+                                                <div className="font-medium text-sm text-primary">{item.name}</div>
+                                                <div className="text-xs text-muted-foreground font-normal">SKU: {item.sku}</div>
                                             </div>
                                         </div>
                                     </TableCell>
-                                    <TableCell className="text-center">{item.stock}</TableCell>
-                                </TableRow>
-                            );
-                        })
-                    ) : (
-                        <TableRow>
-                        <TableCell colSpan={3} className="h-24 text-center">
-                            {t.inventoryTable.noItems}
-                        </TableCell>
-                        </TableRow>
-                    )}
-                    </TableBody>
-                </Table>
-                
-            </div>
-            </ScrollArea>
-            <div className="flex items-center justify-end p-4 border-t bg-background">
-                 <div className="flex items-center gap-4">
+                                    <TableCell className='text-center'></TableCell>
+                                </TableRow>,
+                                ...item.variants.map(variant => (
+                                    <TableRow key={`variant-${variant.id}`} data-state={selectedIds.has(variant.id) ? "selected" : ""}>
+                                        <TableCell>
+                                                <Checkbox
+                                                checked={selectedIds.has(variant.id)}
+                                                onCheckedChange={(checked) => handleSelectVariant(variant.id, !!checked)}
+                                                aria-label={`Select ${variant.name}`}
+                                            />
+                                        </TableCell>
+                                        <TableCell>
+                                            <div className="flex items-center gap-4">
+                                                <div className="flex h-10 w-10 items-center justify-center rounded-sm">
+                                                    <Store className="h-5 w-5 text-gray-400" />
+                                                </div>
+                                                <div>
+                                                    <div className="font-medium text-sm">{variant.name}</div>
+                                                    <div className="text-xs text-muted-foreground">SKU: {variant.sku}</div>
+                                                </div>
+                                            </div>
+                                        </TableCell>
+                                        <TableCell className="text-center">{variant.stock}</TableCell>
+                                    </TableRow>
+                                ))
+                            ];
+                        }
+                        return (
+                            <TableRow key={`product-${item.id}`} data-state={selectedIds.has(item.id) ? "selected" : ""}>
+                                <TableCell>
+                                    <Checkbox
+                                        checked={selectedIds.has(item.id)}
+                                        onCheckedChange={(checked) => handleSelectRow(item, !!checked)}
+                                        aria-label={`Select ${item.name}`}
+                                        disabled={item.stock === undefined}
+                                    />
+                                </TableCell>
+                                <TableCell>
+                                    <div className="flex items-center gap-4">
+                                        <Image 
+                                            src={item.imageUrl || 'https://placehold.co/40x40.png'} 
+                                            alt={item.name} 
+                                            width={40} height={40} 
+                                            className="rounded-sm"
+                                            data-ai-hint="product image"
+                                        />
+                                        <div>
+                                            <div className="font-medium text-sm">{item.name}</div>
+                                            <div className="text-xs text-muted-foreground">SKU: {item.sku}</div>
+                                        </div>
+                                    </div>
+                                </TableCell>
+                                <TableCell className="text-center">{item.stock}</TableCell>
+                            </TableRow>
+                        );
+                    })
+                ) : (
+                    <TableRow>
+                    <TableCell colSpan={3} className="h-24 text-center">
+                        {t.inventoryTable.noItems}
+                    </TableCell>
+                    </TableRow>
+                )}
+                </TableBody>
+            </Table>
+            <div className="flex items-center justify-end p-4 border-t">
+                    <div className="flex items-center gap-4">
                     <Pagination
                         totalPages={totalPages}
                         currentPage={currentPage}
@@ -303,6 +299,7 @@ export function ProductSelectionDialog({ open, onOpenChange, onSelect, available
                     </Select>
                 </div>
             </div>
+            </ScrollArea>
         </div>
         <DialogFooter className="pt-4">
           <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>{t.common.cancel}</Button>
@@ -326,6 +323,7 @@ export function ProductSelectionDialog({ open, onOpenChange, onSelect, available
 
 
     
+
 
 
 
