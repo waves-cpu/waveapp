@@ -16,12 +16,13 @@ interface ParsedRow {
     [key: string]: any;
 }
 
-const csvTemplate = `parent_sku,product_name,category,image_url,variant_sku,variant_name,price,stock
-SKU001,T-Shirt A,T-Shirt Oversize,https://placehold.co/100x100.png,SKU001-S,Small,150000,50
-SKU001,T-Shirt A,T-Shirt Oversize,https://placehold.co/100x100.png,SKU001-M,Medium,150000,100
-SKU002,Hoodie B,Hoodie,,SKU002-L,Large,350000,30
-SKU002,Hoodie B,Hoodie,,SKU002-XL,X-Large,350000,25
-`;
+const templateData = [
+    ['parent_sku', 'product_name', 'category', 'image_url', 'variant_sku', 'variant_name', 'price', 'stock'],
+    ['SKU001', 'T-Shirt A', 'T-Shirt Oversize', 'https://placehold.co/100x100.png', 'SKU001-S', 'Small', 150000, 50],
+    ['SKU001', 'T-Shirt A', 'T-Shirt Oversize', 'https://placehold.co/100x100.png', 'SKU001-M', 'Medium', 150000, 100],
+    ['SKU002', 'Hoodie B', 'Hoodie', '', 'SKU002-L', 'Large', 350000, 30],
+    ['SKU002', 'Hoodie B', 'Hoodie', '', 'SKU002-XL', 'X-Large', 350000, 25]
+];
 
 export function BulkUploadForm() {
     const [data, setData] = useState<ParsedRow[]>([]);
@@ -95,15 +96,10 @@ export function BulkUploadForm() {
     };
 
     const handleDownloadTemplate = () => {
-        const blob = new Blob([csvTemplate], { type: 'text/csv;charset=utf-8;' });
-        const link = document.createElement('a');
-        const url = URL.createObjectURL(blob);
-        link.setAttribute('href', url);
-        link.setAttribute('download', 'template.csv');
-        link.style.visibility = 'hidden';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+        const ws = XLSX.utils.aoa_to_sheet(templateData);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Template");
+        XLSX.writeFile(wb, "template.xlsx");
     };
 
     const handleSubmit = async () => {
@@ -179,7 +175,7 @@ export function BulkUploadForm() {
                     <CardTitle>Bulk Import Products</CardTitle>
                     <CardDescription>
                         Upload an Excel (.xlsx) file to add multiple products and their variants.
-                        Download the CSV template to see the required format and open it in Excel.
+                        Download the Excel template to see the required format.
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -210,7 +206,7 @@ export function BulkUploadForm() {
                     <div className="flex justify-start">
                         <Button variant="outline" size="sm" onClick={handleDownloadTemplate}>
                             <FileDown className="mr-2 h-4 w-4" />
-                            Download Template (CSV)
+                            Download Template (.xlsx)
                         </Button>
                     </div>
                 </CardContent>
