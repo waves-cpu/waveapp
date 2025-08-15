@@ -10,40 +10,45 @@ export async function fetchInventoryData() {
 
     const historyMap = new Map<string, AdjustmentHistory[]>();
     for (const entry of fetchedHistory as any[]) {
-        const key = entry.variantId || entry.productId;
+        const key = entry.variantId ? entry.variantId.toString() : entry.productId.toString();
         if (!historyMap.has(key)) {
             historyMap.set(key, []);
         }
         historyMap.get(key)!.push({
             ...entry,
+            id: entry.id.toString(),
             date: new Date(entry.date)
         });
     }
 
     const variantMap = new Map<string, InventoryItemVariant[]>();
     for (const variant of fetchedVariants as any[]) {
-        if (!variantMap.has(variant.productId)) {
-            variantMap.set(variant.productId, []);
+        const productIdStr = variant.productId.toString();
+        if (!variantMap.has(productIdStr)) {
+            variantMap.set(productIdStr, []);
         }
-        variantMap.get(variant.productId)!.push({
+        const variantIdStr = variant.id.toString();
+        variantMap.get(productIdStr)!.push({
             ...variant,
-            history: historyMap.get(variant.id) || []
+            id: variantIdStr,
+            history: historyMap.get(variantIdStr) || []
         });
     }
 
     const fullItems: InventoryItem[] = (fetchedItems as any[]).map(item => {
+        const itemIdStr = item.id.toString();
         if (item.hasVariants) {
             return {
                 ...item,
-                id: item.id.toString(),
-                variants: (variantMap.get(item.id) || []).map(v => ({...v, id: v.id.toString()})),
+                id: itemIdStr,
+                variants: (variantMap.get(itemIdStr) || []).map(v => ({...v, id: v.id.toString()})),
                 imageUrl: item.imageUrl
             };
         }
         return {
             ...item,
-            id: item.id.toString(),
-            history: historyMap.get(item.id) || [],
+            id: itemIdStr,
+            history: historyMap.get(itemIdStr) || [],
             imageUrl: item.imageUrl
         };
     });
@@ -95,24 +100,28 @@ export async function addProduct(itemData: any) {
                     stock: variant.stock,
                 });
                 const variantId = variantResult.lastInsertRowid;
-                addHistoryStmt.run({
-                    productId: productId,
-                    variantId: variantId,
-                    change: variant.stock,
-                    reason: 'Initial Stock',
-                    newStockLevel: variant.stock,
-                    date: new Date().toISOString()
-                });
+                if (variant.stock > 0) {
+                    addHistoryStmt.run({
+                        productId: productId,
+                        variantId: variantId,
+                        change: variant.stock,
+                        reason: 'Initial Stock',
+                        newStockLevel: variant.stock,
+                        date: new Date().toISOString()
+                    });
+                }
             });
         } else {
-            addHistoryStmt.run({
-                productId: productId,
-                variantId: null,
-                change: itemData.stock,
-                reason: 'Initial Stock',
-                newStockLevel: itemData.stock,
-                date: new Date().toISOString()
-            });
+             if (itemData.stock > 0) {
+                addHistoryStmt.run({
+                    productId: productId,
+                    variantId: null,
+                    change: itemData.stock,
+                    reason: 'Initial Stock',
+                    newStockLevel: itemData.stock,
+                    date: new Date().toISOString()
+                });
+            }
         }
     })();
 }
@@ -158,7 +167,7 @@ export async function editProduct(itemId: string, itemData: any) {
                     const existingVariant = getVariantStockStmt.get(variant.id) as { stock: number } | undefined;
                     if(existingVariant) {
                        stockChange = variant.stock - existingVariant.stock;
-                       reason = 'Stock adjustment during edit';
+                       reason = stockChange !== 0 ? 'Stock adjustment during edit' : 'No change';
                     }
                 }
 
@@ -244,10 +253,10 @@ export async function editVariantsBulk(itemId: string, variants: InventoryItemVa
 }
 
 export async function adjustStock(itemId: string, change: number, reason: string) {
-    const { items } = await fetchInventoryData();
+    if (change === 0) return;
+
     db.transaction(() => {
-        const item = items.find(i => i.id === itemId);
-        const variant = items.flatMap(i => i.variants || []).find(v => v.id === itemId);
+        const variant = db.prepare('SELECT * FROM variants WHERE id = ?').get(itemId) as (InventoryItemVariant & {productId: number}) | undefined;
 
         if (variant) {
             const newStockLevel = variant.stock + change;
@@ -257,13 +266,16 @@ export async function adjustStock(itemId: string, change: number, reason: string
                 VALUES (?, ?, ?, ?, ?, ?)
             `).run(variant.productId, itemId, change, reason, newStockLevel, new Date().toISOString());
 
-        } else if (item && item.stock !== undefined) { 
-            const newStockLevel = item.stock + change;
-            db.prepare('UPDATE products SET stock = ? WHERE id = ?').run(newStockLevel, itemId);
-            db.prepare(`
-                INSERT INTO history (productId, variantId, change, reason, newStockLevel, date)
-                VALUES (?, ?, ?, ?, ?, ?)
-            `).run(itemId, null, change, reason, newStockLevel, new Date().toISOString());
+        } else { 
+            const item = db.prepare('SELECT * FROM products WHERE id = ?').get(itemId) as InventoryItem | undefined;
+            if (item && item.stock !== undefined) {
+                const newStockLevel = item.stock + change;
+                db.prepare('UPDATE products SET stock = ? WHERE id = ?').run(newStockLevel, itemId);
+                db.prepare(`
+                    INSERT INTO history (productId, variantId, change, reason, newStockLevel, date)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                `).run(itemId, null, change, reason, newStockLevel, new Date().toISOString());
+            }
         }
     })();
 }
