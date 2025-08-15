@@ -41,6 +41,7 @@ export function ProductSelectionDialog({ open, onOpenChange, onSelect, available
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(ITEMS_PER_PAGE);
 
   const filteredItems = useMemo(() => {
     return availableItems
@@ -54,16 +55,16 @@ export function ProductSelectionDialog({ open, onOpenChange, onSelect, available
       );
   }, [availableItems, categoryFilter, searchTerm]);
 
-  const totalPages = Math.ceil(filteredItems.length / ITEMS_PER_PAGE);
+  const totalPages = Math.ceil(filteredItems.length / itemsPerPage);
 
   const { paginatedItems, selectableItemIdsOnPage } = useMemo(() => {
-    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-    const paginated = filteredItems.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const paginated = filteredItems.slice(startIndex, startIndex + itemsPerPage);
     const selectableIds = paginated.flatMap(item => 
         item.variants && item.variants.length > 0 ? item.variants.map(v => v.id) : (item.stock !== undefined ? [item.id] : [])
     );
     return { paginatedItems: paginated, selectableItemIdsOnPage: selectableIds };
-  }, [filteredItems, currentPage]);
+  }, [filteredItems, currentPage, itemsPerPage]);
 
 
   useEffect(() => {
@@ -72,6 +73,7 @@ export function ProductSelectionDialog({ open, onOpenChange, onSelect, available
         setSearchTerm('');
         setCategoryFilter(null);
         setCurrentPage(1);
+        setItemsPerPage(ITEMS_PER_PAGE);
       }
   }, [open])
 
@@ -278,13 +280,31 @@ export function ProductSelectionDialog({ open, onOpenChange, onSelect, available
                 <div className="text-sm text-muted-foreground">
                     {t.productSelectionDialog.itemsSelected.replace('{count}', selectedIds.size.toString())}
                 </div>
-                 {totalPages > 1 && (
-                    <Pagination 
-                        currentPage={currentPage}
+                 <div className="flex items-center gap-4">
+                    <Pagination
                         totalPages={totalPages}
+                        currentPage={currentPage}
                         onPageChange={setCurrentPage}
                     />
-                )}
+                    <Select
+                        value={`${itemsPerPage}`}
+                        onValueChange={(value) => {
+                            setItemsPerPage(Number(value))
+                            setCurrentPage(1)
+                        }}
+                        >
+                        <SelectTrigger className="h-8 w-[200px]">
+                            <SelectValue placeholder={itemsPerPage} />
+                        </SelectTrigger>
+                        <SelectContent side="top">
+                            {[10, 20, 50].map((pageSize) => (
+                            <SelectItem key={pageSize} value={`${pageSize}`}>
+                                {`${pageSize} / ${t.productSelectionDialog.page}`}
+                            </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                </div>
             </div>
         </div>
         <DialogFooter className="pt-4">
@@ -309,6 +329,7 @@ export function ProductSelectionDialog({ open, onOpenChange, onSelect, available
 
 
     
+
 
 
 
