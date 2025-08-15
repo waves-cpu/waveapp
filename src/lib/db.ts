@@ -51,6 +51,7 @@ const createSchema = () => {
 
     CREATE TABLE IF NOT EXISTS sales (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
+        transactionId TEXT,
         productId INTEGER NOT NULL,
         variantId INTEGER,
         channel TEXT NOT NULL,

@@ -14,6 +14,7 @@ import {
   revertSale,
   findProductBySku,
   fetchAllSales,
+  revertSaleByTransaction,
 } from '@/lib/inventory-service';
 
 
@@ -28,9 +29,10 @@ interface InventoryContextType {
   bulkUpdateVariants: (itemId: string, variants: InventoryItemVariant[]) => Promise<void>;
   fetchItems: () => Promise<void>;
   loading: boolean;
-  recordSale: (sku: string, channel: string, quantity: number, saleDate?: Date) => Promise<void>;
+  recordSale: (sku: string, channel: string, quantity: number, saleDate?: Date, transactionId?: string) => Promise<void>;
   fetchSales: (channel: string, date: Date) => Promise<Sale[]>;
   cancelSale: (saleId: string) => Promise<void>;
+  cancelSaleTransaction: (transactionId: string) => Promise<void>;
   getProductBySku: (sku: string) => Promise<InventoryItem | null>;
   allSales: Sale[];
 }
@@ -107,8 +109,8 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
     return undefined;
   }, [items]);
 
-  const recordSale = async (sku: string, channel: string, quantity: number, saleDate?: Date) => {
-    await performSale(sku, channel, quantity, saleDate);
+  const recordSale = async (sku: string, channel: string, quantity: number, saleDate?: Date, transactionId?: string) => {
+    await performSale(sku, channel, quantity, saleDate, transactionId);
     // For POS, we don't need to refetch all sales, just inventory
     if (channel !== 'pos') {
       await fetchAllData();
@@ -127,6 +129,11 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
     await revertSale(saleId);
     await fetchAllData();
   };
+
+  const cancelSaleTransaction = async (transactionId: string) => {
+    await revertSaleByTransaction(transactionId);
+    await fetchAllData();
+  }
 
   const getProductBySku = async (sku: string) => {
     return await findProductBySku(sku);
@@ -147,6 +154,7 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
         recordSale,
         fetchSales,
         cancelSale,
+        cancelSaleTransaction,
         getProductBySku,
         allSales,
       }}>

@@ -17,7 +17,7 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-import { Calendar as CalendarIcon, Trash2, ShoppingCart, ArrowLeft } from 'lucide-react';
+import { Calendar as CalendarIcon, Trash2, ShoppingCart, ArrowLeft, ChevronDown, ChevronRight } from 'lucide-react';
 import { format } from 'date-fns';
 import { useInventory } from '@/hooks/use-inventory';
 import { useLanguage } from '@/hooks/use-language';
@@ -39,22 +39,65 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
 import { id as indonesiaLocale } from 'date-fns/locale';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Badge } from '@/components/ui/badge';
+
+interface GroupedSale {
+    transactionId: string;
+    saleDate: Date;
+    totalAmount: number;
+    totalItems: number;
+    items: Sale[];
+}
 
 export default function PosHistoryPage() {
   const { language } = useLanguage();
   const t = translations[language];
-  const { fetchSales, cancelSale } = useInventory();
+  const { fetchSales, cancelSaleTransaction } = useInventory();
   const { toast } = useToast();
 
   const [date, setDate] = useState<Date | undefined>(undefined);
-  const [sales, setSales] = useState<Sale[]>([]);
+  const [groupedSales, setGroupedSales] = useState<GroupedSale[]>([]);
   const [loading, setLoading] = useState(true);
+  const [openCollapsibles, setOpenCollapsibles] = useState<Set<string>>(new Set());
+
+  const toggleCollapsible = (transactionId: string) => {
+    setOpenCollapsibles(prev => {
+        const newSet = new Set(prev);
+        if (newSet.has(transactionId)) {
+            newSet.delete(transactionId);
+        } else {
+            newSet.add(transactionId);
+        }
+        return newSet;
+    });
+  };
 
   const loadSales = useCallback(async (selectedDate: Date) => {
     setLoading(true);
     try {
       const salesData = await fetchSales('pos', selectedDate);
-      setSales(salesData);
+      
+      const salesByTransaction = new Map<string, GroupedSale>();
+
+      salesData.forEach(sale => {
+          const txId = sale.transactionId!;
+          if (!salesByTransaction.has(txId)) {
+              salesByTransaction.set(txId, {
+                  transactionId: txId,
+                  saleDate: new Date(sale.saleDate),
+                  totalAmount: 0,
+                  totalItems: 0,
+                  items: [],
+              });
+          }
+          const tx = salesByTransaction.get(txId)!;
+          tx.items.push(sale);
+          tx.totalAmount += sale.priceAtSale * sale.quantity;
+          tx.totalItems += sale.quantity;
+      });
+
+      setGroupedSales(Array.from(salesByTransaction.values()).sort((a,b) => b.saleDate.getTime() - a.saleDate.getTime()));
     } catch (error) {
       console.error('Failed to fetch sales:', error);
       toast({
@@ -78,13 +121,13 @@ export default function PosHistoryPage() {
     }
   }, [date, loadSales]);
   
-  const handleCancelSale = async (saleId: string) => {
+  const handleCancelTransaction = async (transactionId: string) => {
     if (!date) return;
     try {
-        await cancelSale(saleId);
+        await cancelSaleTransaction(transactionId);
         toast({
-            title: 'Penjualan Dibatalkan',
-            description: 'Penjualan telah berhasil dibatalkan dan stok dikembalikan.',
+            title: 'Transaksi Dibatalkan',
+            description: 'Transaksi telah berhasil dibatalkan dan stok dikembalikan.',
         });
         loadSales(date);
     } catch (error) {
@@ -92,7 +135,7 @@ export default function PosHistoryPage() {
         toast({
             variant: 'destructive',
             title: 'Gagal Membatalkan',
-            description: 'Terjadi kesalahan saat membatalkan penjualan.',
+            description: 'Terjadi kesalahan saat membatalkan transaksi.',
         });
     }
   };
@@ -140,64 +183,100 @@ export default function PosHistoryPage() {
                 <Table>
                 <TableHeader>
                     <TableRow>
-                    <TableHead>Waktu</TableHead>
-                    <TableHead className="w-[40%]">Produk</TableHead>
-                    <TableHead>SKU</TableHead>
-                    <TableHead>Harga</TableHead>
-                    <TableHead className="text-center">Aksi</TableHead>
+                        <TableHead className="w-10"></TableHead>
+                        <TableHead>Waktu</TableHead>
+                        <TableHead>No. Transaksi</TableHead>
+                        <TableHead>Total Item</TableHead>
+                        <TableHead>Total Belanja</TableHead>
+                        <TableHead className="text-center">Aksi</TableHead>
                     </TableRow>
                 </TableHeader>
                 <TableBody>
                     {loading ? (
-                    Array.from({ length: 10 }).map((_, i) => (
-                        <TableRow key={i}>
-                            <TableCell><Skeleton className="h-4 w-[120px]" /></TableCell>
-                            <TableCell><Skeleton className="h-4 w-[250px]" /></TableCell>
-                            <TableCell><Skeleton className="h-4 w-[150px]" /></TableCell>
-                            <TableCell><Skeleton className="h-4 w-[100px]" /></TableCell>
-                            <TableCell className="text-center">
-                                <Skeleton className="h-8 w-8 rounded-md" />
-                            </TableCell>
-                        </TableRow>
-                    ))
-                    ) : sales.length > 0 ? (
-                    sales.map((sale) => (
-                        <TableRow key={sale.id}>
-                        <TableCell>{format(new Date(sale.saleDate), 'HH:mm:ss')}</TableCell>
-                        <TableCell>
-                            {sale.productName}
-                            {sale.variantName && <span className="text-muted-foreground text-xs ml-2">{sale.variantName}</span>}
-                        </TableCell>
-                        <TableCell>{sale.sku}</TableCell>
-                        <TableCell>{`Rp${Math.round(sale.priceAtSale).toLocaleString('id-ID')}`}</TableCell>
-                        <TableCell className="text-center">
-                        <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                                <Button variant="ghost" size="icon" className="text-destructive">
-                                    <Trash2 className="h-4 w-4" />
-                                </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                                <AlertDialogHeader>
-                                <AlertDialogTitle>Anda yakin?</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                    Tindakan ini akan membatalkan penjualan dan mengembalikan stok. Tindakan ini tidak dapat diurungkan.
-                                </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                <AlertDialogCancel>Batal</AlertDialogCancel>
-                                <AlertDialogAction onClick={() => handleCancelSale(sale.id)}>
-                                    Ya, Batalkan Penjualan
-                                </AlertDialogAction>
-                                </AlertDialogFooter>
-                            </AlertDialogContent>
-                            </AlertDialog>
-                        </TableCell>
-                        </TableRow>
-                    ))
+                        Array.from({ length: 10 }).map((_, i) => (
+                            <TableRow key={i}>
+                                <TableCell colSpan={6}><Skeleton className="h-8 w-full" /></TableCell>
+                            </TableRow>
+                        ))
+                    ) : groupedSales.length > 0 ? (
+                        groupedSales.map((sale) => (
+                            <Collapsible asChild key={sale.transactionId} open={openCollapsibles.has(sale.transactionId)} onOpenChange={() => toggleCollapsible(sale.transactionId)}>
+                                <>
+                                    <TableRow className="cursor-pointer hover:bg-muted/50">
+                                        <TableCell>
+                                            <CollapsibleTrigger asChild>
+                                                <Button variant="ghost" size="icon" className="h-8 w-8">
+                                                    {openCollapsibles.has(sale.transactionId) ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                                                </Button>
+                                            </CollapsibleTrigger>
+                                        </TableCell>
+                                        <TableCell>{format(sale.saleDate, 'HH:mm:ss')}</TableCell>
+                                        <TableCell>
+                                            <Badge variant="secondary">{sale.transactionId}</Badge>
+                                        </TableCell>
+                                        <TableCell>{sale.totalItems} item</TableCell>
+                                        <TableCell className="font-semibold">{`Rp${sale.totalAmount.toLocaleString('id-ID')}`}</TableCell>
+                                        <TableCell className="text-center">
+                                            <AlertDialog>
+                                                <AlertDialogTrigger asChild>
+                                                    <Button variant="ghost" size="icon" className="text-destructive h-8 w-8">
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </Button>
+                                                </AlertDialogTrigger>
+                                                <AlertDialogContent>
+                                                    <AlertDialogHeader>
+                                                    <AlertDialogTitle>Anda yakin ingin membatalkan transaksi ini?</AlertDialogTitle>
+                                                    <AlertDialogDescription>
+                                                        Tindakan ini akan membatalkan seluruh transaksi <span className='font-bold'>{sale.transactionId}</span> dan mengembalikan stok semua item di dalamnya. Tindakan ini tidak dapat diurungkan.
+                                                    </AlertDialogDescription>
+                                                    </AlertDialogHeader>
+                                                    <AlertDialogFooter>
+                                                    <AlertDialogCancel>Batal</AlertDialogCancel>
+                                                    <AlertDialogAction onClick={() => handleCancelTransaction(sale.transactionId)}>
+                                                        Ya, Batalkan Transaksi
+                                                    </AlertDialogAction>
+                                                    </AlertDialogFooter>
+                                                </AlertDialogContent>
+                                            </AlertDialog>
+                                        </TableCell>
+                                    </TableRow>
+                                    <CollapsibleContent asChild>
+                                        <tr className='bg-muted/30'>
+                                            <td colSpan={6} className='p-0'>
+                                                <div className='p-4'>
+                                                    <h4 className="font-semibold mb-2">Detail Item:</h4>
+                                                    <Table>
+                                                        <TableHeader>
+                                                            <TableRow>
+                                                                <TableHead>Produk</TableHead>
+                                                                <TableHead>SKU</TableHead>
+                                                                <TableHead className='text-center'>Jumlah</TableHead>
+                                                                <TableHead className='text-right'>Harga Satuan</TableHead>
+                                                                <TableHead className='text-right'>Subtotal</TableHead>
+                                                            </TableRow>
+                                                        </TableHeader>
+                                                        <TableBody>
+                                                        {sale.items.map(item => (
+                                                            <TableRow key={item.id} className='hover:bg-background'>
+                                                                <TableCell>{item.productName}{item.variantName && <span className="text-muted-foreground text-xs ml-2">({item.variantName})</span>}</TableCell>
+                                                                <TableCell>{item.sku}</TableCell>
+                                                                <TableCell className='text-center'>{item.quantity}</TableCell>
+                                                                <TableCell className='text-right'>{`Rp${item.priceAtSale.toLocaleString('id-ID')}`}</TableCell>
+                                                                <TableCell className='text-right'>{`Rp${(item.priceAtSale * item.quantity).toLocaleString('id-ID')}`}</TableCell>
+                                                            </TableRow>
+                                                        ))}
+                                                        </TableBody>
+                                                    </Table>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    </CollapsibleContent>
+                                </>
+                            </Collapsible>
+                        ))
                     ) : (
                     <TableRow>
-                        <TableCell colSpan={5} className="h-48 text-center">
+                        <TableCell colSpan={6} className="h-48 text-center">
                             <div className="flex flex-col items-center justify-center gap-4 text-muted-foreground">
                                 <ShoppingCart className="h-16 w-16" />
                                 <div className="text-center">

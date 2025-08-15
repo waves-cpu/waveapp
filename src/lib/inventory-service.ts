@@ -322,7 +322,7 @@ export async function findProductBySku(sku: string): Promise<InventoryItem | nul
 }
 
 
-export async function performSale(sku: string, channel: string, quantity: number, saleDate?: Date) {
+export async function performSale(sku: string, channel: string, quantity: number, saleDate?: Date, transactionId?: string) {
     const getProductStmt = db.prepare('SELECT id, price, stock FROM products WHERE sku = ? AND hasVariants = 0');
     const getVariantStmt = db.prepare('SELECT id, price, stock, productId FROM variants WHERE sku = ?');
     
@@ -333,8 +333,8 @@ export async function performSale(sku: string, channel: string, quantity: number
                 throw new Error('Insufficient stock for variant.');
             }
             adjustStock(variant.id.toString(), -quantity, `Sale (${channel})`);
-            db.prepare('INSERT INTO sales (productId, variantId, channel, quantity, priceAtSale, saleDate) VALUES (?, ?, ?, ?, ?, ?)')
-              .run(variant.productId, variant.id, channel, quantity, variant.price, (saleDate || new Date()).toISOString());
+            db.prepare('INSERT INTO sales (transactionId, productId, variantId, channel, quantity, priceAtSale, saleDate) VALUES (?, ?, ?, ?, ?, ?, ?)')
+              .run(transactionId, variant.productId, variant.id, channel, quantity, variant.price, (saleDate || new Date()).toISOString());
         } else {
             const product = getProductStmt.get(sku) as { id: number, price: number, stock: number } | undefined;
             if (product) {
@@ -342,8 +342,8 @@ export async function performSale(sku: string, channel: string, quantity: number
                     throw new Error('Insufficient stock for product.');
                 }
                 adjustStock(product.id.toString(), -quantity, `Sale (${channel})`);
-                db.prepare('INSERT INTO sales (productId, variantId, channel, quantity, priceAtSale, saleDate) VALUES (?, ?, ?, ?, ?, ?)')
-                  .run(product.id, null, channel, quantity, product.price, (saleDate || new Date()).toISOString());
+                db.prepare('INSERT INTO sales (transactionId, productId, variantId, channel, quantity, priceAtSale, saleDate) VALUES (?, ?, ?, ?, ?, ?, ?)')
+                  .run(transactionId, product.id, null, channel, quantity, product.price, (saleDate || new Date()).toISOString());
             } else {
                 throw new Error('Product or variant with specified SKU not found or has variants.');
             }
@@ -354,7 +354,7 @@ export async function performSale(sku: string, channel: string, quantity: number
 export async function fetchAllSales(): Promise<Sale[]> {
      const salesQuery = db.prepare(`
         SELECT 
-            s.id, s.productId, s.variantId, s.channel, s.quantity, s.priceAtSale, s.saleDate,
+            s.id, s.transactionId, s.productId, s.variantId, s.channel, s.quantity, s.priceAtSale, s.saleDate,
             p.name as productName,
             v.name as variantName,
             COALESCE(v.sku, p.sku) as sku
@@ -376,7 +376,7 @@ export async function getSalesByDate(channel: string, date: Date): Promise<Sale[
 
     const salesQuery = db.prepare(`
         SELECT 
-            s.id, s.productId, s.variantId, s.channel, s.quantity, s.priceAtSale, s.saleDate,
+            s.id, s.transactionId, s.productId, s.variantId, s.channel, s.quantity, s.priceAtSale, s.saleDate,
             p.name as productName,
             v.name as variantName,
             COALESCE(v.sku, p.sku) as sku
@@ -413,5 +413,25 @@ export async function revertSale(saleId: string) {
         adjustStock(idToAdjust, sale.quantity, `Cancelled Sale (${sale.channel})`);
         
         deleteSaleStmt.run(saleId);
+    })();
+}
+
+
+export async function revertSaleByTransaction(transactionId: string) {
+    const getSalesStmt = db.prepare('SELECT * FROM sales WHERE transactionId = ?');
+    const deleteSalesStmt = db.prepare('DELETE FROM sales WHERE transactionId = ?');
+
+    db.transaction(() => {
+        const sales = getSalesStmt.all(transactionId) as { id: number, productId: number, variantId?: number, quantity: number, channel: string }[];
+        if (!sales || sales.length === 0) {
+            throw new Error('Transaction not found.');
+        }
+
+        sales.forEach(sale => {
+            const idToAdjust = sale.variantId ? sale.variantId.toString() : sale.productId.toString();
+            adjustStock(idToAdjust, sale.quantity, `Cancelled Transaction #${transactionId} (${sale.channel})`);
+        });
+
+        deleteSalesStmt.run(transactionId);
     })();
 }

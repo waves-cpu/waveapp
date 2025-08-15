@@ -1,3 +1,4 @@
+
 export interface AdjustmentHistory {
   date: Date;
   change: number;
@@ -31,6 +32,7 @@ export interface InventoryItem {
 
 export interface Sale {
   id: string;
+  transactionId?: string;
   productId: string;
   variantId?: string;
   channel: string;
