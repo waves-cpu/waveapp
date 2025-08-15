@@ -136,8 +136,8 @@ export function InventoryTable({ onUpdateStock, onShowHistory }: InventoryTableP
                     const minPrice = Math.min(...prices);
                     const maxPrice = Math.max(...prices);
                     const priceDisplay = minPrice === maxPrice 
-                        ? `$${minPrice.toFixed(2)}`
-                        : `$${minPrice.toFixed(2)} - $${maxPrice.toFixed(2)}`;
+                        ? `Rp${Math.round(minPrice)}`
+                        : `Rp${Math.round(minPrice)} - Rp${Math.round(maxPrice)}`;
 
                     return (
                         <React.Fragment key={item.id}>
@@ -169,7 +169,7 @@ export function InventoryTable({ onUpdateStock, onShowHistory }: InventoryTableP
                                         <div className="font-medium text-sm">{variant.name}</div>
                                         <div className="text-xs text-muted-foreground">SKU: {variant.sku}</div>
                                     </TableCell>
-                                    <TableCell>{`$${variant.price.toFixed(2)}`}</TableCell>
+                                    <TableCell>{`Rp${Math.round(variant.price)}`}</TableCell>
                                     <TableCell>{variant.stock}</TableCell>
                                     <TableCell className="text-center">
                                         <div className="flex justify-center gap-2">
@@ -203,7 +203,7 @@ export function InventoryTable({ onUpdateStock, onShowHistory }: InventoryTableP
                                     </div>
                                 </div>
                             </TableCell>
-                             <TableCell>{item.price ? `$${item.price.toFixed(2)}` : '-'}</TableCell>
+                             <TableCell>{item.price ? `Rp${Math.round(item.price)}` : '-'}</TableCell>
                             <TableCell>{item.stock}</TableCell>
                              <TableCell className="text-center">
                                 <div className="flex justify-center gap-2">

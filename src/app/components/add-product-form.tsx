@@ -243,7 +243,7 @@ export function AddProductForm() {
                                                     name={`variants.${index}.price`}
                                                     render={({ field }) => (
                                                         <FormItem>
-                                                            <FormControl><Input type="number" placeholder="9.99" {...field} /></FormControl>
+                                                            <FormControl><Input type="number" placeholder="50000" {...field} /></FormControl>
                                                             <FormMessage/>
                                                         </FormItem>
                                                     )}

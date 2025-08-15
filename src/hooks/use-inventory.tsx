@@ -22,8 +22,8 @@ const initialItems: InventoryItem[] = [
     sku: 'TEA-GRN-ORG',
     imageUrl: 'https://placehold.co/40x40.png',
     variants: [
-      { id: '1-1', name: '250g Box', sku: 'TEA-GRN-ORG-250', stock: 150, price: 5, history: [{ date: new Date(), change: 150, reason: 'Initial Stock', newStockLevel: 150 }] },
-      { id: '1-2', name: '500g Pouch', sku: 'TEA-GRN-ORG-500', stock: 80, price: 9, history: [{ date: new Date(), change: 80, reason: 'Initial Stock', newStockLevel: 80 }] },
+      { id: '1-1', name: '250g Box', sku: 'TEA-GRN-ORG-250', stock: 150, price: 25000, history: [{ date: new Date(), change: 150, reason: 'Initial Stock', newStockLevel: 150 }] },
+      { id: '1-2', name: '500g Pouch', sku: 'TEA-GRN-ORG-500', stock: 80, price: 45000, history: [{ date: new Date(), change: 80, reason: 'Initial Stock', newStockLevel: 80 }] },
     ]
   },
   { 
@@ -33,7 +33,7 @@ const initialItems: InventoryItem[] = [
     sku: 'BAK-BRD-WW',
     imageUrl: 'https://placehold.co/40x40.png',
     variants: [
-        { id: '2-1', name: '500g Loaf', sku: 'BAK-BRD-WW-500', stock: 75, price: 3, history: [{ date: new Date(), change: 75, reason: 'Initial Stock', newStockLevel: 75 }] }
+        { id: '2-1', name: '500g Loaf', sku: 'BAK-BRD-WW-500', stock: 75, price: 15000, history: [{ date: new Date(), change: 75, reason: 'Initial Stock', newStockLevel: 75 }] }
     ]
   },
   { 
@@ -43,7 +43,7 @@ const initialItems: InventoryItem[] = [
     sku: 'DRY-AMILK',
     imageUrl: 'https://placehold.co/40x40.png',
     variants: [
-        { id: '3-1', name: '1L Carton', sku: 'DRY-AMILK-1L', stock: 120, price: 4, history: [{ date: new Date(), change: 120, reason: 'Initial Stock', newStockLevel: 120 }] }
+        { id: '3-1', name: '1L Carton', sku: 'DRY-AMILK-1L', stock: 120, price: 20000, history: [{ date: new Date(), change: 120, reason: 'Initial Stock', newStockLevel: 120 }] }
     ]
   },
   { 
@@ -51,7 +51,7 @@ const initialItems: InventoryItem[] = [
     name: 'Avocados', 
     category: 'Produce', 
     stock: 200, 
-    price: 2, 
+    price: 10000, 
     size: 'Per piece', 
     history: [{ date: new Date(), change: 200, reason: 'Initial Stock', newStockLevel: 200 }],
     imageUrl: 'https://placehold.co/40x40.png'
@@ -61,7 +61,7 @@ const initialItems: InventoryItem[] = [
     name: 'Quinoa', 
     category: 'Grains', 
     stock: 100, 
-    price: 8, 
+    price: 80000, 
     size: '1kg', 
     history: [{ date: new Date(), change: 100, reason: 'Initial Stock', newStockLevel: 100 }],
     imageUrl: 'https://placehold.co/40x40.png'
@@ -71,7 +71,7 @@ const initialItems: InventoryItem[] = [
     name: 'Dark Chocolate Bar', 
     category: 'Snacks', 
     stock: 80, 
-    price: 3.5, 
+    price: 18000, 
     size: '100g', 
     history: [{ date: new Date(), change: 80, reason: 'Initial Stock', newStockLevel: 80 }],
     imageUrl: 'https://placehold.co/40x40.png'
