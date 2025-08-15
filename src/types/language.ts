@@ -84,7 +84,7 @@ export const translations = {
             itemsSelected: "{count} item(s) selected.",
             previous: "Previous",
             next: "Next",
-            page: "Page {current} of {total}",
+            page: "Page",
         },
         settings: {
             back: "Back",
@@ -200,7 +200,7 @@ export const translations = {
             itemsSelected: "{count} barang dipilih.",
             previous: "Sebelumnya",
             next: "Berikutnya",
-            page: "Halaman {current} dari {total}",
+            page: "Halaman",
         },
         settings: {
             back: "Kembali",

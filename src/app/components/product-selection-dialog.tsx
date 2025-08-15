@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -21,6 +20,7 @@ import type { InventoryItem } from '@/types';
 import { useLanguage } from '@/hooks/use-language';
 import { translations } from '@/types/language';
 import Image from 'next/image';
+import { Pagination } from '@/components/ui/pagination';
 
 interface ProductSelectionDialogProps {
   open: boolean;
@@ -53,6 +53,8 @@ export function ProductSelectionDialog({ open, onOpenChange, onSelect, available
       );
   }, [availableItems, categoryFilter, searchTerm]);
 
+  const totalPages = Math.ceil(filteredItems.length / ITEMS_PER_PAGE);
+
   const { paginatedItems, selectableItemIdsOnPage } = useMemo(() => {
     const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
     const paginated = filteredItems.slice(startIndex, startIndex + ITEMS_PER_PAGE);
@@ -62,7 +64,6 @@ export function ProductSelectionDialog({ open, onOpenChange, onSelect, available
     return { paginatedItems: paginated, selectableItemIdsOnPage: selectableIds };
   }, [filteredItems, currentPage]);
 
-  const totalPages = Math.ceil(filteredItems.length / ITEMS_PER_PAGE);
 
   useEffect(() => {
       if(open) {
@@ -247,36 +248,22 @@ export function ProductSelectionDialog({ open, onOpenChange, onSelect, available
                 </Table>
                 <div className="flex items-center justify-between p-4 border-t">
                     <div className="text-sm text-muted-foreground">
-                        {selectedIds.size} item(s) selected.
+                        {t.productSelectionDialog.itemsSelected.replace('{count}', selectedIds.size.toString())}
                     </div>
-                    <div className="flex items-center space-x-2">
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                            disabled={currentPage === 1}
-                        >
-                            Previous
-                        </Button>
-                        <span className="text-sm">
-                            Page {currentPage} of {totalPages}
-                        </span>
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                            disabled={currentPage === totalPages}
-                        >
-                            Next
-                        </Button>
-                    </div>
+                     {totalPages > 1 && (
+                        <Pagination 
+                            currentPage={currentPage}
+                            totalPages={totalPages}
+                            onPageChange={setCurrentPage}
+                        />
+                    )}
                 </div>
             </div>
             </ScrollArea>
         </div>
         <DialogFooter className="pt-4">
           <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>{t.common.cancel}</Button>
-          <Button type="button" onClick={handleSave}>Add {selectedIds.size} Items</Button>
+          <Button type="button" onClick={handleSave}>{t.productSelectionDialog.addItems.replace('{count}', selectedIds.size.toString())}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
