@@ -74,23 +74,23 @@ export function ProductSelectionDialog({ open, onOpenChange, onSelect, available
   }, [open])
 
   const handleSelectAllOnPage = (checked: boolean | 'indeterminate') => {
+    const newSelectedIds = new Set(selectedIds);
     if (checked === true) {
-      const newSelectedIds = new Set(selectedIds);
       selectableItemIdsOnPage.forEach(id => newSelectedIds.add(id));
-      setSelectedIds(newSelectedIds);
     } else {
-      const newSelectedIds = new Set(selectedIds);
       selectableItemIdsOnPage.forEach(id => newSelectedIds.delete(id));
-      setSelectedIds(newSelectedIds);
     }
+    setSelectedIds(newSelectedIds);
   };
 
-  const handleSelectRow = (id: string, checked: boolean) => {
+  const handleSelectRow = (item: InventoryItem, checked: boolean) => {
     const newSelectedIds = new Set(selectedIds);
+    const idsToToggle = item.variants ? item.variants.map(v => v.id) : [item.id];
+    
     if (checked) {
-      newSelectedIds.add(id);
+      idsToToggle.forEach(id => newSelectedIds.add(id));
     } else {
-      newSelectedIds.delete(id);
+      idsToToggle.forEach(id => newSelectedIds.delete(id));
     }
     setSelectedIds(newSelectedIds);
   };
@@ -108,12 +108,12 @@ export function ProductSelectionDialog({ open, onOpenChange, onSelect, available
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl h-[90vh] flex flex-col">
         <DialogHeader>
-          <DialogTitle>Select Products</DialogTitle>
+          <DialogTitle>{t.dashboard.stockIn}</DialogTitle>
           <DialogDescription>
-            Choose products to add to the stock in list. You can search, filter, and select multiple items.
+            {t.stockHistory.description}
           </DialogDescription>
         </DialogHeader>
-        <div className="flex flex-col md:flex-row gap-4">
+        <div className="flex flex-col md:flex-row gap-4 px-0 py-4">
             <div className="relative w-full md:w-auto flex-grow">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -143,8 +143,8 @@ export function ProductSelectionDialog({ open, onOpenChange, onSelect, available
                 </SelectContent>
             </Select>
         </div>
-        <div className="flex-grow overflow-hidden border rounded-md">
-            <ScrollArea className="h-full">
+        <div className="flex-grow overflow-hidden border rounded-md relative">
+           <ScrollArea className="absolute inset-0 h-full w-full">
                 <Table>
                     <TableHeader className="sticky top-0 bg-card z-10">
                     <TableRow>
@@ -163,9 +163,20 @@ export function ProductSelectionDialog({ open, onOpenChange, onSelect, available
                     {paginatedItems.length > 0 ? (
                         paginatedItems.flatMap((item) => {
                             if (item.variants && item.variants.length > 0) {
+                                const variantIds = item.variants.map(v => v.id);
+                                const selectedCount = variantIds.filter(id => selectedIds.has(id)).length;
+                                const isAllSelected = selectedCount === variantIds.length;
+                                const isPartiallySelected = selectedCount > 0 && !isAllSelected;
+
                                 return [
-                                    <TableRow key={item.id} className="bg-muted/20 hover:bg-muted/40 font-semibold">
-                                        <TableCell></TableCell>
+                                    <TableRow key={item.id} className="bg-muted/20 hover:bg-muted/40 font-semibold" data-state={isAllSelected ? "selected" : ""}>
+                                        <TableCell>
+                                             <Checkbox
+                                                checked={isAllSelected ? true : (isPartiallySelected ? 'indeterminate' : false)}
+                                                onCheckedChange={(checked) => handleSelectRow(item, !!checked)}
+                                                aria-label={`Select ${item.name}`}
+                                            />
+                                        </TableCell>
                                         <TableCell>
                                             <div className="flex items-center gap-4">
                                                 <Image 
@@ -185,13 +196,7 @@ export function ProductSelectionDialog({ open, onOpenChange, onSelect, available
                                     </TableRow>,
                                     ...item.variants.map(variant => (
                                         <TableRow key={variant.id} data-state={selectedIds.has(variant.id) && "selected"}>
-                                            <TableCell>
-                                                <Checkbox
-                                                    checked={selectedIds.has(variant.id)}
-                                                    onCheckedChange={(checked) => handleSelectRow(variant.id, !!checked)}
-                                                    aria-label={`Select ${item.name} - ${variant.name}`}
-                                                />
-                                            </TableCell>
+                                            <TableCell></TableCell>
                                             <TableCell className="pl-16">
                                                 <div className="font-medium text-sm">{variant.name}</div>
                                                 <div className="text-xs text-muted-foreground">SKU: {variant.sku}</div>
@@ -206,7 +211,7 @@ export function ProductSelectionDialog({ open, onOpenChange, onSelect, available
                                     <TableCell>
                                         <Checkbox
                                             checked={selectedIds.has(item.id)}
-                                            onCheckedChange={(checked) => handleSelectRow(item.id, !!checked)}
+                                            onCheckedChange={(checked) => handleSelectRow(item, !!checked)}
                                             aria-label={`Select ${item.name}`}
                                             disabled={item.stock === undefined}
                                         />
@@ -276,3 +281,5 @@ export function ProductSelectionDialog({ open, onOpenChange, onSelect, available
   );
 }
  
+
+    
