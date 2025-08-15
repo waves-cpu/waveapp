@@ -62,6 +62,28 @@ export const translations = {
             change: "Change",
             newTotal: "New Total",
         },
+        stockInForm: {
+            title: "Create Stock In Record",
+            description: "Add new stock received from suppliers or other sources.",
+            selectProducts: "Select Products",
+            noProducts: "No products selected. Click \"Select Products\" to begin.",
+            quantity: "Quantity",
+            reason: "Reason / Note",
+            submit: "Submit Stock In",
+            successTitle: "Stock In Successful",
+            successDescription: "{count} item(s) have been updated.",
+        },
+        productSelectionDialog: {
+            title: "Select Products",
+            description: "Choose products to add to the stock in list. You can search, filter, and select multiple items.",
+            searchPlaceholder: "Search by product or SKU...",
+            categoryPlaceholder: "Filter by category...",
+            addItems: "Add {count} Items",
+            itemsSelected: "{count} item(s) selected.",
+            previous: "Previous",
+            next: "Next",
+            page: "Page {current} of {total}",
+        },
         settings: {
             back: "Back",
             title: "Settings",
@@ -79,6 +101,13 @@ export const translations = {
         bulkEditDialog: {
             title: "Edit Variants for",
             description: "Quickly edit all variants for this product below."
+        },
+        bulkStockInDialog: {
+            title: "Bulk Stock In for",
+            description: "Quickly set quantity and reason for all variants below.",
+            variantName: "Variant Name",
+            applyToAll: "Apply to All",
+            applyReasonPlaceholder: "Set a reason for all variants...",
         },
         common: {
             cancel: "Cancel",
@@ -147,6 +176,28 @@ export const translations = {
             change: "Perubahan",
             newTotal: "Total Baru",
         },
+        stockInForm: {
+            title: "Buat Catatan Stok Masuk",
+            description: "Tambahkan stok baru yang diterima dari pemasok atau sumber lain.",
+            selectProducts: "Pilih Produk",
+            noProducts: "Belum ada produk dipilih. Klik \"Pilih Produk\" untuk memulai.",
+            quantity: "Jumlah",
+            reason: "Alasan / Catatan",
+            submit: "Kirim Stok Masuk",
+            successTitle: "Stok Masuk Berhasil",
+            successDescription: "{count} barang telah diperbarui.",
+        },
+        productSelectionDialog: {
+            title: "Pilih Produk",
+            description: "Pilih produk untuk ditambahkan ke daftar stok masuk. Anda dapat mencari, memfilter, dan memilih beberapa item.",
+            searchPlaceholder: "Cari berdasarkan produk atau SKU...",
+            categoryPlaceholder: "Filter berdasarkan kategori...",
+            addItems: "Tambah {count} Barang",
+            itemsSelected: "{count} barang dipilih.",
+            previous: "Sebelumnya",
+            next: "Berikutnya",
+            page: "Halaman {current} dari {total}",
+        },
         settings: {
             back: "Kembali",
             title: "Pengaturan",
@@ -164,6 +215,13 @@ export const translations = {
         bulkEditDialog: {
             title: "Ubah Varian untuk",
             description: "Ubah semua varian untuk produk ini dengan cepat di bawah."
+        },
+        bulkStockInDialog: {
+            title: "Stok Masuk Massal untuk",
+            description: "Atur jumlah dan alasan untuk semua varian di bawah ini dengan cepat.",
+            variantName: "Nama Varian",
+            applyToAll: "Terapkan ke Semua",
+            applyReasonPlaceholder: "Atur alasan untuk semua varian...",
         },
         common: {
             cancel: "Batal",

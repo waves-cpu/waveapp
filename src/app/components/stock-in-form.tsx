@@ -12,7 +12,6 @@ import {
   FormControl,
   FormField,
   FormItem,
-  FormLabel,
   FormMessage,
 } from '@/components/ui/form';
 import { useInventory } from '@/hooks/use-inventory';
@@ -21,20 +20,26 @@ import { useLanguage } from '@/hooks/use-language';
 import { translations } from '@/types/language';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { PlusCircle, Trash2 } from 'lucide-react';
+import { PlusCircle, Trash2, Pencil } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import type { InventoryItem } from '@/types';
 import { ProductSelectionDialog } from './product-selection-dialog';
+import Image from 'next/image';
+import { BulkStockInDialog } from './bulk-stock-in-dialog';
 
 const stockInItemSchema = z.object({
     itemId: z.string(),
     itemName: z.string(),
-    quantity: z.coerce.number().int().min(1, "Quantity must be at least 1."),
+    quantity: z.coerce.number().int().min(0, "Quantity must be at least 0."),
     reason: z.string().min(2, "Reason is required."),
     parentName: z.string().optional(),
+    parentSku: z.string().optional(),
+    parentImageUrl: z.string().optional(),
     variantName: z.string().optional(),
     isVariant: z.boolean(),
 });
+
+type StockInItem = z.infer<typeof stockInItemSchema>;
 
 const formSchema = z.object({
   stockInItems: z.array(stockInItemSchema).nonempty("Please add at least one item to stock in."),
@@ -47,6 +52,8 @@ export function StockInForm() {
   const { toast } = useToast();
   const router = useRouter();
   const [isProductSelectionOpen, setProductSelectionOpen] = useState(false);
+  const [isBulkStockInOpen, setBulkStockInOpen] = useState(false);
+  const [bulkEditProduct, setBulkEditProduct] = useState<{name: string, variants: any[]} | null>(null);
   
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -55,19 +62,21 @@ export function StockInForm() {
     },
   });
 
-  const { fields, append, remove } = useFieldArray({
+  const { fields, append, remove, update } = useFieldArray({
     control: form.control,
     name: "stockInItems"
   });
 
-  const allItemsAndVariantsByName = useMemo(() => {
-    const map = new Map<string, {name: string; parentName?: string; variantName?: string; isVariant: boolean}>();
+  const allItemsAndVariantsById = useMemo(() => {
+    const map = new Map<string, {name: string; parentName?: string; parentSku?: string; parentImageUrl?: string; variantName?: string; isVariant: boolean}>();
     items.forEach(item => {
         if (item.variants && item.variants.length > 0) {
             item.variants.forEach(variant => {
                 map.set(variant.id, { 
                     name: `${item.name} - ${variant.name}`,
                     parentName: item.name,
+                    parentSku: item.sku,
+                    parentImageUrl: item.imageUrl,
                     variantName: variant.name,
                     isVariant: true
                 });
@@ -75,7 +84,8 @@ export function StockInForm() {
         } else if (item.stock !== undefined) {
              map.set(item.id, { 
                 name: item.name,
-                isVariant: false
+                isVariant: false,
+                parentImageUrl: item.imageUrl,
              });
         }
     });
@@ -87,10 +97,8 @@ export function StockInForm() {
   const availableItems = useMemo(() => {
     return items.filter(item => {
         if (item.variants && item.variants.length > 0) {
-            // Include parent if not all variants are already selected
             return !item.variants.every(v => existingItemIds.has(v.id));
         }
-        // Include simple item if it's not selected
         return item.stock !== undefined && !existingItemIds.has(item.id);
     });
   }, [items, existingItemIds]);
@@ -100,37 +108,58 @@ export function StockInForm() {
     const newItems = selectedIds
         .filter(id => !existingItemIds.has(id))
         .map(id => {
-            const itemDetail = allItemsAndVariantsByName.get(id);
-            if (!itemDetail) return null; // Should not happen if logic is correct
-            
-            const parentName = itemDetail.isVariant ? itemDetail.parentName : undefined;
-            const variantName = itemDetail.isVariant ? itemDetail.variantName : undefined;
-            
-            // Find parent item to get full name
-            const parentItem = items.find(i => i.name === parentName);
-            const itemName = parentItem ? `${parentItem.name} - ${variantName}` : itemDetail.name;
-
+            const itemDetail = allItemsAndVariantsById.get(id);
+            if (!itemDetail) return null;
 
             return {
                 itemId: id,
-                itemName: itemName,
+                itemName: itemDetail.name,
                 quantity: 1,
                 reason: 'Stock In',
-                parentName: parentName,
-                variantName: variantName,
+                parentName: itemDetail.parentName,
+                parentSku: itemDetail.parentSku,
+                parentImageUrl: itemDetail.parentImageUrl,
+                variantName: itemDetail.variantName,
                 isVariant: itemDetail.isVariant,
             };
-        }).filter(Boolean); // Filter out any nulls
+        }).filter((item): item is StockInItem => item !== null);
     
-    append(newItems as any[]);
+    append(newItems);
+  };
+
+  const openBulkStockInDialog = (parentName: string) => {
+    const variantsForBulkEdit = fields
+        .filter(field => field.parentName === parentName)
+        .map(field => ({
+            itemId: field.itemId,
+            variantName: field.variantName || field.itemName,
+            quantity: field.quantity,
+            reason: field.reason,
+        }));
+    
+    setBulkEditProduct({ name: parentName, variants: variantsForBulkEdit });
+    setBulkStockInOpen(true);
+  };
+
+  const handleBulkSave = (updatedVariants: { itemId: string; quantity: number; reason: string }[]) => {
+    updatedVariants.forEach(updatedVariant => {
+        const fieldIndex = fields.findIndex(field => field.itemId === updatedVariant.itemId);
+        if (fieldIndex !== -1) {
+            update(fieldIndex, {
+                ...fields[fieldIndex],
+                quantity: updatedVariant.quantity,
+                reason: updatedVariant.reason,
+            });
+        }
+    });
   };
 
   const groupedItems = useMemo(() => {
-    const groups = new Map<string, (z.infer<typeof stockInItemSchema> & { originalIndex: number })[]>();
-    const simpleItems: (z.infer<typeof stockInItemSchema> & { originalIndex: number })[] = [];
+    const groups = new Map<string, (StockInItem & { originalIndex: number })[]>();
+    const simpleItems: (StockInItem & { originalIndex: number })[] = [];
     
     fields.forEach((field, index) => {
-        const formField = { ...field, originalIndex: index };
+        const formField = { ...form.getValues(`stockInItems.${index}`), originalIndex: index };
         if (formField.isVariant && formField.parentName) {
             if (!groups.has(formField.parentName)) {
                 groups.set(formField.parentName, []);
@@ -142,18 +171,19 @@ export function StockInForm() {
     });
 
     return { groups, simpleItems };
-
-  }, [fields]);
+  }, [fields, form]);
 
 
   function onSubmit(values: z.infer<typeof formSchema>) {
     values.stockInItems.forEach(item => {
-        updateStock(item.itemId, item.quantity, item.reason);
+        if(item.quantity > 0){
+            updateStock(item.itemId, item.quantity, item.reason);
+        }
     });
 
     toast({
-        title: "Stock In Successful",
-        description: `${values.stockInItems.length} item(s) have been updated.`,
+        title: t.stockInForm.successTitle,
+        description: t.stockInForm.successDescription.replace('{count}', values.stockInItems.length.toString()),
     });
     form.reset();
     router.push('/');
@@ -165,25 +195,25 @@ export function StockInForm() {
         <CardHeader>
             <div className="flex justify-between items-start">
                 <div>
-                    <CardTitle>Create Stock In Record</CardTitle>
-                    <CardDescription>Add new stock received from suppliers or other sources.</CardDescription>
+                    <CardTitle>{t.stockInForm.title}</CardTitle>
+                    <CardDescription>{t.stockInForm.description}</CardDescription>
                 </div>
                 <Button type="button" onClick={() => setProductSelectionOpen(true)}>
                     <PlusCircle className="mr-2 h-4 w-4" />
-                    Select Products
+                    {t.stockInForm.selectProducts}
                 </Button>
             </div>
         </CardHeader>
         <CardContent>
             <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                <div className="max-h-[50vh] overflow-auto">
+                <div className="max-h-[60vh] overflow-auto border rounded-md">
                     <Table>
                         <TableHeader>
                             <TableRow>
-                                <TableHead className="w-[45%]">Product</TableHead>
-                                <TableHead className="w-[15%]">Quantity</TableHead>
-                                <TableHead>Reason / Note</TableHead>
+                                <TableHead className="w-[45%]">{t.inventoryTable.name}</TableHead>
+                                <TableHead className="w-[15%]">{t.stockInForm.quantity}</TableHead>
+                                <TableHead>{t.stockInForm.reason}</TableHead>
                                 <TableHead className="w-[50px]"></TableHead>
                             </TableRow>
                         </TableHeader>
@@ -191,14 +221,25 @@ export function StockInForm() {
                             {fields.length === 0 ? (
                                 <TableRow>
                                     <TableCell colSpan={4} className="text-center h-24">
-                                        No products selected. Click "Select Products" to begin.
+                                        {t.stockInForm.noProducts}
                                     </TableCell>
                                 </TableRow>
                             ) : (
                                 <>
                                 {groupedItems.simpleItems.map((field) => (
-                                     <TableRow key={field.id}>
-                                        <TableCell className="font-medium">{field.itemName}</TableCell>
+                                     <TableRow key={field.itemId}>
+                                        <TableCell>
+                                            <div className="flex items-center gap-4">
+                                                <Image 
+                                                    src={field.parentImageUrl || 'https://placehold.co/40x40.png'} 
+                                                    alt={field.itemName} 
+                                                    width={40} height={40} 
+                                                    className="rounded-sm" 
+                                                    data-ai-hint="product image"
+                                                />
+                                                <span className="font-medium">{field.itemName}</span>
+                                            </div>
+                                        </TableCell>
                                         <TableCell>
                                             <FormField
                                                 control={form.control}
@@ -213,7 +254,7 @@ export function StockInForm() {
                                                 control={form.control}
                                                 name={`stockInItems.${field.originalIndex}.reason`}
                                                 render={({ field: formField }) => (
-                                                    <FormItem><FormControl><Input placeholder="e.g., From Supplier A" {...formField} /></FormControl><FormMessage/></FormItem>
+                                                    <FormItem><FormControl><Input placeholder={t.updateStockDialog.reasonPlaceholder} {...formField} /></FormControl><FormMessage/></FormItem>
                                                 )}
                                             />
                                         </TableCell>
@@ -224,14 +265,34 @@ export function StockInForm() {
                                         </TableCell>
                                     </TableRow>
                                 ))}
-                                {Array.from(groupedItems.groups.entries()).map(([parentName, variants]) => (
+                                {Array.from(groupedItems.groups.entries()).map(([parentName, variants]) => {
+                                    const parent = variants[0];
+                                    return (
                                     <React.Fragment key={parentName}>
                                         <TableRow className="bg-muted/20 hover:bg-muted/40">
-                                             <TableCell colSpan={4} className="font-semibold text-primary">{parentName}</TableCell>
+                                             <TableCell>
+                                                <div className="flex items-center gap-4 font-semibold text-primary">
+                                                    <Image 
+                                                        src={parent.parentImageUrl || 'https://placehold.co/40x40.png'} 
+                                                        alt={parentName} 
+                                                        width={40} height={40} 
+                                                        className="rounded-sm" 
+                                                        data-ai-hint="product image"
+                                                    />
+                                                    <span>{parentName}</span>
+                                                    <Button type="button" variant="ghost" size="icon" className="h-6 w-6 text-foreground" onClick={() => openBulkStockInDialog(parentName)}>
+                                                        <Pencil className="h-3 w-3" />
+                                                    </Button>
+                                                </div>
+                                                <div className="text-xs text-muted-foreground ml-14">SKU: {parent.parentSku}</div>
+                                             </TableCell>
+                                             <TableCell colSpan={3}></TableCell>
                                         </TableRow>
                                         {variants.map((field) => (
-                                            <TableRow key={field.id}>
-                                                <TableCell className="pl-12">{field.variantName}</TableCell>
+                                            <TableRow key={field.itemId}>
+                                                <TableCell className="pl-16">
+                                                    <div className="font-medium text-sm">{field.variantName}</div>
+                                                </TableCell>
                                                 <TableCell>
                                                     <FormField
                                                         control={form.control}
@@ -246,7 +307,7 @@ export function StockInForm() {
                                                         control={form.control}
                                                         name={`stockInItems.${field.originalIndex}.reason`}
                                                         render={({ field: formField }) => (
-                                                            <FormItem><FormControl><Input placeholder="e.g., From Supplier A" {...formField} /></FormControl><FormMessage/></FormItem>
+                                                            <FormItem><FormControl><Input placeholder={t.updateStockDialog.reasonPlaceholder} {...formField} /></FormControl><FormMessage/></FormItem>
                                                         )}
                                                     />
                                                 </TableCell>
@@ -258,7 +319,8 @@ export function StockInForm() {
                                             </TableRow>
                                         ))}
                                     </React.Fragment>
-                                ))}
+                                    )
+                                })}
                                 </>
                             )}
                         </TableBody>
@@ -269,7 +331,7 @@ export function StockInForm() {
 
                 <div className="flex justify-end gap-2 pt-4">
                     <Button type="button" variant="ghost" onClick={() => router.push('/')}>{t.common.cancel}</Button>
-                    <Button type="submit" disabled={fields.length === 0}>Submit Stock In</Button>
+                    <Button type="submit" disabled={fields.length === 0}>{t.stockInForm.submit}</Button>
                 </div>
             </form>
             </Form>
@@ -282,6 +344,15 @@ export function StockInForm() {
         availableItems={availableItems}
         categories={categories}
     />
+     {bulkEditProduct && (
+        <BulkStockInDialog 
+            open={isBulkStockInOpen}
+            onOpenChange={setBulkStockInOpen}
+            productName={bulkEditProduct.name}
+            variants={bulkEditProduct.variants}
+            onSave={handleBulkSave}
+        />
+     )}
     </>
   );
 }
