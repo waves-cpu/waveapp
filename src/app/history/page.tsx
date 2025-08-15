@@ -283,7 +283,7 @@ export default function HistoryPage() {
                             ) : (
                                 <div className="flex items-center gap-2 font-semibold text-primary">
                                     <ShoppingCart className="h-5 w-5" />
-                                    <span>Ringkasan Penjualan</span>
+                                    <span>Penjualan</span>
                                 </div>
                             )}
                         </TableCell>
