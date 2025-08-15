@@ -8,25 +8,45 @@ import { translations } from "@/types/language";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import type { InventoryItem } from "@/types";
+import { Skeleton } from "@/components/ui/skeleton";
+
+function EditProductPageSkeleton() {
+    return (
+        <div className="space-y-6">
+            <div className="space-y-2">
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-9 w-full" />
+            </div>
+             <div className="space-y-2">
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-9 w-full" />
+            </div>
+             <div className="space-y-2">
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-9 w-full" />
+            </div>
+        </div>
+    )
+}
+
 
 export default function EditProductPage() {
     const { language } = useLanguage();
     const t = translations[language];
     const params = useParams();
-    const { getItem, items } = useInventory(); // Destructure items to find parent
+    const { getItem, loading: inventoryLoading } = useInventory(); 
     const [item, setItem] = useState<InventoryItem | undefined>(undefined);
-    const [loading, setLoading] = useState(true);
+    const [pageLoading, setPageLoading] = useState(true);
 
     const id = typeof params.id === 'string' ? params.id : '';
 
     useEffect(() => {
-        if (id && items.length > 0) {
-            setLoading(true);
+        if (!inventoryLoading && id) {
             const fetchedItem = getItem(id);
             setItem(fetchedItem);
-            setLoading(false);
+            setPageLoading(false);
         }
-    }, [id, getItem, items]);
+    }, [id, getItem, inventoryLoading]);
 
 
     return (
@@ -36,8 +56,8 @@ export default function EditProductPage() {
                     <SidebarTrigger className="md:hidden" />
                     <h1 className="text-lg font-bold">{t.inventoryTable.editProduct}</h1>
                 </div>
-                {loading ? (
-                    <p>Loading item...</p>
+                {pageLoading ? (
+                    <EditProductPageSkeleton />
                 ) : item ? (
                     <AddProductForm existingItem={item} />
                 ) : (

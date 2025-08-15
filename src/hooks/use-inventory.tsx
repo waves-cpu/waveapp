@@ -81,13 +81,16 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const getItem = useCallback((itemId: string): InventoryItem | undefined => {
-    for (const item of items) {
-      if (item.id === itemId) {
+    const item = items.find(i => i.id === itemId);
+    if (item) {
         return item;
-      }
-      if (item.variants?.some(v => v.id === itemId)) {
-        return item; 
-      }
+    }
+    // If no direct match, check if it's a variant ID
+    for (const parentItem of items) {
+        if (parentItem.variants?.some(v => v.id === itemId)) {
+            // If it's a variant, we still want to return the whole parent item for editing
+            return parentItem; 
+        }
     }
     return undefined;
   }, [items]);

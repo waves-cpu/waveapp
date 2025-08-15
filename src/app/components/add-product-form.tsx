@@ -340,7 +340,7 @@ export function AddProductForm({ existingItem }: AddProductFormProps) {
                             <FormItem>
                             <FormLabel>{t.inventoryTable.size}</FormLabel>
                             <FormControl>
-                                <Input placeholder="e.g., 250g, 1L" {...field} />
+                                <Input placeholder="e.g., 250g, 1L" {...field} value={field.value ?? ''}/>
                             </FormControl>
                             <FormMessage />
                             </FormItem>
