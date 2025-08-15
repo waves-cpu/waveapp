@@ -27,42 +27,32 @@ import Image from 'next/image';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Search } from 'lucide-react';
 
-const PosProductGrid = ({ onAddToCart }: { onAddToCart: (sku: string) => void }) => {
+const PosProductGrid = ({ onProductSelect }: { onProductSelect: (item: InventoryItem) => void }) => {
     const { items, loading } = useInventory();
     const [searchTerm, setSearchTerm] = useState('');
     const debouncedSearchTerm = useDebounce(searchTerm, 300);
 
     const availableItems = React.useMemo(() => {
-        if (!debouncedSearchTerm) {
-            return items.filter(item => item.variants ? item.variants.some(v => v.stock > 0) : (item.stock ?? 0) > 0);
-        }
-
         const lowerCaseSearch = debouncedSearchTerm.toLowerCase();
         
-        return items.map(item => {
+        return items.filter(item => {
+            // Item is available if it has stock or its variants have stock
+            const hasStock = item.variants 
+                ? item.variants.some(v => v.stock > 0)
+                : (item.stock ?? 0) > 0;
+
+            if (!hasStock) return false;
+            
+            if (!debouncedSearchTerm) return true;
+
             const matchesName = item.name.toLowerCase().includes(lowerCaseSearch);
             const matchesSku = item.sku?.toLowerCase().includes(lowerCaseSearch);
-            
-            if (item.variants && item.variants.length > 0) {
-                const matchingVariants = item.variants.filter(v => 
-                    (v.name.toLowerCase().includes(lowerCaseSearch) || v.sku?.toLowerCase().includes(lowerCaseSearch)) && v.stock > 0
-                );
-                
-                if (matchingVariants.length > 0) {
-                    return { ...item, variants: matchingVariants };
-                }
-                 if (matchesName || matchesSku) {
-                    const availableVariants = item.variants.filter(v => v.stock > 0);
-                    if (availableVariants.length > 0) {
-                        return { ...item, variants: availableVariants };
-                    }
-                }
-            } else if ((matchesName || matchesSku) && (item.stock ?? 0) > 0) {
-                return item;
-            }
-            return null;
-        }).filter((item): item is InventoryItem => item !== null);
+            const matchesVariant = item.variants?.some(v => 
+                v.name.toLowerCase().includes(lowerCaseSearch) || v.sku?.toLowerCase().includes(lowerCaseSearch)
+            );
 
+            return matchesName || matchesSku || matchesVariant;
+        });
     }, [items, debouncedSearchTerm]);
 
 
@@ -70,7 +60,7 @@ const PosProductGrid = ({ onAddToCart }: { onAddToCart: (sku: string) => void })
         return (
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
                 {Array.from({ length: 10 }).map((_, i) => (
-                    <Skeleton key={i} className="h-36 w-full" />
+                    <Skeleton key={i} className="h-44 w-full" />
                 ))}
             </div>
         );
@@ -90,29 +80,37 @@ const PosProductGrid = ({ onAddToCart }: { onAddToCart: (sku: string) => void })
             <ScrollArea className="flex-grow">
                 {availableItems.length > 0 ? (
                     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 pr-4">
-                        {availableItems.flatMap(item => 
-                            item.variants && item.variants.length > 0
-                            ? item.variants.map(variant => (
-                                <button key={variant.id} onClick={() => onAddToCart(variant.sku || '')} className="border bg-card rounded-lg p-2 text-left hover:bg-accent transition-colors disabled:opacity-50" disabled={!variant.sku}>
-                                    <div className="aspect-square bg-muted rounded-md flex items-center justify-center mb-2">
+                        {availableItems.map(item => {
+                            const hasVariants = item.variants && item.variants.length > 0;
+                            let priceDisplay;
+                            let stockDisplay;
+
+                            if (hasVariants) {
+                                const prices = item.variants!.map(v => v.price).filter(p => p !== undefined);
+                                const minPrice = Math.min(...prices);
+                                const maxPrice = Math.max(...prices);
+                                priceDisplay = prices.length > 0 
+                                    ? (minPrice === maxPrice ? `Rp${minPrice.toLocaleString('id-ID')}` : `Rp${minPrice.toLocaleString('id-ID')} - Rp${maxPrice.toLocaleString('id-ID')}`)
+                                    : '-';
+                                stockDisplay = `Stok: ${item.variants!.reduce((acc, v) => acc + v.stock, 0)}`;
+                            } else {
+                                priceDisplay = `Rp${(item.price ?? 0).toLocaleString('id-ID')}`;
+                                stockDisplay = `Stok: ${item.stock}`;
+                            }
+
+                            return (
+                                <button key={item.id} onClick={() => onProductSelect(item)} className="border bg-card rounded-lg p-2 text-left hover:bg-accent transition-colors flex flex-col">
+                                    <div className="aspect-square bg-muted rounded-md flex items-center justify-center mb-2 overflow-hidden">
                                         <Image src={item.imageUrl || 'https://placehold.co/150x150.png'} alt={item.name} width={150} height={150} className="rounded-md object-cover h-full w-full" data-ai-hint="product image"/>
                                     </div>
-                                    <p className="font-semibold text-sm truncate" title={`${item.name} - ${variant.name}`}>{item.name} - {variant.name}</p>
-                                    <p className="text-xs text-muted-foreground">Stok: {variant.stock}</p>
-                                    <p className="font-bold text-primary">{`Rp${variant.price.toLocaleString('id-ID')}`}</p>
-                                </button>
-                            ))
-                            : (
-                                <button key={item.id} onClick={() => onAddToCart(item.sku || '')} className="border bg-card rounded-lg p-2 text-left hover:bg-accent transition-colors disabled:opacity-50" disabled={!item.sku}>
-                                     <div className="aspect-square bg-muted rounded-md flex items-center justify-center mb-2">
-                                        <Image src={item.imageUrl || 'https://placehold.co/150x150.png'} alt={item.name} width={150} height={150} className="rounded-md object-cover h-full w-full" data-ai-hint="product image"/>
+                                    <div className="flex-grow">
+                                        <p className="font-semibold text-sm leading-tight line-clamp-2" title={item.name}>{item.name}</p>
+                                        <p className="text-xs text-muted-foreground">{stockDisplay}</p>
                                     </div>
-                                    <p className="font-semibold text-sm truncate" title={item.name}>{item.name}</p>
-                                    <p className="text-xs text-muted-foreground">Stok: {item.stock}</p>
-                                    <p className="font-bold text-primary">{`Rp${(item.price ?? 0).toLocaleString('id-ID')}`}</p>
+                                    <p className="font-bold text-primary text-sm mt-1">{priceDisplay}</p>
                                 </button>
-                            )
-                        )}
+                            );
+                        })}
                     </div>
                 ) : (
                      <div className="flex-grow flex flex-col items-center justify-center text-muted-foreground p-6 h-full">
@@ -130,7 +128,7 @@ const PosProductGrid = ({ onAddToCart }: { onAddToCart: (sku: string) => void })
 export default function PosSalesPage() {
   const { language } = useLanguage();
   const t = translations[language];
-  const { fetchSales, recordSale, getProductBySku, items } = useInventory();
+  const { recordSale, getProductBySku, items } = useInventory();
   const { toast } = useToast();
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -183,7 +181,7 @@ export default function PosSalesPage() {
         toast({
             variant: 'destructive',
             title: 'Stok Tidak Cukup',
-            description: `Stok untuk ${itemDetails.name} sudah habis.`,
+            description: `Stok untuk ${'parentName' in itemDetails ? itemDetails.name : itemDetails.name} sudah habis.`,
         });
         return;
     }
@@ -211,6 +209,21 @@ export default function PosSalesPage() {
         description: `${'parentName' in itemDetails ? itemDetails.parentName : itemDetails.name}${ 'parentName' in itemDetails ? ` (${itemDetails.name})` : ''} ditambahkan ke keranjang.`,
     });
   }, [cart, items, toast]);
+  
+  const handleProductSelect = useCallback((item: InventoryItem) => {
+    if (item.variants && item.variants.length > 0) {
+        setProductForVariantSelection(item);
+        setIsVariantDialogOpen(true);
+    } else if (item.sku) {
+        handleAddToCart(item.sku);
+    } else {
+        toast({
+            variant: 'destructive',
+            title: 'SKU Tidak Ditemukan',
+            description: `Produk "${item.name}" tidak memiliki SKU untuk ditambahkan.`
+        });
+    }
+  }, [handleAddToCart, toast]);
 
 
   const handleSkuSubmit = async (skuValue: string) => {
@@ -305,7 +318,7 @@ export default function PosSalesPage() {
 
         <div className="flex-1 grid grid-cols-1 lg:grid-cols-3 gap-8 p-4 lg:p-8 overflow-hidden">
               <div className="lg:col-span-2 flex flex-col gap-4 h-full overflow-hidden">
-                  <PosProductGrid onAddToCart={handleAddToCart} />
+                  <PosProductGrid onProductSelect={handleProductSelect} />
               </div>
               <div className="lg:col-span-1 h-full overflow-hidden">
                   <PosOrderSummary 
