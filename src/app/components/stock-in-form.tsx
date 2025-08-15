@@ -1,7 +1,6 @@
-
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -26,6 +25,7 @@ import type { InventoryItem } from '@/types';
 import { ProductSelectionDialog } from './product-selection-dialog';
 import Image from 'next/image';
 import { BulkStockInDialog } from './bulk-stock-in-dialog';
+import { Checkbox } from '@/components/ui/checkbox';
 
 const stockInItemSchema = z.object({
     itemId: z.string(),
@@ -54,6 +54,7 @@ export function StockInForm() {
   const router = useRouter();
   const [isProductSelectionOpen, setProductSelectionOpen] = useState(false);
   const [isBulkStockInOpen, setBulkStockInOpen] = useState(false);
+  const [bulkSelectedIds, setBulkSelectedIds] = useState<Set<string>>(new Set());
   
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -67,6 +68,11 @@ export function StockInForm() {
     control: form.control,
     name: "stockInItems"
   });
+
+  useEffect(() => {
+    // Clear selections when fields change
+    setBulkSelectedIds(new Set());
+  }, [fields.length]);
 
   const allItemsAndVariantsById = useMemo(() => {
     const map = new Map<string, {name: string; parentName?: string; parentSku?: string; parentImageUrl?: string; variantName?: string; isVariant: boolean}>();
@@ -150,12 +156,35 @@ export function StockInForm() {
   
   const handleBulkApply = (quantity: number, reason: string) => {
     fields.forEach((_field, index) => {
-        form.setValue(`stockInItems.${index}.quantity`, quantity, { shouldDirty: true });
-        form.setValue(`stockInItems.${index}.reason`, reason, { shouldDirty: true });
+        const fieldItemId = form.getValues(`stockInItems.${index}.itemId`);
+        if (bulkSelectedIds.has(fieldItemId)) {
+            form.setValue(`stockInItems.${index}.quantity`, quantity, { shouldDirty: true });
+            form.setValue(`stockInItems.${index}.reason`, reason, { shouldDirty: true });
+        }
     });
     form.trigger('stockInItems');
   };
 
+  const handleSelectAll = (checked: boolean) => {
+    const newSelectedIds = new Set<string>();
+    if (checked) {
+        fields.forEach(field => newSelectedIds.add(field.itemId));
+    }
+    setBulkSelectedIds(newSelectedIds);
+  };
+
+  const handleToggleSelection = (itemId: string) => {
+    const newSelectedIds = new Set(bulkSelectedIds);
+    if (newSelectedIds.has(itemId)) {
+        newSelectedIds.delete(itemId);
+    } else {
+        newSelectedIds.add(itemId);
+    }
+    setBulkSelectedIds(newSelectedIds);
+  };
+
+  const isAllSelected = fields.length > 0 && bulkSelectedIds.size === fields.length;
+  const isSomeSelected = bulkSelectedIds.size > 0 && !isAllSelected;
 
   const groupedItems = useMemo(() => {
     const groups = new Map<string, (StockInItem & { originalIndex: number })[]>();
@@ -202,7 +231,7 @@ export function StockInForm() {
                     <CardDescription>{t.stockInForm.description}</CardDescription>
                 </div>
                  <div className="flex gap-2">
-                    <Button type="button" variant="outline" onClick={() => setBulkStockInOpen(true)} disabled={fields.length === 0}>
+                    <Button type="button" variant="outline" onClick={() => setBulkStockInOpen(true)} disabled={bulkSelectedIds.size === 0}>
                         <PackagePlus className="mr-2 h-4 w-4" />
                         {t.stockInForm.bulkAdd}
                     </Button>
@@ -220,6 +249,14 @@ export function StockInForm() {
                     <Table>
                         <TableHeader>
                             <TableRow>
+                                <TableHead className="w-[50px]">
+                                    <Checkbox
+                                        checked={isAllSelected ? true : (isSomeSelected ? "indeterminate" : false)}
+                                        onCheckedChange={(checked) => handleSelectAll(!!checked)}
+                                        aria-label="Select all"
+                                        disabled={fields.length === 0}
+                                    />
+                                </TableHead>
                                 <TableHead className="w-[45%]">{t.inventoryTable.name}</TableHead>
                                 <TableHead className="w-[15%]">{t.stockInForm.quantity}</TableHead>
                                 <TableHead>{t.stockInForm.reason}</TableHead>
@@ -229,14 +266,21 @@ export function StockInForm() {
                         <TableBody>
                             {fields.length === 0 ? (
                                 <TableRow>
-                                    <TableCell colSpan={4} className="text-center h-24">
+                                    <TableCell colSpan={5} className="text-center h-24">
                                         {t.stockInForm.noProducts}
                                     </TableCell>
                                 </TableRow>
                             ) : (
                                 <>
                                 {groupedItems.simpleItems.map((field) => (
-                                     <TableRow key={field.itemId}>
+                                     <TableRow key={field.itemId} data-state={bulkSelectedIds.has(field.itemId) ? "selected" : ""}>
+                                        <TableCell>
+                                            <Checkbox
+                                                checked={bulkSelectedIds.has(field.itemId)}
+                                                onCheckedChange={() => handleToggleSelection(field.itemId)}
+                                                aria-label={`Select ${field.itemName}`}
+                                            />
+                                        </TableCell>
                                         <TableCell className="align-middle">
                                             <div className="flex items-center gap-4">
                                                 <Image 
@@ -279,6 +323,7 @@ export function StockInForm() {
                                     return (
                                     <React.Fragment key={parentName}>
                                         <TableRow className="bg-muted/20 hover:bg-muted/40">
+                                            <TableCell></TableCell>
                                              <TableCell className="align-middle">
                                                 <div className="flex items-center gap-4 font-semibold text-primary">
                                                     <Image 
@@ -312,7 +357,14 @@ export function StockInForm() {
                                              </TableCell>
                                         </TableRow>
                                         {variants.map((field) => (
-                                            <TableRow key={field.itemId}>
+                                            <TableRow key={field.itemId} data-state={bulkSelectedIds.has(field.itemId) ? "selected" : ""}>
+                                                <TableCell className="pl-6">
+                                                     <Checkbox
+                                                        checked={bulkSelectedIds.has(field.itemId)}
+                                                        onCheckedChange={() => handleToggleSelection(field.itemId)}
+                                                        aria-label={`Select ${field.itemName}`}
+                                                    />
+                                                </TableCell>
                                                 <TableCell className="pl-16 align-middle">
                                                     <div className="font-medium text-sm">{field.variantName}</div>
                                                 </TableCell>
@@ -375,4 +427,3 @@ export function StockInForm() {
     </>
   );
 }
-
