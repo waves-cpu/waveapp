@@ -34,7 +34,7 @@ function DashboardContent() {
                 {t.dashboard.inventory}
             </h1>
         </div>
-        <div className="flex-grow overflow-hidden">
+        <div className="flex-grow">
             <InventoryTable
             onUpdateStock={handleUpdateStock}
             />

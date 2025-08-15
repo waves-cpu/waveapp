@@ -13,7 +13,6 @@ import {
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   Select,
   SelectContent,
@@ -222,7 +221,7 @@ export function InventoryTable({ onUpdateStock }: InventoryTableProps) {
 
   return (
     <>
-    <div className="h-full flex flex-col bg-card rounded-lg border shadow-sm">
+    <div className="bg-card rounded-lg border shadow-sm">
       <div className="p-4 flex flex-col gap-4 border-b">
         <div className="flex flex-col md:flex-row gap-4 justify-between items-center">
             <div className="flex flex-col md:flex-row gap-4 w-full md:w-auto flex-1">
@@ -274,7 +273,7 @@ export function InventoryTable({ onUpdateStock }: InventoryTableProps) {
             </Button>
         </div>
       </div>
-      <ScrollArea className="flex-grow">
+      <div>
         <Table>
           <TableHeader className="sticky top-0 bg-card">
             <TableRow>
@@ -468,7 +467,7 @@ export function InventoryTable({ onUpdateStock }: InventoryTableProps) {
                 </Select>
             </div>
         </div>
-      </ScrollArea>
+      </div>
     </div>
     {selectedBulkEditItem && (
         <BulkEditVariantsDialog 
@@ -488,3 +487,4 @@ export function InventoryTable({ onUpdateStock }: InventoryTableProps) {
     
 
     
+
