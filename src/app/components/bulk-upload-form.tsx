@@ -18,10 +18,12 @@ interface ParsedRow {
 
 const templateData = [
     ['parent_sku', 'product_name', 'category', 'image_url', 'variant_sku', 'variant_name', 'price', 'stock'],
-    ['SKU001', 'T-Shirt A', 'T-Shirt Oversize', 'https://placehold.co/100x100.png', 'SKU001-S', 'Small', 150000, 50],
-    ['SKU001', 'T-Shirt A', 'T-Shirt Oversize', 'https://placehold.co/100x100.png', 'SKU001-M', 'Medium', 150000, 100],
-    ['SKU002', 'Hoodie B', 'Hoodie', '', 'SKU002-L', 'Large', 350000, 30],
-    ['SKU002', 'Hoodie B', 'Hoodie', '', 'SKU002-XL', 'X-Large', 350000, 25]
+    ['TSHIRT-BLK', 'T-Shirt Basic Black', 'T-Shirt Oversize', 'https://placehold.co/100x100.png', 'TSHIRT-BLK-S', 'Small', 150000, 50],
+    ['TSHIRT-BLK', 'T-Shirt Basic Black', 'T-Shirt Oversize', 'https://placehold.co/100x100.png', 'TSHIRT-BLK-M', 'Medium', 150000, 100],
+    ['TSHIRT-BLK', 'T-Shirt Basic Black', 'T-Shirt Oversize', 'https://placehold.co/100x100.png', 'TSHIRT-BLK-L', 'Large', 150000, 75],
+    ['HOODIE-GRY', 'Classic Hoodie Grey', 'Hoodie', 'https://placehold.co/100x100.png', 'HOODIE-GRY-L', 'Large', 350000, 30],
+    ['HOODIE-GRY', 'Classic Hoodie Grey', 'Hoodie', 'https://placehold.co/100x100.png', 'HOODIE-GRY-XL', 'X-Large', 350000, 25],
+    ['CAP-NAVY', 'Navy Blue Cap', 'Caps', '', 'CAP-NAVY-OS', 'One Size', 120000, 60]
 ];
 
 export function BulkUploadForm() {
@@ -174,8 +176,9 @@ export function BulkUploadForm() {
                 <CardHeader>
                     <CardTitle>Bulk Import Products</CardTitle>
                     <CardDescription>
-                        Upload an Excel (.xlsx) file to add multiple products and their variants.
-                        Download the Excel template to see the required format.
+                        Unggah file Excel (.xlsx) untuk menambahkan beberapa produk dan variannya sekaligus.
+                        Setiap baris dalam file mewakili satu varian produk. Gunakan `parent_sku` yang sama untuk semua varian dari produk induk yang sama.
+                        Unduh template untuk melihat format yang diperlukan.
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
