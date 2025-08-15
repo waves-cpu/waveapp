@@ -69,8 +69,8 @@ export default function HistoryPage() {
     items.forEach(item => {
       const processHistory = (history: AdjustmentHistory[], parentItem: InventoryItem, variant?: InventoryItemVariant) => {
         history.forEach(entry => {
-            // Filter out sales adjustments which are now handled separately
-            if (!entry.reason.toLowerCase().startsWith('sale') && !entry.reason.toLowerCase().startsWith('cancelled sale')) {
+            // Filter out sales adjustments and entries with no change
+            if (entry.change !== 0 && !entry.reason.toLowerCase().startsWith('sale') && !entry.reason.toLowerCase().startsWith('cancelled sale')) {
                  historyList.push({
                     type: 'adjustment',
                     date: new Date(entry.date),
@@ -336,4 +336,3 @@ export default function HistoryPage() {
     </>
   );
 }
-
