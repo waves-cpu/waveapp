@@ -44,6 +44,7 @@ import Link from 'next/link';
 import { BulkEditVariantsDialog } from './bulk-edit-variants-dialog';
 import { useRouter } from 'next/navigation';
 import { Skeleton } from '@/components/ui/skeleton';
+import { cn } from '@/lib/utils';
 
 interface InventoryTableProps {
   onUpdateStock: (itemId: string) => void;
@@ -193,7 +194,7 @@ export function InventoryTable({ onUpdateStock }: InventoryTableProps) {
           </TableHeader>
           <TableBody>
             {filteredItems.length > 0 ? (
-              filteredItems.flatMap((item) => {
+              filteredItems.flatMap((item, itemIndex) => {
                 const totalStock = item.variants?.reduce((sum, v) => sum + v.stock, 0) ?? item.stock;
 
                 if (item.variants && item.variants.length > 0) {
@@ -206,7 +207,7 @@ export function InventoryTable({ onUpdateStock }: InventoryTableProps) {
 
                     return (
                         <React.Fragment key={item.id}>
-                            <TableRow className="bg-muted/20 hover:bg-muted/40">
+                            <TableRow className="bg-muted/20 hover:bg-muted/40" noBorder>
                                 <TableCell>
                                     <div className="flex items-center gap-4">
                                         <Image 
@@ -250,8 +251,15 @@ export function InventoryTable({ onUpdateStock }: InventoryTableProps) {
                                     </DropdownMenu>
                                 </TableCell>
                             </TableRow>
-                            {item.variants?.map((variant) => (
-                                <TableRow key={variant.id}>
+                            {item.variants?.map((variant, variantIndex) => (
+                                <TableRow 
+                                    key={variant.id}
+                                    className={cn(
+                                        "hover:bg-muted/50",
+                                        (variantIndex === item.variants!.length - 1) && "border-b"
+                                    )}
+                                    noBorder
+                                >
                                     <TableCell>
                                         <div className="flex items-center gap-4">
                                             <div className="flex h-10 w-10 items-center justify-center rounded-sm shrink-0">
@@ -280,7 +288,7 @@ export function InventoryTable({ onUpdateStock }: InventoryTableProps) {
                     )
                 } else {
                     return (
-                        <TableRow key={item.id}>
+                        <TableRow key={item.id} noBorder className="border-b">
                             <TableCell>
                                 <div className="flex items-center gap-4">
                                         <Image 
