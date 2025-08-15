@@ -28,21 +28,11 @@ function DashboardContent() {
   return (
     <>
       <main className="flex min-h-[calc(100vh_-_theme(spacing.16))] flex-1 flex-col gap-4 bg-muted/40 p-4 md:gap-8 md:p-10">
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-4">
-             <SidebarTrigger className="md:hidden" />
-             <h1 className="text-lg md:text-xl font-bold font-headline text-foreground">
+        <div className="flex items-center gap-4">
+            <SidebarTrigger className="md:hidden" />
+            <h1 className="text-lg md:text-xl font-bold font-headline text-foreground">
                 {t.dashboard.inventory}
             </h1>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button asChild variant="outline" size="sm">
-              <Link href="/add-product">
-                <PlusCircle className="mr-2 h-4 w-4" />
-                {t.dashboard.addItem}
-              </Link>
-            </Button>
-          </div>
         </div>
         <div className="flex-grow overflow-hidden">
             <InventoryTable
