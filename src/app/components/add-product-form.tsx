@@ -124,9 +124,9 @@ export function AddProductForm({ existingItem }: AddProductFormProps) {
             sku: existingItem.sku || '',
             imageUrl: existingItem.imageUrl || '',
             hasVariants: hasVariants,
-            price: hasVariants ? undefined : existingItem.price,
-            stock: hasVariants ? undefined : existingItem.stock,
-            size: hasVariants ? undefined : existingItem.size,
+            price: hasVariants ? undefined : (existingItem.price ?? ''),
+            stock: hasVariants ? undefined : (existingItem.stock ?? ''),
+            size: hasVariants ? undefined : (existingItem.size || ''),
             variants: hasVariants ? existingItem.variants : [],
         });
     }
@@ -353,7 +353,7 @@ export function AddProductForm({ existingItem }: AddProductFormProps) {
                             <FormItem>
                             <FormLabel>{t.addItemDialog.price}</FormLabel>
                             <FormControl>
-                                <Input type="number" placeholder={t.addItemDialog.pricePlaceholder} {...field} />
+                                <Input type="number" placeholder={t.addItemDialog.pricePlaceholder} {...field} value={field.value ?? ''} />
                             </FormControl>
                             <FormMessage />
                             </FormItem>
@@ -366,7 +366,7 @@ export function AddProductForm({ existingItem }: AddProductFormProps) {
                             <FormItem>
                             <FormLabel>{t.addItemDialog.initialStock}</FormLabel>
                             <FormControl>
-                                <Input type="number" placeholder={t.addItemDialog.initialStockPlaceholder} {...field} />
+                                <Input type="number" placeholder={t.addItemDialog.initialStockPlaceholder} {...field} value={field.value ?? ''} />
                             </FormControl>
                             <FormMessage />
                             </FormItem>
