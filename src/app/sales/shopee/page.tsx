@@ -261,7 +261,7 @@ export default function ShopeeSalesPage() {
               ) : sales.length > 0 ? (
                 sales.map((sale) => (
                   <TableRow key={sale.id}>
-                    <TableCell>{format(new Date(sale.saleDate), 'PPpp')}</TableCell>
+                    <TableCell>{format(new Date(sale.saleDate), 'PP')}</TableCell>
                     <TableCell>{sale.productName}</TableCell>
                     <TableCell>{sale.sku}</TableCell>
                     <TableCell>{sale.variantName || '-'}</TableCell>
