@@ -216,7 +216,7 @@ export function ProductSelectionDialog({ open, onOpenChange, onSelect, available
                                                     aria-label={`Select ${variant.name}`}
                                                 />
                                             </TableCell>
-                                            <TableCell className="pl-16">
+                                            <TableCell className="pl-12">
                                                 <div className="flex items-center gap-4">
                                                     <div className="flex h-6 w-6 items-center justify-center rounded-sm bg-muted text-muted-foreground">
                                                         <Package className="h-4 w-4" />
@@ -302,4 +302,5 @@ export function ProductSelectionDialog({ open, onOpenChange, onSelect, available
     
 
     
+
 
