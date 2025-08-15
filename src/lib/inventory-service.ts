@@ -127,27 +127,17 @@ export async function addProduct(itemData: any) {
 }
 
 export async function addBulkProducts(products: any[]) {
-    const upsertProductStmt = db.prepare(`
+    const findProductBySkuStmt = db.prepare('SELECT id FROM products WHERE sku = ?');
+    const insertProductStmt = db.prepare(`
         INSERT INTO products (name, category, sku, imageUrl, hasVariants)
         VALUES (@name, @category, @sku, @imageUrl, 1)
-        ON CONFLICT(sku) DO NOTHING
-        RETURNING id
     `);
-
-    const findProductBySkuStmt = db.prepare('SELECT id FROM products WHERE sku = ?');
-    
-    const upsertVariantStmt = db.prepare(`
-        INSERT INTO variants (productId, name, sku, price, stock)
-        VALUES (@productId, @name, @sku, @price, @stock)
-        ON CONFLICT(sku) DO UPDATE SET
-            name = excluded.name,
-            price = excluded.price,
-            stock = variants.stock + excluded.stock
-        RETURNING id, stock
-    `);
+    const updateProductStmt = db.prepare('UPDATE products SET name = ?, category = ?, imageUrl = ? WHERE id = ?');
     
     const findVariantBySkuStmt = db.prepare('SELECT id, stock FROM variants WHERE sku = ?');
-
+    const insertVariantStmt = db.prepare('INSERT INTO variants (productId, name, sku, price, stock) VALUES (?, ?, ?, ?, ?)');
+    const updateVariantStmt = db.prepare('UPDATE variants SET stock = ?, price = ?, name = ? WHERE id = ?');
+    
     const addHistoryStmt = db.prepare(`
         INSERT INTO history (productId, variantId, change, reason, newStockLevel, date)
         VALUES (@productId, @variantId, @change, @reason, @newStockLevel, @date)
@@ -157,43 +147,25 @@ export async function addBulkProducts(products: any[]) {
         products.forEach(productData => {
             if (!productData.sku) throw new Error('Parent SKU is required for bulk import.');
 
-            // Upsert Product
             let productRecord = findProductBySkuStmt.get(productData.sku) as { id: number } | undefined;
+            let productId: number;
+
             if (productRecord) {
-                const updateValues: (string | null)[] = [];
-                const updateClauses: string[] = [];
-
-                if(productData.name) {
-                    updateClauses.push('name = ?');
-                    updateValues.push(productData.name);
+                productId = productRecord.id;
+                // Only update if new data is provided
+                if (productData.name && productData.category) {
+                     updateProductStmt.run(productData.name, productData.category, productData.imageUrl || 'https://placehold.co/100x100.png', productId);
                 }
-                if(productData.category) {
-                    updateClauses.push('category = ?');
-                    updateValues.push(productData.category);
-                }
-                if(productData.imageUrl) {
-                    updateClauses.push('imageUrl = ?');
-                    updateValues.push(productData.imageUrl);
-                }
-
-                if (updateClauses.length > 0) {
-                    const updateQuery = `UPDATE products SET ${updateClauses.join(', ')} WHERE sku = ?`;
-                    updateValues.push(productData.sku);
-                    db.prepare(updateQuery).run(...updateValues);
-                }
-
             } else {
-                 upsertProductStmt.run({
+                 const result = insertProductStmt.run({
                     name: productData.name,
                     category: productData.category,
                     sku: productData.sku,
                     imageUrl: productData.imageUrl || 'https://placehold.co/100x100.png',
                 });
-                productRecord = findProductBySkuStmt.get(productData.sku) as { id: number };
+                productId = result.lastInsertRowid as number;
             }
             
-            const productId = productRecord!.id;
-
             productData.variants.forEach((variant: any) => {
                  if (!variant.sku) throw new Error(`Variant SKU is required for variant "${variant.name}" under product SKU "${productData.sku}".`);
 
@@ -206,13 +178,10 @@ export async function addBulkProducts(products: any[]) {
                     // Update existing variant
                     variantId = existingVariant.id;
                     newStockLevel = existingVariant.stock + variant.stock;
-                    db.prepare('UPDATE variants SET stock = ?, price = ?, name = ? WHERE id = ?').run(newStockLevel, variant.price, variant.name, variantId);
+                    updateVariantStmt.run(newStockLevel, variant.price, variant.name, variantId);
                 } else {
                     // Insert new variant
-                    const variantResult = db.prepare(`
-                        INSERT INTO variants (productId, name, sku, price, stock) 
-                        VALUES (?, ?, ?, ?, ?)
-                    `).run(productId, variant.name, variant.sku, variant.price, variant.stock);
+                    const variantResult = insertVariantStmt.run(productId, variant.name, variant.sku, variant.price, variant.stock);
                     variantId = variantResult.lastInsertRowid as number;
                     newStockLevel = variant.stock;
                 }
