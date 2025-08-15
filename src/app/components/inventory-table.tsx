@@ -445,10 +445,7 @@ export function InventoryTable({ onUpdateStock }: InventoryTableProps) {
           </TableBody>
         </Table>
       </ScrollArea>
-       <div className="flex items-center justify-between p-4 border-t">
-            <div className="flex-1 text-sm text-muted-foreground">
-                {t.productSelectionDialog.itemsPerPage.replace('{start}', startItem.toString()).replace('{end}', endItem.toString()).replace('{total}', filteredItems.length.toString())}
-            </div>
+       <div className="flex items-center justify-end p-4 border-t">
             <div className="flex items-center gap-4">
                 <Pagination
                     totalPages={totalPages}
@@ -491,3 +488,4 @@ export function InventoryTable({ onUpdateStock }: InventoryTableProps) {
 
     
 
+    
