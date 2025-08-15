@@ -220,7 +220,7 @@ export function ProductSelectionDialog({ open, onOpenChange, onSelect, available
                                             <TableCell>
                                                 <div className="flex items-center gap-4">
                                                     <div className="flex h-10 w-10 items-center justify-center rounded-sm bg-muted">
-                                                        <Store className="h-5 w-5 text-muted-foreground" />
+                                                        <Store className="h-5 w-5 text-gray-400" />
                                                     </div>
                                                     <div>
                                                         <div className="font-medium text-sm">{variant.name}</div>
@@ -308,3 +308,4 @@ export function ProductSelectionDialog({ open, onOpenChange, onSelect, available
 
 
     
+
