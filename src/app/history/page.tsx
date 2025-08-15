@@ -189,8 +189,8 @@ export default function HistoryPage() {
                 <TableHead className="w-[35%]">{t.inventoryTable.name}</TableHead>
                 <TableHead>{t.stockHistory.date}</TableHead>
                 <TableHead>{t.stockHistory.reason}</TableHead>
-                <TableHead className="text-right">{t.stockHistory.change}</TableHead>
-                <TableHead className="text-right">{t.stockHistory.newTotal}</TableHead>
+                <TableHead>{t.stockHistory.change}</TableHead>
+                <TableHead>{t.stockHistory.newTotal}</TableHead>
                 </TableRow>
             </TableHeader>
             <TableBody>
@@ -214,12 +214,12 @@ export default function HistoryPage() {
                         </TableCell>
                         <TableCell>{new Date(entry.date).toLocaleDateString()}</TableCell>
                         <TableCell>{entry.reason}</TableCell>
-                        <TableCell className="text-right">
+                        <TableCell>
                             <Badge variant={entry.change >= 0 ? 'default' : 'destructive'} className={cn(entry.change >= 0 ? 'bg-green-600' : 'bg-red-600', 'text-white')}>
                             {entry.change > 0 ? `+${entry.change}` : entry.change}
                             </Badge>
                         </TableCell>
-                        <TableCell className="text-right">{entry.newStockLevel}</TableCell>
+                        <TableCell>{entry.newStockLevel}</TableCell>
                     </TableRow>
                 ))
                 ) : (
