@@ -76,6 +76,8 @@ export function StockInForm() {
     }
   }), [items]);
 
+  const existingItemIds = useMemo(() => new Set(fields.map(field => field.itemId)), [fields]);
+  const availableItems = useMemo(() => allItemsAndVariants.filter(item => !existingItemIds.has(item.id)), [allItemsAndVariants, existingItemIds]);
 
   const handleProductsSelected = (selectedIds: string[]) => {
     const existingIds = new Set(fields.map(field => field.itemId));
@@ -195,7 +197,7 @@ export function StockInForm() {
         open={isProductSelectionOpen}
         onOpenChange={setProductSelectionOpen}
         onSelect={handleProductsSelected}
-        allItems={allItemsAndVariants}
+        allItems={availableItems}
         categories={categories}
     />
     </>
