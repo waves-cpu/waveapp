@@ -280,10 +280,10 @@ export function StockInForm() {
                                                         className="rounded-sm" 
                                                         data-ai-hint="product image"
                                                     />
-                                                    <span>{parentName}</span>
-                                                    <Button type="button" variant="ghost" size="icon" className="h-6 w-6 text-foreground" onClick={() => openBulkStockInDialog(parentName)}>
-                                                        <Pencil className="h-3 w-3" />
-                                                    </Button>
+                                                    <button type="button" onClick={() => openBulkStockInDialog(parentName)} className="text-left group relative">
+                                                        <span>{parentName}</span>
+                                                        <div className="absolute -bottom-1 left-0 right-0 h-px bg-transparent transition-all group-hover:bg-primary"></div>
+                                                    </button>
                                                 </div>
                                                 <div className="text-xs text-muted-foreground ml-14">SKU: {parent.parentSku}</div>
                                              </TableCell>
@@ -362,5 +362,3 @@ export function StockInForm() {
     </>
   );
 }
-
-    

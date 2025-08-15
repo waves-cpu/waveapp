@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useForm, useFieldArray } from 'react-hook-form';
@@ -18,6 +19,7 @@ import {
   FormControl,
   FormField,
   FormItem,
+  FormLabel,
   FormMessage,
 } from '@/components/ui/form';
 import { useLanguage } from '@/hooks/use-language';
@@ -36,6 +38,7 @@ const variantSchema = z.object({
 const formSchema = z.object({
   variants: z.array(variantSchema),
   masterReason: z.string().optional(),
+  masterQuantity: z.coerce.number().int().optional(),
 });
 
 interface BulkStockInDialogProps {
@@ -55,12 +58,13 @@ export function BulkStockInDialog({ open, onOpenChange, productName, variants, o
     defaultValues: {
       variants: [],
       masterReason: '',
+      masterQuantity: undefined,
     },
   });
 
   useEffect(() => {
     if (open) {
-      form.reset({ variants });
+      form.reset({ variants, masterReason: '', masterQuantity: undefined });
     }
   }, [open, variants, form]);
 
@@ -69,13 +73,17 @@ export function BulkStockInDialog({ open, onOpenChange, productName, variants, o
     name: "variants"
   });
 
-  function applyMasterReason() {
+  function applyMasterValues() {
     const masterReason = form.getValues('masterReason');
-    if (masterReason) {
-      fields.forEach((field, index) => {
+    const masterQuantity = form.getValues('masterQuantity');
+    fields.forEach((_field, index) => {
+      if (masterReason) {
         form.setValue(`variants.${index}.reason`, masterReason);
-      });
-    }
+      }
+      if (masterQuantity !== undefined && masterQuantity >= 0) {
+        form.setValue(`variants.${index}.quantity`, masterQuantity);
+      }
+    });
   }
 
   function onSubmit(values: z.infer<typeof formSchema>) {
@@ -94,19 +102,32 @@ export function BulkStockInDialog({ open, onOpenChange, productName, variants, o
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-             <div className="flex gap-2">
+             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <FormField
+                    control={form.control}
+                    name="masterQuantity"
+                    render={({ field }) => (
+                        <FormItem>
+                           <FormLabel>{t.stockInForm.quantity}</FormLabel>
+                           <FormControl><Input type="number" placeholder="e.g., 12" {...field} /></FormControl>
+                        </FormItem>
+                    )}
+                />
                 <FormField
                     control={form.control}
                     name="masterReason"
                     render={({ field }) => (
-                        <FormItem className="flex-grow">
+                        <FormItem>
+                            <FormLabel>{t.stockInForm.reason}</FormLabel>
                             <FormControl><Input placeholder={t.bulkStockInDialog.applyReasonPlaceholder} {...field} /></FormControl>
                         </FormItem>
                     )}
                 />
-                <Button type="button" variant="outline" onClick={applyMasterReason}>{t.bulkStockInDialog.applyToAll}</Button>
              </div>
-            <ScrollArea className="h-96 border rounded-md">
+             <Button type="button" variant="outline" size="sm" onClick={applyMasterValues} className="w-full sm:w-auto">
+                {t.bulkStockInDialog.applyToAll}
+            </Button>
+            <ScrollArea className="h-80 border rounded-md">
             <Table>
                 <TableHeader>
                     <TableRow>
