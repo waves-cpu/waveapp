@@ -29,7 +29,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { PlusCircle, Trash2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import type { InventoryItem } from '@/types';
 
 const variantSchema = z.object({
@@ -98,39 +98,47 @@ export function AddProductForm({ existingItem }: AddProductFormProps) {
   const { addItem, updateItem } = useInventory();
   const { toast } = useToast();
   const router = useRouter();
+
+  const isEditMode = !!existingItem;
+
+  const defaultValues = useMemo(() => {
+    if (!existingItem) {
+        return {
+            name: '',
+            category: '',
+            sku: '',
+            imageUrl: '',
+            hasVariants: false,
+            variants: [],
+            price: undefined,
+            stock: undefined,
+            size: '',
+        };
+    }
+    const hasVariants = !!existingItem.variants && existingItem.variants.length > 0;
+    return {
+        id: existingItem.id,
+        name: existingItem.name,
+        category: existingItem.category,
+        sku: existingItem.sku || '',
+        imageUrl: existingItem.imageUrl || '',
+        hasVariants: hasVariants,
+        price: hasVariants ? undefined : (existingItem.price ?? ''),
+        stock: hasVariants ? undefined : (existingItem.stock ?? ''),
+        size: hasVariants ? undefined : (existingItem.size || ''),
+        variants: hasVariants ? existingItem.variants.map(v => ({ ...v, id: v.id.toString() })) : [],
+    };
+  }, [existingItem]);
   
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
-    defaultValues: {
-      name: '',
-      category: '',
-      sku: '',
-      imageUrl: '',
-      hasVariants: false,
-      variants: [],
-      price: undefined,
-      stock: undefined,
-      size: '',
-    },
+    defaultValues: defaultValues,
   });
 
   useEffect(() => {
-    if (existingItem) {
-        const hasVariants = !!existingItem.variants && existingItem.variants.length > 0;
-        form.reset({
-            id: existingItem.id,
-            name: existingItem.name,
-            category: existingItem.category,
-            sku: existingItem.sku || '',
-            imageUrl: existingItem.imageUrl || '',
-            hasVariants: hasVariants,
-            price: hasVariants ? undefined : (existingItem.price ?? ''),
-            stock: hasVariants ? undefined : (existingItem.stock ?? ''),
-            size: hasVariants ? undefined : (existingItem.size || ''),
-            variants: hasVariants ? existingItem.variants : [],
-        });
-    }
-  }, [existingItem, form]);
+    form.reset(defaultValues);
+  }, [defaultValues, form]);
+
 
   const { fields, append, remove } = useFieldArray({
     control: form.control,
@@ -138,8 +146,7 @@ export function AddProductForm({ existingItem }: AddProductFormProps) {
   });
 
   const hasVariants = form.watch('hasVariants');
-  const isEditMode = !!existingItem;
-
+  
   function onSubmit(values: z.infer<typeof formSchema>) {
     if (isEditMode) {
         updateItem(values.id!, values);
