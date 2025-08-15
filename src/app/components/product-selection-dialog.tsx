@@ -156,8 +156,8 @@ export function ProductSelectionDialog({ open, onOpenChange, onSelect, available
                 </SelectContent>
             </Select>
         </div>
-        <div className="flex-grow overflow-hidden border rounded-md relative">
-           <ScrollArea className="absolute inset-0 h-full w-full">
+        <div className="flex-grow overflow-hidden border rounded-md relative flex flex-col">
+           <ScrollArea className="flex-grow">
             <div>
                 <Table>
                     <TableHeader className="sticky top-0 bg-card z-10">
@@ -271,20 +271,21 @@ export function ProductSelectionDialog({ open, onOpenChange, onSelect, available
                     )}
                     </TableBody>
                 </Table>
-                <div className="flex items-center justify-between p-4 border-t bg-background">
-                    <div className="text-sm text-muted-foreground">
-                        {t.productSelectionDialog.itemsSelected.replace('{count}', selectedIds.size.toString())}
-                    </div>
-                     {totalPages > 1 && (
-                        <Pagination 
-                            currentPage={currentPage}
-                            totalPages={totalPages}
-                            onPageChange={setCurrentPage}
-                        />
-                    )}
-                </div>
+                
             </div>
             </ScrollArea>
+            <div className="flex items-center justify-between p-4 border-t bg-background">
+                <div className="text-sm text-muted-foreground">
+                    {t.productSelectionDialog.itemsSelected.replace('{count}', selectedIds.size.toString())}
+                </div>
+                 {totalPages > 1 && (
+                    <Pagination 
+                        currentPage={currentPage}
+                        totalPages={totalPages}
+                        onPageChange={setCurrentPage}
+                    />
+                )}
+            </div>
         </div>
         <DialogFooter className="pt-4">
           <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>{t.common.cancel}</Button>
@@ -308,5 +309,6 @@ export function ProductSelectionDialog({ open, onOpenChange, onSelect, available
 
 
     
+
 
 
