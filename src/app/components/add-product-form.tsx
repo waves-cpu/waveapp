@@ -262,10 +262,10 @@ export function AddProductForm({ existingItem }: AddProductFormProps) {
                              <Table className="table-fixed border">
                                 <TableHeader>
                                     <TableRow>
-                                        <TableHead className="w-1/3 border-r">{t.inventoryTable.name}</TableHead>
-                                        <TableHead className="w-1/4 border-r">SKU</TableHead>
-                                        <TableHead className="w-1/4 border-r">{t.inventoryTable.price}</TableHead>
-                                        <TableHead className="w-1/4 border-r">{t.inventoryTable.currentStock}</TableHead>
+                                        <TableHead className="w-[30%] border-r">{t.inventoryTable.name}</TableHead>
+                                        <TableHead className="w-[30%] border-r">SKU</TableHead>
+                                        <TableHead className="w-[15%] border-r">{t.inventoryTable.price}</TableHead>
+                                        <TableHead className="w-[15%] border-r">{t.inventoryTable.currentStock}</TableHead>
                                         <TableHead className="w-[50px]"></TableHead>
                                     </TableRow>
                                 </TableHeader>
@@ -389,5 +389,7 @@ export function AddProductForm({ existingItem }: AddProductFormProps) {
     </Card>
   );
 }
+
+    
 
     
