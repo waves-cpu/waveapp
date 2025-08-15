@@ -177,26 +177,28 @@ export function AddProductForm({ existingItem }: AddProductFormProps) {
                     )}
                     />
                     <FormField
-                    control={form.control}
-                    name="category"
-                    render={({ field }) => (
+                      control={form.control}
+                      name="category"
+                      render={({ field }) => (
                         <FormItem>
-                            <FormLabel>{t.addItemDialog.category}</FormLabel>
-                            <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value}>
-                                <FormControl>
-                                <SelectTrigger>
-                                    <SelectValue placeholder={t.addItemDialog.categoryPlaceholder} />
-                                </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                    {categories.map(category => (
-                                        <SelectItem key={category} value={category}>{category}</SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                            <FormMessage />
+                          <FormLabel>{t.addItemDialog.category}</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder={t.addItemDialog.categoryPlaceholder} />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {categories.map((category) => (
+                                <SelectItem key={category} value={category}>
+                                  {category}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
                         </FormItem>
-                    )}
+                      )}
                     />
                 </div>
                  <FormField
