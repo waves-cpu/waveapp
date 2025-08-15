@@ -252,7 +252,7 @@ export function InventoryTable({ onUpdateStock }: InventoryTableProps) {
                             </TableRow>
                             {item.variants?.map((variant) => (
                                 <TableRow key={variant.id}>
-                                    <TableCell className="pl-8">
+                                    <TableCell>
                                         <div className="flex items-center gap-4">
                                             <div className="flex h-10 w-10 items-center justify-center rounded-sm shrink-0">
                                                 <Store className="h-5 w-5 text-gray-400" />
