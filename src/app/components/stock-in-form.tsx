@@ -140,7 +140,7 @@ export function StockInForm() {
         fields.forEach((_field, index) => {
             const field = form.getValues(`stockInItems.${index}`);
             if (field.parentName === parentName) {
-                form.setValue(`stockInItems.${index}.quantity`, masterQuantity);
+                form.setValue(`stockInItems.${index}.quantity`, masterQuantity, { shouldDirty: true, shouldValidate: true });
             }
         });
     }
@@ -221,7 +221,7 @@ export function StockInForm() {
                                 <>
                                 {groupedItems.simpleItems.map((field) => (
                                      <TableRow key={field.itemId}>
-                                        <TableCell>
+                                        <TableCell className="align-middle">
                                             <div className="flex items-center gap-4">
                                                 <Image 
                                                     src={field.parentImageUrl || 'https://placehold.co/40x40.png'} 
@@ -233,7 +233,7 @@ export function StockInForm() {
                                                 <span className="font-medium">{field.itemName}</span>
                                             </div>
                                         </TableCell>
-                                        <TableCell>
+                                        <TableCell className="align-middle">
                                             <FormField
                                                 control={form.control}
                                                 name={`stockInItems.${field.originalIndex}.quantity`}
@@ -242,7 +242,7 @@ export function StockInForm() {
                                                 )}
                                             />
                                         </TableCell>
-                                        <TableCell>
+                                        <TableCell className="align-middle">
                                             <FormField
                                                 control={form.control}
                                                 name={`stockInItems.${field.originalIndex}.reason`}
@@ -251,7 +251,7 @@ export function StockInForm() {
                                                 )}
                                             />
                                         </TableCell>
-                                        <TableCell>
+                                        <TableCell className="align-middle">
                                             <Button type="button" variant="ghost" size="icon" className="text-destructive hover:text-destructive-foreground hover:bg-destructive" onClick={() => remove(field.originalIndex)}>
                                                 <Trash2 className="h-4 w-4" />
                                             </Button>
@@ -267,7 +267,7 @@ export function StockInForm() {
                                     return (
                                     <React.Fragment key={parentName}>
                                         <TableRow className="bg-muted/20 hover:bg-muted/40">
-                                             <TableCell>
+                                             <TableCell className="align-middle">
                                                 <div className="flex items-center gap-4 font-semibold text-primary">
                                                     <Image 
                                                         src={parent.parentImageUrl || 'https://placehold.co/40x40.png'} 
@@ -276,14 +276,14 @@ export function StockInForm() {
                                                         className="rounded-sm" 
                                                         data-ai-hint="product image"
                                                     />
-                                                    <span>{parentName}</span>
+                                                    <div>
+                                                        <span>{parentName}</span>
+                                                        <div className="text-xs text-muted-foreground font-normal">SKU: {parent.parentSku}</div>
+                                                    </div>
                                                 </div>
-                                                <div className="text-xs text-muted-foreground ml-14">SKU: {parent.parentSku}</div>
                                              </TableCell>
-                                             <TableCell className="align-middle">
-                                                <div className="font-semibold text-sm">
-                                                    {totalQuantity}
-                                                </div>
+                                             <TableCell className="align-middle font-semibold text-sm">
+                                                {totalQuantity}
                                              </TableCell>
                                              <TableCell className="align-middle" colSpan={2}>
                                                 <div className="flex items-center gap-2">
@@ -304,7 +304,7 @@ export function StockInForm() {
                                         </TableRow>
                                         {variants.map((field) => (
                                             <TableRow key={field.itemId}>
-                                                <TableCell className="pl-16">
+                                                <TableCell className="pl-16 align-middle">
                                                     <div className="font-medium text-sm">{field.variantName}</div>
                                                 </TableCell>
                                                 <TableCell className="align-middle">
