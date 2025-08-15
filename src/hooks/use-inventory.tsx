@@ -90,7 +90,7 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
       name: itemData.name,
       category: itemData.category,
       sku: itemData.sku,
-      imageUrl: 'https://placehold.co/40x40.png',
+      imageUrl: itemData.imageUrl || 'https://placehold.co/40x40.png',
     };
 
     if (itemData.hasVariants && itemData.variants) {

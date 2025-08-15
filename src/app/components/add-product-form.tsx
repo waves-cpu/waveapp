@@ -41,6 +41,7 @@ const formSchema = z.object({
   name: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
   category: z.string().min(2, { message: 'Category must be at least 2 characters.' }),
   sku: z.string().optional(),
+  imageUrl: z.string().url({ message: "Please enter a valid URL." }).optional().or(z.literal('')),
   hasVariants: z.boolean().default(false),
   // Fields for items without variants
   price: z.coerce.number().optional(),
@@ -96,6 +97,7 @@ export function AddProductForm() {
       name: '',
       category: '',
       sku: '',
+      imageUrl: '',
       hasVariants: false,
       variants: [],
     },
@@ -160,18 +162,31 @@ export function AddProductForm() {
                     )}
                     />
                 </div>
-                <FormField
-                control={form.control}
-                name="sku"
-                render={({ field }) => (
+                 <FormField
+                  control={form.control}
+                  name="sku"
+                  render={({ field }) => (
                     <FormItem>
-                    <FormLabel>SKU (Parent)</FormLabel>
-                    <FormControl>
+                      <FormLabel>SKU (Parent)</FormLabel>
+                      <FormControl>
                         <Input placeholder="e.g., SKU-PARENT" {...field} />
-                    </FormControl>
-                    <FormMessage />
+                      </FormControl>
+                      <FormMessage />
                     </FormItem>
-                )}
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="imageUrl"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Image URL</FormLabel>
+                      <FormControl>
+                        <Input placeholder="https://example.com/image.png" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
                 />
                 <FormField
                     control={form.control}
