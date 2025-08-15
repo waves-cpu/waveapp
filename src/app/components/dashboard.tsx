@@ -5,7 +5,6 @@ import {
   PlusCircle,
 } from 'lucide-react';
 import { InventoryTable } from './inventory-table';
-import { AddItemDialog } from './add-item-dialog';
 import { UpdateStockDialog } from './update-stock-dialog';
 import { StockHistorySheet } from './stock-history-sheet';
 import { Button } from '@/components/ui/button';

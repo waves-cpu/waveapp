@@ -26,6 +26,7 @@ import {
   FileDown,
   Search,
   Pencil,
+  Plus,
 } from 'lucide-react';
 import type { InventoryItem } from '@/types';
 import { useLanguage } from '@/hooks/use-language';
@@ -33,6 +34,7 @@ import { translations } from '@/types/language';
 import { Badge } from '@/components/ui/badge';
 import Image from 'next/image';
 import Link from 'next/link';
+import { BulkEditVariantsDialog } from './bulk-edit-variants-dialog';
 
 interface InventoryTableProps {
   onUpdateStock: (itemId: string) => void;
@@ -45,6 +47,13 @@ export function InventoryTable({ onUpdateStock, onShowHistory }: InventoryTableP
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
   const { language } = useLanguage();
   const t = translations[language];
+  const [isBulkEditDialogOpen, setBulkEditDialogOpen] = useState(false);
+  const [selectedBulkEditItem, setSelectedBulkEditItem] = useState<InventoryItem | null>(null);
+
+  const handleBulkEdit = (item: InventoryItem) => {
+    setSelectedBulkEditItem(item);
+    setBulkEditDialogOpen(true);
+  };
 
   const filteredItems = useMemo(() => {
     return items
@@ -87,6 +96,7 @@ export function InventoryTable({ onUpdateStock, onShowHistory }: InventoryTableP
 
 
   return (
+    <>
     <div className="h-full flex flex-col bg-card rounded-lg border shadow-sm">
       <div className="p-4 flex flex-col md:flex-row gap-4 justify-between items-center border-b">
         <div className="flex flex-col md:flex-row gap-4 w-full md:w-auto">
@@ -143,7 +153,7 @@ export function InventoryTable({ onUpdateStock, onShowHistory }: InventoryTableP
 
                     return (
                         <React.Fragment key={item.id}>
-                            <TableRow className="bg-muted/20">
+                            <TableRow className="bg-muted/20 hover:bg-muted/40">
                                 <TableCell>
                                     <div className="flex items-center gap-4">
                                         <Image 
@@ -153,9 +163,15 @@ export function InventoryTable({ onUpdateStock, onShowHistory }: InventoryTableP
                                             className="rounded-sm" 
                                             data-ai-hint="product image"
                                         />
-                                        <div>
-                                            <div className="font-medium text-primary text-sm">{item.name}</div>
-                                            <div className="text-xs text-muted-foreground">SKU: {item.sku}</div>
+                                        <div className="group relative">
+                                            <button onClick={() => handleBulkEdit(item)} className="text-left">
+                                                <div className="font-medium text-primary text-sm">{item.name}</div>
+                                                <div className="text-xs text-muted-foreground">SKU: {item.sku}</div>
+                                                <div className="absolute -bottom-1 left-0 right-0 h-px bg-transparent transition-all group-hover:bg-primary"></div>
+                                                <div className="absolute top-1/2 -right-6 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                    <Pencil className="h-3 w-3" />
+                                                </div>
+                                            </button>
                                         </div>
                                     </div>
                                 </TableCell>
@@ -253,5 +269,13 @@ export function InventoryTable({ onUpdateStock, onShowHistory }: InventoryTableP
         </Table>
       </ScrollArea>
     </div>
+    {selectedBulkEditItem && (
+        <BulkEditVariantsDialog 
+            open={isBulkEditDialogOpen}
+            onOpenChange={setBulkEditDialogOpen}
+            item={selectedBulkEditItem}
+        />
+    )}
+    </>
   );
 }

@@ -11,6 +11,7 @@ interface InventoryContextType {
   getHistory: (itemId: string) => AdjustmentHistory[];
   getItem: (itemId: string) => InventoryItem | InventoryItemVariant | undefined;
   categories: string[];
+  bulkUpdateVariants: (itemId: string, variants: InventoryItemVariant[]) => void;
 }
 
 const InventoryContext = createContext<InventoryContextType | undefined>(undefined);
@@ -182,6 +183,38 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
     }));
   };
 
+  const bulkUpdateVariants = (itemId: string, variants: InventoryItemVariant[]) => {
+    setItems(prevItems =>
+      prevItems.map(item => {
+        if (item.id === itemId) {
+          const newVariants = variants.map(updatedVariant => {
+            const originalVariant = item.variants?.find(v => v.id === updatedVariant.id);
+            if (originalVariant) {
+              const stockChange = updatedVariant.stock - originalVariant.stock;
+              let newHistory = originalVariant.history;
+              if (stockChange !== 0) {
+                newHistory = [{
+                  date: new Date(),
+                  change: stockChange,
+                  reason: 'Bulk Update',
+                  newStockLevel: updatedVariant.stock,
+                }, ...originalVariant.history];
+              }
+              return { ...updatedVariant, history: newHistory };
+            }
+            // This case handles a variant that was somehow newly added in the bulk edit form.
+            return { 
+                ...updatedVariant,
+                history: [{ date: new Date(), change: updatedVariant.stock, reason: 'Initial Stock (Bulk Add)', newStockLevel: updatedVariant.stock }]
+            };
+          });
+          return { ...item, variants: newVariants };
+        }
+        return item;
+      })
+    );
+  };
+
   const updateStock = (itemId: string, change: number, reason: string) => {
     setItems(prevItems =>
       prevItems.map(item => {
@@ -262,7 +295,7 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
   const categories = [...new Set(items.map(item => item.category))].sort();
 
   return (
-    <InventoryContext.Provider value={{ items, addItem, updateItem, updateStock, getHistory, getItem, categories }}>
+    <InventoryContext.Provider value={{ items, addItem, updateItem, bulkUpdateVariants, updateStock, getHistory, getItem, categories }}>
       {children}
     </InventoryContext.Provider>
   );
