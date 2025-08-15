@@ -88,6 +88,7 @@ export default function HistoryPage() {
 
   const filteredHistory = useMemo(() => {
     return allHistory
+      .filter(entry => entry.change !== 0) // Exclude entries with zero change
       .filter(entry => 
         categoryFilter ? entry.itemCategory === categoryFilter : true
       )
