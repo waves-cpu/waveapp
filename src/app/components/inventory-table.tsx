@@ -45,6 +45,7 @@ import { BulkEditVariantsDialog } from './bulk-edit-variants-dialog';
 import { useRouter } from 'next/navigation';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
+import { Progress } from '@/components/ui/progress';
 
 interface InventoryTableProps {
   onUpdateStock: (itemId: string) => void;
@@ -82,6 +83,22 @@ function InventoryTableSkeleton() {
         </Table>
     )
 }
+
+function StockBar({ stock }: { stock: number }) {
+    const getStockColor = (stock: number) => {
+        if (stock > 50) return 'bg-green-500';
+        if (stock > 10) return 'bg-yellow-500';
+        return 'bg-red-500';
+    };
+
+    return (
+        <div className="flex items-center gap-2 w-32">
+            <span className="font-medium w-8">{stock}</span>
+            <Progress value={stock} className="h-2 flex-1" indicatorClassName={getStockColor(stock)} />
+        </div>
+    );
+}
+
 
 export function InventoryTable({ onUpdateStock }: InventoryTableProps) {
   const { items, categories, loading } = useInventory();
@@ -231,7 +248,7 @@ export function InventoryTable({ onUpdateStock }: InventoryTableProps) {
                                 </TableCell>
                                 <TableCell>{priceDisplay}</TableCell>
                                 <TableCell>
-                                    {totalStock}
+                                    <StockBar stock={totalStock ?? 0} />
                                 </TableCell>
                                 <TableCell className="text-center">
                                     <DropdownMenu>
@@ -274,7 +291,7 @@ export function InventoryTable({ onUpdateStock }: InventoryTableProps) {
                                     <TableCell>{`Rp${Math.round(variant.price).toLocaleString('id-ID')}`}</TableCell>
                                     <TableCell>
                                         <div className="group relative flex items-center justify-start gap-2">
-                                            <span>{variant.stock}</span>
+                                            <StockBar stock={variant.stock} />
                                             <Button variant="ghost" size="icon" onClick={() => onUpdateStock(variant.id)} className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity" aria-label={t.inventoryTable.updateStock}>
                                                 <Edit className="h-3 w-3" />
                                             </Button>
@@ -307,7 +324,7 @@ export function InventoryTable({ onUpdateStock }: InventoryTableProps) {
                              <TableCell>{item.price ? `Rp${Math.round(item.price).toLocaleString('id-ID')}` : '-'}</TableCell>
                             <TableCell>
                                 <div className="group relative flex items-center justify-start gap-2">
-                                    <span>{item.stock}</span>
+                                    <StockBar stock={item.stock ?? 0} />
                                     <Button variant="ghost" size="icon" onClick={() => onUpdateStock(item.id)} className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity" aria-label={t.inventoryTable.updateStock}>
                                         <Edit className="h-3 w-3" />
                                     </Button>
