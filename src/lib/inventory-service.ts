@@ -126,6 +126,58 @@ export async function addProduct(itemData: any) {
     })();
 }
 
+export async function addBulkProducts(products: any[]) {
+     const addProductStmt = db.prepare(`
+        INSERT INTO products (name, category, sku, imageUrl, hasVariants)
+        VALUES (@name, @category, @sku, @imageUrl, 1)
+    `);
+    
+    const addVariantStmt = db.prepare(`
+        INSERT INTO variants (productId, name, sku, price, stock)
+        VALUES (@productId, @name, @sku, @price, @stock)
+    `);
+
+    const addHistoryStmt = db.prepare(`
+        INSERT INTO history (productId, variantId, change, reason, newStockLevel, date)
+        VALUES (@productId, @variantId, @change, @reason, @newStockLevel, @date)
+    `);
+
+    db.transaction(() => {
+        products.forEach(productData => {
+            const productResult = addProductStmt.run({
+                name: productData.name,
+                category: productData.category,
+                sku: productData.sku || null,
+                imageUrl: 'https://placehold.co/40x40.png',
+            });
+            
+            const productId = productResult.lastInsertRowid as number;
+
+            productData.variants.forEach((variant: any) => {
+                const variantResult = addVariantStmt.run({
+                    productId: productId,
+                    name: variant.name,
+                    sku: variant.sku || null,
+                    price: variant.price,
+                    stock: variant.stock,
+                });
+                const variantId = variantResult.lastInsertRowid;
+                if (variant.stock > 0) {
+                    addHistoryStmt.run({
+                        productId: productId,
+                        variantId: variantId,
+                        change: variant.stock,
+                        reason: 'Initial Stock',
+                        newStockLevel: variant.stock,
+                        date: new Date().toISOString()
+                    });
+                }
+            });
+        })
+    })();
+}
+
+
 export async function editProduct(itemId: string, itemData: any) {
     const updateProductStmt = db.prepare(`
         UPDATE products SET name = @name, category = @category, sku = @sku, imageUrl = @imageUrl, hasVariants = @hasVariants, stock = @stock, price = @price, size = @size
