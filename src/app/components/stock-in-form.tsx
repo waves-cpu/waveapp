@@ -260,10 +260,6 @@ export function StockInForm() {
                                 ))}
                                 {Array.from(groupedItems.groups.entries()).map(([parentName, variants]) => {
                                     const parent = variants[0];
-                                    const totalQuantity = variants.reduce((sum, variant) => {
-                                        const value = form.watch(`stockInItems.${variant.originalIndex}.quantity`);
-                                        return sum + (Number(value) || 0);
-                                    }, 0);
                                     return (
                                     <React.Fragment key={parentName}>
                                         <TableRow className="bg-muted/20 hover:bg-muted/40">
@@ -282,10 +278,7 @@ export function StockInForm() {
                                                     </div>
                                                 </div>
                                              </TableCell>
-                                             <TableCell className="align-middle font-semibold text-sm">
-                                                {totalQuantity}
-                                             </TableCell>
-                                             <TableCell className="align-middle" colSpan={2}>
+                                             <TableCell className="align-middle" colSpan={3}>
                                                 <div className="flex items-center gap-2">
                                                     <FormField
                                                         control={form.control}
@@ -361,3 +354,4 @@ export function StockInForm() {
     </>
   );
 }
+
