@@ -392,8 +392,8 @@ export default function PosSalesPage() {
           </div>
         </header>
 
-        <div className="flex-1 grid grid-cols-1 lg:grid-cols-3 gap-4 p-4 overflow-hidden">
-              <div className="lg:col-span-2 flex flex-col gap-4 h-full overflow-hidden">
+        <div className="flex-1 grid grid-cols-1 lg:grid-cols-5 gap-4 p-4 overflow-hidden">
+              <div className="lg:col-span-3 flex flex-col gap-4 h-full overflow-hidden">
                   <PosProductGrid 
                     onProductSelect={handleProductSelect}
                     onSkuSubmit={handleSkuSubmit}
@@ -401,7 +401,7 @@ export default function PosSalesPage() {
                     isVariantDialogOpen={isVariantDialogOpen}
                   />
               </div>
-              <div className="lg:col-span-1 h-full overflow-hidden">
+              <div className="lg:col-span-2 h-full overflow-hidden">
                   <PosOrderSummary 
                       cart={cart}
                       setCart={setCart}
@@ -422,5 +422,3 @@ export default function PosSalesPage() {
     </>
   );
 }
-
-    
