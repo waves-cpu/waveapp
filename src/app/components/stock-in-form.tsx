@@ -20,11 +20,12 @@ import { useLanguage } from '@/hooks/use-language';
 import { translations } from '@/types/language';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { PlusCircle, Trash2 } from 'lucide-react';
+import { PlusCircle, Trash2, PackagePlus } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import type { InventoryItem } from '@/types';
 import { ProductSelectionDialog } from './product-selection-dialog';
 import Image from 'next/image';
+import { BulkStockInDialog } from './bulk-stock-in-dialog';
 
 const stockInItemSchema = z.object({
     itemId: z.string(),
@@ -52,6 +53,7 @@ export function StockInForm() {
   const { toast } = useToast();
   const router = useRouter();
   const [isProductSelectionOpen, setProductSelectionOpen] = useState(false);
+  const [isBulkStockInOpen, setBulkStockInOpen] = useState(false);
   
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -145,6 +147,14 @@ export function StockInForm() {
         });
     }
   };
+  
+  const handleBulkApply = (quantity: number, reason: string) => {
+    fields.forEach((_field, index) => {
+        form.setValue(`stockInItems.${index}.quantity`, quantity, { shouldDirty: true });
+        form.setValue(`stockInItems.${index}.reason`, reason, { shouldDirty: true });
+    });
+    form.trigger('stockInItems');
+  };
 
 
   const groupedItems = useMemo(() => {
@@ -191,10 +201,16 @@ export function StockInForm() {
                     <CardTitle>{t.stockInForm.title}</CardTitle>
                     <CardDescription>{t.stockInForm.description}</CardDescription>
                 </div>
-                <Button type="button" onClick={() => setProductSelectionOpen(true)}>
-                    <PlusCircle className="mr-2 h-4 w-4" />
-                    {t.stockInForm.selectProducts}
-                </Button>
+                 <div className="flex gap-2">
+                    <Button type="button" variant="outline" onClick={() => setBulkStockInOpen(true)} disabled={fields.length === 0}>
+                        <PackagePlus className="mr-2 h-4 w-4" />
+                        {t.stockInForm.bulkAdd}
+                    </Button>
+                    <Button type="button" onClick={() => setProductSelectionOpen(true)}>
+                        <PlusCircle className="mr-2 h-4 w-4" />
+                        {t.stockInForm.selectProducts}
+                    </Button>
+                </div>
             </div>
         </CardHeader>
         <CardContent>
@@ -350,6 +366,11 @@ export function StockInForm() {
         onSelect={handleProductsSelected}
         availableItems={availableItems}
         categories={categories}
+    />
+    <BulkStockInDialog
+        open={isBulkStockInOpen}
+        onOpenChange={setBulkStockInOpen}
+        onApply={handleBulkApply}
     />
     </>
   );

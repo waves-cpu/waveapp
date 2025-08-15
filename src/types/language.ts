@@ -74,6 +74,7 @@ export const translations = {
             submit: "Submit Stock In",
             successTitle: "Stock In Successful",
             successDescription: "{count} item(s) have been updated.",
+            bulkAdd: "Bulk Add",
         },
         productSelectionDialog: {
             title: "Select Products",
@@ -85,6 +86,7 @@ export const translations = {
             previous: "Previous",
             next: "Next",
             page: "Page",
+            of: "of",
         },
         settings: {
             back: "Back",
@@ -105,8 +107,8 @@ export const translations = {
             description: "Quickly edit all variants for this product below."
         },
         bulkStockInDialog: {
-            title: "Bulk Stock In for",
-            description: "Quickly set quantity and reason for all variants below.",
+            title: "Bulk Stock In",
+            description: "Quickly set quantity and reason for all selected items. This will overwrite existing values.",
             variantName: "Variant Name",
             applyToAll: "Apply to All",
             applyReasonPlaceholder: "Set a reason for all variants...",
@@ -114,6 +116,7 @@ export const translations = {
         common: {
             cancel: "Cancel",
             saveChanges: "Save Changes",
+            apply: "Apply",
         }
     },
     id: {
@@ -190,6 +193,7 @@ export const translations = {
             submit: "Kirim Stok Masuk",
             successTitle: "Stok Masuk Berhasil",
             successDescription: "{count} barang telah diperbarui.",
+            bulkAdd: "Tambah Massal",
         },
         productSelectionDialog: {
             title: "Pilih Produk",
@@ -201,6 +205,7 @@ export const translations = {
             previous: "Sebelumnya",
             next: "Berikutnya",
             page: "Halaman",
+            of: "dari",
         },
         settings: {
             back: "Kembali",
@@ -221,8 +226,8 @@ export const translations = {
             description: "Ubah semua varian untuk produk ini dengan cepat di bawah."
         },
         bulkStockInDialog: {
-            title: "Stok Masuk Massal untuk",
-            description: "Atur jumlah dan alasan untuk semua varian di bawah ini dengan cepat.",
+            title: "Stok Masuk Massal",
+            description: "Atur jumlah dan alasan untuk semua barang terpilih dengan cepat. Ini akan menimpa nilai yang sudah ada.",
             variantName: "Nama Varian",
             applyToAll: "Terapkan ke Semua",
             applyReasonPlaceholder: "Atur alasan untuk semua varian...",
@@ -230,6 +235,7 @@ export const translations = {
         common: {
             cancel: "Batal",
             saveChanges: "Simpan Perubahan",
+            apply: "Terapkan",
         }
     }
 }
