@@ -10,6 +10,8 @@ import {
 
 import { cn } from "@/lib/utils"
 import { Button, buttonVariants, type ButtonProps } from "@/components/ui/button"
+import { useLanguage } from "@/hooks/use-language"
+import { translations } from "@/types/language"
 
 const PaginationContainer = ({ className, ...props }: React.ComponentProps<"nav">) => (
   <nav
@@ -69,33 +71,41 @@ PaginationLink.displayName = "PaginationLink"
 const PaginationPrevious = ({
   className,
   ...props
-}: React.ComponentProps<typeof PaginationLink>) => (
-  <PaginationLink
-    aria-label="Go to previous page"
-    size="default"
-    className={cn("gap-1 pl-2.5", className)}
-    {...props}
-  >
-    <ChevronLeft className="h-4 w-4" />
-    <span>Previous</span>
-  </PaginationLink>
-)
+}: React.ComponentProps<typeof PaginationLink>) => {
+    const { language } = useLanguage();
+    const t = translations[language];
+    return (
+        <PaginationLink
+            aria-label="Go to previous page"
+            size="default"
+            className={cn("gap-1 pl-2.5 h-8 px-2.5", className)}
+            {...props}
+        >
+            <ChevronLeft className="h-4 w-4" />
+            <span>{t.productSelectionDialog.previous}</span>
+        </PaginationLink>
+    )
+}
 PaginationPrevious.displayName = "PaginationPrevious"
 
 const PaginationNext = ({
   className,
   ...props
-}: React.ComponentProps<typeof PaginationLink>) => (
-  <PaginationLink
-    aria-label="Go to next page"
-    size="default"
-    className={cn("gap-1 pr-2.5", className)}
-    {...props}
-  >
-    <span>Next</span>
-    <ChevronRight className="h-4 w-4" />
-  </PaginationLink>
-)
+}: React.ComponentProps<typeof PaginationLink>) => {
+  const { language } = useLanguage();
+  const t = translations[language];
+  return (
+    <PaginationLink
+        aria-label="Go to next page"
+        size="default"
+        className={cn("gap-1 pr-2.5 h-8 px-2.5", className)}
+        {...props}
+    >
+        <span>{t.productSelectionDialog.next}</span>
+        <ChevronRight className="h-4 w-4" />
+    </PaginationLink>
+  )
+}
 PaginationNext.displayName = "PaginationNext"
 
 const PaginationEllipsis = ({
@@ -104,7 +114,7 @@ const PaginationEllipsis = ({
 }: React.ComponentProps<"span">) => (
   <span
     aria-hidden
-    className={cn("flex h-9 w-9 items-center justify-center", className)}
+    className={cn("flex h-8 w-8 items-center justify-center", className)}
     {...props}
   >
     <MoreHorizontal className="h-4 w-4" />
@@ -181,13 +191,11 @@ const Pagination = ({ totalPages, currentPage, onPageChange, siblings = 1, class
         }
     };
 
-    const lastPage = paginationRange[paginationRange.length - 1];
-
     return (
         <PaginationContainer className={className}>
             <PaginationContent>
                 <PaginationItem>
-                    <Button variant="ghost" size="icon" onClick={onPrevious} disabled={currentPage === 1}>
+                    <Button variant="ghost" size="icon" onClick={onPrevious} disabled={currentPage === 1} className="h-8 w-8">
                         <ChevronLeft className="h-4 w-4" />
                     </Button>
                 </PaginationItem>
@@ -203,6 +211,7 @@ const Pagination = ({ totalPages, currentPage, onPageChange, siblings = 1, class
                                 variant={pageNumber === currentPage ? "outline" : "ghost"}
                                 size="icon"
                                 onClick={() => onPageChange(pageNumber as number)}
+                                className="h-8 w-8"
                             >
                                 {pageNumber}
                             </Button>
@@ -211,7 +220,7 @@ const Pagination = ({ totalPages, currentPage, onPageChange, siblings = 1, class
                 })}
 
                 <PaginationItem>
-                     <Button variant="ghost" size="icon" onClick={onNext} disabled={currentPage === totalPages}>
+                     <Button variant="ghost" size="icon" onClick={onNext} disabled={currentPage === totalPages} className="h-8 w-8">
                         <ChevronRight className="h-4 w-4" />
                     </Button>
                 </PaginationItem>

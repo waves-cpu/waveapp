@@ -220,6 +220,9 @@ export function InventoryTable({ onUpdateStock }: InventoryTableProps) {
       return <InventoryTableSkeleton />;
   }
 
+  const startItem = filteredItems.length > 0 ? (currentPage - 1) * itemsPerPage + 1 : 0;
+  const endItem = Math.min(currentPage * itemsPerPage, filteredItems.length);
+
   return (
     <>
     <div className="h-full flex flex-col bg-card rounded-lg border shadow-sm">
@@ -443,9 +446,9 @@ export function InventoryTable({ onUpdateStock }: InventoryTableProps) {
         </Table>
       </ScrollArea>
        <div className="flex items-center justify-between p-4 border-t">
-            <div className="flex items-center gap-2">
-                <span className="text-sm text-muted-foreground">Rows per page</span>
-                 <Select
+            <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                {t.productSelectionDialog.itemsPerPage.replace('{start}', startItem.toString()).replace('{end}', endItem.toString()).replace('{total}', filteredItems.length.toString())}
+                <Select
                     value={`${itemsPerPage}`}
                     onValueChange={(value) => {
                         setItemsPerPage(Number(value))
@@ -485,3 +488,4 @@ export function InventoryTable({ onUpdateStock }: InventoryTableProps) {
     
 
     
+
