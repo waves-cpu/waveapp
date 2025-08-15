@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -60,7 +60,7 @@ export function StockInForm() {
     },
   });
 
-  const { fields, append, remove } = useFieldArray({
+  const { fields, append, remove, update } = useFieldArray({
     control: form.control,
     name: "stockInItems"
   });
@@ -94,10 +94,10 @@ export function StockInForm() {
   
   const availableItems = useMemo(() => {
     return items.filter(item => {
-        if (item.variants && item.variants.length > 0) {
-            return !item.variants.every(v => existingItemIds.has(v.id));
-        }
-        return item.stock !== undefined && !existingItemIds.has(item.id);
+      if (item.variants && item.variants.length > 0) {
+        return !item.variants.every(v => existingItemIds.has(v.id));
+      }
+      return item.stock !== undefined && !existingItemIds.has(item.id);
     });
   }, [items, existingItemIds]);
 
@@ -130,7 +130,7 @@ export function StockInForm() {
     if (masterQuantity !== undefined && masterQuantity >= 0) {
         fields.forEach((field, index) => {
             if (form.getValues(`stockInItems.${index}.parentName`) === parentName) {
-                form.setValue(`stockInItems.${index}.quantity`, masterQuantity, { shouldDirty: true });
+                update(index, { ...fields[index], quantity: masterQuantity });
             }
         });
     }
@@ -142,7 +142,7 @@ export function StockInForm() {
     const simpleItems: (StockInItem & { originalIndex: number })[] = [];
     
     fields.forEach((field, index) => {
-        const formField = { ...form.getValues(`stockInItems.${index}`), originalIndex: index };
+        const formField = { ...field, originalIndex: index };
         if (formField.isVariant && formField.parentName) {
             if (!groups.has(formField.parentName)) {
                 groups.set(formField.parentName, []);
@@ -154,7 +154,7 @@ export function StockInForm() {
     });
 
     return { groups, simpleItems };
-  }, [fields, form]);
+  }, [fields]);
 
 
   function onSubmit(values: z.infer<typeof formSchema>) {
@@ -282,7 +282,7 @@ export function StockInForm() {
                                                         name={`masterQuantities.${parentName}`}
                                                         render={({ field }) => (
                                                             <FormItem className="flex-grow">
-                                                               <FormControl><Input type="number" placeholder={t.stockInForm.quantity} {...field} /></FormControl>
+                                                               <FormControl><Input type="number" placeholder={t.stockInForm.quantity} {...field} value={field.value ?? ''} /></FormControl>
                                                             </FormItem>
                                                         )}
                                                     />
