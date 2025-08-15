@@ -158,7 +158,7 @@ export function ProductSelectionDialog({ open, onOpenChange, onSelect, available
                         />
                         </TableHead>
                         <TableHead>{t.inventoryTable.name}</TableHead>
-                        <TableHead className="text-right">{t.inventoryTable.currentStock}</TableHead>
+                        <TableHead className="text-center">{t.inventoryTable.currentStock}</TableHead>
                     </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -203,7 +203,7 @@ export function ProductSelectionDialog({ open, onOpenChange, onSelect, available
                                                 <div className="font-medium text-sm">{variant.name}</div>
                                                 <div className="text-xs text-muted-foreground">SKU: {variant.sku}</div>
                                             </TableCell>
-                                            <TableCell className="text-right">{variant.stock}</TableCell>
+                                            <TableCell className="text-center">{variant.stock}</TableCell>
                                         </TableRow>
                                     ))
                                 ];
@@ -233,7 +233,7 @@ export function ProductSelectionDialog({ open, onOpenChange, onSelect, available
                                             </div>
                                         </div>
                                     </TableCell>
-                                    <TableCell className="text-right">{item.stock}</TableCell>
+                                    <TableCell className="text-center">{item.stock}</TableCell>
                                 </TableRow>
                             );
                         })
