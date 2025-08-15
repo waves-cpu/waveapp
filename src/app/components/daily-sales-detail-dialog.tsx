@@ -97,6 +97,7 @@ export function DailySalesDetailDialog({ open, onOpenChange, sales }: DailySales
                             <TableCell>
                                 <div className="font-medium">{sale.productName}</div>
                                 {sale.variantName && <div className="text-xs text-muted-foreground">{sale.variantName}</div>}
+                                {sale.sku && <div className="text-xs text-muted-foreground">SKU: {sale.sku}</div>}
                             </TableCell>
                             <TableCell>
                                 <Badge variant="secondary" className="capitalize">{sale.channel}</Badge>
