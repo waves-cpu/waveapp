@@ -246,7 +246,7 @@ export function AddProductForm({ existingItem }: AddProductFormProps) {
                                 />
                             </FormControl>
                             <div className="space-y-1 leading-none">
-                                <FormLabel>This product has multiple variants (e.g., sizes, colors)</FormLabel>
+                                <FormLabel>{t.bulkStockInDialog.hasVariants}</FormLabel>
                             </div>
                         </FormItem>
                     )}
@@ -255,75 +255,75 @@ export function AddProductForm({ existingItem }: AddProductFormProps) {
                 {hasVariants ? (
                     <Card>
                         <CardHeader>
-                            <CardTitle>Variants</CardTitle>
+                            <CardTitle>{t.bulkStockInDialog.variants}</CardTitle>
                             <CardDescription>
-                                Add variants for your product. Each variant can have its own SKU, price, and stock level.
+                                {t.bulkStockInDialog.variantsDescription}
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
-                             <Table>
+                             <Table className="table-fixed">
                                 <TableHeader>
                                     <TableRow>
-                                        <TableHead>{t.inventoryTable.name}</TableHead>
-                                        <TableHead>SKU</TableHead>
-                                        <TableHead>{t.inventoryTable.price}</TableHead>
-                                        <TableHead>{t.inventoryTable.currentStock}</TableHead>
+                                        <TableHead className="w-1/3">{t.inventoryTable.name}</TableHead>
+                                        <TableHead className="w-1/4">SKU</TableHead>
+                                        <TableHead className="w-1/4">{t.inventoryTable.price}</TableHead>
+                                        <TableHead className="w-1/4">{t.inventoryTable.currentStock}</TableHead>
                                         <TableHead className="w-[50px]"></TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
                                     {fields.map((field, index) => (
-                                        <TableRow key={field.id}>
-                                            <TableCell>
+                                        <TableRow key={field.id} className="align-top">
+                                            <TableCell className="p-1">
                                                  <FormField
                                                     control={form.control}
                                                     name={`variants.${index}.name`}
                                                     render={({ field }) => (
                                                         <FormItem>
-                                                            <FormControl><Input placeholder="e.g., Large" {...field} /></FormControl>
-                                                            <FormMessage/>
+                                                            <FormControl><Input placeholder="e.g., Large" {...field} className="border-none focus-visible:ring-1" /></FormControl>
+                                                            <FormMessage className="px-2 py-1"/>
                                                         </FormItem>
                                                     )}
                                                 />
                                             </TableCell>
-                                            <TableCell>
+                                            <TableCell className="p-1">
                                                 <FormField
                                                     control={form.control}
                                                     name={`variants.${index}.sku`}
                                                     render={({ field }) => (
                                                         <FormItem>
-                                                            <FormControl><Input placeholder="e.g., VAR-LG" {...field} /></FormControl>
-                                                            <FormMessage/>
+                                                            <FormControl><Input placeholder="e.g., VAR-LG" {...field} className="border-none focus-visible:ring-1" /></FormControl>
+                                                            <FormMessage className="px-2 py-1"/>
                                                         </FormItem>
                                                     )}
                                                 />
                                             </TableCell>
-                                            <TableCell>
+                                            <TableCell className="p-1">
                                                 <FormField
                                                     control={form.control}
                                                     name={`variants.${index}.price`}
                                                     render={({ field }) => (
                                                         <FormItem>
-                                                            <FormControl><Input type="number" placeholder="50000" {...field} /></FormControl>
-                                                            <FormMessage/>
+                                                            <FormControl><Input type="number" placeholder="50000" {...field} className="border-none focus-visible:ring-1" /></FormControl>
+                                                            <FormMessage className="px-2 py-1"/>
                                                         </FormItem>
                                                     )}
                                                 />
                                             </TableCell>
-                                            <TableCell>
+                                            <TableCell className="p-1">
                                                 <FormField
                                                     control={form.control}
                                                     name={`variants.${index}.stock`}
                                                     render={({ field }) => (
                                                         <FormItem>
-                                                            <FormControl><Input type="number" placeholder="50" {...field} /></FormControl>
-                                                            <FormMessage/>
+                                                            <FormControl><Input type="number" placeholder="50" {...field} className="border-none focus-visible:ring-1" /></FormControl>
+                                                            <FormMessage className="px-2 py-1"/>
                                                         </FormItem>
                                                     )}
                                                 />
                                             </TableCell>
-                                            <TableCell>
-                                                <Button type="button" variant="ghost" size="icon" className="text-destructive hover:text-destructive-foreground hover:bg-destructive" onClick={() => remove(index)}>
+                                            <TableCell className="p-1">
+                                                <Button type="button" variant="ghost" size="icon" className="text-destructive hover:text-destructive-foreground hover:bg-destructive mt-1" onClick={() => remove(index)}>
                                                     <Trash2 className="h-4 w-4" />
                                                 </Button>
                                             </TableCell>
@@ -333,7 +333,7 @@ export function AddProductForm({ existingItem }: AddProductFormProps) {
                              </Table>
                              <Button type="button" size="sm" variant="outline" className="mt-4" onClick={() => append({ name: '', sku: '', price: 0, stock: 0 })}>
                                 <PlusCircle className="mr-2 h-4 w-4" />
-                                Add Variant
+                                {t.bulkStockInDialog.addVariant}
                             </Button>
                              <FormMessage>{form.formState.errors.variants?.message}</FormMessage>
                         </CardContent>

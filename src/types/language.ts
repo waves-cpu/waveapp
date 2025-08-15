@@ -115,6 +115,10 @@ export const translations = {
             variantName: "Variant Name",
             applyToAll: "Apply to All",
             applyReasonPlaceholder: "Set a reason for all variants...",
+            hasVariants: "This product has multiple variants (e.g., sizes, colors)",
+            variants: "Variants",
+            variantsDescription: "Add variants for your product. Each variant can have its own SKU, price, and stock level.",
+            addVariant: "Add Variant"
         },
         common: {
             cancel: "Cancel",
@@ -237,6 +241,10 @@ export const translations = {
             variantName: "Nama Varian",
             applyToAll: "Terapkan ke Semua",
             applyReasonPlaceholder: "Atur alasan untuk semua varian...",
+            hasVariants: "Produk ini memiliki banyak varian (misalnya ukuran, warna)",
+            variants: "Varian",
+            variantsDescription: "Tambahkan varian untuk produk Anda. Setiap varian dapat memiliki SKU, harga, dan tingkat stok sendiri.",
+            addVariant: "Tambah Varian"
         },
         common: {
             cancel: "Batal",
