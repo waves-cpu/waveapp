@@ -132,6 +132,13 @@ export function InventoryTable({ onUpdateStock, onShowHistory }: InventoryTableP
                 const totalStock = item.variants?.reduce((sum, v) => sum + v.stock, 0) ?? item.stock;
 
                 if (item.variants && item.variants.length > 0) {
+                    const prices = item.variants.map(v => v.price);
+                    const minPrice = Math.min(...prices);
+                    const maxPrice = Math.max(...prices);
+                    const priceDisplay = minPrice === maxPrice 
+                        ? `$${minPrice.toFixed(2)}`
+                        : `$${minPrice.toFixed(2)} - $${maxPrice.toFixed(2)}`;
+
                     return (
                         <React.Fragment key={item.id}>
                             <TableRow className="bg-muted/20">
@@ -150,7 +157,7 @@ export function InventoryTable({ onUpdateStock, onShowHistory }: InventoryTableP
                                         </div>
                                     </div>
                                 </TableCell>
-                                <TableCell></TableCell>
+                                <TableCell>{priceDisplay}</TableCell>
                                 <TableCell>
                                     {totalStock}
                                 </TableCell>
