@@ -47,7 +47,7 @@ export function PosOrderSummary({ cart, setCart, onCheckout, isSubmitting }: Pos
   const totalPrice = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
   return (
-    <Card className="sticky top-10 flex flex-col h-[calc(100vh-8rem)]">
+    <Card className="sticky top-0 flex flex-col h-full">
       <CardHeader>
         <CardTitle>Pesanan Saat Ini</CardTitle>
       </CardHeader>

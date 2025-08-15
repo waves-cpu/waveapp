@@ -22,6 +22,7 @@ import { useTheme } from "next-themes"
 import { useLanguage, Language } from "@/hooks/use-language";
 import { translations } from "@/types/language";
 import { Skeleton } from "@/components/ui/skeleton";
+import { AppLayout } from "../components/app-layout";
 
 
 function SettingsContent() {
@@ -108,6 +109,8 @@ function SettingsContent() {
 
 export default function SettingsPage() {
   return (
-    <SettingsContent />
+    <AppLayout>
+      <SettingsContent />
+    </AppLayout>
   )
 }

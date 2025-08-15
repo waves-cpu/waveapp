@@ -13,7 +13,7 @@ export default function PosLayout({
 }>) {
   return (
     <>
-        {children}
+      {children}
     </>
   );
 }

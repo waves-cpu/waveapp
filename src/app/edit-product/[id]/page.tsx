@@ -1,6 +1,7 @@
 'use client';
 
 import { AddProductForm } from "@/app/components/add-product-form";
+import { AppLayout } from "@/app/components/app-layout";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { useLanguage } from "@/hooks/use-language";
 import { useInventory } from "@/hooks/use-inventory";
@@ -61,20 +62,22 @@ export default function EditProductPage() {
 
 
     return (
-        <main className="flex min-h-screen flex-col items-center p-4 md:p-10">
-            <div className="w-full max-w-4xl">
-                <div className="flex items-center gap-4 mb-6">
-                    <SidebarTrigger className="md:hidden" />
-                    <h1 className="text-lg font-bold">{t.inventoryTable.editProduct}</h1>
+        <AppLayout>
+            <main className="flex min-h-screen flex-col items-center p-4 md:p-10">
+                <div className="w-full max-w-4xl">
+                    <div className="flex items-center gap-4 mb-6">
+                        <SidebarTrigger className="md:hidden" />
+                        <h1 className="text-lg font-bold">{t.inventoryTable.editProduct}</h1>
+                    </div>
+                    {pageLoading ? (
+                        <EditProductPageSkeleton />
+                    ) : item ? (
+                        <AddProductForm existingItem={item} />
+                    ) : (
+                        <p>Item not found.</p>
+                    )}
                 </div>
-                {pageLoading ? (
-                    <EditProductPageSkeleton />
-                ) : item ? (
-                    <AddProductForm existingItem={item} />
-                ) : (
-                    <p>Item not found.</p>
-                )}
-            </div>
-        </main>
+            </main>
+        </AppLayout>
     );
 }

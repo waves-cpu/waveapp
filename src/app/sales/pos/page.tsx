@@ -40,6 +40,7 @@ import {
 import { VariantSelectionDialog } from '@/app/components/variant-selection-dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { PosOrderSummary, type PosCartItem } from '@/app/components/pos-order-summary';
+import { Logo } from '@/app/components/logo';
 
 
 export default function PosSalesPage() {
@@ -251,145 +252,145 @@ export default function PosSalesPage() {
 
   return (
     <>
-    <main className="flex min-h-screen flex-1 bg-muted/40 md:p-10 p-4">
-       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 w-full">
-            <div className="lg:col-span-2 flex flex-col gap-8">
-                 <div className="flex items-center gap-4">
-                    <h1 className="text-lg md:text-xl font-bold font-headline text-foreground">
-                    {t.sales.pos}
-                    </h1>
-                </div>
-                <div className="bg-card rounded-lg border shadow-sm flex flex-col h-full">
-                    <div className="p-4 flex flex-col md:flex-row gap-4 justify-between items-center border-b">
-                        <form onSubmit={handleSkuSubmit} className="flex-grow md:max-w-sm">
-                            <div className="relative">
-                                <ScanLine className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                <Input
-                                    ref={skuInputRef}
-                                    placeholder="Scan atau masukkan SKU..."
-                                    value={sku}
-                                    onChange={(e) => setSku(e.target.value)}
-                                    className="pl-10 w-full"
-                                    disabled={isSubmitting || isVariantDialogOpen}
-                                />
-                            </div>
-                        </form>
-                        <Popover>
-                        <PopoverTrigger asChild>
-                            <Button
-                            id="date"
-                            variant={'outline'}
-                            className={cn(
-                                'w-full md:w-[240px] justify-start text-left font-normal',
-                                !date && 'text-muted-foreground'
-                            )}
-                            >
-                            <CalendarIcon className="mr-2 h-4 w-4" />
-                            {date ? format(date, 'PP') : <span>{t.stockHistory.dateRange}</span>}
-                            </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="end">
-                            <Calendar
-                            mode="single"
-                            selected={date}
-                            onSelect={(newDate) => setDate(newDate || new Date())}
-                            initialFocus
-                            />
-                        </PopoverContent>
-                        </Popover>
-                    </div>
-                    <div className="flex-grow overflow-auto">
-                    <Table>
-                        <TableHeader className="sticky top-0 bg-card">
-                        <TableRow>
-                            <TableHead className="w-[40%]">{t.inventoryTable.name}</TableHead>
-                            <TableHead>SKU</TableHead>
-                            <TableHead>{t.inventoryTable.size}</TableHead>
-                            <TableHead>Harga</TableHead>
-                            <TableHead className="text-center">{t.inventoryTable.actions}</TableHead>
-                        </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                        {loading ? (
-                            Array.from({ length: 5 }).map((_, i) => (
-                                <TableRow key={i}>
-                                    <TableCell><Skeleton className="h-4 w-[250px]" /></TableCell>
-                                    <TableCell><Skeleton className="h-4 w-[120px]" /></TableCell>
-                                    <TableCell><Skeleton className="h-4 w-[80px]" /></TableCell>
-                                    <TableCell><Skeleton className="h-4 w-[100px]" /></TableCell>
+      <main className="flex flex-col h-screen bg-muted/40">
+        <header className="flex items-center justify-between p-4 border-b bg-background">
+          <Logo />
+          <Popover>
+            <PopoverTrigger asChild>
+                <Button
+                id="date"
+                variant={'outline'}
+                className={cn(
+                    'w-[240px] justify-start text-left font-normal',
+                    !date && 'text-muted-foreground'
+                )}
+                >
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {date ? format(date, 'PP') : <span>{t.stockHistory.dateRange}</span>}
+                </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="end">
+                <Calendar
+                mode="single"
+                selected={date}
+                onSelect={(newDate) => setDate(newDate || new Date())}
+                initialFocus
+                />
+            </PopoverContent>
+          </Popover>
+        </header>
+
+        <div className="flex-1 grid grid-cols-1 lg:grid-cols-3 gap-8 p-4 lg:p-8 overflow-hidden">
+              <div className="lg:col-span-2 flex flex-col gap-8 h-full">
+                  <div className="bg-card rounded-lg border shadow-sm flex flex-col h-full">
+                      <div className="p-4 border-b">
+                          <form onSubmit={handleSkuSubmit} className="flex-grow">
+                              <div className="relative">
+                                  <ScanLine className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                  <Input
+                                      ref={skuInputRef}
+                                      placeholder="Scan atau masukkan SKU..."
+                                      value={sku}
+                                      onChange={(e) => setSku(e.target.value)}
+                                      className="pl-10 w-full"
+                                      disabled={isSubmitting || isVariantDialogOpen}
+                                  />
+                              </div>
+                          </form>
+                      </div>
+                      <div className="flex-grow overflow-auto">
+                        <h2 className="p-4 text-lg font-semibold">Riwayat Penjualan Hari Ini</h2>
+                        <Table>
+                            <TableHeader className="sticky top-0 bg-card">
+                            <TableRow>
+                                <TableHead className="w-[40%]">{t.inventoryTable.name}</TableHead>
+                                <TableHead>SKU</TableHead>
+                                <TableHead>{t.inventoryTable.size}</TableHead>
+                                <TableHead>Harga</TableHead>
+                                <TableHead className="text-center">{t.inventoryTable.actions}</TableHead>
+                            </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                            {loading ? (
+                                Array.from({ length: 5 }).map((_, i) => (
+                                    <TableRow key={i}>
+                                        <TableCell><Skeleton className="h-4 w-[250px]" /></TableCell>
+                                        <TableCell><Skeleton className="h-4 w-[120px]" /></TableCell>
+                                        <TableCell><Skeleton className="h-4 w-[80px]" /></TableCell>
+                                        <TableCell><Skeleton className="h-4 w-[100px]" /></TableCell>
+                                        <TableCell className="text-center">
+                                            <Skeleton className="h-8 w-8 rounded-md" />
+                                        </TableCell>
+                                    </TableRow>
+                                ))
+                            ) : sales.length > 0 ? (
+                                sales.map((sale) => (
+                                <TableRow key={sale.id}>
+                                    <TableCell>{sale.productName}</TableCell>
+                                    <TableCell>{sale.sku}</TableCell>
+                                    <TableCell>{sale.variantName || '-'}</TableCell>
+                                    <TableCell>{`Rp${Math.round(sale.priceAtSale).toLocaleString('id-ID')}`}</TableCell>
                                     <TableCell className="text-center">
-                                        <Skeleton className="h-8 w-8 rounded-md" />
+                                    <AlertDialog>
+                                        <AlertDialogTrigger asChild>
+                                            <Button variant="ghost" size="icon" className="text-destructive">
+                                                <Trash2 className="h-4 w-4" />
+                                            </Button>
+                                        </AlertDialogTrigger>
+                                        <AlertDialogContent>
+                                            <AlertDialogHeader>
+                                            <AlertDialogTitle>Anda yakin?</AlertDialogTitle>
+                                            <AlertDialogDescription>
+                                                Tindakan ini akan membatalkan penjualan dan mengembalikan stok. Tindakan ini tidak dapat diurungkan.
+                                            </AlertDialogDescription>
+                                            </AlertDialogHeader>
+                                            <AlertDialogFooter>
+                                            <AlertDialogCancel>Batal</AlertDialogCancel>
+                                            <AlertDialogAction onClick={() => handleCancelSale(sale.id)}>
+                                                Ya, Batalkan Penjualan
+                                            </AlertDialogAction>
+                                            </AlertDialogFooter>
+                                        </AlertDialogContent>
+                                        </AlertDialog>
                                     </TableCell>
                                 </TableRow>
-                            ))
-                        ) : sales.length > 0 ? (
-                            sales.map((sale) => (
-                            <TableRow key={sale.id}>
-                                <TableCell>{sale.productName}</TableCell>
-                                <TableCell>{sale.sku}</TableCell>
-                                <TableCell>{sale.variantName || '-'}</TableCell>
-                                <TableCell>{`Rp${Math.round(sale.priceAtSale).toLocaleString('id-ID')}`}</TableCell>
-                                <TableCell className="text-center">
-                                <AlertDialog>
-                                    <AlertDialogTrigger asChild>
-                                        <Button variant="ghost" size="icon" className="text-destructive">
-                                            <Trash2 className="h-4 w-4" />
-                                        </Button>
-                                    </AlertDialogTrigger>
-                                    <AlertDialogContent>
-                                        <AlertDialogHeader>
-                                        <AlertDialogTitle>Anda yakin?</AlertDialogTitle>
-                                        <AlertDialogDescription>
-                                            Tindakan ini akan membatalkan penjualan dan mengembalikan stok. Tindakan ini tidak dapat diurungkan.
-                                        </AlertDialogDescription>
-                                        </AlertDialogHeader>
-                                        <AlertDialogFooter>
-                                        <AlertDialogCancel>Batal</AlertDialogCancel>
-                                        <AlertDialogAction onClick={() => handleCancelSale(sale.id)}>
-                                            Ya, Batalkan Penjualan
-                                        </AlertDialogAction>
-                                        </AlertDialogFooter>
-                                    </AlertDialogContent>
-                                    </AlertDialog>
-                                </TableCell>
-                            </TableRow>
-                            ))
-                        ) : (
-                            <TableRow>
-                                <TableCell colSpan={5} className="h-48 text-center">
-                                    <div className="flex flex-col items-center justify-center gap-4 text-muted-foreground">
-                                        <ShoppingCart className="h-16 w-16" />
-                                        <div className="text-center">
-                                            <p className="font-semibold">Tidak Ada Penjualan</p>
-                                            <p className="text-sm">Tidak ada penjualan yang tercatat pada tanggal yang dipilih.</p>
+                                ))
+                            ) : (
+                                <TableRow>
+                                    <TableCell colSpan={5} className="h-48 text-center">
+                                        <div className="flex flex-col items-center justify-center gap-4 text-muted-foreground">
+                                            <ShoppingCart className="h-16 w-16" />
+                                            <div className="text-center">
+                                                <p className="font-semibold">Tidak Ada Penjualan</p>
+                                                <p className="text-sm">Tidak ada penjualan yang tercatat pada tanggal yang dipilih.</p>
+                                            </div>
                                         </div>
-                                    </div>
-                                </TableCell>
-                            </TableRow>
-                        )}
-                        </TableBody>
-                    </Table>
-                    </div>
-                </div>
-            </div>
-            <div className="lg:col-span-1">
-                <PosOrderSummary 
-                    cart={cart}
-                    setCart={setCart}
-                    onCheckout={handleCheckout}
-                    isSubmitting={isSubmitting}
-                />
-            </div>
-       </div>
-    </main>
-    {productForVariantSelection && (
-        <VariantSelectionDialog
-            open={isVariantDialogOpen}
-            onOpenChange={setIsVariantDialogOpen}
-            item={productForVariantSelection}
-            onSelect={handleVariantSelect}
-        />
-    )}
+                                    </TableCell>
+                                </TableRow>
+                            )}
+                            </TableBody>
+                        </Table>
+                      </div>
+                  </div>
+              </div>
+              <div className="lg:col-span-1 h-full">
+                  <PosOrderSummary 
+                      cart={cart}
+                      setCart={setCart}
+                      onCheckout={handleCheckout}
+                      isSubmitting={isSubmitting}
+                  />
+              </div>
+        </div>
+      </main>
+      {productForVariantSelection && (
+          <VariantSelectionDialog
+              open={isVariantDialogOpen}
+              onOpenChange={setIsVariantDialogOpen}
+              item={productForVariantSelection}
+              onSelect={handleVariantSelect}
+          />
+      )}
     </>
   );
 }
