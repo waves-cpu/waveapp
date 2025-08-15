@@ -245,7 +245,7 @@ export function ProductSelectionDialog({ open, onOpenChange, onSelect, available
                     )}
                     </TableBody>
                 </Table>
-                 <div className="flex items-center justify-between p-4 sticky bottom-0 bg-card/80 backdrop-blur-sm">
+                <div className="flex items-center justify-between p-4 border-t">
                     <div className="text-sm text-muted-foreground">
                         {selectedIds.size} item(s) selected.
                     </div>
@@ -283,6 +283,8 @@ export function ProductSelectionDialog({ open, onOpenChange, onSelect, available
   );
 }
  
+
+    
 
     
 
