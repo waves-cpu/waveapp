@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -95,9 +95,19 @@ export function StockInForm() {
   const availableItems = useMemo(() => {
     return items.filter(item => {
       if (item.variants && item.variants.length > 0) {
-        return !item.variants.every(v => existingItemIds.has(v.id));
+        // Only include parent item if at least one of its variants is not already selected
+        return item.variants.some(v => !existingItemIds.has(v.id));
       }
       return item.stock !== undefined && !existingItemIds.has(item.id);
+    }).map(item => {
+        // if some variants are already selected, only show the ones that are not
+        if (item.variants) {
+            return {
+                ...item,
+                variants: item.variants.filter(v => !existingItemIds.has(v.id))
+            }
+        }
+        return item;
     });
   }, [items, existingItemIds]);
 
@@ -190,7 +200,7 @@ export function StockInForm() {
         <CardContent>
             <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                <div className="max-h-[60vh] overflow-auto border rounded-md">
+                <div className="border rounded-md">
                     <Table>
                         <TableHeader>
                             <TableRow>
