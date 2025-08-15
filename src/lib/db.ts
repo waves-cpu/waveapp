@@ -11,6 +11,29 @@ if (!fs.existsSync(dbDir)) {
 export const db = new Database(path.join(dbDir, 'inventory.db'));
 db.pragma('journal_mode = WAL');
 
+// Simple migration logic
+const runMigrations = () => {
+  try {
+    // Check if transactionId column exists in sales table
+    const columns = db.pragma('table_info(sales)');
+    const hasTransactionId = columns.some((col: any) => col.name === 'transactionId');
+
+    if (!hasTransactionId) {
+      console.log('Adding transactionId column to sales table...');
+      db.exec('ALTER TABLE sales ADD COLUMN transactionId TEXT');
+    }
+  } catch (error) {
+    // This might happen if the sales table doesn't exist yet, which is fine.
+    // The createSchema function will handle creating it.
+    if (error instanceof Error && error.message.includes('no such table: sales')) {
+        // ignore
+    } else {
+        console.error('Migration failed:', error);
+    }
+  }
+};
+
+
 // Create tables if they don't exist
 const createSchema = () => {
   db.exec(`
@@ -65,6 +88,8 @@ const createSchema = () => {
 };
 
 createSchema();
+runMigrations();
+
 
 const seedData = () => {
     const count = db.prepare('SELECT COUNT(*) as count FROM products').get() as { count: number };
