@@ -280,8 +280,8 @@ export function StockInForm() {
                                          <div className="flex flex-col items-center justify-center gap-4 text-muted-foreground">
                                             <ShoppingBag className="h-16 w-16" />
                                             <div className="text-center">
-                                                <p className="font-semibold">No products selected.</p>
-                                                <p className="text-sm">Click "Select Products" to begin.</p>
+                                                <p className="font-semibold">{t.stockInForm.noProducts}</p>
+                                                <p className="text-sm">{t.stockInForm.selectProducts} to begin.</p>
                                             </div>
                                         </div>
                                     </TableCell>
@@ -366,7 +366,7 @@ export function StockInForm() {
                                                     </div>
                                                 </div>
                                              </TableCell>
-                                             <TableCell className="align-middle" colSpan={3}>
+                                             <TableCell colSpan={2}>
                                                 <div className="flex items-center gap-2">
                                                     <FormField
                                                         control={form.control}
@@ -382,6 +382,7 @@ export function StockInForm() {
                                                     </Button>
                                                 </div>
                                              </TableCell>
+                                             <TableCell></TableCell>
                                         </TableRow>
                                         {variants.map((field) => (
                                             <TableRow key={field.itemId} data-state={bulkSelectedIds.has(field.itemId) ? "selected" : ""}>
@@ -392,9 +393,20 @@ export function StockInForm() {
                                                         aria-label={`Select ${field.itemName}`}
                                                     />
                                                 </TableCell>
-                                                <TableCell className="pl-16 align-middle">
-                                                    <div className="font-medium text-sm">{field.variantName}</div>
-                                                    <div className="text-xs text-muted-foreground">SKU: {field.variantSku}</div>
+                                                <TableCell className="pl-10 align-middle">
+                                                    <div className="flex items-center gap-4">
+                                                        <Image
+                                                            src={'https://placehold.co/24x24.png'}
+                                                            alt={field.variantName || ''}
+                                                            width={24} height={24}
+                                                            className="rounded-sm"
+                                                            data-ai-hint="variant image"
+                                                        />
+                                                        <div>
+                                                            <div className="font-medium text-sm">{field.variantName}</div>
+                                                            <div className="text-xs text-muted-foreground">SKU: {field.variantSku}</div>
+                                                        </div>
+                                                    </div>
                                                 </TableCell>
                                                 <TableCell className="align-middle">
                                                     <FormField
