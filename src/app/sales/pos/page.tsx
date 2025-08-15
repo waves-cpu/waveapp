@@ -24,7 +24,6 @@ import { useInventory } from '@/hooks/use-inventory';
 import { useLanguage } from '@/hooks/use-language';
 import { translations } from '@/types/language';
 import { cn } from '@/lib/utils';
-import { SidebarTrigger } from '@/components/ui/sidebar';
 import type { Sale, InventoryItem, InventoryItemVariant } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -252,11 +251,10 @@ export default function PosSalesPage() {
 
   return (
     <>
-    <main className="flex min-h-[calc(100vh_-_theme(spacing.16))] flex-1 bg-muted/40 md:p-10 p-4">
+    <main className="flex min-h-screen flex-1 bg-muted/40 md:p-10 p-4">
        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 w-full">
             <div className="lg:col-span-2 flex flex-col gap-8">
                  <div className="flex items-center gap-4">
-                    <SidebarTrigger className="md:hidden" />
                     <h1 className="text-lg md:text-xl font-bold font-headline text-foreground">
                     {t.sales.pos}
                     </h1>
