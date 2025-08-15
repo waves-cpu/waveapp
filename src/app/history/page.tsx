@@ -43,6 +43,7 @@ type HistoryEntry = {
     // For adjustments
     itemName?: string;
     variantName?: string;
+    variantSku?: string;
     newStockLevel?: number;
     imageUrl?: string;
     itemCategory?: string;
@@ -80,6 +81,7 @@ export default function HistoryPage() {
                     itemName: parentItem.name,
                     itemCategory: parentItem.category,
                     variantName: variant?.name,
+                    variantSku: variant?.sku,
                     imageUrl: parentItem.imageUrl,
                 });
             }
@@ -283,7 +285,12 @@ export default function HistoryPage() {
                                      )}
                                     <div>
                                         <div className="font-medium text-sm">{entry.itemName}</div>
-                                        {entry.variantName && <div className="text-xs text-muted-foreground">{entry.variantName}</div>}
+                                        {entry.variantName && (
+                                            <div className="text-xs text-muted-foreground">
+                                                {entry.variantName}
+                                                {entry.variantSku && ` (SKU: ${entry.variantSku})`}
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             ) : (
@@ -346,4 +353,3 @@ export default function HistoryPage() {
     </>
   );
 }
-

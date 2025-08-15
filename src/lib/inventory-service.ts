@@ -287,26 +287,34 @@ export async function findProductBySku(sku: string): Promise<InventoryItem | nul
     const getProductByIdStmt = db.prepare('SELECT * FROM products WHERE id = ?');
     const getVariantsByProductIdStmt = db.prepare('SELECT * FROM variants WHERE productId = ?');
 
+    // First, check if the SKU belongs to a variant
     const variantResult: any = getVariantBySkuStmt.get(sku);
     if (variantResult) {
+        // If it's a variant, find its parent product
         const parent = getProductByIdStmt.get(variantResult.productId) as any;
+        // Return the parent, but only with the single variant that matched the SKU
         return {
             ...parent,
             id: parent.id.toString(),
-            variants: [{...variantResult, id: variantResult.id.toString()}] // Return parent with only the matched variant
+            // This structure indicates to the caller that a specific variant was found
+            variants: [{...variantResult, id: variantResult.id.toString()}] 
         };
     }
 
+    // If not a variant SKU, check if it's a parent product SKU
     const productResult: any = getProductBySkuStmt.get(sku);
     if (productResult) {
+        // If it's a parent product, check if it has variants
         if (productResult.hasVariants) {
             const variants = getVariantsByProductIdStmt.all(productResult.id) as any[];
+             // Return the parent with all its variants for selection
             return {
                  ...productResult,
                  id: productResult.id.toString(),
                  variants: variants.map(v => ({ ...v, id: v.id.toString() }))
             };
         }
+        // If it's a simple product (no variants), just return it
         return { ...productResult, id: productResult.id.toString() };
     }
 
