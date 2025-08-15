@@ -1,6 +1,7 @@
 
 'use client';
 
+import React, { useState, useMemo } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -23,7 +24,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { PlusCircle, Trash2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import type { InventoryItem } from '@/types';
-import { useState, useMemo } from 'react';
 import { ProductSelectionDialog } from './product-selection-dialog';
 
 const stockInItemSchema = z.object({
@@ -55,7 +55,7 @@ export function StockInForm() {
     },
   });
 
-  const { fields, append } = useFieldArray({
+  const { fields, append, remove } = useFieldArray({
     control: form.control,
     name: "stockInItems"
   });
@@ -83,11 +83,14 @@ export function StockInForm() {
   }, [items]);
 
   const existingItemIds = useMemo(() => new Set(fields.map(field => field.itemId)), [fields]);
+  
   const availableItems = useMemo(() => {
     return items.filter(item => {
         if (item.variants && item.variants.length > 0) {
+            // Include parent if not all variants are already selected
             return !item.variants.every(v => existingItemIds.has(v.id));
         }
+        // Include simple item if it's not selected
         return item.stock !== undefined && !existingItemIds.has(item.id);
     });
   }, [items, existingItemIds]);
@@ -97,40 +100,44 @@ export function StockInForm() {
     const newItems = selectedIds
         .filter(id => !existingItemIds.has(id))
         .map(id => {
-            const item = allItemsAndVariantsByName.get(id);
+            const itemDetail = allItemsAndVariantsByName.get(id);
+            if (!itemDetail) return null; // Should not happen if logic is correct
+            
+            const parentName = itemDetail.isVariant ? itemDetail.parentName : undefined;
+            const variantName = itemDetail.isVariant ? itemDetail.variantName : undefined;
+            
+            // Find parent item to get full name
+            const parentItem = items.find(i => i.name === parentName);
+            const itemName = parentItem ? `${parentItem.name} - ${variantName}` : itemDetail.name;
+
+
             return {
                 itemId: id,
-                itemName: item?.name || 'Unknown Item',
+                itemName: itemName,
                 quantity: 1,
                 reason: 'Stock In',
-                parentName: item?.parentName,
-                variantName: item?.variantName,
-                isVariant: item?.isVariant || false,
+                parentName: parentName,
+                variantName: variantName,
+                isVariant: itemDetail.isVariant,
             };
-        });
+        }).filter(Boolean); // Filter out any nulls
     
-    append(newItems);
+    append(newItems as any[]);
   };
 
-  const removeField = (index: number) => {
-    const currentItems = form.getValues('stockInItems');
-    const newItems = currentItems.filter((_, i) => i !== index);
-    form.setValue('stockInItems', newItems, { shouldValidate: true, shouldDirty: true });
-  }
-
   const groupedItems = useMemo(() => {
-    const groups = new Map<string, z.infer<typeof stockInItemSchema>[]>();
-    const simpleItems: z.infer<typeof stockInItemSchema>[] = [];
+    const groups = new Map<string, (z.infer<typeof stockInItemSchema> & { originalIndex: number })[]>();
+    const simpleItems: (z.infer<typeof stockInItemSchema> & { originalIndex: number })[] = [];
     
     fields.forEach((field, index) => {
-        const formField = {...field, originalIndex: index }; // Add original index to find it later
+        const formField = { ...field, originalIndex: index };
         if (formField.isVariant && formField.parentName) {
             if (!groups.has(formField.parentName)) {
                 groups.set(formField.parentName, []);
             }
-            groups.get(formField.parentName)!.push(formField as any);
+            groups.get(formField.parentName)!.push(formField);
         } else {
-            simpleItems.push(formField as any);
+            simpleItems.push(formField);
         }
     });
 
@@ -196,8 +203,8 @@ export function StockInForm() {
                                             <FormField
                                                 control={form.control}
                                                 name={`stockInItems.${field.originalIndex}.quantity`}
-                                                render={({ field }) => (
-                                                    <FormItem><FormControl><Input type="number" placeholder="10" {...field} /></FormControl><FormMessage/></FormItem>
+                                                render={({ field: formField }) => (
+                                                    <FormItem><FormControl><Input type="number" placeholder="10" {...formField} /></FormControl><FormMessage/></FormItem>
                                                 )}
                                             />
                                         </TableCell>
@@ -205,13 +212,13 @@ export function StockInForm() {
                                             <FormField
                                                 control={form.control}
                                                 name={`stockInItems.${field.originalIndex}.reason`}
-                                                render={({ field }) => (
-                                                    <FormItem><FormControl><Input placeholder="e.g., From Supplier A" {...field} /></FormControl><FormMessage/></FormItem>
+                                                render={({ field: formField }) => (
+                                                    <FormItem><FormControl><Input placeholder="e.g., From Supplier A" {...formField} /></FormControl><FormMessage/></FormItem>
                                                 )}
                                             />
                                         </TableCell>
                                         <TableCell>
-                                            <Button type="button" variant="ghost" size="icon" className="text-destructive hover:text-destructive-foreground hover:bg-destructive" onClick={() => removeField(field.originalIndex)}>
+                                            <Button type="button" variant="ghost" size="icon" className="text-destructive hover:text-destructive-foreground hover:bg-destructive" onClick={() => remove(field.originalIndex)}>
                                                 <Trash2 className="h-4 w-4" />
                                             </Button>
                                         </TableCell>
@@ -229,8 +236,8 @@ export function StockInForm() {
                                                     <FormField
                                                         control={form.control}
                                                         name={`stockInItems.${field.originalIndex}.quantity`}
-                                                        render={({ field }) => (
-                                                            <FormItem><FormControl><Input type="number" placeholder="10" {...field} /></FormControl><FormMessage/></FormItem>
+                                                        render={({ field: formField }) => (
+                                                            <FormItem><FormControl><Input type="number" placeholder="10" {...formField} /></FormControl><FormMessage/></FormItem>
                                                         )}
                                                     />
                                                 </TableCell>
@@ -238,13 +245,13 @@ export function StockInForm() {
                                                     <FormField
                                                         control={form.control}
                                                         name={`stockInItems.${field.originalIndex}.reason`}
-                                                        render={({ field }) => (
-                                                            <FormItem><FormControl><Input placeholder="e.g., From Supplier A" {...field} /></FormControl><FormMessage/></FormItem>
+                                                        render={({ field: formField }) => (
+                                                            <FormItem><FormControl><Input placeholder="e.g., From Supplier A" {...formField} /></FormControl><FormMessage/></FormItem>
                                                         )}
                                                     />
                                                 </TableCell>
                                                 <TableCell>
-                                                    <Button type="button" variant="ghost" size="icon" className="text-destructive hover:text-destructive-foreground hover:bg-destructive" onClick={() => removeField(field.originalIndex)}>
+                                                    <Button type="button" variant="ghost" size="icon" className="text-destructive hover:text-destructive-foreground hover:bg-destructive" onClick={() => remove(field.originalIndex)}>
                                                         <Trash2 className="h-4 w-4" />
                                                     </Button>
                                                 </TableCell>
@@ -278,4 +285,3 @@ export function StockInForm() {
     </>
   );
 }
-
