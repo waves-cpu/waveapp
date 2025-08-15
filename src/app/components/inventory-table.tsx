@@ -180,12 +180,16 @@ export function InventoryTable({ onUpdateStock, onShowHistory }: InventoryTableP
                                         <div className="text-xs text-muted-foreground">SKU: {variant.sku}</div>
                                     </TableCell>
                                     <TableCell>{`Rp${Math.round(variant.price)}`}</TableCell>
-                                    <TableCell>{variant.stock}</TableCell>
-                                    <TableCell className="text-center">
-                                        <div className="flex justify-center gap-2">
-                                            <Button variant="ghost" size="icon" onClick={() => onUpdateStock(variant.id)} aria-label={t.inventoryTable.updateStock}>
+                                    <TableCell>
+                                        <div className="group relative">
+                                            <span>{variant.stock}</span>
+                                            <Button variant="ghost" size="icon" onClick={() => onUpdateStock(variant.id)} className="absolute left-1/2 -translate-x-1/2 top-1/2 -translate-y-1/2 h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity" aria-label={t.inventoryTable.updateStock}>
                                                 <Edit className="h-4 w-4" />
                                             </Button>
+                                        </div>
+                                    </TableCell>
+                                    <TableCell className="text-center">
+                                        <div className="flex justify-center gap-2">
                                             <Button variant="ghost" size="icon" onClick={() => onShowHistory(variant.id)} aria-label={t.inventoryTable.viewHistory}>
                                                 <History className="h-4 w-4" />
                                             </Button>
@@ -214,16 +218,20 @@ export function InventoryTable({ onUpdateStock, onShowHistory }: InventoryTableP
                                 </div>
                             </TableCell>
                              <TableCell>{item.price ? `Rp${Math.round(item.price)}` : '-'}</TableCell>
-                            <TableCell>{item.stock}</TableCell>
+                            <TableCell>
+                                <div className="group relative">
+                                    <span>{item.stock}</span>
+                                    <Button variant="ghost" size="icon" onClick={() => onUpdateStock(item.id)} className="absolute left-1/2 -translate-x-1/2 top-1/2 -translate-y-1/2 h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity" aria-label={t.inventoryTable.updateStock}>
+                                        <Edit className="h-4 w-4" />
+                                    </Button>
+                                </div>
+                            </TableCell>
                              <TableCell className="text-center">
                                 <div className="flex justify-center gap-2">
                                      <Button asChild variant="ghost" size="icon" aria-label={t.inventoryTable.editProduct}>
                                         <Link href={`/edit-product/${item.id}`}>
                                             <Pencil className="h-4 w-4" />
                                         </Link>
-                                    </Button>
-                                    <Button variant="ghost" size="icon" onClick={() => onUpdateStock(item.id)} aria-label={t.inventoryTable.updateStock}>
-                                        <Edit className="h-4 w-4" />
                                     </Button>
                                     <Button variant="ghost" size="icon" onClick={() => onShowHistory(item.id)} aria-label={t.inventoryTable.viewHistory}>
                                         <History className="h-4 w-4" />
