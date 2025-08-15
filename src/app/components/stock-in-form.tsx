@@ -108,6 +108,7 @@ export function StockInForm({
                 name: item.name,
                 isVariant: false,
                 parentImageUrl: item.imageUrl,
+                parentSku: item.sku,
              });
         }
     });
@@ -305,7 +306,10 @@ export function StockInForm({
                                                     className="rounded-sm" 
                                                     data-ai-hint="product image"
                                                 />
-                                                <span className="font-medium">{field.itemName}</span>
+                                                <div>
+                                                    <span className="font-medium">{field.itemName}</span>
+                                                    <div className="text-xs text-muted-foreground">SKU: {field.parentSku}</div>
+                                                </div>
                                             </div>
                                         </TableCell>
                                         <TableCell className="align-middle">
@@ -385,14 +389,14 @@ export function StockInForm({
                                         </TableRow>
                                         {variants.map((field) => (
                                             <TableRow key={field.itemId} data-state={bulkSelectedIds.has(field.itemId) ? "selected" : ""}>
-                                                <TableCell className="pl-6">
+                                                <TableCell className="pl-4">
                                                      <Checkbox
                                                         checked={bulkSelectedIds.has(field.itemId)}
                                                         onCheckedChange={() => handleToggleSelection(field.itemId)}
                                                         aria-label={`Select ${field.itemName}`}
                                                     />
                                                 </TableCell>
-                                                <TableCell className="pl-10 align-middle">
+                                                <TableCell className="pl-8 align-middle">
                                                     <div className="flex items-center gap-4">
                                                         <div className="flex h-6 w-6 items-center justify-center rounded-sm bg-muted text-muted-foreground">
                                                             <Package className="h-4 w-4" />
