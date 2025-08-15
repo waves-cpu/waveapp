@@ -385,18 +385,22 @@ export function StockInForm({
                                                     </Button>
                                                 </div>
                                              </TableCell>
-                                             <TableCell></TableCell>
+                                             <TableCell>
+                                                <Button type="button" variant="ghost" size="icon" className="text-destructive hover:text-destructive-foreground hover:bg-destructive" onClick={() => variants.forEach(v => remove(v.originalIndex))}>
+                                                    <Trash2 className="h-4 w-4" />
+                                                </Button>
+                                             </TableCell>
                                         </TableRow>
                                         {variants.map((field) => (
                                             <TableRow key={field.itemId} data-state={bulkSelectedIds.has(field.itemId) ? "selected" : ""}>
-                                                <TableCell className="pl-4">
+                                                <TableCell>
                                                      <Checkbox
                                                         checked={bulkSelectedIds.has(field.itemId)}
                                                         onCheckedChange={() => handleToggleSelection(field.itemId)}
                                                         aria-label={`Select ${field.itemName}`}
                                                     />
                                                 </TableCell>
-                                                <TableCell className="pl-8 align-middle">
+                                                <TableCell className="align-middle">
                                                     <div className="flex items-center gap-4">
                                                         <div className="flex h-10 w-10 items-center justify-center rounded-sm bg-muted text-muted-foreground">
                                                             <Package className="h-5 w-5" />
@@ -422,7 +426,7 @@ export function StockInForm({
                                                         name={`stockInItems.${field.originalIndex}.reason`}
                                                         render={({ field: formField }) => (
                                                             <FormItem><FormControl><Input placeholder={t.updateStockDialog.reasonPlaceholder} {...formField} /></FormControl><FormMessage/></FormItem>
-                                                        )}
+                                                )}
                                                     />
                                                 </TableCell>
                                                 <TableCell className="align-middle">
@@ -466,5 +470,3 @@ export function StockInForm({
     </>
   );
 }
-
-    
