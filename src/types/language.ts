@@ -132,9 +132,9 @@ export const translations = {
             settings: "Pengaturan",
         },
         dashboard: {
-            inventory: "Inventaris",
+            inventory: "Produk Saya",
             addItem: "Tambah Barang",
-            inventoryMenu: "Menu Inventaris",
+            inventoryMenu: "Menu Produk Saya",
             myProducts: "Produk Saya",
             bulk: "Impor Massal",
             stockIn: "Stok Masuk",
