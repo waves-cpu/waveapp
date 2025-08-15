@@ -181,10 +181,10 @@ export function InventoryTable({ onUpdateStock, onShowHistory }: InventoryTableP
                                     </TableCell>
                                     <TableCell>{`Rp${Math.round(variant.price)}`}</TableCell>
                                     <TableCell>
-                                        <div className="group relative">
+                                        <div className="group relative flex items-center justify-start gap-2">
                                             <span>{variant.stock}</span>
-                                            <Button variant="ghost" size="icon" onClick={() => onUpdateStock(variant.id)} className="absolute left-1/2 -translate-x-1/2 top-1/2 -translate-y-1/2 h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity" aria-label={t.inventoryTable.updateStock}>
-                                                <Edit className="h-4 w-4" />
+                                            <Button variant="ghost" size="icon" onClick={() => onUpdateStock(variant.id)} className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity" aria-label={t.inventoryTable.updateStock}>
+                                                <Edit className="h-3 w-3" />
                                             </Button>
                                         </div>
                                     </TableCell>
@@ -219,10 +219,10 @@ export function InventoryTable({ onUpdateStock, onShowHistory }: InventoryTableP
                             </TableCell>
                              <TableCell>{item.price ? `Rp${Math.round(item.price)}` : '-'}</TableCell>
                             <TableCell>
-                                <div className="group relative">
+                                <div className="group relative flex items-center justify-start gap-2">
                                     <span>{item.stock}</span>
-                                    <Button variant="ghost" size="icon" onClick={() => onUpdateStock(item.id)} className="absolute left-1/2 -translate-x-1/2 top-1/2 -translate-y-1/2 h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity" aria-label={t.inventoryTable.updateStock}>
-                                        <Edit className="h-4 w-4" />
+                                    <Button variant="ghost" size="icon" onClick={() => onUpdateStock(item.id)} className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity" aria-label={t.inventoryTable.updateStock}>
+                                        <Edit className="h-3 w-3" />
                                     </Button>
                                 </div>
                             </TableCell>
