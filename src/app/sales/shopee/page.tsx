@@ -18,7 +18,7 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-import { Calendar as CalendarIcon, ScanLine, Trash2, ClipboardX } from 'lucide-react';
+import { Calendar as CalendarIcon, ScanLine, Trash2, ShoppingCart } from 'lucide-react';
 import { format } from 'date-fns';
 import { useInventory } from '@/hooks/use-inventory';
 import { useLanguage } from '@/hooks/use-language';
@@ -292,7 +292,7 @@ export default function ShopeeSalesPage() {
                 <TableRow>
                     <TableCell colSpan={5} className="h-48 text-center">
                         <div className="flex flex-col items-center justify-center gap-4 text-muted-foreground">
-                            <ClipboardX className="h-16 w-16" />
+                            <ShoppingCart className="h-16 w-16" />
                             <div className="text-center">
                                 <p className="font-semibold">Tidak Ada Penjualan</p>
                                 <p className="text-sm">Tidak ada penjualan yang tercatat pada tanggal yang dipilih.</p>
