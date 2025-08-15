@@ -31,6 +31,9 @@ const stockInItemSchema = z.object({
     itemName: z.string(),
     quantity: z.coerce.number().int().min(1, "Quantity must be at least 1."),
     reason: z.string().min(2, "Reason is required."),
+    parentName: z.string().optional(),
+    variantName: z.string().optional(),
+    isVariant: z.boolean(),
 });
 
 const formSchema = z.object({
@@ -58,48 +61,51 @@ export function StockInForm() {
   });
 
   const allItemsAndVariantsByName = useMemo(() => {
-    const map = new Map<string, {name: string}>();
+    const map = new Map<string, {name: string; parentName?: string; variantName?: string; isVariant: boolean}>();
     items.forEach(item => {
         if (item.variants && item.variants.length > 0) {
             item.variants.forEach(variant => {
-                map.set(variant.id, { name: `${item.name} - ${variant.name}` });
+                map.set(variant.id, { 
+                    name: `${item.name} - ${variant.name}`,
+                    parentName: item.name,
+                    variantName: variant.name,
+                    isVariant: true
+                });
             });
         } else if (item.stock !== undefined) {
-             map.set(item.id, { name: item.name });
+             map.set(item.id, { 
+                name: item.name,
+                isVariant: false
+             });
         }
     });
     return map;
   }, [items]);
 
   const existingItemIds = useMemo(() => new Set(fields.map(field => field.itemId)), [fields]);
-  const availableItems = useMemo(() => items.filter(item => {
-    if (item.variants && item.variants.length > 0) {
-        // Include parent if any variant is not already selected
-        return item.variants.some(v => !existingItemIds.has(v.id));
-    }
-    // Include simple item if not already selected
-    return item.stock !== undefined && !existingItemIds.has(item.id);
-  }).map(item => {
-      // Filter out already selected variants from the parent item
-      if (item.variants) {
-          return {
-              ...item,
-              variants: item.variants.filter(v => !existingItemIds.has(v.id))
-          }
-      }
-      return item;
-  }), [items, existingItemIds]);
+  const availableItems = useMemo(() => {
+    return items.filter(item => {
+        if (item.variants && item.variants.length > 0) {
+            return !item.variants.every(v => existingItemIds.has(v.id));
+        }
+        return item.stock !== undefined && !existingItemIds.has(item.id);
+    });
+  }, [items, existingItemIds]);
 
 
   const handleProductsSelected = (selectedIds: string[]) => {
     const newItems = selectedIds
+        .filter(id => !existingItemIds.has(id))
         .map(id => {
             const item = allItemsAndVariantsByName.get(id);
             return {
                 itemId: id,
                 itemName: item?.name || 'Unknown Item',
                 quantity: 1,
-                reason: 'Stock In'
+                reason: 'Stock In',
+                parentName: item?.parentName,
+                variantName: item?.variantName,
+                isVariant: item?.isVariant || false,
             };
         });
     
@@ -111,6 +117,26 @@ export function StockInForm() {
     const newItems = currentItems.filter((_, i) => i !== index);
     form.setValue('stockInItems', newItems, { shouldValidate: true, shouldDirty: true });
   }
+
+  const groupedItems = useMemo(() => {
+    const groups = new Map<string, z.infer<typeof stockInItemSchema>[]>();
+    const simpleItems: z.infer<typeof stockInItemSchema>[] = [];
+    
+    fields.forEach((field, index) => {
+        const formField = {...field, originalIndex: index }; // Add original index to find it later
+        if (formField.isVariant && formField.parentName) {
+            if (!groups.has(formField.parentName)) {
+                groups.set(formField.parentName, []);
+            }
+            groups.get(formField.parentName)!.push(formField as any);
+        } else {
+            simpleItems.push(formField as any);
+        }
+    });
+
+    return { groups, simpleItems };
+
+  }, [fields]);
 
 
   function onSubmit(values: z.infer<typeof formSchema>) {
@@ -155,45 +181,78 @@ export function StockInForm() {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {fields.length > 0 ? fields.map((field, index) => (
-                                <TableRow key={field.id}>
-                                    <TableCell className="font-medium">{field.itemName}</TableCell>
-                                    <TableCell>
-                                        <FormField
-                                            control={form.control}
-                                            name={`stockInItems.${index}.quantity`}
-                                            render={({ field }) => (
-                                                <FormItem>
-                                                    <FormControl><Input type="number" placeholder="10" {...field} /></FormControl>
-                                                    <FormMessage/>
-                                                </FormItem>
-                                            )}
-                                        />
-                                    </TableCell>
-                                    <TableCell>
-                                        <FormField
-                                            control={form.control}
-                                            name={`stockInItems.${index}.reason`}
-                                            render={({ field }) => (
-                                                <FormItem>
-                                                    <FormControl><Input placeholder="e.g., From Supplier A" {...field} /></FormControl>
-                                                    <FormMessage/>
-                                                </FormItem>
-                                            )}
-                                        />
-                                    </TableCell>
-                                    <TableCell>
-                                        <Button type="button" variant="ghost" size="icon" className="text-destructive hover:text-destructive-foreground hover:bg-destructive" onClick={() => removeField(index)}>
-                                            <Trash2 className="h-4 w-4" />
-                                        </Button>
-                                    </TableCell>
-                                </TableRow>
-                            )) : (
+                            {fields.length === 0 ? (
                                 <TableRow>
                                     <TableCell colSpan={4} className="text-center h-24">
                                         No products selected. Click "Select Products" to begin.
                                     </TableCell>
                                 </TableRow>
+                            ) : (
+                                <>
+                                {groupedItems.simpleItems.map((field) => (
+                                     <TableRow key={field.id}>
+                                        <TableCell className="font-medium">{field.itemName}</TableCell>
+                                        <TableCell>
+                                            <FormField
+                                                control={form.control}
+                                                name={`stockInItems.${field.originalIndex}.quantity`}
+                                                render={({ field }) => (
+                                                    <FormItem><FormControl><Input type="number" placeholder="10" {...field} /></FormControl><FormMessage/></FormItem>
+                                                )}
+                                            />
+                                        </TableCell>
+                                        <TableCell>
+                                            <FormField
+                                                control={form.control}
+                                                name={`stockInItems.${field.originalIndex}.reason`}
+                                                render={({ field }) => (
+                                                    <FormItem><FormControl><Input placeholder="e.g., From Supplier A" {...field} /></FormControl><FormMessage/></FormItem>
+                                                )}
+                                            />
+                                        </TableCell>
+                                        <TableCell>
+                                            <Button type="button" variant="ghost" size="icon" className="text-destructive hover:text-destructive-foreground hover:bg-destructive" onClick={() => removeField(field.originalIndex)}>
+                                                <Trash2 className="h-4 w-4" />
+                                            </Button>
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                                {Array.from(groupedItems.groups.entries()).map(([parentName, variants]) => (
+                                    <React.Fragment key={parentName}>
+                                        <TableRow className="bg-muted/20 hover:bg-muted/40">
+                                             <TableCell colSpan={4} className="font-semibold text-primary">{parentName}</TableCell>
+                                        </TableRow>
+                                        {variants.map((field) => (
+                                            <TableRow key={field.id}>
+                                                <TableCell className="pl-12">{field.variantName}</TableCell>
+                                                <TableCell>
+                                                    <FormField
+                                                        control={form.control}
+                                                        name={`stockInItems.${field.originalIndex}.quantity`}
+                                                        render={({ field }) => (
+                                                            <FormItem><FormControl><Input type="number" placeholder="10" {...field} /></FormControl><FormMessage/></FormItem>
+                                                        )}
+                                                    />
+                                                </TableCell>
+                                                <TableCell>
+                                                    <FormField
+                                                        control={form.control}
+                                                        name={`stockInItems.${field.originalIndex}.reason`}
+                                                        render={({ field }) => (
+                                                            <FormItem><FormControl><Input placeholder="e.g., From Supplier A" {...field} /></FormControl><FormMessage/></FormItem>
+                                                        )}
+                                                    />
+                                                </TableCell>
+                                                <TableCell>
+                                                    <Button type="button" variant="ghost" size="icon" className="text-destructive hover:text-destructive-foreground hover:bg-destructive" onClick={() => removeField(field.originalIndex)}>
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </Button>
+                                                </TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </React.Fragment>
+                                ))}
+                                </>
                             )}
                         </TableBody>
                     </Table>
@@ -219,3 +278,4 @@ export function StockInForm() {
     </>
   );
 }
+
