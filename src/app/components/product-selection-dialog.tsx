@@ -276,10 +276,7 @@ export function ProductSelectionDialog({ open, onOpenChange, onSelect, available
                 
             </div>
             </ScrollArea>
-            <div className="flex items-center justify-between p-4 border-t bg-background">
-                <div className="text-sm text-muted-foreground">
-                    {t.productSelectionDialog.itemsSelected.replace('{count}', selectedIds.size.toString())}
-                </div>
+            <div className="flex items-center justify-end p-4 border-t bg-background">
                  <div className="flex items-center gap-4">
                     <Pagination
                         totalPages={totalPages}
@@ -329,6 +326,7 @@ export function ProductSelectionDialog({ open, onOpenChange, onSelect, available
 
 
     
+
 
 
 
