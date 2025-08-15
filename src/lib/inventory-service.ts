@@ -130,10 +130,7 @@ export async function addBulkProducts(products: any[]) {
     const upsertProductStmt = db.prepare(`
         INSERT INTO products (name, category, sku, imageUrl, hasVariants)
         VALUES (@name, @category, @sku, @imageUrl, 1)
-        ON CONFLICT(sku) DO UPDATE SET
-            name = COALESCE(excluded.name, name),
-            category = COALESCE(excluded.category, category),
-            imageUrl = COALESCE(excluded.imageUrl, imageUrl)
+        ON CONFLICT(sku) DO NOTHING
         RETURNING id
     `);
 
@@ -163,20 +160,38 @@ export async function addBulkProducts(products: any[]) {
             // Upsert Product
             let productRecord = findProductBySkuStmt.get(productData.sku) as { id: number } | undefined;
             if (productRecord) {
-                 db.prepare(`
-                    UPDATE products SET 
-                        name = ?, 
-                        category = ?, 
-                        imageUrl = ? 
-                    WHERE sku = ? AND (name IS NULL OR category IS NULL OR imageUrl IS NULL)
-                `).run(productData.name, productData.category, productData.imageUrl || 'https://placehold.co/100x100.png', productData.sku);
+                const updateValues: (string | null)[] = [];
+                let updateQuery = 'UPDATE products SET ';
+                const updateClauses: string[] = [];
+
+                if(productData.name) {
+                    updateClauses.push('name = ?');
+                    updateValues.push(productData.name);
+                }
+                if(productData.category) {
+                    updateClauses.push('category = ?');
+                    updateValues.push(productData.category);
+                }
+                if(productData.imageUrl) {
+                    updateClauses.push('imageUrl = ?');
+                    updateValues.push(productData.imageUrl);
+                }
+
+                if (updateClauses.length > 0) {
+                    updateQuery += updateClauses.join(', ');
+                    updateQuery += ' WHERE sku = ?';
+                    updateValues.push(productData.sku);
+                    db.prepare(updateQuery).run(...updateValues);
+                }
+
             } else {
-                 productRecord = upsertProductStmt.get({
+                 upsertProductStmt.run({
                     name: productData.name,
                     category: productData.category,
                     sku: productData.sku,
                     imageUrl: productData.imageUrl || 'https://placehold.co/100x100.png',
-                }) as { id: number };
+                });
+                productRecord = findProductBySkuStmt.get(productData.sku) as { id: number };
             }
             
             const productId = productRecord.id;
