@@ -1,3 +1,4 @@
+
 'use server';
 
 import { db } from './db';
@@ -286,35 +287,29 @@ export async function findProductBySku(sku: string): Promise<InventoryItem | nul
     const getProductByIdStmt = db.prepare('SELECT * FROM products WHERE id = ?');
     const getVariantsByProductIdStmt = db.prepare('SELECT * FROM variants WHERE productId = ?');
 
-    // First, try to find a variant with this SKU
-    const variant: any = getVariantBySkuStmt.get(sku);
-    if (variant) {
-        const parentProduct = getProductByIdStmt.get(variant.productId) as any;
-        if (!parentProduct) return null;
-
-        // Return a product-like object for the single variant found
+    const variantResult: any = getVariantBySkuStmt.get(sku);
+    if (variantResult) {
+        const parent = getProductByIdStmt.get(variantResult.productId) as any;
         return {
-            id: parentProduct.id.toString(), // The ID of the parent product
-            name: `${parentProduct.name} - ${variant.name}`,
-            category: parentProduct.category,
-            sku: variant.sku,
-            imageUrl: parentProduct.imageUrl,
-            stock: variant.stock,
-            price: variant.price,
-            variants: [], // No need to list other variants
+            ...parent,
+            id: parent.id.toString(),
+            variants: [{...variantResult, id: variantResult.id.toString()}] // Return parent with only the matched variant
         };
     }
 
-    // If not a variant SKU, try to find a product with this SKU
-    const product: any = getProductBySkuStmt.get(sku);
-    if (product) {
-        if (product.hasVariants) {
-            const variants = getVariantsByProductIdStmt.all(product.id) as any[];
-            product.variants = variants.map(v => ({ ...v, id: v.id.toString() }));
+    const productResult: any = getProductBySkuStmt.get(sku);
+    if (productResult) {
+        if (productResult.hasVariants) {
+            const variants = getVariantsByProductIdStmt.all(productResult.id) as any[];
+            return {
+                 ...productResult,
+                 id: productResult.id.toString(),
+                 variants: variants.map(v => ({ ...v, id: v.id.toString() }))
+            };
         }
-        return { ...product, id: product.id.toString() };
+        return { ...productResult, id: productResult.id.toString() };
     }
-    
+
     return null;
 }
 
@@ -346,6 +341,23 @@ export async function performSale(sku: string, channel: string, quantity: number
             }
         }
     })();
+}
+
+export async function fetchAllSales(): Promise<Sale[]> {
+     const salesQuery = db.prepare(`
+        SELECT 
+            s.id, s.productId, s.variantId, s.channel, s.quantity, s.priceAtSale, s.saleDate,
+            p.name as productName,
+            v.name as variantName,
+            COALESCE(v.sku, p.sku) as sku
+        FROM sales s
+        JOIN products p ON s.productId = p.id
+        LEFT JOIN variants v ON s.variantId = v.id
+        ORDER BY s.saleDate DESC
+    `);
+    
+    const sales = salesQuery.all() as any[];
+    return sales.map(s => ({...s, id: s.id.toString()}));
 }
 
 export async function getSalesByDate(channel: string, date: Date): Promise<Sale[]> {

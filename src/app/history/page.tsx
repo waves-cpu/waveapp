@@ -21,82 +21,118 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Search, Calendar as CalendarIcon } from 'lucide-react';
-import type { InventoryItem, AdjustmentHistory, InventoryItemVariant } from '@/types';
+import { Search, Calendar as CalendarIcon, Eye } from 'lucide-react';
+import type { InventoryItem, AdjustmentHistory, InventoryItemVariant, Sale } from '@/types';
 import { useLanguage } from '@/hooks/use-language';
 import { translations } from '@/types/language';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { DateRange } from 'react-day-picker';
-import { format } from 'date-fns';
+import { format, startOfDay } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import Image from 'next/image';
+import { DailySalesDetailDialog } from '@/app/components/daily-sales-detail-dialog';
 
-type HistoryEntry = AdjustmentHistory & {
-    itemId: string;
-    itemName: string;
-    itemCategory: string;
+type HistoryEntry = {
+    type: 'adjustment' | 'sales_summary';
+    date: Date;
+    change: number;
+    reason: string;
+    // For adjustments
+    itemName?: string;
     variantName?: string;
-    itemSku?: string;
-    variantSku?: string;
+    newStockLevel?: number;
     imageUrl?: string;
+    itemCategory?: string;
+    // For sales summaries
+    sales?: Sale[];
 };
 
+
 export default function HistoryPage() {
-  const { items, categories } = useInventory();
+  const { items, categories, allSales, loading } = useInventory();
   const { language } = useLanguage();
   const t = translations[language];
   
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
+  const [selectedSales, setSelectedSales] = useState<Sale[]>([]);
+  const [isSalesDetailOpen, setSalesDetailOpen] = useState(false);
 
   const allHistory = useMemo((): HistoryEntry[] => {
     const historyList: HistoryEntry[] = [];
+
+    // Process adjustments
     items.forEach(item => {
-      if (item.variants && item.variants.length > 0) {
-        item.variants.forEach(variant => {
-          variant.history.forEach(entry => {
-            historyList.push({
-              ...entry,
-              itemId: item.id,
-              itemName: item.name,
-              itemCategory: item.category,
-              variantName: variant.name,
-              itemSku: item.sku,
-              variantSku: variant.sku,
-              imageUrl: item.imageUrl,
-            });
-          });
-        });
-      } else if(item.history) {
-        item.history.forEach(entry => {
-          historyList.push({
-            ...entry,
-            itemId: item.id,
-            itemName: item.name,
-            itemCategory: item.category,
-            itemSku: item.sku,
-            imageUrl: item.imageUrl,
-          });
+      const processHistory = (history: AdjustmentHistory[], parentItem: InventoryItem, variant?: InventoryItemVariant) => {
+        history.forEach(entry => {
+            // Filter out sales adjustments which are now handled separately
+            if (!entry.reason.toLowerCase().startsWith('sale') && !entry.reason.toLowerCase().startsWith('cancelled sale')) {
+                 historyList.push({
+                    type: 'adjustment',
+                    date: new Date(entry.date),
+                    change: entry.change,
+                    reason: entry.reason,
+                    newStockLevel: entry.newStockLevel,
+                    itemName: parentItem.name,
+                    itemCategory: parentItem.category,
+                    variantName: variant?.name,
+                    imageUrl: parentItem.imageUrl,
+                });
+            }
         });
       }
+      
+      if (item.variants && item.variants.length > 0) {
+        item.variants.forEach(variant => {
+          if(variant.history) processHistory(variant.history, item, variant);
+        });
+      } else if(item.history) {
+        processHistory(item.history, item);
+      }
     });
+
+    // Process and group sales
+    const salesByDay = new Map<string, Sale[]>();
+    allSales.forEach(sale => {
+        const dayKey = startOfDay(new Date(sale.saleDate)).toISOString();
+        if (!salesByDay.has(dayKey)) {
+            salesByDay.set(dayKey, []);
+        }
+        salesByDay.get(dayKey)!.push(sale);
+    });
+
+    salesByDay.forEach((dailySales, dateString) => {
+        const totalChange = dailySales.reduce((sum, sale) => sum - sale.quantity, 0);
+        historyList.push({
+            type: 'sales_summary',
+            date: new Date(dateString),
+            reason: 'Penjualan Harian',
+            change: totalChange,
+            sales: dailySales,
+            itemCategory: 'Penjualan' // Assign a category for filtering
+        });
+    });
+
+
     return historyList.sort((a, b) => b.date.getTime() - a.date.getTime());
-  }, [items]);
+  }, [items, allSales]);
 
   const filteredHistory = useMemo(() => {
     return allHistory
-      .filter(entry => entry.change !== 0) // Exclude entries with zero change
-      .filter(entry => 
-        categoryFilter ? entry.itemCategory === categoryFilter : true
-      )
+      .filter(entry => {
+        if (!categoryFilter) return true;
+        if (categoryFilter === 'Penjualan') return entry.type === 'sales_summary';
+        return entry.itemCategory === categoryFilter;
+      })
       .filter(entry => {
         const lowerSearchTerm = searchTerm.toLowerCase();
+        if(!lowerSearchTerm) return true;
         return (
-            entry.itemName.toLowerCase().includes(lowerSearchTerm) ||
+            (entry.itemName && entry.itemName.toLowerCase().includes(lowerSearchTerm)) ||
             (entry.variantName && entry.variantName.toLowerCase().includes(lowerSearchTerm)) ||
             entry.reason.toLowerCase().includes(lowerSearchTerm)
         );
@@ -128,8 +164,19 @@ export default function HistoryPage() {
     const netChange = totalIn - totalOut;
     return { totalIn, totalOut, netChange };
   }, [filteredHistory])
+  
+  const viewSalesDetail = (sales: Sale[]) => {
+      setSelectedSales(sales);
+      setSalesDetailOpen(true);
+  }
+
+  const uniqueCategoriesWithSales = useMemo(() => {
+      return [...categories, 'Penjualan'].sort()
+  },[categories])
+
 
   return (
+    <>
     <main className="flex min-h-[calc(100vh_-_theme(spacing.16))] flex-1 flex-col gap-4 bg-muted/40 p-4 md:gap-8 md:p-10">
       <div className="flex items-center gap-4">
         <SidebarTrigger className="md:hidden" />
@@ -155,7 +202,7 @@ export default function HistoryPage() {
                     </SelectTrigger>
                     <SelectContent>
                     <SelectItem value="all">{t.inventoryTable.allCategories}</SelectItem>
-                    {categories.map((category) => (
+                    {uniqueCategoriesWithSales.map((category) => (
                         <SelectItem key={category} value={category}>
                         {category}
                         </SelectItem>
@@ -206,40 +253,56 @@ export default function HistoryPage() {
                 <TableHead>{t.stockHistory.reason}</TableHead>
                 <TableHead>{t.stockHistory.change}</TableHead>
                 <TableHead>{t.stockHistory.newTotal}</TableHead>
+                <TableHead className="w-[50px] text-center">Aksi</TableHead>
                 </TableRow>
             </TableHeader>
             <TableBody>
-                {filteredHistory.length > 0 ? (
+                {loading ? (
+                    <TableRow>
+                        <TableCell colSpan={6} className="h-24 text-center">Memuat riwayat...</TableCell>
+                    </TableRow>
+                ) : filteredHistory.length > 0 ? (
                 filteredHistory.map((entry, index) => (
                     <TableRow key={index}>
                         <TableCell>
-                            <div className="flex items-center gap-4">
-                                <Image 
-                                    src={entry.imageUrl || 'https://placehold.co/40x40.png'} 
-                                    alt={entry.itemName} 
-                                    width={40} height={40} 
-                                    className="rounded-sm" 
-                                    data-ai-hint="product image"
-                                />
-                                <div>
-                                    <div className="font-medium text-sm">{entry.itemName}</div>
-                                    {entry.variantName && <div className="text-xs text-muted-foreground">{entry.variantName}</div>}
+                            {entry.type === 'adjustment' ? (
+                                <div className="flex items-center gap-4">
+                                    <Image 
+                                        src={entry.imageUrl || 'https://placehold.co/40x40.png'} 
+                                        alt={entry.itemName!} 
+                                        width={40} height={40} 
+                                        className="rounded-sm" 
+                                        data-ai-hint="product image"
+                                    />
+                                    <div>
+                                        <div className="font-medium text-sm">{entry.itemName}</div>
+                                        {entry.variantName && <div className="text-xs text-muted-foreground">{entry.variantName}</div>}
+                                    </div>
                                 </div>
-                            </div>
+                            ) : (
+                                <div className="font-semibold text-primary">Ringkasan Penjualan</div>
+                            )}
                         </TableCell>
-                        <TableCell>{new Date(entry.date).toLocaleDateString()}</TableCell>
+                        <TableCell>{format(new Date(entry.date), 'PP')}</TableCell>
                         <TableCell>{entry.reason}</TableCell>
                         <TableCell>
                             <Badge variant={entry.change >= 0 ? 'default' : 'destructive'} className={cn(entry.change >= 0 ? 'bg-green-600' : 'bg-red-600', 'text-white')}>
                             {entry.change > 0 ? `+${entry.change}` : entry.change}
                             </Badge>
                         </TableCell>
-                        <TableCell>{entry.newStockLevel}</TableCell>
+                        <TableCell>{entry.newStockLevel ?? '-'}</TableCell>
+                        <TableCell className="text-center">
+                            {entry.type === 'sales_summary' && entry.sales && (
+                                <Button variant="ghost" size="icon" onClick={() => viewSalesDetail(entry.sales!)}>
+                                    <Eye className="h-4 w-4" />
+                                </Button>
+                            )}
+                        </TableCell>
                     </TableRow>
                 ))
                 ) : (
                 <TableRow>
-                    <TableCell colSpan={5} className="h-24 text-center">
+                    <TableCell colSpan={6} className="h-24 text-center">
                     {t.inventoryTable.noItems}
                     </TableCell>
                 </TableRow>
@@ -248,7 +311,7 @@ export default function HistoryPage() {
             <TableFooter>
                 <TableRow>
                     <TableCell colSpan={3} className="font-semibold text-right">Total Perubahan:</TableCell>
-                    <TableCell colSpan={2} className="font-semibold">
+                    <TableCell colSpan={3} className="font-semibold">
                         <div className="flex items-center gap-x-4 gap-y-1 flex-wrap">
                             <span className="text-green-600">Masuk: {historyTotals.totalIn}</span>
                             <span className="text-red-600">Keluar: {historyTotals.totalOut}</span>
@@ -265,5 +328,12 @@ export default function HistoryPage() {
         </div>
       </div>
     </main>
+    <DailySalesDetailDialog 
+        open={isSalesDetailOpen}
+        onOpenChange={setSalesDetailOpen}
+        sales={selectedSales}
+    />
+    </>
   );
 }
+
