@@ -13,24 +13,20 @@ export default function EditProductPage() {
     const { language } = useLanguage();
     const t = translations[language];
     const params = useParams();
-    const { getItem } = useInventory();
+    const { getItem, items } = useInventory(); // Destructure items to find parent
     const [item, setItem] = useState<InventoryItem | undefined>(undefined);
+    const [loading, setLoading] = useState(true);
 
     const id = typeof params.id === 'string' ? params.id : '';
 
     useEffect(() => {
-        if (id) {
+        if (id && items.length > 0) {
+            setLoading(true);
             const fetchedItem = getItem(id);
-            if (fetchedItem && !('history' in fetchedItem)) {
-                setItem(fetchedItem as InventoryItem);
-            } else if (fetchedItem) {
-                // If it's a variant, we might want to find the parent to edit,
-                // but for now let's handle direct item editing.
-                 const foundItem = getItem(id) as InventoryItem;
-                 if(foundItem) setItem(foundItem);
-            }
+            setItem(fetchedItem);
+            setLoading(false);
         }
-    }, [id, getItem]);
+    }, [id, getItem, items]);
 
 
     return (
@@ -40,10 +36,12 @@ export default function EditProductPage() {
                     <SidebarTrigger className="md:hidden" />
                     <h1 className="text-lg font-bold">{t.inventoryTable.editProduct}</h1>
                 </div>
-                {item ? (
+                {loading ? (
+                    <p>Loading item...</p>
+                ) : item ? (
                     <AddProductForm existingItem={item} />
                 ) : (
-                    <p>Loading item...</p>
+                    <p>Item not found.</p>
                 )}
             </div>
         </main>

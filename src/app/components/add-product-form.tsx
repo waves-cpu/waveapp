@@ -108,14 +108,26 @@ export function AddProductForm({ existingItem }: AddProductFormProps) {
       imageUrl: '',
       hasVariants: false,
       variants: [],
+      price: undefined,
+      stock: undefined,
+      size: '',
     },
   });
 
   useEffect(() => {
     if (existingItem) {
+        const hasVariants = !!existingItem.variants && existingItem.variants.length > 0;
         form.reset({
-            ...existingItem,
-            hasVariants: !!existingItem.variants && existingItem.variants.length > 0,
+            id: existingItem.id,
+            name: existingItem.name,
+            category: existingItem.category,
+            sku: existingItem.sku || '',
+            imageUrl: existingItem.imageUrl || '',
+            hasVariants: hasVariants,
+            price: hasVariants ? undefined : existingItem.price,
+            stock: hasVariants ? undefined : existingItem.stock,
+            size: hasVariants ? undefined : existingItem.size,
+            variants: hasVariants ? existingItem.variants : [],
         });
     }
   }, [existingItem, form]);
@@ -142,7 +154,6 @@ export function AddProductForm({ existingItem }: AddProductFormProps) {
         description: `${values.name} ${t.addItemDialog.hasBeenAdded}`,
         });
     }
-    form.reset();
     router.push('/');
   }
 
@@ -171,7 +182,7 @@ export function AddProductForm({ existingItem }: AddProductFormProps) {
                     render={({ field }) => (
                         <FormItem>
                             <FormLabel>{t.addItemDialog.category}</FormLabel>
-                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value}>
                                 <FormControl>
                                 <SelectTrigger>
                                     <SelectValue placeholder={t.addItemDialog.categoryPlaceholder} />

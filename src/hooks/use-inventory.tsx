@@ -16,7 +16,7 @@ interface InventoryContextType {
   addItem: (item: any) => Promise<void>;
   updateItem: (itemId: string, itemData: any) => Promise<void>;
   updateStock: (itemId: string, change: number, reason: string) => Promise<void>;
-  getItem: (itemId: string) => InventoryItem | InventoryItemVariant | undefined;
+  getItem: (itemId: string) => InventoryItem | undefined;
   getHistory: (itemId: string) => Promise<AdjustmentHistory[]>;
   categories: string[];
   bulkUpdateVariants: (itemId: string, variants: InventoryItemVariant[]) => Promise<void>;
@@ -80,31 +80,17 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
     return [];
   };
 
-  const getItem = (itemId: string): InventoryItem | InventoryItemVariant | undefined => {
-    // This finds the parent item, even for a variant. Useful for some operations.
+  const getItem = useCallback((itemId: string): InventoryItem | undefined => {
     for (const item of items) {
       if (item.id === itemId) {
         return item;
       }
-      if (item.variants) {
-        const variant = item.variants.find(v => v.id === itemId);
-        if (variant) {
-          // Returning the parent item when a variant ID is passed.
-          // This might need adjustment depending on the use case.
-          // For editing a variant's stock, we need the parent to find it.
-          return item; 
-        }
+      if (item.variants?.some(v => v.id === itemId)) {
+        return item; 
       }
     }
-    // Specific search for just the variant object if needed elsewhere
-    for (const item of items) {
-        if (item.variants) {
-            const variant = item.variants.find(v => v.id === itemId);
-            if (variant) return variant;
-        }
-    }
     return undefined;
-  };
+  }, [items]);
 
   return (
     <InventoryContext.Provider value={{ items, addItem, updateItem, bulkUpdateVariants, updateStock, getHistory, getItem, categories, fetchItems, loading }}>
