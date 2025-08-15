@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState } from 'react';
@@ -24,6 +23,10 @@ import {
   ArrowRightLeft,
   ChevronDown,
   History,
+  ShoppingCart,
+  ShoppingBag,
+  SquareTerminal,
+  Users,
 } from 'lucide-react';
 import { Logo } from './logo';
 import { Separator } from '@/components/ui/separator';
@@ -37,6 +40,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     const t = translations[language];
     const pathname = usePathname();
     const [isInventoryOpen, setInventoryOpen] = useState(true);
+    const [isSalesOpen, setSalesOpen] = useState(true);
 
   return (
     <SidebarProvider>
@@ -85,6 +89,60 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                                     <SidebarMenuButton variant="ghost" size="sm" isActive={pathname === '/history'}>
                                         <History />
                                         {t.stockHistory.title}
+                                    </SidebarMenuButton>
+                                </Link>
+                            </SidebarMenuItem>
+                        </SidebarMenu>
+                    </CollapsibleContent>
+                </Collapsible>
+
+                <Collapsible open={isSalesOpen} onOpenChange={setSalesOpen}>
+                    <CollapsibleTrigger asChild>
+                        <SidebarMenuButton>
+                            <ShoppingCart />
+                            <span>{t.sales.title}</span>
+                            <ChevronDown className={cn("ml-auto transition-transform", isSalesOpen && "rotate-180")} />
+                        </SidebarMenuButton>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent>
+                        <SidebarMenu className="ml-4 mt-2 border-l border-muted-foreground/20 pl-4">
+                             <SidebarMenuItem>
+                                <Link href="/sales/shopee">
+                                    <SidebarMenuButton variant="ghost" size="sm" isActive={pathname === '/sales/shopee'}>
+                                        <ShoppingBag />
+                                        {t.sales.shopee}
+                                    </SidebarMenuButton>
+                                </Link>
+                            </SidebarMenuItem>
+                            <SidebarMenuItem>
+                                <Link href="/sales/tiktok">
+                                    <SidebarMenuButton variant="ghost" size="sm" isActive={pathname === '/sales/tiktok'}>
+                                        <ShoppingBag />
+                                        {t.sales.tiktok}
+                                    </SidebarMenuButton>
+                                </Link>
+                            </SidebarMenuItem>
+                            <SidebarMenuItem>
+                                <Link href="/sales/lazada">
+                                    <SidebarMenuButton variant="ghost" size="sm" isActive={pathname === '/sales/lazada'}>
+                                        <ShoppingBag />
+                                        {t.sales.lazada}
+                                    </SidebarMenuButton>
+                                </Link>
+                            </SidebarMenuItem>
+                            <SidebarMenuItem>
+                                <Link href="/sales/pos">
+                                    <SidebarMenuButton variant="ghost" size="sm" isActive={pathname === '/sales/pos'}>
+                                        <SquareTerminal />
+                                        {t.sales.pos}
+                                    </SidebarMenuButton>
+                                </Link>
+                            </SidebarMenuItem>
+                             <SidebarMenuItem>
+                                <Link href="/sales/reseller">
+                                    <SidebarMenuButton variant="ghost" size="sm" isActive={pathname === '/sales/reseller'}>
+                                        <Users />
+                                        {t.sales.reseller}
                                     </SidebarMenuButton>
                                 </Link>
                             </SidebarMenuItem>
