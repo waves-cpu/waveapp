@@ -169,10 +169,10 @@ export function AddProductForm() {
                              <Table>
                                 <TableHeader>
                                     <TableRow>
-                                        <TableHead>Name</TableHead>
+                                        <TableHead>{t.inventoryTable.name}</TableHead>
                                         <TableHead>SKU</TableHead>
-                                        <TableHead>Price</TableHead>
-                                        <TableHead>Stock</TableHead>
+                                        <TableHead>{t.inventoryTable.price}</TableHead>
+                                        <TableHead>{t.inventoryTable.currentStock}</TableHead>
                                         <TableHead className="w-[50px]"></TableHead>
                                     </TableRow>
                                 </TableHeader>
@@ -250,7 +250,7 @@ export function AddProductForm() {
                         name="size"
                         render={({ field }) => (
                             <FormItem>
-                            <FormLabel>Size/Variation</FormLabel>
+                            <FormLabel>{t.inventoryTable.size}</FormLabel>
                             <FormControl>
                                 <Input placeholder="e.g., 250g, 1L" {...field} />
                             </FormControl>
