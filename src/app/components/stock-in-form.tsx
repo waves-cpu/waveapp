@@ -19,7 +19,7 @@ import { useLanguage } from '@/hooks/use-language';
 import { translations } from '@/types/language';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { PlusCircle, Trash2, PackagePlus, ShoppingBag } from 'lucide-react';
+import { PlusCircle, Trash2, PackagePlus, ShoppingBag, Package } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import type { InventoryItem } from '@/types';
 import { ProductSelectionDialog } from './product-selection-dialog';
@@ -395,13 +395,9 @@ export function StockInForm() {
                                                 </TableCell>
                                                 <TableCell className="pl-10 align-middle">
                                                     <div className="flex items-center gap-4">
-                                                        <Image
-                                                            src={'https://placehold.co/24x24.png'}
-                                                            alt={field.variantName || ''}
-                                                            width={24} height={24}
-                                                            className="rounded-sm"
-                                                            data-ai-hint="variant image"
-                                                        />
+                                                        <div className="flex h-6 w-6 items-center justify-center rounded-sm bg-muted text-muted-foreground">
+                                                            <Package className="h-4 w-4" />
+                                                        </div>
                                                         <div>
                                                             <div className="font-medium text-sm">{field.variantName}</div>
                                                             <div className="text-xs text-muted-foreground">SKU: {field.variantSku}</div>
