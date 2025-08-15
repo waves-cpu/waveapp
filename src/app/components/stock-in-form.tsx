@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useMemo } from 'react';
@@ -20,12 +19,11 @@ import { useLanguage } from '@/hooks/use-language';
 import { translations } from '@/types/language';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { PlusCircle, Trash2, Pencil } from 'lucide-react';
+import { PlusCircle, Trash2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import type { InventoryItem } from '@/types';
 import { ProductSelectionDialog } from './product-selection-dialog';
 import Image from 'next/image';
-import { BulkStockInDialog } from './bulk-stock-in-dialog';
 
 const stockInItemSchema = z.object({
     itemId: z.string(),
@@ -43,6 +41,7 @@ type StockInItem = z.infer<typeof stockInItemSchema>;
 
 const formSchema = z.object({
   stockInItems: z.array(stockInItemSchema).nonempty("Please add at least one item to stock in."),
+  masterQuantities: z.record(z.coerce.number().int().optional())
 });
 
 export function StockInForm() {
@@ -52,17 +51,16 @@ export function StockInForm() {
   const { toast } = useToast();
   const router = useRouter();
   const [isProductSelectionOpen, setProductSelectionOpen] = useState(false);
-  const [isBulkStockInOpen, setBulkStockInOpen] = useState(false);
-  const [bulkEditProduct, setBulkEditProduct] = useState<{name: string, variants: any[]} | null>(null);
   
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       stockInItems: [],
+      masterQuantities: {}
     },
   });
 
-  const { fields, append, remove, update } = useFieldArray({
+  const { fields, append, remove } = useFieldArray({
     control: form.control,
     name: "stockInItems"
   });
@@ -126,33 +124,18 @@ export function StockInForm() {
     
     append(newItems);
   };
-
-  const openBulkStockInDialog = (parentName: string) => {
-    const variantsForBulkEdit = fields
-        .filter(field => field.parentName === parentName)
-        .map((field, index) => ({
-            itemId: field.itemId,
-            variantName: field.variantName || field.itemName,
-            quantity: form.getValues(`stockInItems.${fields.findIndex(f => f.id === field.id)}.quantity`),
-            reason: form.getValues(`stockInItems.${fields.findIndex(f => f.id === field.id)}.reason`),
-        }));
-    
-    setBulkEditProduct({ name: parentName, variants: variantsForBulkEdit });
-    setBulkStockInOpen(true);
+  
+  const applyMasterQuantity = (parentName: string) => {
+    const masterQuantity = form.getValues(`masterQuantities.${parentName}`);
+    if (masterQuantity !== undefined && masterQuantity >= 0) {
+        fields.forEach((field, index) => {
+            if (form.getValues(`stockInItems.${index}.parentName`) === parentName) {
+                form.setValue(`stockInItems.${index}.quantity`, masterQuantity, { shouldDirty: true });
+            }
+        });
+    }
   };
 
-  const handleBulkSave = (updatedVariants: { itemId: string; quantity: number; reason: string }[]) => {
-    updatedVariants.forEach(updatedVariant => {
-        const fieldIndex = fields.findIndex(field => field.itemId === updatedVariant.itemId);
-        if (fieldIndex !== -1) {
-            update(fieldIndex, {
-                ...fields[fieldIndex],
-                quantity: updatedVariant.quantity,
-                reason: updatedVariant.reason,
-            });
-        }
-    });
-  };
 
   const groupedItems = useMemo(() => {
     const groups = new Map<string, (StockInItem & { originalIndex: number })[]>();
@@ -267,7 +250,10 @@ export function StockInForm() {
                                 ))}
                                 {Array.from(groupedItems.groups.entries()).map(([parentName, variants]) => {
                                     const parent = variants[0];
-                                    const totalQuantity = variants.reduce((sum, variant) => sum + Number(form.getValues(`stockInItems.${variant.originalIndex}.quantity`)), 0);
+                                    const totalQuantity = variants.reduce((sum, variant) => {
+                                        const value = form.getValues(`stockInItems.${variant.originalIndex}.quantity`);
+                                        return sum + (Number(value) || 0);
+                                    }, 0);
                                     return (
                                     <React.Fragment key={parentName}>
                                         <TableRow className="bg-muted/20 hover:bg-muted/40">
@@ -280,10 +266,7 @@ export function StockInForm() {
                                                         className="rounded-sm" 
                                                         data-ai-hint="product image"
                                                     />
-                                                    <button type="button" onClick={() => openBulkStockInDialog(parentName)} className="text-left group relative">
-                                                        <span>{parentName}</span>
-                                                        <div className="absolute -bottom-1 left-0 right-0 h-px bg-transparent transition-all group-hover:bg-primary"></div>
-                                                    </button>
+                                                    <span>{parentName}</span>
                                                 </div>
                                                 <div className="text-xs text-muted-foreground ml-14">SKU: {parent.parentSku}</div>
                                              </TableCell>
@@ -292,7 +275,23 @@ export function StockInForm() {
                                                     {totalQuantity}
                                                 </div>
                                              </TableCell>
-                                             <TableCell colSpan={2}></TableCell>
+                                             <TableCell className="align-bottom">
+                                                <div className="flex items-center gap-2">
+                                                    <FormField
+                                                        control={form.control}
+                                                        name={`masterQuantities.${parentName}`}
+                                                        render={({ field }) => (
+                                                            <FormItem className="flex-grow">
+                                                               <FormControl><Input type="number" placeholder={t.stockInForm.quantity} {...field} /></FormControl>
+                                                            </FormItem>
+                                                        )}
+                                                    />
+                                                    <Button type="button" variant="outline" size="sm" onClick={() => applyMasterQuantity(parentName)}>
+                                                        {t.bulkStockInDialog.applyToAll}
+                                                    </Button>
+                                                </div>
+                                             </TableCell>
+                                             <TableCell></TableCell>
                                         </TableRow>
                                         {variants.map((field) => (
                                             <TableRow key={field.itemId}>
@@ -350,15 +349,6 @@ export function StockInForm() {
         availableItems={availableItems}
         categories={categories}
     />
-     {bulkEditProduct && (
-        <BulkStockInDialog 
-            open={isBulkStockInOpen}
-            onOpenChange={setBulkStockInOpen}
-            productName={bulkEditProduct.name}
-            variants={bulkEditProduct.variants}
-            onSave={handleBulkSave}
-        />
-     )}
     </>
   );
 }
