@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useMemo } from 'react';
@@ -21,12 +22,18 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
   Edit,
   History,
   FileDown,
   Search,
   Pencil,
-  Plus,
+  MoreVertical,
 } from 'lucide-react';
 import type { InventoryItem } from '@/types';
 import { useLanguage } from '@/hooks/use-language';
@@ -180,13 +187,21 @@ export function InventoryTable({ onUpdateStock, onShowHistory }: InventoryTableP
                                     {totalStock}
                                 </TableCell>
                                 <TableCell className="text-center">
-                                    <div className="flex justify-center gap-2">
-                                        <Button asChild variant="ghost" size="icon" aria-label={t.inventoryTable.editProduct}>
-                                            <Link href={`/edit-product/${item.id}`}>
-                                                <Pencil className="h-4 w-4" />
-                                            </Link>
-                                        </Button>
-                                    </div>
+                                    <DropdownMenu>
+                                        <DropdownMenuTrigger asChild>
+                                            <Button variant="ghost" size="icon">
+                                                <MoreVertical className="h-4 w-4" />
+                                            </Button>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent align="end">
+                                            <DropdownMenuItem asChild>
+                                                <Link href={`/edit-product/${item.id}`}>
+                                                    <Pencil className="mr-2 h-4 w-4" />
+                                                    <span>{t.inventoryTable.editProduct}</span>
+                                                </Link>
+                                            </DropdownMenuItem>
+                                        </DropdownMenuContent>
+                                    </DropdownMenu>
                                 </TableCell>
                             </TableRow>
                             {item.variants?.map((variant) => (
@@ -205,11 +220,19 @@ export function InventoryTable({ onUpdateStock, onShowHistory }: InventoryTableP
                                         </div>
                                     </TableCell>
                                     <TableCell className="text-center">
-                                        <div className="flex justify-center gap-2">
-                                            <Button variant="ghost" size="icon" onClick={() => onShowHistory(variant.id)} aria-label={t.inventoryTable.viewHistory}>
-                                                <History className="h-4 w-4" />
-                                            </Button>
-                                        </div>
+                                        <DropdownMenu>
+                                            <DropdownMenuTrigger asChild>
+                                                <Button variant="ghost" size="icon">
+                                                    <MoreVertical className="h-4 w-4" />
+                                                </Button>
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent align="end">
+                                                <DropdownMenuItem onClick={() => onShowHistory(variant.id)}>
+                                                    <History className="mr-2 h-4 w-4" />
+                                                    <span>{t.inventoryTable.viewHistory}</span>
+                                                </DropdownMenuItem>
+                                            </DropdownMenuContent>
+                                        </DropdownMenu>
                                     </TableCell>
                                 </TableRow>
                             ))}
@@ -243,16 +266,25 @@ export function InventoryTable({ onUpdateStock, onShowHistory }: InventoryTableP
                                 </div>
                             </TableCell>
                              <TableCell className="text-center">
-                                <div className="flex justify-center gap-2">
-                                     <Button asChild variant="ghost" size="icon" aria-label={t.inventoryTable.editProduct}>
-                                        <Link href={`/edit-product/${item.id}`}>
-                                            <Pencil className="h-4 w-4" />
-                                        </Link>
-                                    </Button>
-                                    <Button variant="ghost" size="icon" onClick={() => onShowHistory(item.id)} aria-label={t.inventoryTable.viewHistory}>
-                                        <History className="h-4 w-4" />
-                                    </Button>
-                                </div>
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <Button variant="ghost" size="icon">
+                                            <MoreVertical className="h-4 w-4" />
+                                        </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                        <DropdownMenuItem asChild>
+                                             <Link href={`/edit-product/${item.id}`}>
+                                                <Pencil className="mr-2 h-4 w-4" />
+                                                <span>{t.inventoryTable.editProduct}</span>
+                                            </Link>
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem onClick={() => onShowHistory(item.id)}>
+                                            <History className="mr-2 h-4 w-4" />
+                                            <span>{t.inventoryTable.viewHistory}</span>
+                                        </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
                             </TableCell>
                         </TableRow>
                     )
