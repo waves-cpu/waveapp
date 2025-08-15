@@ -27,6 +27,7 @@ import Image from 'next/image';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Search } from 'lucide-react';
 import { Pagination } from '@/components/ui/pagination';
+import { useRouter } from 'next/navigation';
 
 const ITEMS_PER_PAGE = 9;
 
@@ -243,11 +244,12 @@ const PosProductGrid = ({
 export default function PosSalesPage() {
   const { language } = useLanguage();
   const t = translations[language];
-  const { recordSale, getProductBySku, items } = useInventory();
+  const { getProductBySku, items } = useInventory();
   const { toast } = useToast();
   const [mounted, setMounted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const skuInputRef = useRef<HTMLInputElement>(null);
+  const router = useRouter();
 
   const [productForVariantSelection, setProductForVariantSelection] = useState<InventoryItem | null>(null);
   const [isVariantDialogOpen, setIsVariantDialogOpen] = useState(false);
@@ -419,29 +421,16 @@ export default function PosSalesPage() {
     skuInputRef.current?.focus();
   };
   
-  const handleCheckout = async () => {
-    setIsSubmitting(true);
-    try {
-        const saleDate = new Date();
-        for (const item of cart) {
-            await recordSale(item.sku, 'pos', item.quantity, saleDate);
-        }
-        toast({
-            title: 'Transaksi Berhasil',
-            description: `${cart.length} jenis item berhasil terjual.`
-        });
-        setCart([]);
-        localStorage.removeItem('posCart');
-    } catch (error) {
-        const message = error instanceof Error ? error.message : 'Terjadi kesalahan.';
+  const handleCheckout = () => {
+    if (cart.length === 0) {
         toast({
             variant: 'destructive',
-            title: 'Transaksi Gagal',
-            description: message,
+            title: 'Keranjang Kosong',
+            description: 'Tambahkan item ke keranjang sebelum melanjutkan.',
         });
-    } finally {
-        setIsSubmitting(false);
+        return;
     }
+    router.push('/sales/pos/checkout');
   };
 
 
