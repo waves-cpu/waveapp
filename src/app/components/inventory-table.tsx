@@ -201,8 +201,8 @@ export function InventoryTable({ onUpdateStock }: InventoryTableProps) {
                     const minPrice = Math.min(...prices);
                     const maxPrice = Math.max(...prices);
                     const priceDisplay = minPrice === maxPrice 
-                        ? `Rp${Math.round(minPrice)}`
-                        : `Rp${Math.round(minPrice)} - Rp${Math.round(maxPrice)}`;
+                        ? `Rp${Math.round(minPrice).toLocaleString('id-ID')}`
+                        : `Rp${Math.round(minPrice).toLocaleString('id-ID')} - Rp${Math.round(maxPrice).toLocaleString('id-ID')}`;
 
                     return (
                         <React.Fragment key={item.id}>
@@ -263,7 +263,7 @@ export function InventoryTable({ onUpdateStock }: InventoryTableProps) {
                                             </div>
                                         </div>
                                     </TableCell>
-                                    <TableCell>{`Rp${Math.round(variant.price)}`}</TableCell>
+                                    <TableCell>{`Rp${Math.round(variant.price).toLocaleString('id-ID')}`}</TableCell>
                                     <TableCell>
                                         <div className="group relative flex items-center justify-start gap-2">
                                             <span>{variant.stock}</span>
@@ -296,7 +296,7 @@ export function InventoryTable({ onUpdateStock }: InventoryTableProps) {
                                     </div>
                                 </div>
                             </TableCell>
-                             <TableCell>{item.price ? `Rp${Math.round(item.price)}` : '-'}</TableCell>
+                             <TableCell>{item.price ? `Rp${Math.round(item.price).toLocaleString('id-ID')}` : '-'}</TableCell>
                             <TableCell>
                                 <div className="group relative flex items-center justify-start gap-2">
                                     <span>{item.stock}</span>
