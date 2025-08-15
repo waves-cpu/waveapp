@@ -145,6 +145,7 @@ export function ProductSelectionDialog({ open, onOpenChange, onSelect, available
         </div>
         <div className="flex-grow overflow-hidden border rounded-md relative">
            <ScrollArea className="absolute inset-0 h-full w-full">
+            <div>
                 <Table>
                     <TableHeader className="sticky top-0 bg-card z-10">
                     <TableRow>
@@ -244,35 +245,36 @@ export function ProductSelectionDialog({ open, onOpenChange, onSelect, available
                     )}
                     </TableBody>
                 </Table>
+                 <div className="flex items-center justify-between p-4 sticky bottom-0 bg-card/80 backdrop-blur-sm">
+                    <div className="text-sm text-muted-foreground">
+                        {selectedIds.size} item(s) selected.
+                    </div>
+                    <div className="flex items-center space-x-2">
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                            disabled={currentPage === 1}
+                        >
+                            Previous
+                        </Button>
+                        <span className="text-sm">
+                            Page {currentPage} of {totalPages}
+                        </span>
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                            disabled={currentPage === totalPages}
+                        >
+                            Next
+                        </Button>
+                    </div>
+                </div>
+            </div>
             </ScrollArea>
         </div>
-        <div className="flex items-center justify-between pt-4">
-            <div className="text-sm text-muted-foreground">
-                {selectedIds.size} item(s) selected.
-            </div>
-            <div className="flex items-center space-x-2">
-                <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                    disabled={currentPage === 1}
-                >
-                    Previous
-                </Button>
-                <span className="text-sm">
-                    Page {currentPage} of {totalPages}
-                </span>
-                <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                    disabled={currentPage === totalPages}
-                >
-                    Next
-                </Button>
-            </div>
-        </div>
-        <DialogFooter>
+        <DialogFooter className="pt-4">
           <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>{t.common.cancel}</Button>
           <Button type="button" onClick={handleSave}>Add {selectedIds.size} Items</Button>
         </DialogFooter>
@@ -281,6 +283,8 @@ export function ProductSelectionDialog({ open, onOpenChange, onSelect, available
   );
 }
  
+
+    
 
     
 
