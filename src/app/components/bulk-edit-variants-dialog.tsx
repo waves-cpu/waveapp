@@ -18,7 +18,6 @@ import {
   FormControl,
   FormField,
   FormItem,
-  FormLabel,
   FormMessage,
 } from '@/components/ui/form';
 import { useInventory } from '@/hooks/use-inventory';
@@ -89,9 +88,9 @@ export function BulkEditVariantsDialog({ open, onOpenChange, item }: BulkEditVar
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl">
         <DialogHeader>
-          <DialogTitle>Edit Variants for {item.name}</DialogTitle>
+          <DialogTitle>{t.bulkEditDialog.title} {item.name}</DialogTitle>
           <DialogDescription>
-            Quickly edit all variants for this product below.
+            {t.bulkEditDialog.description}
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -165,7 +164,7 @@ export function BulkEditVariantsDialog({ open, onOpenChange, item }: BulkEditVar
 
             <DialogFooter>
                 <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>{t.common.cancel}</Button>
-                <Button type="submit">Save Changes</Button>
+                <Button type="submit">{t.common.saveChanges}</Button>
             </DialogFooter>
           </form>
         </Form>

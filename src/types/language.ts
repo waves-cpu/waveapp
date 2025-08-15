@@ -75,8 +75,13 @@ export const translations = {
             languageDescription: "Choose your preferred language.",
             selectLanguagePlaceholder: "Select language",
         },
+        bulkEditDialog: {
+            title: "Edit Variants for",
+            description: "Quickly edit all variants for this product below."
+        },
         common: {
             cancel: "Cancel",
+            saveChanges: "Save Changes",
         }
     },
     id: {
@@ -155,8 +160,13 @@ export const translations = {
             languageDescription: "Pilih bahasa pilihan Anda.",
             selectLanguagePlaceholder: "Pilih bahasa",
         },
+        bulkEditDialog: {
+            title: "Ubah Varian untuk",
+            description: "Ubah semua varian untuk produk ini dengan cepat di bawah."
+        },
         common: {
             cancel: "Batal",
+            saveChanges: "Simpan Perubahan",
         }
     }
 }
