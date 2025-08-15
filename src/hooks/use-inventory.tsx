@@ -1,13 +1,17 @@
 'use client';
 
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
-import type { InventoryItem, AdjustmentHistory, InventoryItemVariant } from '@/types';
+import type { InventoryItem, AdjustmentHistory, InventoryItemVariant, Sale } from '@/types';
 import {
   fetchInventoryData,
   addProduct,
   editProduct,
   adjustStock,
-  editVariantsBulk
+  editVariantsBulk,
+  performSale,
+  getSalesByDate,
+  revertSale,
+  findProductBySku,
 } from '@/lib/inventory-service';
 
 
@@ -22,6 +26,10 @@ interface InventoryContextType {
   bulkUpdateVariants: (itemId: string, variants: InventoryItemVariant[]) => Promise<void>;
   fetchItems: () => Promise<void>;
   loading: boolean;
+  recordSale: (sku: string, channel: string, quantity: number) => Promise<void>;
+  fetchSales: (channel: string, date: Date) => Promise<Sale[]>;
+  cancelSale: (saleId: string) => Promise<void>;
+  getProductBySku: (sku: string) => Promise<{ id: string; stock?: number; variants?: { id: string; stock: number }[] } | null>;
 }
 
 const InventoryContext = createContext<InventoryContextType | undefined>(undefined);
@@ -92,8 +100,43 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
     return undefined;
   }, [items]);
 
+  const recordSale = async (sku: string, channel: string, quantity: number) => {
+    await performSale(sku, channel, quantity);
+    // After a sale, inventory changes, so we refetch.
+    await fetchItems();
+  };
+
+  const fetchSales = async (channel: string, date: Date): Promise<Sale[]> => {
+    return await getSalesByDate(channel, date);
+  };
+  
+  const cancelSale = async (saleId: string) => {
+    await revertSale(saleId);
+    // After cancelling a sale, inventory changes, so we refetch.
+    await fetchItems();
+  };
+
+  const getProductBySku = async (sku: string) => {
+    return await findProductBySku(sku);
+  };
+
   return (
-    <InventoryContext.Provider value={{ items, addItem, updateItem, bulkUpdateVariants, updateStock, getHistory, getItem, categories, fetchItems, loading }}>
+    <InventoryContext.Provider value={{ 
+        items, 
+        addItem, 
+        updateItem, 
+        bulkUpdateVariants, 
+        updateStock, 
+        getHistory, 
+        getItem, 
+        categories, 
+        fetchItems, 
+        loading,
+        recordSale,
+        fetchSales,
+        cancelSale,
+        getProductBySku,
+      }}>
       {children}
     </InventoryContext.Provider>
   );

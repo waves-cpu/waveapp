@@ -48,6 +48,18 @@ const createSchema = () => {
       FOREIGN KEY (productId) REFERENCES products(id) ON DELETE CASCADE,
       FOREIGN KEY (variantId) REFERENCES variants(id) ON DELETE CASCADE
     );
+
+    CREATE TABLE IF NOT EXISTS sales (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        productId INTEGER NOT NULL,
+        variantId INTEGER,
+        channel TEXT NOT NULL,
+        quantity INTEGER NOT NULL,
+        priceAtSale REAL NOT NULL,
+        saleDate TEXT NOT NULL,
+        FOREIGN KEY (productId) REFERENCES products(id),
+        FOREIGN KEY (variantId) REFERENCES variants(id)
+    );
   `);
 };
 

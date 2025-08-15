@@ -1,7 +1,7 @@
 'use server';
 
 import { db } from './db';
-import type { InventoryItem, AdjustmentHistory, InventoryItemVariant } from '@/types';
+import type { InventoryItem, AdjustmentHistory, InventoryItemVariant, Sale } from '@/types';
 
 export async function fetchInventoryData() {
     const fetchedItems = db.prepare('SELECT * FROM products').all();
@@ -277,5 +277,101 @@ export async function adjustStock(itemId: string, change: number, reason: string
                 `).run(itemId, null, change, reason, newStockLevel, new Date().toISOString());
             }
         }
+    })();
+}
+
+export async function findProductBySku(sku: string): Promise<{ id: string; stock?: number; variants?: {id: string, stock: number}[] } | null> {
+    const getProductStmt = db.prepare('SELECT id, stock, hasVariants FROM products WHERE sku = ?');
+    const getVariantStmt = db.prepare('SELECT id, stock, productId FROM variants WHERE sku = ?');
+    
+    const variant = getVariantStmt.get(sku) as { id: number, stock: number, productId: number } | undefined;
+    if (variant) {
+        return { id: variant.productId.toString(), variants: [{ id: variant.id.toString(), stock: variant.stock }] };
+    }
+
+    const product = getProductStmt.get(sku) as { id: number, stock: number, hasVariants: number } | undefined;
+    if (product && !product.hasVariants) {
+        return { id: product.id.toString(), stock: product.stock };
+    }
+
+    return null;
+}
+
+export async function performSale(sku: string, channel: string, quantity: number) {
+    const getProductStmt = db.prepare('SELECT id, price, stock FROM products WHERE sku = ? AND hasVariants = 0');
+    const getVariantStmt = db.prepare('SELECT id, price, stock, productId FROM variants WHERE sku = ?');
+    
+    db.transaction(() => {
+        const variant = getVariantStmt.get(sku) as { id: number, price: number, stock: number, productId: number } | undefined;
+        if (variant) {
+            if (variant.stock < quantity) {
+                throw new Error('Insufficient stock for variant.');
+            }
+            const newStock = variant.stock - quantity;
+            adjustStock(variant.id.toString(), -quantity, `Sale (${channel})`);
+            db.prepare('INSERT INTO sales (productId, variantId, channel, quantity, priceAtSale, saleDate) VALUES (?, ?, ?, ?, ?, ?)')
+              .run(variant.productId, variant.id, channel, quantity, variant.price, new Date().toISOString());
+        } else {
+            const product = getProductStmt.get(sku) as { id: number, price: number, stock: number } | undefined;
+            if (product) {
+                 if (product.stock < quantity) {
+                    throw new Error('Insufficient stock for product.');
+                }
+                const newStock = product.stock - quantity;
+                adjustStock(product.id.toString(), -quantity, `Sale (${channel})`);
+                db.prepare('INSERT INTO sales (productId, variantId, channel, quantity, priceAtSale, saleDate) VALUES (?, ?, ?, ?, ?, ?)')
+                  .run(product.id, null, channel, quantity, product.price, new Date().toISOString());
+            } else {
+                throw new Error('Product or variant with specified SKU not found or has variants.');
+            }
+        }
+    })();
+}
+
+export async function getSalesByDate(channel: string, date: Date): Promise<Sale[]> {
+    const startOfDay = new Date(date);
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date(date);
+    endOfDay.setHours(23, 59, 59, 999);
+
+    const salesQuery = db.prepare(`
+        SELECT 
+            s.id, s.productId, s.variantId, s.channel, s.quantity, s.priceAtSale, s.saleDate,
+            p.name as productName,
+            v.name as variantName,
+            COALESCE(v.sku, p.sku) as sku
+        FROM sales s
+        JOIN products p ON s.productId = p.id
+        LEFT JOIN variants v ON s.variantId = v.id
+        WHERE s.channel = @channel 
+        AND s.saleDate >= @startOfDay 
+        AND s.saleDate <= @endOfDay
+        ORDER BY s.saleDate DESC
+    `);
+    
+    const sales = salesQuery.all({ 
+        channel, 
+        startOfDay: startOfDay.toISOString(), 
+        endOfDay: endOfDay.toISOString() 
+    }) as any[];
+    
+    return sales.map(s => ({...s, id: s.id.toString()}));
+}
+
+export async function revertSale(saleId: string) {
+    const getSaleStmt = db.prepare('SELECT * FROM sales WHERE id = ?');
+    const deleteSaleStmt = db.prepare('DELETE FROM sales WHERE id = ?');
+    
+    db.transaction(() => {
+        const sale = getSaleStmt.get(saleId) as { id: number, productId: number, variantId?: number, quantity: number, channel: string } | undefined;
+        if (!sale) {
+            throw new Error('Sale not found.');
+        }
+
+        const idToAdjust = sale.variantId ? sale.variantId.toString() : sale.productId.toString();
+        
+        adjustStock(idToAdjust, sale.quantity, `Cancelled Sale (${sale.channel})`);
+        
+        deleteSaleStmt.run(saleId);
     })();
 }

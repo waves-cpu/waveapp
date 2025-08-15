@@ -27,3 +27,16 @@ export interface InventoryItem {
   size?: string;
   history?: AdjustmentHistory[];
 }
+
+export interface Sale {
+  id: string;
+  productId: string;
+  variantId?: string;
+  channel: string;
+  quantity: number;
+  priceAtSale: number;
+  saleDate: string; // ISO String
+  productName: string;
+  variantName?: string;
+  sku?: string;
+}
