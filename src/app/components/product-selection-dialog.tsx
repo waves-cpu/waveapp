@@ -15,7 +15,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search } from 'lucide-react';
+import { Package, Search } from 'lucide-react';
 import type { InventoryItem } from '@/types';
 import { useLanguage } from '@/hooks/use-language';
 import { translations } from '@/types/language';
@@ -95,6 +95,17 @@ export function ProductSelectionDialog({ open, onOpenChange, onSelect, available
     }
     setSelectedIds(newSelectedIds);
   };
+  
+  const handleSelectVariant = (variantId: string, checked: boolean) => {
+    const newSelectedIds = new Set(selectedIds);
+    if (checked) {
+      newSelectedIds.add(variantId);
+    } else {
+      newSelectedIds.delete(variantId);
+    }
+    setSelectedIds(newSelectedIds);
+  };
+
 
   const handleSave = () => {
     onSelect(Array.from(selectedIds));
@@ -111,7 +122,7 @@ export function ProductSelectionDialog({ open, onOpenChange, onSelect, available
         <DialogHeader>
           <DialogTitle>{t.dashboard.stockIn}</DialogTitle>
           <DialogDescription>
-            {t.stockHistory.description}
+            {t.productSelectionDialog.description}
           </DialogDescription>
         </DialogHeader>
         <div className="flex flex-col md:flex-row gap-4 px-0 py-4">
@@ -194,14 +205,27 @@ export function ProductSelectionDialog({ open, onOpenChange, onSelect, available
                                                 </div>
                                             </div>
                                         </TableCell>
-                                        <TableCell></TableCell>
+                                        <TableCell className='text-center'></TableCell>
                                     </TableRow>,
                                     ...item.variants.map(variant => (
-                                        <TableRow key={`variant-${variant.id}`} data-state={selectedIds.has(variant.id) && "selected"}>
-                                            <TableCell></TableCell>
+                                        <TableRow key={`variant-${variant.id}`} data-state={selectedIds.has(variant.id) ? "selected" : ""}>
+                                            <TableCell>
+                                                 <Checkbox
+                                                    checked={selectedIds.has(variant.id)}
+                                                    onCheckedChange={(checked) => handleSelectVariant(variant.id, !!checked)}
+                                                    aria-label={`Select ${variant.name}`}
+                                                />
+                                            </TableCell>
                                             <TableCell className="pl-16">
-                                                <div className="font-medium text-sm">{variant.name}</div>
-                                                <div className="text-xs text-muted-foreground">SKU: {variant.sku}</div>
+                                                <div className="flex items-center gap-4">
+                                                    <div className="flex h-6 w-6 items-center justify-center rounded-sm bg-muted text-muted-foreground">
+                                                        <Package className="h-4 w-4" />
+                                                    </div>
+                                                    <div>
+                                                        <div className="font-medium text-sm">{variant.name}</div>
+                                                        <div className="text-xs text-muted-foreground">SKU: {variant.sku}</div>
+                                                    </div>
+                                                </div>
                                             </TableCell>
                                             <TableCell className="text-center">{variant.stock}</TableCell>
                                         </TableRow>
@@ -209,7 +233,7 @@ export function ProductSelectionDialog({ open, onOpenChange, onSelect, available
                                 ];
                             }
                             return (
-                                <TableRow key={`product-${item.id}`} data-state={selectedIds.has(item.id) && "selected"}>
+                                <TableRow key={`product-${item.id}`} data-state={selectedIds.has(item.id) ? "selected" : ""}>
                                     <TableCell>
                                         <Checkbox
                                             checked={selectedIds.has(item.id)}
@@ -246,7 +270,7 @@ export function ProductSelectionDialog({ open, onOpenChange, onSelect, available
                     )}
                     </TableBody>
                 </Table>
-                <div className="flex items-center justify-between p-4 border-t">
+                <div className="flex items-center justify-between p-4 border-t bg-background">
                     <div className="text-sm text-muted-foreground">
                         {t.productSelectionDialog.itemsSelected.replace('{count}', selectedIds.size.toString())}
                     </div>
@@ -278,3 +302,4 @@ export function ProductSelectionDialog({ open, onOpenChange, onSelect, available
     
 
     
+
