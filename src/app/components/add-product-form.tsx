@@ -13,6 +13,13 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+  } from "@/components/ui/select"
 import { useInventory } from '@/hooks/use-inventory';
 import { useToast } from '@/hooks/use-toast';
 import { useLanguage } from '@/hooks/use-language';
@@ -57,6 +64,24 @@ const formSchema = z.object({
     message: "At least one variant is required when 'has variants' is checked.",
     path: ["variants"],
 });
+
+const categories = [
+    "T-Shirt Oversize",
+    "T-Shirt Boxy",
+    "Longsleeve",
+    "Ringer",
+    "Muscle",
+    "Hoodie",
+    "Rugby",
+    "Kids",
+    "Long Pants",
+    "Short Pants",
+    "Boxer",
+    "Caps",
+    "Accecoris",
+    "Sandals",
+    "Bag"
+];
 
 export function AddProductForm() {
   const { language } = useLanguage();
@@ -117,11 +142,20 @@ export function AddProductForm() {
                     name="category"
                     render={({ field }) => (
                         <FormItem>
-                        <FormLabel>{t.addItemDialog.category}</FormLabel>
-                        <FormControl>
-                            <Input placeholder={t.addItemDialog.categoryPlaceholder} {...field} />
-                        </FormControl>
-                        <FormMessage />
+                            <FormLabel>{t.addItemDialog.category}</FormLabel>
+                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                <FormControl>
+                                <SelectTrigger>
+                                    <SelectValue placeholder={t.addItemDialog.categoryPlaceholder} />
+                                </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                    {categories.map(category => (
+                                        <SelectItem key={category} value={category}>{category}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                            <FormMessage />
                         </FormItem>
                     )}
                     />
