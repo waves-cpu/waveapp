@@ -25,12 +25,14 @@ import {
   History,
   FileDown,
   Search,
+  Pencil,
 } from 'lucide-react';
 import type { InventoryItem } from '@/types';
 import { useLanguage } from '@/hooks/use-language';
 import { translations } from '@/types/language';
 import { Badge } from '@/components/ui/badge';
 import Image from 'next/image';
+import Link from 'next/link';
 
 interface InventoryTableProps {
   onUpdateStock: (itemId: string) => void;
@@ -161,7 +163,15 @@ export function InventoryTable({ onUpdateStock, onShowHistory }: InventoryTableP
                                 <TableCell>
                                     {totalStock}
                                 </TableCell>
-                                <TableCell></TableCell>
+                                <TableCell className="text-center">
+                                    <div className="flex justify-center gap-2">
+                                        <Button asChild variant="ghost" size="icon" aria-label={t.inventoryTable.editProduct}>
+                                            <Link href={`/edit-product/${item.id}`}>
+                                                <Pencil className="h-4 w-4" />
+                                            </Link>
+                                        </Button>
+                                    </div>
+                                </TableCell>
                             </TableRow>
                             {item.variants?.map((variant) => (
                                 <TableRow key={variant.id}>
@@ -207,6 +217,11 @@ export function InventoryTable({ onUpdateStock, onShowHistory }: InventoryTableP
                             <TableCell>{item.stock}</TableCell>
                              <TableCell className="text-center">
                                 <div className="flex justify-center gap-2">
+                                     <Button asChild variant="ghost" size="icon" aria-label={t.inventoryTable.editProduct}>
+                                        <Link href={`/edit-product/${item.id}`}>
+                                            <Pencil className="h-4 w-4" />
+                                        </Link>
+                                    </Button>
                                     <Button variant="ghost" size="icon" onClick={() => onUpdateStock(item.id)} aria-label={t.inventoryTable.updateStock}>
                                         <Edit className="h-4 w-4" />
                                     </Button>

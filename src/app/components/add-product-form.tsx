@@ -29,8 +29,11 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { PlusCircle, Trash2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
+import type { InventoryItem } from '@/types';
 
 const variantSchema = z.object({
+    id: z.string().optional(),
     name: z.string().min(1, "Variant name is required."),
     sku: z.string().optional(),
     price: z.coerce.number().min(0, "Price must be non-negative."),
@@ -38,6 +41,7 @@ const variantSchema = z.object({
 });
 
 const formSchema = z.object({
+  id: z.string().optional(),
   name: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
   category: z.string().min(2, { message: 'Category must be at least 2 characters.' }),
   sku: z.string().optional(),
@@ -84,10 +88,14 @@ const categories = [
     "Bag"
 ];
 
-export function AddProductForm() {
+interface AddProductFormProps {
+    existingItem?: InventoryItem;
+}
+
+export function AddProductForm({ existingItem }: AddProductFormProps) {
   const { language } = useLanguage();
   const t = translations[language];
-  const { addItem } = useInventory();
+  const { addItem, updateItem } = useInventory();
   const { toast } = useToast();
   const router = useRouter();
   
@@ -103,19 +111,37 @@ export function AddProductForm() {
     },
   });
 
+  useEffect(() => {
+    if (existingItem) {
+        form.reset({
+            ...existingItem,
+            hasVariants: !!existingItem.variants && existingItem.variants.length > 0,
+        });
+    }
+  }, [existingItem, form]);
+
   const { fields, append, remove } = useFieldArray({
     control: form.control,
     name: "variants"
   });
 
   const hasVariants = form.watch('hasVariants');
+  const isEditMode = !!existingItem;
 
   function onSubmit(values: z.infer<typeof formSchema>) {
-    addItem(values);
-    toast({
-      title: t.addItemDialog.itemAdded,
-      description: `${values.name} ${t.addItemDialog.hasBeenAdded}`,
-    });
+    if (isEditMode) {
+        updateItem(values.id!, values);
+        toast({
+            title: "Product Updated",
+            description: `${values.name} has been updated.`,
+        });
+    } else {
+        addItem(values);
+        toast({
+        title: t.addItemDialog.itemAdded,
+        description: `${values.name} ${t.addItemDialog.hasBeenAdded}`,
+        });
+    }
     form.reset();
     router.push('/');
   }
@@ -337,7 +363,7 @@ export function AddProductForm() {
                 )}
                 <div className="flex justify-end gap-2">
                     <Button type="button" variant="ghost" onClick={() => router.push('/')}>{t.common.cancel}</Button>
-                    <Button type="submit">{t.addItemDialog.addItem}</Button>
+                    <Button type="submit">{isEditMode ? t.inventoryTable.editProduct : t.addItemDialog.addItem}</Button>
                 </div>
             </form>
             </Form>

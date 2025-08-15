@@ -24,6 +24,7 @@ export const translations = {
             updateStock: "Update Stock",
             viewHistory: "View History",
             noItems: "No items found.",
+            editProduct: "Edit Product",
         },
         addItemDialog: {
             title: "Add New Item",
@@ -103,6 +104,7 @@ export const translations = {
             updateStock: "Perbarui Stok",
             viewHistory: "Lihat Riwayat",
             noItems: "Tidak ada barang ditemukan.",
+            editProduct: "Ubah Produk",
         },
         addItemDialog: {
             title: "Tambah Barang Baru",

@@ -5,7 +5,8 @@ import type { InventoryItem, AdjustmentHistory, InventoryItemVariant } from '@/t
 
 interface InventoryContextType {
   items: InventoryItem[];
-  addItem: (item: any) => void; // Changed to any to support new form structure
+  addItem: (item: any) => void;
+  updateItem: (itemId: string, itemData: any) => void;
   updateStock: (itemId: string, change: number, reason: string) => void;
   getHistory: (itemId: string) => AdjustmentHistory[];
   getItem: (itemId: string) => InventoryItem | InventoryItemVariant | undefined;
@@ -122,6 +123,65 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
     setItems(prevItems => [...prevItems, newItem]);
   };
 
+  const updateItem = (itemId: string, itemData: any) => {
+    setItems(prevItems => prevItems.map(item => {
+        if (item.id === itemId) {
+            const updatedItem = {
+                ...item,
+                ...itemData,
+                id: item.id // Ensure ID is not overwritten
+            };
+
+            if (itemData.hasVariants && itemData.variants) {
+                updatedItem.variants = itemData.variants.map((variant: any, index: number) => {
+                    const existingVariant = item.variants?.find(v => v.id === variant.id);
+                    if (existingVariant) {
+                        const stockChange = variant.stock - existingVariant.stock;
+                        let newHistory = existingVariant.history;
+                        if (stockChange !== 0) {
+                            newHistory = [{
+                                date: new Date(),
+                                change: stockChange,
+                                reason: 'Stock adjustment during edit',
+                                newStockLevel: variant.stock
+                            }, ...existingVariant.history];
+                        }
+                        return { ...existingVariant, ...variant, history: newHistory };
+                    }
+                    // New variant added during edit
+                    return {
+                        id: `${item.id}-${index}-${new Date().getTime()}`,
+                        ...variant,
+                        history: [{ date: new Date(), change: variant.stock, reason: 'Initial Stock', newStockLevel: variant.stock }]
+                    }
+                });
+                delete updatedItem.stock;
+                delete updatedItem.price;
+                delete updatedItem.size;
+                delete updatedItem.history;
+            } else {
+                 const stockChange = itemData.stock - (item.stock || 0);
+                 let newHistory = item.history || [];
+                 if (stockChange !== 0) {
+                     newHistory = [{
+                         date: new Date(),
+                         change: stockChange,
+                         reason: 'Stock adjustment during edit',
+                         newStockLevel: itemData.stock
+                     }, ...newHistory];
+                 }
+                updatedItem.stock = itemData.stock;
+                updatedItem.price = itemData.price;
+                updatedItem.size = itemData.size;
+                updatedItem.history = newHistory;
+                delete updatedItem.variants;
+            }
+            return updatedItem;
+        }
+        return item;
+    }));
+  };
+
   const updateStock = (itemId: string, change: number, reason: string) => {
     setItems(prevItems =>
       prevItems.map(item => {
@@ -191,7 +251,8 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
       if (item.variants) {
         const variant = item.variants.find(v => v.id === itemId);
         if (variant) {
-          return variant;
+          // to edit the whole product, we should return the parent item
+          return item; 
         }
       }
     }
@@ -201,7 +262,7 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
   const categories = [...new Set(items.map(item => item.category))].sort();
 
   return (
-    <InventoryContext.Provider value={{ items, addItem, updateStock, getHistory, getItem, categories }}>
+    <InventoryContext.Provider value={{ items, addItem, updateItem, updateStock, getHistory, getItem, categories }}>
       {children}
     </InventoryContext.Provider>
   );
