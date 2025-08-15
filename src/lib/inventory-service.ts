@@ -148,7 +148,7 @@ export async function addBulkProducts(products: any[]) {
                 name: productData.name,
                 category: productData.category,
                 sku: productData.sku || null,
-                imageUrl: 'https://placehold.co/40x40.png',
+                imageUrl: productData.imageUrl || 'https://placehold.co/40x40.png',
             });
             
             const productId = productResult.lastInsertRowid as number;

@@ -28,7 +28,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { PlusCircle, Trash2, GitBranchPlus } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { addBulkProducts } from '@/lib/inventory-service';
-import { cn } from '@/lib/utils';
 
 const variantSchema = z.object({
     name: z.string().min(1, "Variant name is required."),
@@ -41,6 +40,7 @@ const productSchema = z.object({
   name: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
   category: z.string().min(1, 'Category is required.'),
   sku: z.string().optional(),
+  imageUrl: z.string().url({ message: "Please enter a valid URL." }).optional().or(z.literal('')),
   variants: z.array(variantSchema).nonempty("Product must have at least one variant."),
 });
 
@@ -77,7 +77,7 @@ export function BulkAddForm() {
     resolver: zodResolver(formSchema),
     defaultValues: {
       products: [
-        { name: '', category: '', sku: '', variants: [{ name: '', sku: '', price: 0, stock: 0 }] },
+        { name: '', category: '', sku: '', imageUrl: '', variants: [{ name: '', sku: '', price: 0, stock: 0 }] },
       ],
     },
   });
@@ -87,7 +87,7 @@ export function BulkAddForm() {
     name: "products"
   });
 
-  const { getValues, control } = form;
+  const { control } = form;
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     try {
@@ -123,12 +123,13 @@ export function BulkAddForm() {
                         <Table>
                             <TableHeader>
                                 <TableRow>
-                                    <TableHead className="w-[25%]">Product / Variant Name</TableHead>
-                                    <TableHead className="w-[18%]">Category</TableHead>
-                                    <TableHead className="w-[18%]">SKU</TableHead>
-                                    <TableHead className="w-[12%]">Price</TableHead>
-                                    <TableHead className="w-[12%]">Stock</TableHead>
-                                    <TableHead className="w-[15%] text-right">Actions</TableHead>
+                                    <TableHead className="w-[20%]">Product / Variant Name</TableHead>
+                                    <TableHead className="w-[15%]">Category</TableHead>
+                                    <TableHead className="w-[15%]">SKU</TableHead>
+                                    <TableHead className="w-[20%]">Image URL</TableHead>
+                                    <TableHead className="w-[10%]">Price</TableHead>
+                                    <TableHead className="w-[10%]">Stock</TableHead>
+                                    <TableHead className="w-[10%] text-right">Actions</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -138,14 +139,13 @@ export function BulkAddForm() {
                                         pIndex={pIndex} 
                                         removeProduct={removeProduct}
                                         control={control}
-                                        getValues={getValues}
                                     />
                                 ))}
                             </TableBody>
                         </Table>
                      </div>
 
-                    <Button type="button" size="sm" variant="outline" onClick={() => appendProduct({ name: '', category: '', sku: '', variants: [{ name: '', sku: '', price: 0, stock: 0 }] })}>
+                    <Button type="button" size="sm" variant="outline" onClick={() => appendProduct({ name: '', category: '', sku: '', imageUrl: '', variants: [{ name: '', sku: '', price: 0, stock: 0 }] })}>
                         <PlusCircle className="mr-2 h-4 w-4" />
                         Add Another Product
                     </Button>
@@ -163,7 +163,7 @@ export function BulkAddForm() {
   );
 }
 
-function ProductRow({ pIndex, removeProduct, control, getValues }: any) {
+function ProductRow({ pIndex, removeProduct, control }: any) {
     const { fields: variantFields, append: appendVariant, remove: removeVariant } = useFieldArray({
         control,
         name: `products.${pIndex}.variants`,
@@ -221,6 +221,18 @@ function ProductRow({ pIndex, removeProduct, control, getValues }: any) {
                         )}
                     />
                 </TableCell>
+                <TableCell>
+                     <FormField
+                        control={control}
+                        name={`products.${pIndex}.imageUrl`}
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormControl><Input placeholder="https://image.url/product.png" {...field} /></FormControl>
+                                <FormMessage/>
+                            </FormItem>
+                        )}
+                    />
+                </TableCell>
                 <TableCell></TableCell>
                 <TableCell></TableCell>
                 <TableCell className="text-right">
@@ -259,6 +271,7 @@ function ProductRow({ pIndex, removeProduct, control, getValues }: any) {
                             )}
                         />
                     </TableCell>
+                    <TableCell></TableCell>
                     <TableCell>
                         <FormField
                             control={control}
@@ -291,7 +304,7 @@ function ProductRow({ pIndex, removeProduct, control, getValues }: any) {
                 </TableRow>
             ))}
              <TableRow>
-                 <TableCell colSpan={6} className="py-2 pl-8">
+                 <TableCell colSpan={7} className="py-2 pl-8">
                      <Button type="button" size="sm" variant="ghost" onClick={() => appendVariant({ name: '', sku: '', price: 0, stock: 0 })}>
                         <GitBranchPlus className="mr-2 h-4 w-4" />
                         Add Variant
@@ -301,4 +314,3 @@ function ProductRow({ pIndex, removeProduct, control, getValues }: any) {
         </>
     );
 }
-
