@@ -16,6 +16,12 @@ const nextConfig: NextConfig = {
         port: '',
         pathname: '/**',
       },
+      {
+        protocol: 'https',
+        hostname: 'down-id.img.susercontent.com',
+        port: '',
+        pathname: '/**',
+      }
     ],
   },
 };
