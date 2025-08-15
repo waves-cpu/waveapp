@@ -39,6 +39,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { VariantSelectionDialog } from '@/app/components/variant-selection-dialog';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function ShopeeSalesPage() {
   const { language } = useLanguage();
@@ -253,11 +254,18 @@ export default function ShopeeSalesPage() {
             </TableHeader>
             <TableBody>
               {loading ? (
-                <TableRow>
-                  <TableCell colSpan={6} className="h-24 text-center">
-                    Memuat data penjualan...
-                  </TableCell>
-                </TableRow>
+                Array.from({ length: 5 }).map((_, i) => (
+                    <TableRow key={i}>
+                        <TableCell><Skeleton className="h-4 w-[100px]" /></TableCell>
+                        <TableCell><Skeleton className="h-4 w-[250px]" /></TableCell>
+                        <TableCell><Skeleton className="h-4 w-[120px]" /></TableCell>
+                        <TableCell><Skeleton className="h-4 w-[80px]" /></TableCell>
+                        <TableCell><Skeleton className="h-4 w-[100px]" /></TableCell>
+                        <TableCell className="text-center">
+                            <Skeleton className="h-8 w-8 rounded-md" />
+                        </TableCell>
+                    </TableRow>
+                ))
               ) : sales.length > 0 ? (
                 sales.map((sale) => (
                   <TableRow key={sale.id}>
