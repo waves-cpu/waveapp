@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useForm, useFieldArray } from 'react-hook-form';
@@ -256,9 +257,6 @@ export function AddProductForm({ existingItem }: AddProductFormProps) {
                     <Card>
                         <CardHeader>
                             <CardTitle>{t.bulkStockInDialog.variants}</CardTitle>
-                            <CardDescription>
-                                {t.bulkStockInDialog.variantsDescription}
-                            </CardDescription>
                         </CardHeader>
                         <CardContent>
                              <Table className="table-fixed border">
@@ -391,3 +389,5 @@ export function AddProductForm({ existingItem }: AddProductFormProps) {
     </Card>
   );
 }
+
+    
