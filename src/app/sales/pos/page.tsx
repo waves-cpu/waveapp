@@ -43,7 +43,6 @@ const PosProductGrid = ({
 }) => {
     const { items, loading, allSales } = useInventory();
     const [searchTerm, setSearchTerm] = useState('');
-    const [skuInput, setSkuInput] = useState('');
     const debouncedSearchTerm = useDebounce(searchTerm, 300);
     const skuInputRef = useRef<HTMLInputElement>(null);
     const [currentPage, setCurrentPage] = useState(1);
@@ -96,9 +95,9 @@ const PosProductGrid = ({
 
     const handleSkuFormSubmit = (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
-        if (skuInput) {
-            onSkuSubmit(skuInput);
-            setSkuInput('');
+        if (searchTerm) {
+            onSkuSubmit(searchTerm);
+            setSearchTerm('');
         }
     };
     
@@ -125,23 +124,14 @@ const PosProductGrid = ({
                       <ScanLine className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                       <Input
                           ref={skuInputRef}
-                          placeholder="Scan atau masukkan SKU, lalu tekan Enter"
-                          value={skuInput}
-                          onChange={(e) => setSkuInput(e.target.value)}
+                          placeholder="Scan atau masukkan SKU / Nama Produk, lalu tekan Enter"
+                          value={searchTerm}
+                          onChange={(e) => setSearchTerm(e.target.value)}
                           className="pl-10 w-full"
                           disabled={isSubmitting || isVariantDialogOpen}
                       />
                   </div>
               </form>
-                <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                        placeholder="Cari produk..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="pl-10 w-full"
-                    />
-                </div>
             </div>
             <ScrollArea className="flex-grow -mx-2">
                 <div className="px-2">
@@ -335,24 +325,12 @@ export default function PosSalesPage() {
         toast({
             variant: 'destructive',
             title: 'SKU Tidak Ditemukan',
-            description: `Produk dengan SKU "${skuValue}" tidak ditemukan.`,
+            description: `Produk dengan SKU atau Nama "${skuValue}" tidak ditemukan.`,
         });
         return;
       }
       
-      if (product.variants && product.variants.length > 0) {
-        if (product.variants.length === 1 && product.variants[0].sku === skuValue) {
-             // It was a variant SKU that was entered directly
-            handleAddToCart(skuValue);
-        } else {
-            // Parent SKU entered, open variant selection dialog
-            setProductForVariantSelection(product);
-            setIsVariantDialogOpen(true);
-        }
-      } else {
-        // Simple product SKU entered, add to cart
-        handleAddToCart(skuValue);
-      }
+       handleProductSelect(product);
     } catch (error) {
       console.error('Failed to process SKU:', error);
       toast({
@@ -414,8 +392,8 @@ export default function PosSalesPage() {
           </div>
         </header>
 
-        <div className="flex-1 grid grid-cols-1 lg:grid-cols-4 gap-4 p-4 overflow-hidden">
-              <div className="lg:col-span-3 flex flex-col gap-4 h-full overflow-hidden">
+        <div className="flex-1 grid grid-cols-1 lg:grid-cols-3 gap-4 p-4 overflow-hidden">
+              <div className="lg:col-span-2 flex flex-col gap-4 h-full overflow-hidden">
                   <PosProductGrid 
                     onProductSelect={handleProductSelect}
                     onSkuSubmit={handleSkuSubmit}
@@ -444,3 +422,5 @@ export default function PosSalesPage() {
     </>
   );
 }
+
+    
