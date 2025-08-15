@@ -247,13 +247,14 @@ export default function ShopeeSalesPage() {
                 <TableHead className="w-[40%]">{t.inventoryTable.name}</TableHead>
                 <TableHead>SKU</TableHead>
                 <TableHead>{t.inventoryTable.size}</TableHead>
+                <TableHead>{t.inventoryTable.price}</TableHead>
                 <TableHead className="text-center">{t.inventoryTable.actions}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="h-24 text-center">
+                  <TableCell colSpan={6} className="h-24 text-center">
                     Memuat data penjualan...
                   </TableCell>
                 </TableRow>
@@ -264,6 +265,7 @@ export default function ShopeeSalesPage() {
                     <TableCell>{sale.productName}</TableCell>
                     <TableCell>{sale.sku}</TableCell>
                     <TableCell>{sale.variantName || '-'}</TableCell>
+                    <TableCell>{`Rp${Math.round(sale.priceAtSale).toLocaleString('id-ID')}`}</TableCell>
                     <TableCell className="text-center">
                        <AlertDialog>
                           <AlertDialogTrigger asChild>
@@ -291,7 +293,7 @@ export default function ShopeeSalesPage() {
                 ))
               ) : (
                 <TableRow>
-                    <TableCell colSpan={5} className="h-48 text-center">
+                    <TableCell colSpan={6} className="h-48 text-center">
                         <div className="flex flex-col items-center justify-center gap-4 text-muted-foreground">
                             <ShoppingCart className="h-16 w-16" />
                             <div className="text-center">
