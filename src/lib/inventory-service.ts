@@ -286,8 +286,27 @@ export async function findProductBySku(sku: string): Promise<InventoryItem | nul
     const getProductByIdStmt = db.prepare('SELECT * FROM products WHERE id = ?');
     const getVariantsByProductIdStmt = db.prepare('SELECT * FROM variants WHERE productId = ?');
 
-    let product: any = getProductBySkuStmt.get(sku);
+    // First, try to find a variant with this SKU
+    const variant: any = getVariantBySkuStmt.get(sku);
+    if (variant) {
+        const parentProduct = getProductByIdStmt.get(variant.productId) as any;
+        if (!parentProduct) return null;
 
+        // Return a product-like object for the single variant found
+        return {
+            id: parentProduct.id.toString(), // The ID of the parent product
+            name: `${parentProduct.name} - ${variant.name}`,
+            category: parentProduct.category,
+            sku: variant.sku,
+            imageUrl: parentProduct.imageUrl,
+            stock: variant.stock,
+            price: variant.price,
+            variants: [], // No need to list other variants
+        };
+    }
+
+    // If not a variant SKU, try to find a product with this SKU
+    const product: any = getProductBySkuStmt.get(sku);
     if (product) {
         if (product.hasVariants) {
             const variants = getVariantsByProductIdStmt.all(product.id) as any[];
@@ -295,32 +314,10 @@ export async function findProductBySku(sku: string): Promise<InventoryItem | nul
         }
         return { ...product, id: product.id.toString() };
     }
-
-    const variant: any = getVariantBySkuStmt.get(sku);
-    if (variant) {
-        const parentProduct = getProductByIdStmt.get(variant.productId) as any;
-        if (!parentProduct) return null;
-        
-        // Return only the specific variant that was found
-        const foundVariant: InventoryItemVariant = {
-            ...variant,
-            id: variant.id.toString(),
-            history: [],
-        };
-        // Construct a product-like object for the single variant
-        return {
-            id: parentProduct.id.toString(),
-            name: `${parentProduct.name} - ${variant.name}`,
-            category: parentProduct.category,
-            sku: variant.sku,
-            imageUrl: parentProduct.imageUrl,
-            stock: variant.stock,
-            price: variant.price,
-        };
-    }
     
     return null;
 }
+
 
 export async function performSale(sku: string, channel: string, quantity: number) {
     const getProductStmt = db.prepare('SELECT id, price, stock FROM products WHERE sku = ? AND hasVariants = 0');

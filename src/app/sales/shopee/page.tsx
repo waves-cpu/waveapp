@@ -156,6 +156,7 @@ export default function ShopeeSalesPage() {
       });
     } finally {
       setIsSubmitting(false);
+      setSku('');
     }
   };
 
