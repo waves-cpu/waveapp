@@ -21,7 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Search, Calendar as CalendarIcon, Eye, ShoppingCart } from 'lucide-react';
+import { Search, Calendar as CalendarIcon, Eye, ShoppingCart, ShoppingBag } from 'lucide-react';
 import type { InventoryItem, AdjustmentHistory, InventoryItemVariant, Sale } from '@/types';
 import { useLanguage } from '@/hooks/use-language';
 import { translations } from '@/types/language';
@@ -110,7 +110,7 @@ export default function HistoryPage() {
         historyList.push({
             type: 'sales_summary',
             date: new Date(dateString),
-            reason: 'Penjualan Harian',
+            reason: 'Penjualan',
             change: totalChange,
             sales: dailySales,
             itemCategory: 'Penjualan', // Assign a category for filtering
@@ -268,13 +268,19 @@ export default function HistoryPage() {
                         <TableCell>
                             {entry.type === 'adjustment' ? (
                                 <div className="flex items-center gap-4">
-                                    <Image 
-                                        src={entry.imageUrl || 'https://placehold.co/40x40.png'} 
-                                        alt={entry.itemName!} 
-                                        width={40} height={40} 
-                                        className="rounded-sm" 
-                                        data-ai-hint="product image"
-                                    />
+                                     {entry.imageUrl ? (
+                                        <Image 
+                                            src={entry.imageUrl} 
+                                            alt={entry.itemName!} 
+                                            width={40} height={40} 
+                                            className="rounded-sm" 
+                                            data-ai-hint="product image"
+                                        />
+                                     ) : (
+                                        <div className="flex h-10 w-10 items-center justify-center rounded-sm bg-muted">
+                                            <ShoppingBag className="h-5 w-5 text-muted-foreground" />
+                                        </div>
+                                     )}
                                     <div>
                                         <div className="font-medium text-sm">{entry.itemName}</div>
                                         {entry.variantName && <div className="text-xs text-muted-foreground">{entry.variantName}</div>}
@@ -283,7 +289,7 @@ export default function HistoryPage() {
                             ) : (
                                 <div className="flex items-center gap-2 font-semibold text-primary">
                                     <ShoppingCart className="h-5 w-5" />
-                                    <span>Penjualan</span>
+                                    <span>{entry.reason}</span>
                                 </div>
                             )}
                         </TableCell>
@@ -340,3 +346,4 @@ export default function HistoryPage() {
     </>
   );
 }
+
