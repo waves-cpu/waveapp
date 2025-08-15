@@ -30,10 +30,40 @@ interface DailySalesDetailDialogProps {
   sales: Sale[];
 }
 
+interface AggregatedSale {
+    productName: string;
+    variantName?: string;
+    sku?: string;
+    channel: string;
+    quantity: number;
+}
+
 export function DailySalesDetailDialog({ open, onOpenChange, sales }: DailySalesDetailDialogProps) {
     
-    const totalQuantity = useMemo(() => {
-        return sales.reduce((sum, sale) => sum + sale.quantity, 0);
+    const { aggregatedSales, totalQuantity } = useMemo(() => {
+        const aggregationMap = new Map<string, AggregatedSale>();
+
+        sales.forEach(sale => {
+            const key = sale.sku || sale.productId; // Use SKU as the primary key for aggregation
+            const existingEntry = aggregationMap.get(key);
+
+            if (existingEntry) {
+                existingEntry.quantity += sale.quantity;
+            } else {
+                aggregationMap.set(key, {
+                    productName: sale.productName,
+                    variantName: sale.variantName,
+                    sku: sale.sku,
+                    channel: sale.channel,
+                    quantity: sale.quantity,
+                });
+            }
+        });
+
+        const aggregatedSales = Array.from(aggregationMap.values());
+        const totalQuantity = aggregatedSales.reduce((sum, sale) => sum + sale.quantity, 0);
+
+        return { aggregatedSales, totalQuantity };
     }, [sales]);
 
     const salesDate = useMemo(() => {
@@ -62,8 +92,8 @@ export function DailySalesDetailDialog({ open, onOpenChange, sales }: DailySales
                     </TableRow>
                 </TableHeader>
                 <TableBody>
-                    {sales.map(sale => (
-                        <TableRow key={sale.id}>
+                    {aggregatedSales.map(sale => (
+                        <TableRow key={sale.sku || sale.productName}>
                             <TableCell>
                                 <div className="font-medium">{sale.productName}</div>
                                 {sale.variantName && <div className="text-xs text-muted-foreground">{sale.variantName}</div>}
