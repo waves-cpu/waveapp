@@ -21,7 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Search, Calendar as CalendarIcon, Eye } from 'lucide-react';
+import { Search, Calendar as CalendarIcon, Eye, ShoppingCart } from 'lucide-react';
 import type { InventoryItem, AdjustmentHistory, InventoryItemVariant, Sale } from '@/types';
 import { useLanguage } from '@/hooks/use-language';
 import { translations } from '@/types/language';
@@ -281,7 +281,10 @@ export default function HistoryPage() {
                                     </div>
                                 </div>
                             ) : (
-                                <div className="font-semibold text-primary">Ringkasan Penjualan</div>
+                                <div className="flex items-center gap-2 font-semibold text-primary">
+                                    <ShoppingCart className="h-5 w-5" />
+                                    <span>Ringkasan Penjualan</span>
+                                </div>
                             )}
                         </TableCell>
                         <TableCell>{format(new Date(entry.date), 'PP')}</TableCell>
