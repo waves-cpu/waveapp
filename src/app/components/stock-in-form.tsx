@@ -47,15 +47,28 @@ const formSchema = z.object({
   masterQuantities: z.record(z.coerce.number().int().optional())
 });
 
-export function StockInForm() {
+interface StockInFormProps {
+    isProductSelectionOpen: boolean;
+    setProductSelectionOpen: (open: boolean) => void;
+    isBulkStockInOpen: boolean;
+    setBulkStockInOpen: (open: boolean) => void;
+    bulkSelectedIds: Set<string>;
+    setBulkSelectedIds: React.Dispatch<React.SetStateAction<Set<string>>>;
+}
+
+export function StockInForm({
+    isProductSelectionOpen,
+    setProductSelectionOpen,
+    isBulkStockInOpen,
+    setBulkStockInOpen,
+    bulkSelectedIds,
+    setBulkSelectedIds
+}: StockInFormProps) {
   const { language } = useLanguage();
   const t = translations[language];
   const { items, updateStock, categories } = useInventory();
   const { toast } = useToast();
   const router = useRouter();
-  const [isProductSelectionOpen, setProductSelectionOpen] = useState(false);
-  const [isBulkStockInOpen, setBulkStockInOpen] = useState(false);
-  const [bulkSelectedIds, setBulkSelectedIds] = useState<Set<string>>(new Set());
   
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -73,7 +86,7 @@ export function StockInForm() {
   useEffect(() => {
     // Clear selections when fields change
     setBulkSelectedIds(new Set());
-  }, [fields.length]);
+  }, [fields.length, setBulkSelectedIds]);
 
   const allItemsAndVariantsById = useMemo(() => {
     const map = new Map<string, {name: string; parentName?: string; parentSku?: string; parentImageUrl?: string; variantName?: string; variantSku?: string; isVariant: boolean}>();
@@ -238,21 +251,7 @@ export function StockInForm() {
   return (
     <>
     <Card>
-        <CardHeader>
-            <div className="flex justify-end items-start">
-                 <div className="flex gap-2">
-                    <Button type="button" variant="outline" onClick={() => setBulkStockInOpen(true)} disabled={bulkSelectedIds.size === 0}>
-                        <PackagePlus className="mr-2 h-4 w-4" />
-                        {t.stockInForm.bulkAdd}
-                    </Button>
-                    <Button type="button" onClick={() => setProductSelectionOpen(true)}>
-                        <PlusCircle className="mr-2 h-4 w-4" />
-                        {t.stockInForm.selectProducts}
-                    </Button>
-                </div>
-            </div>
-        </CardHeader>
-        <CardContent>
+        <CardContent className="pt-6">
             <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                 <div className="border rounded-md">
