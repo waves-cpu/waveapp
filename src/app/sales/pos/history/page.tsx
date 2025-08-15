@@ -201,7 +201,7 @@ export default function PosHistoryPage() {
                     ) : groupedSales.length > 0 ? (
                         groupedSales.map((sale) => (
                             <Collapsible asChild key={sale.transactionId} open={openCollapsibles.has(sale.transactionId)} onOpenChange={() => toggleCollapsible(sale.transactionId)}>
-                                <>
+                                <React.Fragment>
                                     <TableRow className="cursor-pointer hover:bg-muted/50">
                                         <TableCell>
                                             <CollapsibleTrigger asChild>
@@ -271,7 +271,7 @@ export default function PosHistoryPage() {
                                             </td>
                                         </tr>
                                     </CollapsibleContent>
-                                </>
+                                </React.Fragment>
                             </Collapsible>
                         ))
                     ) : (
@@ -294,4 +294,3 @@ export default function PosHistoryPage() {
     </main>
   );
 }
-
