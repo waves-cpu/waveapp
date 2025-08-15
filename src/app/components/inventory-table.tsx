@@ -462,7 +462,7 @@ export function InventoryTable({ onUpdateStock }: InventoryTableProps) {
                         setCurrentPage(1)
                     }}
                     >
-                    <SelectTrigger className="h-8 w-[120px]">
+                    <SelectTrigger className="h-8 w-[130px]">
                         <SelectValue placeholder={itemsPerPage} />
                     </SelectTrigger>
                     <SelectContent side="top">
@@ -490,3 +490,4 @@ export function InventoryTable({ onUpdateStock }: InventoryTableProps) {
     
 
     
+
