@@ -41,13 +41,47 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { BulkEditVariantsDialog } from './bulk-edit-variants-dialog';
 import { useRouter } from 'next/navigation';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface InventoryTableProps {
   onUpdateStock: (itemId: string) => void;
 }
 
+function InventoryTableSkeleton() {
+    return (
+        <Table>
+            <TableHeader>
+                <TableRow>
+                    <TableHead className="w-[40%]"><Skeleton className="h-5 w-24" /></TableHead>
+                    <TableHead><Skeleton className="h-5 w-20" /></TableHead>
+                    <TableHead><Skeleton className="h-5 w-32" /></TableHead>
+                    <TableHead className="text-center"><Skeleton className="h-5 w-16" /></TableHead>
+                </TableRow>
+            </TableHeader>
+            <TableBody>
+                {[...Array(5)].map((_, i) => (
+                    <TableRow key={i}>
+                        <TableCell>
+                            <div className="flex items-center gap-4">
+                                <Skeleton className="h-10 w-10 rounded-sm" />
+                                <div>
+                                    <Skeleton className="h-4 w-40" />
+                                    <Skeleton className="h-3 w-24 mt-2" />
+                                </div>
+                            </div>
+                        </TableCell>
+                        <TableCell><Skeleton className="h-4 w-full" /></TableCell>
+                        <TableCell><Skeleton className="h-4 w-full" /></TableCell>
+                        <TableCell className="text-center"><Skeleton className="h-8 w-8" /></TableCell>
+                    </TableRow>
+                ))}
+            </TableBody>
+        </Table>
+    )
+}
+
 export function InventoryTable({ onUpdateStock }: InventoryTableProps) {
-  const { items, categories } = useInventory();
+  const { items, categories, loading } = useInventory();
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
   const { language } = useLanguage();
@@ -135,6 +169,9 @@ export function InventoryTable({ onUpdateStock }: InventoryTableProps) {
         </Button>
       </div>
       <ScrollArea className="flex-grow">
+        {loading ? (
+            <InventoryTableSkeleton />
+        ) : (
         <Table>
           <TableHeader className="sticky top-0 bg-card">
             <TableRow>
@@ -281,6 +318,7 @@ export function InventoryTable({ onUpdateStock }: InventoryTableProps) {
             )}
           </TableBody>
         </Table>
+        )}
       </ScrollArea>
     </div>
     {selectedBulkEditItem && (
