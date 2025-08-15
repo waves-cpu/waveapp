@@ -124,14 +124,17 @@ export function PosCheckoutForm() {
     try {
         const saleDate = new Date();
         const transactionId = `POS-${saleDate.getTime()}`; // Generate a unique transaction ID
+        
         for (const item of cart) {
             await recordSale(item.sku, 'pos', item.quantity, saleDate, transactionId);
         }
+
         toast({
             title: 'Transaksi Berhasil',
             description: `${cart.length} jenis item berhasil terjual. No. Transaksi: ${transactionId}`,
         });
         localStorage.removeItem('posCart');
+        
         // Here you would typically trigger a print function. For now, we'll just show a success message.
         toast({
             title: 'Struk Siap Dicetak',
