@@ -17,9 +17,9 @@ import { useInventory } from '@/hooks/use-inventory';
 import { useToast } from '@/hooks/use-toast';
 import { useLanguage } from '@/hooks/use-language';
 import { translations } from '@/types/language';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { PlusCircle, Trash2, PackagePlus } from 'lucide-react';
+import { PlusCircle, Trash2, PackagePlus, ShoppingBag } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import type { InventoryItem } from '@/types';
 import { ProductSelectionDialog } from './product-selection-dialog';
@@ -36,6 +36,7 @@ const stockInItemSchema = z.object({
     parentSku: z.string().optional(),
     parentImageUrl: z.string().optional(),
     variantName: z.string().optional(),
+    variantSku: z.string().optional(),
     isVariant: z.boolean(),
 });
 
@@ -75,7 +76,7 @@ export function StockInForm() {
   }, [fields.length]);
 
   const allItemsAndVariantsById = useMemo(() => {
-    const map = new Map<string, {name: string; parentName?: string; parentSku?: string; parentImageUrl?: string; variantName?: string; isVariant: boolean}>();
+    const map = new Map<string, {name: string; parentName?: string; parentSku?: string; parentImageUrl?: string; variantName?: string; variantSku?: string; isVariant: boolean}>();
     items.forEach(item => {
         if (item.variants && item.variants.length > 0) {
             item.variants.forEach(variant => {
@@ -85,6 +86,7 @@ export function StockInForm() {
                     parentSku: item.sku,
                     parentImageUrl: item.imageUrl,
                     variantName: variant.name,
+                    variantSku: variant.sku,
                     isVariant: true
                 });
             });
@@ -135,6 +137,7 @@ export function StockInForm() {
                 parentSku: itemDetail.parentSku,
                 parentImageUrl: itemDetail.parentImageUrl,
                 variantName: itemDetail.variantName,
+                variantSku: itemDetail.variantSku,
                 isVariant: itemDetail.isVariant,
             };
         }).filter((item): item is StockInItem => item !== null);
@@ -273,8 +276,14 @@ export function StockInForm() {
                         <TableBody>
                             {fields.length === 0 ? (
                                 <TableRow>
-                                    <TableCell colSpan={5} className="text-center h-24">
-                                        {t.stockInForm.noProducts}
+                                    <TableCell colSpan={5} className="text-center h-48">
+                                         <div className="flex flex-col items-center justify-center gap-4 text-muted-foreground">
+                                            <ShoppingBag className="h-16 w-16" />
+                                            <div className="text-center">
+                                                <p className="font-semibold">No products selected.</p>
+                                                <p className="text-sm">Click "Select Products" to begin.</p>
+                                            </div>
+                                        </div>
                                     </TableCell>
                                 </TableRow>
                             ) : (
@@ -385,6 +394,7 @@ export function StockInForm() {
                                                 </TableCell>
                                                 <TableCell className="pl-16 align-middle">
                                                     <div className="font-medium text-sm">{field.variantName}</div>
+                                                    <div className="text-xs text-muted-foreground">SKU: {field.variantSku}</div>
                                                 </TableCell>
                                                 <TableCell className="align-middle">
                                                     <FormField
