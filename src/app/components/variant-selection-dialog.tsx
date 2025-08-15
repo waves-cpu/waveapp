@@ -45,12 +45,16 @@ export function VariantSelectionDialog({ open, onOpenChange, item, onSelect }: V
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>{t.variantSelectionDialog.title}: {item.name}</DialogTitle>
+          <DialogTitle>{t.variantSelectionDialog.title}</DialogTitle>
           <DialogDescription>
             {t.variantSelectionDialog.description}
           </DialogDescription>
         </DialogHeader>
-        <ScrollArea className="max-h-96">
+        <div className="-mt-2">
+            <h4 className="font-medium text-lg leading-tight">{item.name}</h4>
+            {item.sku && <p className="text-sm text-muted-foreground">SKU Induk: {item.sku}</p>}
+        </div>
+        <ScrollArea className="max-h-80 border-t pt-4">
             <Table>
                 <TableBody>
                     {(item.variants || []).map(variant => (
