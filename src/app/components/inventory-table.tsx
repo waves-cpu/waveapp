@@ -446,32 +446,34 @@ export function InventoryTable({ onUpdateStock }: InventoryTableProps) {
         </Table>
       </ScrollArea>
        <div className="flex items-center justify-between p-4 border-t">
-            <div className="flex items-center gap-4 text-sm text-muted-foreground">
+            <div className="flex-1 text-sm text-muted-foreground">
                 {t.productSelectionDialog.itemsPerPage.replace('{start}', startItem.toString()).replace('{end}', endItem.toString()).replace('{total}', filteredItems.length.toString())}
-                <Select
+            </div>
+            <div className="flex items-center gap-4">
+                <Pagination
+                    totalPages={totalPages}
+                    currentPage={currentPage}
+                    onPageChange={setCurrentPage}
+                />
+                 <Select
                     value={`${itemsPerPage}`}
                     onValueChange={(value) => {
                         setItemsPerPage(Number(value))
                         setCurrentPage(1)
                     }}
                     >
-                    <SelectTrigger className="h-8 w-[70px]">
+                    <SelectTrigger className="h-8 w-[120px]">
                         <SelectValue placeholder={itemsPerPage} />
                     </SelectTrigger>
                     <SelectContent side="top">
                         {[10, 20, 50].map((pageSize) => (
                         <SelectItem key={pageSize} value={`${pageSize}`}>
-                            {pageSize}
+                            {`${pageSize} / ${t.productSelectionDialog.page}`}
                         </SelectItem>
                         ))}
                     </SelectContent>
                 </Select>
             </div>
-            <Pagination
-                totalPages={totalPages}
-                currentPage={currentPage}
-                onPageChange={setCurrentPage}
-            />
         </div>
     </div>
     {selectedBulkEditItem && (
@@ -488,4 +490,3 @@ export function InventoryTable({ onUpdateStock }: InventoryTableProps) {
     
 
     
-

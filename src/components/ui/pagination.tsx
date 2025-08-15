@@ -12,6 +12,7 @@ import { cn } from "@/lib/utils"
 import { Button, buttonVariants, type ButtonProps } from "@/components/ui/button"
 import { useLanguage } from "@/hooks/use-language"
 import { translations } from "@/types/language"
+import { Input } from "./input";
 
 const PaginationContainer = ({ className, ...props }: React.ComponentProps<"nav">) => (
   <nav
@@ -123,62 +124,41 @@ const PaginationEllipsis = ({
 )
 PaginationEllipsis.displayName = "PaginationEllipsis"
 
-// Custom hook for pagination logic
-const usePagination = ({ totalPages, currentPage, siblings = 1 }: { totalPages: number, currentPage: number, siblings?: number }) => {
-    return React.useMemo(() => {
-        const totalPageNumbers = siblings * 2 + 3 + 2; // siblings + first/last + current + 2*ellipsis
-
-        if (totalPageNumbers >= totalPages) {
-            return Array.from({ length: totalPages }, (_, i) => i + 1);
-        }
-
-        const leftSiblingIndex = Math.max(currentPage - siblings, 1);
-        const rightSiblingIndex = Math.min(currentPage + siblings, totalPages);
-
-        const shouldShowLeftDots = leftSiblingIndex > 2;
-        const shouldShowRightDots = rightSiblingIndex < totalPages - 1;
-
-        const firstPageIndex = 1;
-        const lastPageIndex = totalPages;
-
-        if (!shouldShowLeftDots && shouldShowRightDots) {
-            let leftItemCount = 3 + 2 * siblings;
-            let leftRange = Array.from({ length: leftItemCount }, (_, i) => i + 1);
-            return [...leftRange, '...', totalPages];
-        }
-
-        if (shouldShowLeftDots && !shouldShowRightDots) {
-            let rightItemCount = 3 + 2 * siblings;
-            let rightRange = Array.from({ length: rightItemCount }, (_, i) => totalPages - rightItemCount + i + 1);
-            return [firstPageIndex, '...', ...rightRange];
-        }
-
-        if (shouldShowLeftDots && shouldShowRightDots) {
-            let middleRange = Array.from({ length: rightSiblingIndex - leftSiblingIndex + 1 }, (_, i) => leftSiblingIndex + i);
-            return [firstPageIndex, '...', ...middleRange, '...', lastPageIndex];
-        }
-
-        return [];
-
-    }, [totalPages, currentPage, siblings]);
-};
-
 
 type CustomPaginationProps = {
     totalPages: number;
     currentPage: number;
     onPageChange: (page: number) => void;
-    siblings?: number;
     className?: string;
 }
 
-const Pagination = ({ totalPages, currentPage, onPageChange, siblings = 1, className }: CustomPaginationProps) => {
-    const paginationRange = usePagination({ totalPages, currentPage, siblings });
+const Pagination = ({ totalPages, currentPage, onPageChange, className }: CustomPaginationProps) => {
+    const [inputValue, setInputValue] = React.useState(currentPage.toString());
 
-    if (currentPage === 0 || totalPages < 2) {
-        return null;
-    }
+    React.useEffect(() => {
+        setInputValue(currentPage.toString());
+    }, [currentPage]);
     
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setInputValue(e.target.value);
+    };
+
+    const handleInputBlur = () => {
+        const pageNumber = parseInt(inputValue, 10);
+        if (!isNaN(pageNumber) && pageNumber >= 1 && pageNumber <= totalPages) {
+            onPageChange(pageNumber);
+        } else {
+           // Reset to current page if input is invalid
+           setInputValue(currentPage.toString());
+        }
+    };
+    
+    const handleInputKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === 'Enter') {
+            handleInputBlur();
+        }
+    };
+
     const onNext = () => {
         if (currentPage < totalPages) {
             onPageChange(currentPage + 1);
@@ -191,6 +171,10 @@ const Pagination = ({ totalPages, currentPage, onPageChange, siblings = 1, class
         }
     };
 
+    if (totalPages <= 0) {
+        return null;
+    }
+
     return (
         <PaginationContainer className={className}>
             <PaginationContent>
@@ -199,27 +183,21 @@ const Pagination = ({ totalPages, currentPage, onPageChange, siblings = 1, class
                         <ChevronLeft className="h-4 w-4" />
                     </Button>
                 </PaginationItem>
-
-                {paginationRange.map((pageNumber, index) => {
-                    if (pageNumber === '...') {
-                        return <PaginationItem key={`ellipsis-${index}`}><PaginationEllipsis /></PaginationItem>;
-                    }
-
-                    return (
-                        <PaginationItem key={pageNumber}>
-                            <Button
-                                variant={pageNumber === currentPage ? "outline" : "ghost"}
-                                size="icon"
-                                onClick={() => onPageChange(pageNumber as number)}
-                                className="h-8 w-8"
-                            >
-                                {pageNumber}
-                            </Button>
-                        </PaginationItem>
-                    );
-                })}
-
                 <PaginationItem>
+                    <div className="flex items-center text-sm gap-1">
+                    <Input 
+                        type="text"
+                        value={inputValue}
+                        onChange={handleInputChange}
+                        onBlur={handleInputBlur}
+                        onKeyPress={handleInputKeyPress}
+                        className="h-8 w-10 text-center"
+                    />
+                    <span>/</span>
+                    <span>{totalPages}</span>
+                    </div>
+                </PaginationItem>
+                 <PaginationItem>
                      <Button variant="ghost" size="icon" onClick={onNext} disabled={currentPage === totalPages} className="h-8 w-8">
                         <ChevronRight className="h-4 w-4" />
                     </Button>

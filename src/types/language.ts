@@ -89,7 +89,7 @@ export const translations = {
             itemsPerPage: "Showing {start}-{end} of {total} items.",
             previous: "Previous",
             next: "Next",
-            page: "Page",
+            page: "page",
             of: "of",
         },
         settings: {
@@ -216,7 +216,7 @@ export const translations = {
             itemsPerPage: "Menampilkan {start}-{end} dari {total} barang.",
             previous: "Sebelumnya",
             next: "Berikutnya",
-            page: "Halaman",
+            page: "halaman",
             of: "dari",
         },
         settings: {
