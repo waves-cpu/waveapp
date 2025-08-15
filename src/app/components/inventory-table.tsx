@@ -48,6 +48,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
+import { Pagination } from '@/components/ui/pagination';
 
 interface InventoryTableProps {
   onUpdateStock: (itemId: string) => void;
@@ -55,34 +56,38 @@ interface InventoryTableProps {
 
 function InventoryTableSkeleton() {
     return (
-        <Table>
-            <TableHeader>
-                <TableRow>
-                    <TableHead className="w-[40%]"><Skeleton className="h-5 w-24" /></TableHead>
-                    <TableHead><Skeleton className="h-5 w-20" /></TableHead>
-                    <TableHead><Skeleton className="h-5 w-32" /></TableHead>
-                    <TableHead className="text-center"><Skeleton className="h-5 w-16" /></TableHead>
-                </TableRow>
-            </TableHeader>
-            <TableBody>
-                {[...Array(5)].map((_, i) => (
-                    <TableRow key={i}>
-                        <TableCell>
-                            <div className="flex items-center gap-4">
-                                <Skeleton className="h-10 w-10 rounded-sm" />
-                                <div>
-                                    <Skeleton className="h-4 w-40" />
-                                    <Skeleton className="h-3 w-24 mt-2" />
-                                </div>
-                            </div>
-                        </TableCell>
-                        <TableCell><Skeleton className="h-4 w-full" /></TableCell>
-                        <TableCell><Skeleton className="h-4 w-full" /></TableCell>
-                        <TableCell className="text-center"><Skeleton className="h-8 w-8" /></TableCell>
+        <div className="border rounded-lg shadow-sm">
+             <div className="p-4 border-b"><Skeleton className="h-9 w-full" /></div>
+             <Table>
+                <TableHeader>
+                    <TableRow>
+                        <TableHead className="w-[40%]"><Skeleton className="h-5 w-24" /></TableHead>
+                        <TableHead><Skeleton className="h-5 w-20" /></TableHead>
+                        <TableHead><Skeleton className="h-5 w-32" /></TableHead>
+                        <TableHead className="text-center"><Skeleton className="h-5 w-16" /></TableHead>
                     </TableRow>
-                ))}
-            </TableBody>
-        </Table>
+                </TableHeader>
+                <TableBody>
+                    {[...Array(5)].map((_, i) => (
+                        <TableRow key={i}>
+                            <TableCell>
+                                <div className="flex items-center gap-4">
+                                    <Skeleton className="h-10 w-10 rounded-sm" />
+                                    <div>
+                                        <Skeleton className="h-4 w-40" />
+                                        <Skeleton className="h-3 w-24 mt-2" />
+                                    </div>
+                                </div>
+                            </TableCell>
+                            <TableCell><Skeleton className="h-4 w-full" /></TableCell>
+                            <TableCell><Skeleton className="h-4 w-full" /></TableCell>
+                            <TableCell className="text-center"><Skeleton className="h-8 w-8" /></TableCell>
+                        </TableRow>
+                    ))}
+                </TableBody>
+            </Table>
+            <div className="p-4 border-t"><Skeleton className="h-9 w-1/2" /></div>
+        </div>
     )
 }
 
@@ -108,6 +113,8 @@ export function InventoryTable({ onUpdateStock }: InventoryTableProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
   const [stockFilter, setStockFilter] = useState<'all' | 'low' | 'empty'>('all');
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [currentPage, setCurrentPage] = useState(1);
   const { language } = useLanguage();
   const t = translations[language];
   const [isBulkEditDialogOpen, setBulkEditDialogOpen] = useState(false);
@@ -120,7 +127,7 @@ export function InventoryTable({ onUpdateStock }: InventoryTableProps) {
   };
 
   const filteredItems = useMemo(() => {
-    return items
+    const filtered = items
       .filter((item) =>
         categoryFilter ? item.category === categoryFilter : true
       )
@@ -154,7 +161,18 @@ export function InventoryTable({ onUpdateStock }: InventoryTableProps) {
         }
       })
       .filter((item): item is InventoryItem => item !== null);
+    
+      setCurrentPage(1); // Reset to first page on filter change
+      return filtered;
+
   }, [items, categoryFilter, searchTerm, stockFilter]);
+
+  const totalPages = Math.ceil(filteredItems.length / itemsPerPage);
+
+  const paginatedItems = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    return filteredItems.slice(startIndex, startIndex + itemsPerPage);
+  }, [filteredItems, currentPage, itemsPerPage]);
 
   const stockFilterCounts = useMemo(() => {
     const counts = { all: 0, low: 0, empty: 0 };
@@ -198,6 +216,9 @@ export function InventoryTable({ onUpdateStock }: InventoryTableProps) {
     document.body.removeChild(link);
   };
 
+  if (loading) {
+      return <InventoryTableSkeleton />;
+  }
 
   return (
     <>
@@ -241,7 +262,7 @@ export function InventoryTable({ onUpdateStock }: InventoryTableProps) {
                 </Button>
             </div>
         </div>
-        <div className="p-4 flex items-center gap-2 border-b border-dashed">
+        <div className="px-4 py-2 flex items-center gap-2 border-b border-dashed">
             <Button variant={stockFilter === 'all' ? 'secondary' : 'ghost'} size="sm" onClick={() => setStockFilter('all')}>
                 Semua <Badge variant="secondary" className="ml-2">{stockFilterCounts.all}</Badge>
             </Button>
@@ -254,9 +275,6 @@ export function InventoryTable({ onUpdateStock }: InventoryTableProps) {
         </div>
       </div>
       <ScrollArea className="flex-grow">
-        {loading ? (
-            <InventoryTableSkeleton />
-        ) : (
         <Table>
           <TableHeader className="sticky top-0 bg-card">
             <TableRow>
@@ -267,8 +285,8 @@ export function InventoryTable({ onUpdateStock }: InventoryTableProps) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredItems.length > 0 ? (
-              filteredItems.flatMap((item, itemIndex) => {
+            {paginatedItems.length > 0 ? (
+              paginatedItems.flatMap((item, itemIndex) => {
                 const totalStock = item.variants?.reduce((sum, v) => sum + v.stock, 0) ?? item.stock;
 
                 if (item.variants && item.variants.length > 0) {
@@ -423,8 +441,35 @@ export function InventoryTable({ onUpdateStock }: InventoryTableProps) {
             )}
           </TableBody>
         </Table>
-        )}
       </ScrollArea>
+       <div className="flex items-center justify-between p-4 border-t">
+            <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">Rows per page</span>
+                 <Select
+                    value={`${itemsPerPage}`}
+                    onValueChange={(value) => {
+                        setItemsPerPage(Number(value))
+                        setCurrentPage(1)
+                    }}
+                    >
+                    <SelectTrigger className="h-8 w-[70px]">
+                        <SelectValue placeholder={itemsPerPage} />
+                    </SelectTrigger>
+                    <SelectContent side="top">
+                        {[10, 20, 50].map((pageSize) => (
+                        <SelectItem key={pageSize} value={`${pageSize}`}>
+                            {pageSize}
+                        </SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
+            </div>
+            <Pagination
+                totalPages={totalPages}
+                currentPage={currentPage}
+                onPageChange={setCurrentPage}
+            />
+        </div>
     </div>
     {selectedBulkEditItem && (
         <BulkEditVariantsDialog 

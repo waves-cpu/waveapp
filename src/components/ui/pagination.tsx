@@ -11,7 +11,7 @@ import {
 import { cn } from "@/lib/utils"
 import { Button, buttonVariants, type ButtonProps } from "@/components/ui/button"
 
-const Pagination = ({ className, ...props }: React.ComponentProps<"nav">) => (
+const PaginationContainer = ({ className, ...props }: React.ComponentProps<"nav">) => (
   <nav
     role="navigation"
     aria-label="pagination"
@@ -19,7 +19,7 @@ const Pagination = ({ className, ...props }: React.ComponentProps<"nav">) => (
     {...props}
   />
 )
-Pagination.displayName = "Pagination"
+PaginationContainer.displayName = "Pagination"
 
 const PaginationContent = React.forwardRef<
   HTMLUListElement,
@@ -162,10 +162,10 @@ type CustomPaginationProps = {
     className?: string;
 }
 
-const CustomPagination = ({ totalPages, currentPage, onPageChange, siblings = 1, className }: CustomPaginationProps) => {
+const Pagination = ({ totalPages, currentPage, onPageChange, siblings = 1, className }: CustomPaginationProps) => {
     const paginationRange = usePagination({ totalPages, currentPage, siblings });
 
-    if (currentPage === 0 || paginationRange.length < 2) {
+    if (currentPage === 0 || totalPages < 2) {
         return null;
     }
     
@@ -184,7 +184,7 @@ const CustomPagination = ({ totalPages, currentPage, onPageChange, siblings = 1,
     const lastPage = paginationRange[paginationRange.length - 1];
 
     return (
-        <Pagination className={className}>
+        <PaginationContainer className={className}>
             <PaginationContent>
                 <PaginationItem>
                     <Button variant="ghost" size="icon" onClick={onPrevious} disabled={currentPage === 1}>
@@ -216,17 +216,17 @@ const CustomPagination = ({ totalPages, currentPage, onPageChange, siblings = 1,
                     </Button>
                 </PaginationItem>
             </PaginationContent>
-        </Pagination>
+        </PaginationContainer>
     );
 }
 
 export { 
-  Pagination as Root,
+  PaginationContainer as Root,
   PaginationContent, 
   PaginationItem, 
   PaginationLink, 
   PaginationPrevious, 
   PaginationNext, 
   PaginationEllipsis,
-  CustomPagination as Pagination
+  Pagination
 };
