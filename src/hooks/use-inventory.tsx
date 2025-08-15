@@ -1,7 +1,8 @@
 'use client';
 
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
 import type { InventoryItem, AdjustmentHistory, InventoryItemVariant } from '@/types';
+import { db } from '@/lib/db';
 
 interface InventoryContextType {
   items: InventoryItem[];
@@ -16,264 +17,293 @@ interface InventoryContextType {
 
 const InventoryContext = createContext<InventoryContextType | undefined>(undefined);
 
-const initialItems: InventoryItem[] = [
-  { 
-    id: '1', 
-    name: 'Organic Green Tea', 
-    category: 'Beverages', 
-    sku: 'TEA-GRN-ORG',
-    imageUrl: 'https://placehold.co/40x40.png',
-    variants: [
-      { id: '1-1', name: '250g Box', sku: 'TEA-GRN-ORG-250', stock: 150, price: 25000, history: [{ date: new Date(), change: 150, reason: 'Initial Stock', newStockLevel: 150 }] },
-      { id: '1-2', name: '500g Pouch', sku: 'TEA-GRN-ORG-500', stock: 80, price: 45000, history: [{ date: new Date(), change: 80, reason: 'Initial Stock', newStockLevel: 80 }] },
-    ]
-  },
-  { 
-    id: '2', 
-    name: 'Whole Wheat Bread', 
-    category: 'Bakery',
-    sku: 'BAK-BRD-WW',
-    imageUrl: 'https://placehold.co/40x40.png',
-    variants: [
-        { id: '2-1', name: '500g Loaf', sku: 'BAK-BRD-WW-500', stock: 75, price: 15000, history: [{ date: new Date(), change: 75, reason: 'Initial Stock', newStockLevel: 75 }] }
-    ]
-  },
-  { 
-    id: '3', 
-    name: 'Almond Milk', 
-    category: 'Dairy & Alternatives',
-    sku: 'DRY-AMILK',
-    imageUrl: 'https://placehold.co/40x40.png',
-    variants: [
-        { id: '3-1', name: '1L Carton', sku: 'DRY-AMILK-1L', stock: 120, price: 20000, history: [{ date: new Date(), change: 120, reason: 'Initial Stock', newStockLevel: 120 }] }
-    ]
-  },
-  { 
-    id: '4', 
-    name: 'Avocados', 
-    category: 'Produce', 
-    stock: 200, 
-    price: 10000, 
-    size: 'Per piece', 
-    history: [{ date: new Date(), change: 200, reason: 'Initial Stock', newStockLevel: 200 }],
-    imageUrl: 'https://placehold.co/40x40.png'
-  },
-  { 
-    id: '5', 
-    name: 'Quinoa', 
-    category: 'Grains', 
-    stock: 100, 
-    price: 80000, 
-    size: '1kg', 
-    history: [{ date: new Date(), change: 100, reason: 'Initial Stock', newStockLevel: 100 }],
-    imageUrl: 'https://placehold.co/40x40.png'
-  },
-  { 
-    id: '6', 
-    name: 'Dark Chocolate Bar', 
-    category: 'Snacks', 
-    stock: 80, 
-    price: 18000, 
-    size: '100g', 
-    history: [{ date: new Date(), change: 80, reason: 'Initial Stock', newStockLevel: 80 }],
-    imageUrl: 'https://placehold.co/40x40.png'
-  },
-];
-
-
 export const InventoryProvider = ({ children }: { children: ReactNode }) => {
-  const [items, setItems] = useState<InventoryItem[]>(initialItems);
+  const [items, setItems] = useState<InventoryItem[]>([]);
+  const [categories, setCategories] = useState<string[]>([]);
 
-  const addItem = (itemData: any) => {
-    const parentId = new Date().getTime().toString();
-    
-    const newItem: InventoryItem = {
-      id: parentId,
-      name: itemData.name,
-      category: itemData.category,
-      sku: itemData.sku,
-      imageUrl: itemData.imageUrl || 'https://placehold.co/40x40.png',
-    };
+  const fetchItems = useCallback(() => {
+    const fetchedItems = db.prepare('SELECT * FROM products').all();
+    const fetchedVariants = db.prepare('SELECT * FROM variants').all();
+    const fetchedHistory = db.prepare('SELECT * FROM history ORDER BY date DESC').all();
 
-    if (itemData.hasVariants && itemData.variants) {
-        newItem.variants = itemData.variants.map((variant: any, index: number) => ({
-            id: `${parentId}-${index}`,
-            name: variant.name,
-            sku: variant.sku,
-            price: variant.price,
-            stock: variant.stock,
-            history: [{
-                date: new Date(),
-                change: variant.stock,
-                reason: 'Initial Stock',
-                newStockLevel: variant.stock
-            }]
-        }));
-    } else {
-        newItem.stock = itemData.stock;
-        newItem.price = itemData.price;
-        newItem.size = itemData.size;
-        newItem.history = [{
-            date: new Date(),
-            change: itemData.stock,
-            reason: 'Initial Stock',
-            newStockLevel: itemData.stock
-        }];
+    const historyMap = new Map<string, AdjustmentHistory[]>();
+    for (const entry of fetchedHistory as any[]) {
+        const key = entry.variantId || entry.productId;
+        if (!historyMap.has(key)) {
+            historyMap.set(key, []);
+        }
+        historyMap.get(key)!.push({
+            ...entry,
+            date: new Date(entry.date)
+        });
     }
 
-    setItems(prevItems => [...prevItems, newItem]);
+    const variantMap = new Map<string, InventoryItemVariant[]>();
+    for (const variant of fetchedVariants as any[]) {
+        if (!variantMap.has(variant.productId)) {
+            variantMap.set(variant.productId, []);
+        }
+        variantMap.get(variant.productId)!.push({
+            ...variant,
+            history: historyMap.get(variant.id) || []
+        });
+    }
+
+    const fullItems = (fetchedItems as any[]).map(item => {
+        if (item.hasVariants) {
+            return {
+                ...item,
+                variants: variantMap.get(item.id) || [],
+                imageUrl: item.imageUrl
+            };
+        }
+        return {
+            ...item,
+            history: historyMap.get(item.id) || [],
+            imageUrl: item.imageUrl
+        };
+    });
+
+    setItems(fullItems);
+    const uniqueCategories = [...new Set(fullItems.map(item => item.category))].sort();
+    setCategories(uniqueCategories);
+  }, []);
+
+  useEffect(() => {
+    fetchItems();
+  }, [fetchItems]);
+
+
+  const addItem = (itemData: any) => {
+    const addProductStmt = db.prepare(`
+        INSERT INTO products (name, category, sku, imageUrl, hasVariants, stock, price, size)
+        VALUES (@name, @category, @sku, @imageUrl, @hasVariants, @stock, @price, @size)
+    `);
+    
+    const addVariantStmt = db.prepare(`
+        INSERT INTO variants (productId, name, sku, price, stock)
+        VALUES (@productId, @name, @sku, @price, @stock)
+    `);
+
+    const addHistoryStmt = db.prepare(`
+        INSERT INTO history (productId, variantId, change, reason, newStockLevel, date)
+        VALUES (@productId, @variantId, @change, @reason, @newStockLevel, @date)
+    `);
+
+    const hasVariants = !!(itemData.hasVariants && itemData.variants && itemData.variants.length > 0);
+
+    const productResult = addProductStmt.run({
+        name: itemData.name,
+        category: itemData.category,
+        sku: itemData.sku || null,
+        imageUrl: itemData.imageUrl || 'https://placehold.co/40x40.png',
+        hasVariants: hasVariants ? 1 : 0,
+        stock: hasVariants ? null : itemData.stock,
+        price: hasVariants ? null : itemData.price,
+        size: hasVariants ? null : itemData.size,
+    });
+    
+    const productId = productResult.lastInsertRowid as number;
+
+    if (hasVariants) {
+        itemData.variants.forEach((variant: any) => {
+            const variantResult = addVariantStmt.run({
+                productId: productId,
+                name: variant.name,
+                sku: variant.sku || null,
+                price: variant.price,
+                stock: variant.stock,
+            });
+            const variantId = variantResult.lastInsertRowid;
+            addHistoryStmt.run({
+                productId: productId,
+                variantId: variantId,
+                change: variant.stock,
+                reason: 'Initial Stock',
+                newStockLevel: variant.stock,
+                date: new Date().toISOString()
+            });
+        });
+    } else {
+        addHistoryStmt.run({
+            productId: productId,
+            variantId: null,
+            change: itemData.stock,
+            reason: 'Initial Stock',
+            newStockLevel: itemData.stock,
+            date: new Date().toISOString()
+        });
+    }
+    
+    fetchItems();
   };
 
   const updateItem = (itemId: string, itemData: any) => {
-    setItems(prevItems => prevItems.map(item => {
-        if (item.id === itemId) {
-            const updatedItem = {
-                ...item,
-                ...itemData,
-                id: item.id // Ensure ID is not overwritten
-            };
+    const updateProductStmt = db.prepare(`
+        UPDATE products SET name = @name, category = @category, sku = @sku, imageUrl = @imageUrl, hasVariants = @hasVariants, stock = @stock, price = @price, size = @size
+        WHERE id = @id
+    `);
 
-            if (itemData.hasVariants && itemData.variants) {
-                updatedItem.variants = itemData.variants.map((variant: any, index: number) => {
-                    const existingVariant = item.variants?.find(v => v.id === variant.id);
-                    if (existingVariant) {
-                        const stockChange = variant.stock - existingVariant.stock;
-                        let newHistory = existingVariant.history;
-                        if (stockChange !== 0) {
-                            newHistory = [{
-                                date: new Date(),
-                                change: stockChange,
-                                reason: 'Stock adjustment during edit',
-                                newStockLevel: variant.stock
-                            }, ...existingVariant.history];
-                        }
-                        return { ...existingVariant, ...variant, history: newHistory };
+    const hasVariants = !!(itemData.hasVariants && itemData.variants && itemData.variants.length > 0);
+
+    // This is a transaction to ensure all or nothing
+    db.transaction(() => {
+        updateProductStmt.run({
+            id: itemId,
+            name: itemData.name,
+            category: itemData.category,
+            sku: itemData.sku || null,
+            imageUrl: itemData.imageUrl || 'https://placehold.co/40x40.png',
+            hasVariants: hasVariants ? 1 : 0,
+            stock: hasVariants ? null : itemData.stock,
+            price: hasVariants ? null : itemData.price,
+            size: hasVariants ? null : itemData.size,
+        });
+
+        if (hasVariants) {
+            // Logic for variant updates (add, update, delete)
+            const upsertVariantStmt = db.prepare(`
+                INSERT INTO variants (id, productId, name, sku, price, stock)
+                VALUES (@id, @productId, @name, @sku, @price, @stock)
+                ON CONFLICT(id) DO UPDATE SET name = excluded.name, sku = excluded.sku, price = excluded.price, stock = excluded.stock
+            `);
+             const addHistoryStmt = db.prepare(`
+                INSERT INTO history (productId, variantId, change, reason, newStockLevel, date)
+                VALUES (@productId, @variantId, @change, @reason, @newStockLevel, @date)
+            `);
+            const getVariantStockStmt = db.prepare('SELECT stock FROM variants WHERE id = ?');
+
+            itemData.variants.forEach((variant: any) => {
+                let stockChange = variant.stock;
+                let reason = 'Initial Stock';
+
+                if (variant.id) { // Existing variant
+                    const existingVariant = getVariantStockStmt.get(variant.id) as { stock: number } | undefined;
+                    if(existingVariant) {
+                       stockChange = variant.stock - existingVariant.stock;
+                       reason = 'Stock adjustment during edit';
                     }
-                    // New variant added during edit
-                    return {
-                        id: `${item.id}-${index}-${new Date().getTime()}`,
-                        ...variant,
-                        history: [{ date: new Date(), change: variant.stock, reason: 'Initial Stock', newStockLevel: variant.stock }]
-                    }
+                }
+
+                const result = upsertVariantStmt.run({
+                    id: variant.id || null,
+                    productId: itemId,
+                    name: variant.name,
+                    sku: variant.sku || null,
+                    price: variant.price,
+                    stock: variant.stock
                 });
-                delete updatedItem.stock;
-                delete updatedItem.price;
-                delete updatedItem.size;
-                delete updatedItem.history;
-            } else {
-                 const stockChange = itemData.stock - (item.stock || 0);
-                 let newHistory = item.history || [];
-                 if (stockChange !== 0) {
-                     newHistory = [{
-                         date: new Date(),
-                         change: stockChange,
-                         reason: 'Stock adjustment during edit',
-                         newStockLevel: itemData.stock
-                     }, ...newHistory];
-                 }
-                updatedItem.stock = itemData.stock;
-                updatedItem.price = itemData.price;
-                updatedItem.size = itemData.size;
-                updatedItem.history = newHistory;
-                delete updatedItem.variants;
+                
+                const variantId = variant.id || result.lastInsertRowid;
+
+                if (stockChange !== 0) {
+                     addHistoryStmt.run({
+                        productId: itemId,
+                        variantId: variantId,
+                        change: stockChange,
+                        reason: reason,
+                        newStockLevel: variant.stock,
+                        date: new Date().toISOString()
+                    });
+                }
+            });
+            // TODO: Handle deleted variants
+        } else {
+            // Logic for simple item update
+            const getProductStockStmt = db.prepare('SELECT stock FROM products WHERE id = ?');
+            const addHistoryStmt = db.prepare(`
+                INSERT INTO history (productId, variantId, change, reason, newStockLevel, date)
+                VALUES (@productId, @variantId, @change, @reason, @newStockLevel, @date)
+            `);
+
+            const existingProduct = getProductStockStmt.get(itemId) as {stock: number} | undefined;
+            const stockChange = itemData.stock - (existingProduct?.stock || 0);
+
+            if (stockChange !== 0) {
+                 addHistoryStmt.run({
+                    productId: itemId,
+                    variantId: null,
+                    change: stockChange,
+                    reason: 'Stock adjustment during edit',
+                    newStockLevel: itemData.stock,
+                    date: new Date().toISOString()
+                });
             }
-            return updatedItem;
         }
-        return item;
-    }));
+    })();
+    
+    fetchItems();
   };
 
   const bulkUpdateVariants = (itemId: string, variants: InventoryItemVariant[]) => {
-    setItems(prevItems =>
-      prevItems.map(item => {
-        if (item.id === itemId) {
-          const newVariants = variants.map(updatedVariant => {
-            const originalVariant = item.variants?.find(v => v.id === updatedVariant.id);
-            if (originalVariant) {
-              const stockChange = updatedVariant.stock - originalVariant.stock;
-              let newHistory = originalVariant.history;
-              if (stockChange !== 0) {
-                newHistory = [{
-                  date: new Date(),
-                  change: stockChange,
-                  reason: 'Bulk Update',
-                  newStockLevel: updatedVariant.stock,
-                }, ...originalVariant.history];
-              }
-              return { ...updatedVariant, history: newHistory };
+     db.transaction(() => {
+        const updateVariantStmt = db.prepare('UPDATE variants SET name = @name, sku = @sku, price = @price, stock = @stock WHERE id = @id');
+        const getVariantStockStmt = db.prepare('SELECT stock FROM variants WHERE id = ?');
+        const addHistoryStmt = db.prepare(`
+            INSERT INTO history (productId, variantId, change, reason, newStockLevel, date)
+            VALUES (@productId, @variantId, @change, @reason, @newStockLevel, @date)
+        `);
+
+        variants.forEach(variant => {
+            const originalVariant = getVariantStockStmt.get(variant.id) as { stock: number };
+            const stockChange = variant.stock - originalVariant.stock;
+
+            if (stockChange !== 0) {
+                 addHistoryStmt.run({
+                    productId: itemId,
+                    variantId: variant.id,
+                    change: stockChange,
+                    reason: 'Bulk Update',
+                    newStockLevel: variant.stock,
+                    date: new Date().toISOString()
+                });
             }
-            // This case handles a variant that was somehow newly added in the bulk edit form.
-            return { 
-                ...updatedVariant,
-                history: [{ date: new Date(), change: updatedVariant.stock, reason: 'Initial Stock (Bulk Add)', newStockLevel: updatedVariant.stock }]
-            };
-          });
-          return { ...item, variants: newVariants };
-        }
-        return item;
-      })
-    );
+
+            updateVariantStmt.run({
+                id: variant.id,
+                name: variant.name,
+                sku: variant.sku,
+                price: variant.price,
+                stock: variant.stock,
+            });
+        });
+    })();
+    fetchItems();
   };
 
   const updateStock = (itemId: string, change: number, reason: string) => {
-    setItems(prevItems =>
-      prevItems.map(item => {
-        // Check if it's a simple item
-        if (item.id === itemId && item.stock !== undefined) {
-          const newStockLevel = item.stock + change;
-          const newHistory: AdjustmentHistory = {
-            date: new Date(),
-            change,
-            reason,
-            newStockLevel,
-          };
-          return {
-            ...item,
-            stock: newStockLevel,
-            history: [newHistory, ...(item.history || [])],
-          };
+    db.transaction(() => {
+        const item = items.find(i => i.id === itemId);
+        const variant = items.flatMap(i => i.variants || []).find(v => v.id === itemId);
+
+        if (variant) {
+            const newStockLevel = variant.stock + change;
+            db.prepare('UPDATE variants SET stock = ? WHERE id = ?').run(newStockLevel, itemId);
+            db.prepare(`
+                INSERT INTO history (productId, variantId, change, reason, newStockLevel, date)
+                VALUES (?, ?, ?, ?, ?, ?)
+            `).run(variant.productId, itemId, change, reason, newStockLevel, new Date().toISOString());
+
+        } else if (item) { // This must be a simple product
+            const newStockLevel = (item.stock || 0) + change;
+            db.prepare('UPDATE products SET stock = ? WHERE id = ?').run(newStockLevel, itemId);
+            db.prepare(`
+                INSERT INTO history (productId, variantId, change, reason, newStockLevel, date)
+                VALUES (?, ?, ?, ?, ?, ?)
+            `).run(itemId, null, change, reason, newStockLevel, new Date().toISOString());
         }
-        // Check if it's a variant
-        if (item.variants) {
-          return {
-            ...item,
-            variants: item.variants.map(variant => {
-              if (variant.id === itemId) {
-                const newStockLevel = variant.stock + change;
-                const newHistory: AdjustmentHistory = {
-                  date: new Date(),
-                  change,
-                  reason,
-                  newStockLevel,
-                };
-                return {
-                  ...variant,
-                  stock: newStockLevel,
-                  history: [newHistory, ...variant.history],
-                };
-              }
-              return variant;
-            })
-          };
-        }
-        return item;
-      })
-    );
+    })();
+    fetchItems();
   };
   
   const getHistory = (itemId: string): AdjustmentHistory[] => {
-    for (const item of items) {
-      if (item.id === itemId) {
-        return item.history || [];
-      }
-      if (item.variants) {
-        const variant = item.variants.find(v => v.id === itemId);
-        if (variant) {
-          return variant.history;
-        }
-      }
+    const simpleItemHistory = db.prepare('SELECT * FROM history WHERE productId = ? AND variantId IS NULL ORDER BY date DESC').all(itemId) as any[];
+    if (simpleItemHistory.length > 0) {
+        return simpleItemHistory.map(h => ({...h, date: new Date(h.date)}));
     }
-    return [];
+
+    const variantHistory = db.prepare('SELECT * FROM history WHERE variantId = ? ORDER BY date DESC').all(itemId) as any[];
+    return variantHistory.map(h => ({...h, date: new Date(h.date)}));
   };
 
   const getItem = (itemId: string): InventoryItem | InventoryItemVariant | undefined => {
@@ -291,8 +321,6 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
     }
     return undefined;
   };
-  
-  const categories = [...new Set(items.map(item => item.category))].sort();
 
   return (
     <InventoryContext.Provider value={{ items, addItem, updateItem, bulkUpdateVariants, updateStock, getHistory, getItem, categories }}>
