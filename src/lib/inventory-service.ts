@@ -322,7 +322,7 @@ export async function findProductBySku(sku: string): Promise<InventoryItem | nul
 }
 
 
-export async function performSale(sku: string, channel: string, quantity: number) {
+export async function performSale(sku: string, channel: string, quantity: number, saleDate?: Date) {
     const getProductStmt = db.prepare('SELECT id, price, stock FROM products WHERE sku = ? AND hasVariants = 0');
     const getVariantStmt = db.prepare('SELECT id, price, stock, productId FROM variants WHERE sku = ?');
     
@@ -334,7 +334,7 @@ export async function performSale(sku: string, channel: string, quantity: number
             }
             adjustStock(variant.id.toString(), -quantity, `Sale (${channel})`);
             db.prepare('INSERT INTO sales (productId, variantId, channel, quantity, priceAtSale, saleDate) VALUES (?, ?, ?, ?, ?, ?)')
-              .run(variant.productId, variant.id, channel, quantity, variant.price, new Date().toISOString());
+              .run(variant.productId, variant.id, channel, quantity, variant.price, (saleDate || new Date()).toISOString());
         } else {
             const product = getProductStmt.get(sku) as { id: number, price: number, stock: number } | undefined;
             if (product) {
@@ -343,7 +343,7 @@ export async function performSale(sku: string, channel: string, quantity: number
                 }
                 adjustStock(product.id.toString(), -quantity, `Sale (${channel})`);
                 db.prepare('INSERT INTO sales (productId, variantId, channel, quantity, priceAtSale, saleDate) VALUES (?, ?, ?, ?, ?, ?)')
-                  .run(product.id, null, channel, quantity, product.price, new Date().toISOString());
+                  .run(product.id, null, channel, quantity, product.price, (saleDate || new Date()).toISOString());
             } else {
                 throw new Error('Product or variant with specified SKU not found or has variants.');
             }

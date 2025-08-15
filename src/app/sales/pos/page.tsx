@@ -5,54 +5,134 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-import { Calendar as CalendarIcon, ScanLine, Trash2, ShoppingCart, XCircle, PlusCircle } from 'lucide-react';
+import { Calendar as CalendarIcon, ScanLine, History, ShoppingBag, Store } from 'lucide-react';
 import { format } from 'date-fns';
 import { useInventory } from '@/hooks/use-inventory';
 import { useLanguage } from '@/hooks/use-language';
 import { translations } from '@/types/language';
 import { cn } from '@/lib/utils';
-import type { Sale, InventoryItem, InventoryItemVariant } from '@/types';
+import type { InventoryItem, InventoryItemVariant } from '@/types';
 import { useToast } from '@/hooks/use-toast';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
 import { VariantSelectionDialog } from '@/app/components/variant-selection-dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { PosOrderSummary, type PosCartItem } from '@/app/components/pos-order-summary';
-import { Logo } from '@/app/components/logo';
+import Link from 'next/link';
+import { useDebounce } from '@/hooks/use-debounce';
+import Image from 'next/image';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Search } from 'lucide-react';
+
+const PosProductGrid = ({ onAddToCart }: { onAddToCart: (sku: string) => void }) => {
+    const { items, loading } = useInventory();
+    const [searchTerm, setSearchTerm] = useState('');
+    const debouncedSearchTerm = useDebounce(searchTerm, 300);
+
+    const availableItems = React.useMemo(() => {
+        if (!debouncedSearchTerm) {
+            return items.filter(item => item.variants ? item.variants.some(v => v.stock > 0) : (item.stock ?? 0) > 0);
+        }
+
+        const lowerCaseSearch = debouncedSearchTerm.toLowerCase();
+        
+        return items.map(item => {
+            const matchesName = item.name.toLowerCase().includes(lowerCaseSearch);
+            const matchesSku = item.sku?.toLowerCase().includes(lowerCaseSearch);
+            
+            if (item.variants && item.variants.length > 0) {
+                const matchingVariants = item.variants.filter(v => 
+                    (v.name.toLowerCase().includes(lowerCaseSearch) || v.sku?.toLowerCase().includes(lowerCaseSearch)) && v.stock > 0
+                );
+                
+                if (matchingVariants.length > 0) {
+                    return { ...item, variants: matchingVariants };
+                }
+                 if (matchesName || matchesSku) {
+                    const availableVariants = item.variants.filter(v => v.stock > 0);
+                    if (availableVariants.length > 0) {
+                        return { ...item, variants: availableVariants };
+                    }
+                }
+            } else if ((matchesName || matchesSku) && (item.stock ?? 0) > 0) {
+                return item;
+            }
+            return null;
+        }).filter((item): item is InventoryItem => item !== null);
+
+    }, [items, debouncedSearchTerm]);
+
+
+    if (loading) {
+        return (
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                {Array.from({ length: 10 }).map((_, i) => (
+                    <Skeleton key={i} className="h-36 w-full" />
+                ))}
+            </div>
+        );
+    }
+    
+    return (
+        <div className="flex flex-col h-full">
+             <div className="relative mb-4">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                    placeholder="Cari produk atau SKU..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10 w-full"
+                />
+            </div>
+            <ScrollArea className="flex-grow">
+                {availableItems.length > 0 ? (
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 pr-4">
+                        {availableItems.flatMap(item => 
+                            item.variants && item.variants.length > 0
+                            ? item.variants.map(variant => (
+                                <button key={variant.id} onClick={() => onAddToCart(variant.sku || '')} className="border bg-card rounded-lg p-2 text-left hover:bg-accent transition-colors disabled:opacity-50" disabled={!variant.sku}>
+                                    <div className="aspect-square bg-muted rounded-md flex items-center justify-center mb-2">
+                                        <Image src={item.imageUrl || 'https://placehold.co/150x150.png'} alt={item.name} width={150} height={150} className="rounded-md object-cover h-full w-full" data-ai-hint="product image"/>
+                                    </div>
+                                    <p className="font-semibold text-sm truncate" title={`${item.name} - ${variant.name}`}>{item.name} - {variant.name}</p>
+                                    <p className="text-xs text-muted-foreground">Stok: {variant.stock}</p>
+                                    <p className="font-bold text-primary">{`Rp${variant.price.toLocaleString('id-ID')}`}</p>
+                                </button>
+                            ))
+                            : (
+                                <button key={item.id} onClick={() => onAddToCart(item.sku || '')} className="border bg-card rounded-lg p-2 text-left hover:bg-accent transition-colors disabled:opacity-50" disabled={!item.sku}>
+                                     <div className="aspect-square bg-muted rounded-md flex items-center justify-center mb-2">
+                                        <Image src={item.imageUrl || 'https://placehold.co/150x150.png'} alt={item.name} width={150} height={150} className="rounded-md object-cover h-full w-full" data-ai-hint="product image"/>
+                                    </div>
+                                    <p className="font-semibold text-sm truncate" title={item.name}>{item.name}</p>
+                                    <p className="text-xs text-muted-foreground">Stok: {item.stock}</p>
+                                    <p className="font-bold text-primary">{`Rp${(item.price ?? 0).toLocaleString('id-ID')}`}</p>
+                                </button>
+                            )
+                        )}
+                    </div>
+                ) : (
+                     <div className="flex-grow flex flex-col items-center justify-center text-muted-foreground p-6 h-full">
+                        <ShoppingBag className="h-16 w-16 mb-4" />
+                        <p className="font-semibold">Produk Tidak Ditemukan</p>
+                        <p className="text-sm text-center">Coba kata kunci lain atau periksa stok produk.</p>
+                    </div>
+                )}
+            </ScrollArea>
+        </div>
+    );
+};
 
 
 export default function PosSalesPage() {
   const { language } = useLanguage();
   const t = translations[language];
-  const { fetchSales, recordSale, cancelSale, getProductBySku, items } = useInventory();
+  const { fetchSales, recordSale, getProductBySku, items } = useInventory();
   const { toast } = useToast();
 
-  const [date, setDate] = useState<Date | undefined>(undefined);
-  const [sales, setSales] = useState<Sale[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [sku, setSku] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const skuInputRef = useRef<HTMLInputElement>(null);
 
@@ -61,44 +141,16 @@ export default function PosSalesPage() {
   
   const [cart, setCart] = useState<PosCartItem[]>([]);
 
-  const loadSales = useCallback(async (selectedDate: Date) => {
-    setLoading(true);
-    try {
-      const salesData = await fetchSales('pos', selectedDate);
-      setSales(salesData);
-    } catch (error) {
-      console.error('Failed to fetch sales:', error);
-      toast({
-        variant: 'destructive',
-        title: 'Gagal Memuat Penjualan',
-        description: 'Terjadi kesalahan saat mengambil data penjualan.',
-      });
-    } finally {
-      setLoading(false);
-    }
-  }, [fetchSales, toast]);
-
-  useEffect(() => {
-    // Set initial date on client to avoid hydration mismatch
-    setDate(new Date());
-  }, []);
-
-  useEffect(() => {
-    if (date) {
-      loadSales(date);
-    }
-  }, [date, loadSales]);
-  
   useEffect(() => {
     // Focus the SKU input on page load
     skuInputRef.current?.focus();
   }, []);
 
-  const findItemBySku = (skuToFind: string): InventoryItemVariant | (InventoryItem & { isVariant: false }) | null => {
+  const findItemBySku = (skuToFind: string): (InventoryItemVariant & { parentName: string, parentImageUrl?: string }) | (InventoryItem & { isVariant: false }) | null => {
      for (const item of items) {
         if (item.variants && item.variants.length > 0) {
             const foundVariant = item.variants.find(v => v.sku === skuToFind);
-            if (foundVariant) return { ...foundVariant, parentName: item.name };
+            if (foundVariant) return { ...foundVariant, parentName: item.name, parentImageUrl: item.imageUrl };
         } else {
             if (item.sku === skuToFind) return { ...item, isVariant: false };
         }
@@ -107,6 +159,14 @@ export default function PosSalesPage() {
   }
 
   const handleAddToCart = useCallback((saleSku: string) => {
+    if (!saleSku) {
+        toast({
+            variant: 'destructive',
+            title: 'SKU Tidak Valid',
+            description: `Produk yang dipilih tidak memiliki SKU.`,
+        });
+        return;
+    }
     const existingCartItemIndex = cart.findIndex(item => item.sku === saleSku);
     const itemDetails = findItemBySku(saleSku);
 
@@ -137,8 +197,8 @@ export default function PosSalesPage() {
         // Add new item to cart
         const newCartItem: PosCartItem = {
             id: itemDetails.id.toString(),
-            name: 'isVariant' in itemDetails ? itemDetails.parentName! : itemDetails.name,
-            variantName: 'isVariant' in itemDetails ? itemDetails.name : undefined,
+            name: 'parentName' in itemDetails ? itemDetails.parentName! : itemDetails.name,
+            variantName: 'parentName' in itemDetails ? itemDetails.name : undefined,
             sku: saleSku,
             price: itemDetails.price!,
             quantity: 1,
@@ -148,32 +208,31 @@ export default function PosSalesPage() {
     }
      toast({
         title: 'Item Ditambahkan',
-        description: `${itemDetails.name} ditambahkan ke keranjang.`,
+        description: `${'parentName' in itemDetails ? itemDetails.parentName : itemDetails.name}${ 'parentName' in itemDetails ? ` (${itemDetails.name})` : ''} ditambahkan ke keranjang.`,
     });
   }, [cart, items, toast]);
 
 
-  const handleSkuSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (!sku || isSubmitting) return;
+  const handleSkuSubmit = async (skuValue: string) => {
+    if (!skuValue || isSubmitting) return;
 
     setIsSubmitting(true);
     try {
-      const product = await getProductBySku(sku);
+      const product = await getProductBySku(skuValue);
 
       if (!product) {
         toast({
             variant: 'destructive',
             title: 'SKU Tidak Ditemukan',
-            description: `Produk dengan SKU "${sku}" tidak ditemukan.`,
+            description: `Produk dengan SKU "${skuValue}" tidak ditemukan.`,
         });
         return;
       }
       
       if (product.variants && product.variants.length > 0) {
-        if (product.variants.length === 1 && product.variants[0].sku === sku) {
+        if (product.variants.length === 1 && product.variants[0].sku === skuValue) {
              // It was a variant SKU that was entered directly
-            handleAddToCart(sku);
+            handleAddToCart(skuValue);
         } else {
             // Parent SKU entered, open variant selection dialog
             setProductForVariantSelection(product);
@@ -181,7 +240,7 @@ export default function PosSalesPage() {
         }
       } else {
         // Simple product SKU entered, add to cart
-        handleAddToCart(sku);
+        handleAddToCart(skuValue);
       }
     } catch (error) {
       console.error('Failed to process SKU:', error);
@@ -192,7 +251,6 @@ export default function PosSalesPage() {
       });
     } finally {
       setIsSubmitting(false);
-      setSku('');
     }
   };
 
@@ -205,38 +263,18 @@ export default function PosSalesPage() {
     skuInputRef.current?.focus();
   };
   
-  const handleCancelSale = async (saleId: string) => {
-    if (!date) return;
-    try {
-        await cancelSale(saleId);
-        toast({
-            title: 'Penjualan Dibatalkan',
-            description: 'Penjualan telah berhasil dibatalkan dan stok dikembalikan.',
-        });
-        loadSales(date);
-    } catch (error) {
-        console.error('Failed to cancel sale:', error);
-        toast({
-            variant: 'destructive',
-            title: 'Gagal Membatalkan',
-            description: 'Terjadi kesalahan saat membatalkan penjualan.',
-        });
-    }
-  };
-
   const handleCheckout = async () => {
-    if (!date) return;
     setIsSubmitting(true);
     try {
+        const saleDate = new Date();
         for (const item of cart) {
-            await recordSale(item.sku, 'pos', item.quantity);
+            await recordSale(item.sku, 'pos', item.quantity, saleDate);
         }
         toast({
             title: 'Transaksi Berhasil',
             description: `${cart.length} jenis item berhasil terjual.`
         });
         setCart([]);
-        loadSales(date);
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Terjadi kesalahan.';
         toast({
@@ -253,132 +291,29 @@ export default function PosSalesPage() {
   return (
     <>
       <main className="flex flex-col h-screen bg-muted/40">
-        <header className="flex items-center justify-between p-4 border-b bg-background">
-          <Logo />
-          <Popover>
-            <PopoverTrigger asChild>
-                <Button
-                id="date"
-                variant={'outline'}
-                className={cn(
-                    'w-[240px] justify-start text-left font-normal',
-                    !date && 'text-muted-foreground'
-                )}
-                >
-                <CalendarIcon className="mr-2 h-4 w-4" />
-                {date ? format(date, 'PP') : <span>{t.stockHistory.dateRange}</span>}
-                </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="end">
-                <Calendar
-                mode="single"
-                selected={date}
-                onSelect={(newDate) => setDate(newDate || new Date())}
-                initialFocus
-                />
-            </PopoverContent>
-          </Popover>
+        <header className="flex items-center justify-between p-4 border-b bg-background shrink-0">
+          <h1 className="text-xl font-bold font-headline text-primary">POS</h1>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="icon" asChild>
+              <Link href="/sales/pos/history">
+                  <History className="h-4 w-4" />
+                  <span className="sr-only">Riwayat Penjualan POS</span>
+              </Link>
+            </Button>
+          </div>
         </header>
 
         <div className="flex-1 grid grid-cols-1 lg:grid-cols-3 gap-8 p-4 lg:p-8 overflow-hidden">
-              <div className="lg:col-span-2 flex flex-col gap-8 h-full">
-                  <div className="bg-card rounded-lg border shadow-sm flex flex-col h-full">
-                      <div className="p-4 border-b">
-                          <form onSubmit={handleSkuSubmit} className="flex-grow">
-                              <div className="relative">
-                                  <ScanLine className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                  <Input
-                                      ref={skuInputRef}
-                                      placeholder="Scan atau masukkan SKU..."
-                                      value={sku}
-                                      onChange={(e) => setSku(e.target.value)}
-                                      className="pl-10 w-full"
-                                      disabled={isSubmitting || isVariantDialogOpen}
-                                  />
-                              </div>
-                          </form>
-                      </div>
-                      <div className="flex-grow overflow-auto">
-                        <h2 className="p-4 text-lg font-semibold">Riwayat Penjualan Hari Ini</h2>
-                        <Table>
-                            <TableHeader className="sticky top-0 bg-card">
-                            <TableRow>
-                                <TableHead className="w-[40%]">{t.inventoryTable.name}</TableHead>
-                                <TableHead>SKU</TableHead>
-                                <TableHead>{t.inventoryTable.size}</TableHead>
-                                <TableHead>Harga</TableHead>
-                                <TableHead className="text-center">{t.inventoryTable.actions}</TableHead>
-                            </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                            {loading ? (
-                                Array.from({ length: 5 }).map((_, i) => (
-                                    <TableRow key={i}>
-                                        <TableCell><Skeleton className="h-4 w-[250px]" /></TableCell>
-                                        <TableCell><Skeleton className="h-4 w-[120px]" /></TableCell>
-                                        <TableCell><Skeleton className="h-4 w-[80px]" /></TableCell>
-                                        <TableCell><Skeleton className="h-4 w-[100px]" /></TableCell>
-                                        <TableCell className="text-center">
-                                            <Skeleton className="h-8 w-8 rounded-md" />
-                                        </TableCell>
-                                    </TableRow>
-                                ))
-                            ) : sales.length > 0 ? (
-                                sales.map((sale) => (
-                                <TableRow key={sale.id}>
-                                    <TableCell>{sale.productName}</TableCell>
-                                    <TableCell>{sale.sku}</TableCell>
-                                    <TableCell>{sale.variantName || '-'}</TableCell>
-                                    <TableCell>{`Rp${Math.round(sale.priceAtSale).toLocaleString('id-ID')}`}</TableCell>
-                                    <TableCell className="text-center">
-                                    <AlertDialog>
-                                        <AlertDialogTrigger asChild>
-                                            <Button variant="ghost" size="icon" className="text-destructive">
-                                                <Trash2 className="h-4 w-4" />
-                                            </Button>
-                                        </AlertDialogTrigger>
-                                        <AlertDialogContent>
-                                            <AlertDialogHeader>
-                                            <AlertDialogTitle>Anda yakin?</AlertDialogTitle>
-                                            <AlertDialogDescription>
-                                                Tindakan ini akan membatalkan penjualan dan mengembalikan stok. Tindakan ini tidak dapat diurungkan.
-                                            </AlertDialogDescription>
-                                            </AlertDialogHeader>
-                                            <AlertDialogFooter>
-                                            <AlertDialogCancel>Batal</AlertDialogCancel>
-                                            <AlertDialogAction onClick={() => handleCancelSale(sale.id)}>
-                                                Ya, Batalkan Penjualan
-                                            </AlertDialogAction>
-                                            </AlertDialogFooter>
-                                        </AlertDialogContent>
-                                        </AlertDialog>
-                                    </TableCell>
-                                </TableRow>
-                                ))
-                            ) : (
-                                <TableRow>
-                                    <TableCell colSpan={5} className="h-48 text-center">
-                                        <div className="flex flex-col items-center justify-center gap-4 text-muted-foreground">
-                                            <ShoppingCart className="h-16 w-16" />
-                                            <div className="text-center">
-                                                <p className="font-semibold">Tidak Ada Penjualan</p>
-                                                <p className="text-sm">Tidak ada penjualan yang tercatat pada tanggal yang dipilih.</p>
-                                            </div>
-                                        </div>
-                                    </TableCell>
-                                </TableRow>
-                            )}
-                            </TableBody>
-                        </Table>
-                      </div>
-                  </div>
+              <div className="lg:col-span-2 flex flex-col gap-4 h-full overflow-hidden">
+                  <PosProductGrid onAddToCart={handleAddToCart} />
               </div>
-              <div className="lg:col-span-1 h-full">
+              <div className="lg:col-span-1 h-full overflow-hidden">
                   <PosOrderSummary 
                       cart={cart}
                       setCart={setCart}
                       onCheckout={handleCheckout}
                       isSubmitting={isSubmitting}
+                      onSkuSubmit={handleSkuSubmit}
                   />
               </div>
         </div>

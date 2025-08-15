@@ -1,12 +1,12 @@
 
 'use client';
 
-import React from 'react';
+import React, { useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { X, ShoppingCart, Minus, Plus } from 'lucide-react';
+import { X, ShoppingCart, Minus, Plus, ScanLine } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 
 export interface PosCartItem {
@@ -24,9 +24,13 @@ interface PosOrderSummaryProps {
   setCart: React.Dispatch<React.SetStateAction<PosCartItem[]>>;
   onCheckout: () => void;
   isSubmitting: boolean;
+  onSkuSubmit: (sku: string) => void;
 }
 
-export function PosOrderSummary({ cart, setCart, onCheckout, isSubmitting }: PosOrderSummaryProps) {
+export function PosOrderSummary({ cart, setCart, onCheckout, isSubmitting, onSkuSubmit }: PosOrderSummaryProps) {
+  const [skuInput, setSkuInput] = useState('');
+  const skuInputRef = useRef<HTMLInputElement>(null);
+
   const updateQuantity = (sku: string, newQuantity: number) => {
     setCart(prevCart =>
       prevCart.map(item => {
@@ -35,12 +39,20 @@ export function PosOrderSummary({ cart, setCart, onCheckout, isSubmitting }: Pos
           return { ...item, quantity: clampedQuantity };
         }
         return item;
-      })
+      }).filter(item => item.quantity > 0) // Remove item if quantity becomes 0
     );
   };
 
   const removeItem = (sku: string) => {
     setCart(prevCart => prevCart.filter(item => item.sku !== sku));
+  };
+
+  const handleSkuFormSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (skuInput) {
+      onSkuSubmit(skuInput);
+      setSkuInput('');
+    }
   };
 
   const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
@@ -52,8 +64,23 @@ export function PosOrderSummary({ cart, setCart, onCheckout, isSubmitting }: Pos
         <CardTitle>Pesanan Saat Ini</CardTitle>
       </CardHeader>
       <CardContent className="flex-grow flex flex-col overflow-hidden p-0">
+          <div className="px-6 pb-4 border-b">
+              <form onSubmit={handleSkuFormSubmit} className="flex-grow">
+                  <div className="relative">
+                      <ScanLine className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                          ref={skuInputRef}
+                          placeholder="Scan atau masukkan SKU..."
+                          value={skuInput}
+                          onChange={(e) => setSkuInput(e.target.value)}
+                          className="pl-10 w-full"
+                          disabled={isSubmitting}
+                      />
+                  </div>
+              </form>
+          </div>
         {cart.length > 0 ? (
-          <ScrollArea className="flex-grow p-6 pt-0">
+          <ScrollArea className="flex-grow p-6 pt-4">
             <div className="space-y-4">
               {cart.map(item => (
                 <div key={item.sku} className="flex items-start gap-4">
@@ -69,7 +96,6 @@ export function PosOrderSummary({ cart, setCart, onCheckout, isSubmitting }: Pos
                       size="icon"
                       className="h-6 w-6"
                       onClick={() => updateQuantity(item.sku, item.quantity - 1)}
-                      disabled={item.quantity <= 1}
                     >
                       <Minus className="h-3 w-3" />
                     </Button>
@@ -78,6 +104,7 @@ export function PosOrderSummary({ cart, setCart, onCheckout, isSubmitting }: Pos
                       value={item.quantity}
                       onChange={e => updateQuantity(item.sku, parseInt(e.target.value, 10) || 1)}
                       className="h-6 w-12 text-center px-1"
+                       onFocus={(e) => e.target.select()}
                     />
                     <Button
                       variant="outline"
@@ -97,10 +124,10 @@ export function PosOrderSummary({ cart, setCart, onCheckout, isSubmitting }: Pos
             </div>
           </ScrollArea>
         ) : (
-          <div className="flex-grow flex flex-col items-center justify-center text-muted-foreground p-6">
+          <div className="flex-grow flex flex-col items-center justify-center text-muted-foreground p-6 text-center">
             <ShoppingCart className="h-16 w-16 mb-4" />
             <p className="font-semibold">Keranjang Kosong</p>
-            <p className="text-sm text-center">Scan atau masukkan SKU untuk menambahkan item.</p>
+            <p className="text-sm">Scan atau pilih produk untuk ditambahkan.</p>
           </div>
         )}
       </CardContent>

@@ -28,7 +28,7 @@ interface InventoryContextType {
   bulkUpdateVariants: (itemId: string, variants: InventoryItemVariant[]) => Promise<void>;
   fetchItems: () => Promise<void>;
   loading: boolean;
-  recordSale: (sku: string, channel: string, quantity: number) => Promise<void>;
+  recordSale: (sku: string, channel: string, quantity: number, saleDate?: Date) => Promise<void>;
   fetchSales: (channel: string, date: Date) => Promise<Sale[]>;
   cancelSale: (saleId: string) => Promise<void>;
   getProductBySku: (sku: string) => Promise<InventoryItem | null>;
@@ -107,9 +107,16 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
     return undefined;
   }, [items]);
 
-  const recordSale = async (sku: string, channel: string, quantity: number) => {
-    await performSale(sku, channel, quantity);
-    await fetchAllData();
+  const recordSale = async (sku: string, channel: string, quantity: number, saleDate?: Date) => {
+    await performSale(sku, channel, quantity, saleDate);
+    // For POS, we don't need to refetch all sales, just inventory
+    if (channel !== 'pos') {
+      await fetchAllData();
+    } else {
+       const inventoryData = await fetchInventoryData();
+       setItems(inventoryData.items);
+       setCategories(inventoryData.categories);
+    }
   };
 
   const fetchSales = async (channel: string, date: Date): Promise<Sale[]> => {
