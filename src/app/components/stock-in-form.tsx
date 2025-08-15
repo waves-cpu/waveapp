@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useMemo } from 'react';
@@ -95,12 +96,10 @@ export function StockInForm() {
   const availableItems = useMemo(() => {
     return items.filter(item => {
       if (item.variants && item.variants.length > 0) {
-        // Only include parent item if at least one of its variants is not already selected
         return item.variants.some(v => !existingItemIds.has(v.id));
       }
       return item.stock !== undefined && !existingItemIds.has(item.id);
     }).map(item => {
-        // if some variants are already selected, only show the ones that are not
         if (item.variants) {
             return {
                 ...item,
@@ -138,9 +137,10 @@ export function StockInForm() {
   const applyMasterQuantity = (parentName: string) => {
     const masterQuantity = form.getValues(`masterQuantities.${parentName}`);
     if (masterQuantity !== undefined && masterQuantity >= 0) {
-        fields.forEach((field, index) => {
-            if (form.getValues(`stockInItems.${index}.parentName`) === parentName) {
-                update(index, { ...fields[index], quantity: masterQuantity });
+        fields.forEach((_field, index) => {
+            const field = form.getValues(`stockInItems.${index}`);
+            if (field.parentName === parentName) {
+                form.setValue(`stockInItems.${index}.quantity`, masterQuantity);
             }
         });
     }
@@ -176,7 +176,7 @@ export function StockInForm() {
 
     toast({
         title: t.stockInForm.successTitle,
-        description: t.stockInForm.successDescription.replace('{count}', values.stockInItems.length.toString()),
+        description: t.stockInForm.successDescription.replace('{count}', values.stockInItems.filter(i => i.quantity > 0).length.toString()),
     });
     form.reset();
     router.push('/');
@@ -261,7 +261,7 @@ export function StockInForm() {
                                 {Array.from(groupedItems.groups.entries()).map(([parentName, variants]) => {
                                     const parent = variants[0];
                                     const totalQuantity = variants.reduce((sum, variant) => {
-                                        const value = form.getValues(`stockInItems.${variant.originalIndex}.quantity`);
+                                        const value = form.watch(`stockInItems.${variant.originalIndex}.quantity`);
                                         return sum + (Number(value) || 0);
                                     }, 0);
                                     return (
@@ -280,12 +280,12 @@ export function StockInForm() {
                                                 </div>
                                                 <div className="text-xs text-muted-foreground ml-14">SKU: {parent.parentSku}</div>
                                              </TableCell>
-                                             <TableCell>
+                                             <TableCell className="align-middle">
                                                 <div className="font-semibold text-sm">
                                                     {totalQuantity}
                                                 </div>
                                              </TableCell>
-                                             <TableCell className="align-bottom">
+                                             <TableCell className="align-middle" colSpan={2}>
                                                 <div className="flex items-center gap-2">
                                                     <FormField
                                                         control={form.control}
@@ -301,14 +301,13 @@ export function StockInForm() {
                                                     </Button>
                                                 </div>
                                              </TableCell>
-                                             <TableCell></TableCell>
                                         </TableRow>
                                         {variants.map((field) => (
                                             <TableRow key={field.itemId}>
                                                 <TableCell className="pl-16">
                                                     <div className="font-medium text-sm">{field.variantName}</div>
                                                 </TableCell>
-                                                <TableCell>
+                                                <TableCell className="align-middle">
                                                     <FormField
                                                         control={form.control}
                                                         name={`stockInItems.${field.originalIndex}.quantity`}
@@ -317,7 +316,7 @@ export function StockInForm() {
                                                         )}
                                                     />
                                                 </TableCell>
-                                                <TableCell>
+                                                <TableCell className="align-middle">
                                                     <FormField
                                                         control={form.control}
                                                         name={`stockInItems.${field.originalIndex}.reason`}
@@ -326,7 +325,7 @@ export function StockInForm() {
                                                         )}
                                                     />
                                                 </TableCell>
-                                                <TableCell>
+                                                <TableCell className="align-middle">
                                                     <Button type="button" variant="ghost" size="icon" className="text-destructive hover:text-destructive-foreground hover:bg-destructive" onClick={() => remove(field.originalIndex)}>
                                                         <Trash2 className="h-4 w-4" />
                                                     </Button>
