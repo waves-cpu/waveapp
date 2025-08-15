@@ -220,9 +220,6 @@ export function InventoryTable({ onUpdateStock }: InventoryTableProps) {
       return <InventoryTableSkeleton />;
   }
 
-  const startItem = filteredItems.length > 0 ? (currentPage - 1) * itemsPerPage + 1 : 0;
-  const endItem = Math.min(currentPage * itemsPerPage, filteredItems.length);
-
   return (
     <>
     <div className="h-full flex flex-col bg-card rounded-lg border shadow-sm">
@@ -459,7 +456,7 @@ export function InventoryTable({ onUpdateStock }: InventoryTableProps) {
                         setCurrentPage(1)
                     }}
                     >
-                    <SelectTrigger className="h-8 w-[130px]">
+                    <SelectTrigger className="h-8 w-[140px]">
                         <SelectValue placeholder={itemsPerPage} />
                     </SelectTrigger>
                     <SelectContent side="top">
@@ -483,6 +480,8 @@ export function InventoryTable({ onUpdateStock }: InventoryTableProps) {
     </>
   );
 }
+
+    
 
     
 
