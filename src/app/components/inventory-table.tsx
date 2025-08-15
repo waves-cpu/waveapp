@@ -46,6 +46,7 @@ import { useRouter } from 'next/navigation';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { Progress } from '@/components/ui/progress';
+import { Badge } from '@/components/ui/badge';
 
 interface InventoryTableProps {
   onUpdateStock: (itemId: string) => void;
@@ -86,24 +87,26 @@ function InventoryTableSkeleton() {
 
 function StockBar({ stock }: { stock: number }) {
     const getStockColor = (stock: number) => {
-        if (stock > 50) return 'bg-green-500';
-        if (stock > 10) return 'bg-yellow-500';
+        if (stock > 10) return 'bg-green-500';
+        if (stock > 0) return 'bg-yellow-500';
         return 'bg-red-500';
     };
 
     return (
         <div className="flex items-center gap-2 w-32">
             <span className="font-medium w-8">{stock}</span>
-            <Progress value={stock} className="h-2 flex-1" indicatorClassName={getStockColor(stock)} />
+            <Progress value={stock > 100 ? 100 : stock} className="h-2 flex-1" indicatorClassName={getStockColor(stock)} />
         </div>
     );
 }
 
+const LOW_STOCK_THRESHOLD = 10;
 
 export function InventoryTable({ onUpdateStock }: InventoryTableProps) {
   const { items, categories, loading } = useInventory();
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
+  const [stockFilter, setStockFilter] = useState<'all' | 'low' | 'empty'>('all');
   const { language } = useLanguage();
   const t = translations[language];
   const [isBulkEditDialogOpen, setBulkEditDialogOpen] = useState(false);
@@ -120,12 +123,52 @@ export function InventoryTable({ onUpdateStock }: InventoryTableProps) {
       .filter((item) =>
         categoryFilter ? item.category === categoryFilter : true
       )
-      .filter((item) =>
-        item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.sku?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.variants?.some(v => v.name.toLowerCase().includes(searchTerm.toLowerCase()) || v.sku?.toLowerCase().includes(searchTerm.toLowerCase()))
-      );
-  }, [items, categoryFilter, searchTerm]);
+      .filter((item) => {
+        const lowerSearchTerm = searchTerm.toLowerCase();
+        if (
+          item.name.toLowerCase().includes(lowerSearchTerm) ||
+          item.sku?.toLowerCase().includes(lowerSearchTerm)
+        ) return true;
+
+        if (item.variants?.some(v => v.name.toLowerCase().includes(lowerSearchTerm) || v.sku?.toLowerCase().includes(lowerSearchTerm))) {
+          return true;
+        }
+
+        return false;
+      })
+      .map(item => {
+        if (stockFilter === 'all') return item;
+
+        if (item.variants && item.variants.length > 0) {
+            const filteredVariants = item.variants.filter(v => {
+                if (stockFilter === 'low') return v.stock > 0 && v.stock <= LOW_STOCK_THRESHOLD;
+                if (stockFilter === 'empty') return v.stock === 0;
+                return true;
+            });
+            return filteredVariants.length > 0 ? { ...item, variants: filteredVariants } : null;
+        } else {
+            if (stockFilter === 'low') return (item.stock ?? 0) > 0 && (item.stock ?? 0) <= LOW_STOCK_THRESHOLD ? item : null;
+            if (stockFilter === 'empty') return item.stock === 0 ? item : null;
+            return item;
+        }
+      })
+      .filter((item): item is InventoryItem => item !== null);
+  }, [items, categoryFilter, searchTerm, stockFilter]);
+
+  const stockFilterCounts = useMemo(() => {
+    const counts = { all: 0, low: 0, empty: 0 };
+    items.forEach(item => {
+      counts.all++;
+      if (item.variants && item.variants.length > 0) {
+        if (item.variants.some(v => v.stock === 0)) counts.empty++;
+        if (item.variants.some(v => v.stock > 0 && v.stock <= LOW_STOCK_THRESHOLD)) counts.low++;
+      } else {
+        if (item.stock === 0) counts.empty++;
+        if ((item.stock ?? 0) > 0 && (item.stock ?? 0) <= LOW_STOCK_THRESHOLD) counts.low++;
+      }
+    });
+    return counts;
+  }, [items]);
 
   const downloadCSV = () => {
     const headers = ['ID', 'Name', 'SKU', 'Category', 'Price', 'Stock', 'Is Parent'];
@@ -158,41 +201,54 @@ export function InventoryTable({ onUpdateStock }: InventoryTableProps) {
   return (
     <>
     <div className="h-full flex flex-col bg-card rounded-lg border shadow-sm">
-      <div className="p-4 flex flex-col md:flex-row gap-4 justify-between items-center border-b">
-        <div className="flex flex-col md:flex-row gap-4 w-full md:w-auto flex-1">
-          <div className="relative w-full md:w-auto">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder={t.inventoryTable.searchPlaceholder}
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 w-full md:w-64"
-            />
-          </div>
-          <Select onValueChange={(value) => setCategoryFilter(value === 'all' ? null : value)} defaultValue="all">
-            <SelectTrigger className="w-full md:w-[180px]">
-              <SelectValue placeholder={t.inventoryTable.selectCategoryPlaceholder} />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">{t.inventoryTable.allCategories}</SelectItem>
-              {categories.map((category) => (
-                <SelectItem key={category} value={category}>
-                  {category}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+      <div className="p-4 flex flex-col gap-4 border-b">
+        <div className="flex flex-col md:flex-row gap-4 justify-between items-center">
+            <div className="flex flex-col md:flex-row gap-4 w-full md:w-auto flex-1">
+                <div className="relative w-full md:w-auto">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                    placeholder={t.inventoryTable.searchPlaceholder}
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10 w-full md:w-64"
+                    />
+                </div>
+                <Select onValueChange={(value) => setCategoryFilter(value === 'all' ? null : value)} defaultValue="all">
+                    <SelectTrigger className="w-full md:w-[180px]">
+                    <SelectValue placeholder={t.inventoryTable.selectCategoryPlaceholder} />
+                    </SelectTrigger>
+                    <SelectContent>
+                    <SelectItem value="all">{t.inventoryTable.allCategories}</SelectItem>
+                    {categories.map((category) => (
+                        <SelectItem key={category} value={category}>
+                        {category}
+                        </SelectItem>
+                    ))}
+                    </SelectContent>
+                </Select>
+            </div>
+            <div className="flex items-center gap-2 w-full md:w-auto justify-end">
+                <Button onClick={downloadCSV} variant="outline" size="sm">
+                <FileDown className="mr-2 h-4 w-4" />
+                {t.inventoryTable.exportCsv}
+                </Button>
+                <Button asChild size="sm">
+                <Link href="/add-product">
+                    <PlusCircle className="mr-2 h-4 w-4" />
+                    {t.dashboard.addItem}
+                </Link>
+                </Button>
+            </div>
         </div>
-        <div className="flex items-center gap-2 w-full md:w-auto justify-end">
-            <Button onClick={downloadCSV} variant="outline" size="sm">
-              <FileDown className="mr-2 h-4 w-4" />
-              {t.inventoryTable.exportCsv}
+        <div className="p-4 flex items-center gap-2 border-b border-dashed">
+            <Button variant={stockFilter === 'all' ? 'secondary' : 'ghost'} size="sm" onClick={() => setStockFilter('all')}>
+                Semua <Badge variant="secondary" className="ml-2">{stockFilterCounts.all}</Badge>
             </Button>
-            <Button asChild size="sm">
-              <Link href="/add-product">
-                <PlusCircle className="mr-2 h-4 w-4" />
-                {t.dashboard.addItem}
-              </Link>
+            <Button variant={stockFilter === 'low' ? 'secondary' : 'ghost'} size="sm" onClick={() => setStockFilter('low')}>
+                Stok Menipis <Badge variant="secondary" className="ml-2">{stockFilterCounts.low}</Badge>
+            </Button>
+            <Button variant={stockFilter === 'empty' ? 'secondary' : 'ghost'} size="sm" onClick={() => setStockFilter('empty')}>
+                Stok Kosong <Badge variant="secondary" className="ml-2">{stockFilterCounts.empty}</Badge>
             </Button>
         </div>
       </div>
@@ -373,3 +429,5 @@ export function InventoryTable({ onUpdateStock }: InventoryTableProps) {
     </>
   );
 }
+
+    
