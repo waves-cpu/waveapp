@@ -40,7 +40,7 @@ const formSchema = z.object({
 export function StockInForm() {
   const { language } = useLanguage();
   const t = translations[language];
-  const { items, updateStock } = useInventory();
+  const { items, updateStock, categories } = useInventory();
   const { toast } = useToast();
   const router = useRouter();
   const [isProductSelectionOpen, setProductSelectionOpen] = useState(false);
@@ -196,7 +196,7 @@ export function StockInForm() {
         onOpenChange={setProductSelectionOpen}
         onSelect={handleProductsSelected}
         allItems={allItemsAndVariants}
-        categories={[...new Set(allItemsAndVariants.map(i => i.category))]}
+        categories={categories}
     />
     </>
   );

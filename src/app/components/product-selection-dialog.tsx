@@ -49,7 +49,7 @@ export function ProductSelectionDialog({ open, onOpenChange, onSelect, allItems,
       )
       .filter((item) =>
         item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.sku?.toLowerCase().includes(searchTerm.toLowerCase())
+        (item.sku && item.sku.toLowerCase().includes(searchTerm.toLowerCase()))
       );
   }, [allItems, categoryFilter, searchTerm]);
 
@@ -69,8 +69,8 @@ export function ProductSelectionDialog({ open, onOpenChange, onSelect, allItems,
       }
   }, [open])
 
-  const handleSelectAll = (checked: boolean | 'indeterminate') => {
-    if (checked) {
+  const handleSelectAllOnPage = (checked: boolean | 'indeterminate') => {
+    if (checked === true) {
       const newSelectedIds = new Set(selectedIds);
       paginatedItems.forEach(item => newSelectedIds.add(item.id));
       setSelectedIds(newSelectedIds);
@@ -147,8 +147,8 @@ export function ProductSelectionDialog({ open, onOpenChange, onSelect, allItems,
                         <TableRow>
                             <TableHead className="w-[50px]">
                             <Checkbox 
-                                checked={isPageAllSelected}
-                                onCheckedChange={handleSelectAll}
+                                checked={isPageAllSelected ? true : (isPagePartiallySelected ? 'indeterminate' : false)}
+                                onCheckedChange={handleSelectAllOnPage}
                                 aria-label="Select all on this page"
                             />
                             </TableHead>
