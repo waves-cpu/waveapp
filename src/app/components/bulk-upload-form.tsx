@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import Papa from 'papaparse';
+import * as XLSX from 'xlsx';
 import { useInventory } from '@/hooks/use-inventory';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
@@ -13,7 +13,7 @@ import { addBulkProducts } from '@/lib/inventory-service';
 import { useRouter } from 'next/navigation';
 
 interface ParsedRow {
-    [key: string]: string;
+    [key: string]: any;
 }
 
 const csvTemplate = `parent_sku,product_name,category,image_url,variant_sku,variant_name,price,stock
@@ -41,12 +41,22 @@ export function BulkUploadForm() {
         setData([]);
         setHeaders([]);
 
-        Papa.parse(file, {
-            header: true,
-            skipEmptyLines: true,
-            complete: (results) => {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            try {
+                const workbook = XLSX.read(event.target?.result, { type: 'binary' });
+                const sheetName = workbook.SheetNames[0];
+                const worksheet = workbook.Sheets[sheetName];
+                const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+                
+                if (jsonData.length < 2) {
+                    setError('The Excel file is empty or has only a header row.');
+                    setIsParsing(false);
+                    return;
+                }
+
+                const fileHeaders = jsonData[0] as string[];
                 const requiredHeaders = ['parent_sku', 'product_name', 'category', 'variant_sku', 'variant_name', 'price', 'stock'];
-                const fileHeaders = results.meta.fields || [];
                 const missingHeaders = requiredHeaders.filter(h => !fileHeaders.includes(h));
 
                 if (missingHeaders.length > 0) {
@@ -55,15 +65,21 @@ export function BulkUploadForm() {
                     return;
                 }
 
+                const parsedData = XLSX.utils.sheet_to_json(worksheet);
+
                 setHeaders(fileHeaders);
-                setData(results.data as ParsedRow[]);
-                setIsParsing(false);
-            },
-            error: (err) => {
-                setError(`Error parsing file: ${err.message}`);
+                setData(parsedData as ParsedRow[]);
+            } catch (e: any) {
+                 setError(`Error parsing file: ${e.message}`);
+            } finally {
                 setIsParsing(false);
             }
-        });
+        };
+        reader.onerror = (err) => {
+            setError(`File reading error: ${err}`);
+            setIsParsing(false);
+        }
+        reader.readAsBinaryString(file);
     }, []);
 
     const onDragOver = (e: React.DragEvent<HTMLDivElement>) => {
@@ -95,7 +111,7 @@ export function BulkUploadForm() {
             toast({
                 variant: 'destructive',
                 title: 'No data to import',
-                description: 'Please upload a valid CSV file.',
+                description: 'Please upload a valid Excel file.',
             });
             return;
         }
@@ -162,8 +178,8 @@ export function BulkUploadForm() {
                 <CardHeader>
                     <CardTitle>Bulk Import Products</CardTitle>
                     <CardDescription>
-                        Upload a CSV file to add multiple products and their variants at once. 
-                        Download the template to see the required format.
+                        Upload an Excel (.xlsx) file to add multiple products and their variants.
+                        Download the CSV template to see the required format and open it in Excel.
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -174,7 +190,7 @@ export function BulkUploadForm() {
                     >
                         <input
                             type="file"
-                            accept=".csv"
+                            accept=".xlsx, .xls"
                             onChange={(e) => e.target.files && handleFileUpload(e.target.files[0])}
                             className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                         />
@@ -184,7 +200,7 @@ export function BulkUploadForm() {
                                 <p className="font-semibold">Parsing file...</p>
                             ) : (
                                 <>
-                                    <p className="font-semibold">Drag & drop your CSV file here</p>
+                                    <p className="font-semibold">Drag & drop your Excel file here</p>
                                     <p className="text-sm">or click to browse</p>
                                 </>
                             )}
@@ -194,7 +210,7 @@ export function BulkUploadForm() {
                     <div className="flex justify-start">
                         <Button variant="outline" size="sm" onClick={handleDownloadTemplate}>
                             <FileDown className="mr-2 h-4 w-4" />
-                            Download Template
+                            Download Template (CSV)
                         </Button>
                     </div>
                 </CardContent>
