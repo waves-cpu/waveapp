@@ -9,7 +9,7 @@ export const translations = {
             addItem: "Add Item",
             inventoryMenu: "Inventory Menu",
             myProducts: "My Products",
-            bulk: "Bulk",
+            bulk: "Bulk Import",
             stockIn: "Stock In",
         },
         inventoryTable: {
@@ -131,7 +131,7 @@ export const translations = {
             addItem: "Tambah Barang",
             inventoryMenu: "Menu Inventaris",
             myProducts: "Produk Saya",
-            bulk: "Massal",
+            bulk: "Impor Massal",
             stockIn: "Stok Masuk",
         },
         inventoryTable: {

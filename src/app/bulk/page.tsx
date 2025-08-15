@@ -1,6 +1,6 @@
 'use client';
 
-import { BulkAddForm } from "@/app/components/bulk-add-form";
+import { BulkUploadForm } from "@/app/components/bulk-upload-form";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { useLanguage } from "@/hooks/use-language";
 import { translations } from "@/types/language";
@@ -16,7 +16,7 @@ export default function BulkPage() {
                     <SidebarTrigger className="md:hidden" />
                     <h1 className="text-lg font-bold">{t.dashboard.bulk}</h1>
                 </div>
-                <BulkAddForm />
+                <BulkUploadForm />
             </div>
         </main>
     );
