@@ -7,6 +7,7 @@ import {
   Table,
   TableBody,
   TableCell,
+  TableFooter,
   TableHead,
   TableHeader,
   TableRow,
@@ -113,6 +114,20 @@ export default function HistoryPage() {
           return true;
       });
   }, [allHistory, categoryFilter, searchTerm, dateRange]);
+
+  const historyTotals = useMemo(() => {
+    let totalIn = 0;
+    let totalOut = 0;
+    filteredHistory.forEach(entry => {
+        if (entry.change > 0) {
+            totalIn += entry.change;
+        } else {
+            totalOut += Math.abs(entry.change);
+        }
+    });
+    const netChange = totalIn - totalOut;
+    return { totalIn, totalOut, netChange };
+  }, [filteredHistory])
 
   return (
     <main className="flex min-h-[calc(100vh_-_theme(spacing.16))] flex-1 flex-col gap-4 bg-muted/40 p-4 md:gap-8 md:p-10">
@@ -230,9 +245,26 @@ export default function HistoryPage() {
                 </TableRow>
                 )}
             </TableBody>
+            <TableFooter>
+                <TableRow>
+                    <TableCell colSpan={3} className="font-semibold text-right">Total Perubahan</TableCell>
+                    <TableCell colSpan={2}>
+                        <div className="flex items-center gap-4 font-semibold">
+                            <span className="text-green-600">Masuk: {historyTotals.totalIn}</span>
+                            <span className="text-red-600">Keluar: {historyTotals.totalOut}</span>
+                            <span>Net: 
+                                <span className={cn(historyTotals.netChange >= 0 ? "text-green-600" : "text-red-600")}>
+                                    {historyTotals.netChange > 0 && '+'}{historyTotals.netChange}
+                                </span>
+                            </span>
+                        </div>
+                    </TableCell>
+                </TableRow>
+            </TableFooter>
             </Table>
         </div>
       </div>
     </main>
   );
 }
+
