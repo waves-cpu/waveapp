@@ -65,7 +65,7 @@ export const translations = {
             dateRange: "Date Range",
         },
         stockInForm: {
-            title: "Create Stock In Record",
+            title: "Record Stock In",
             description: "Add new stock received from suppliers or other sources.",
             selectProducts: "Select Products",
             noProducts: "No products selected. Click \"Select Products\" to begin.",
@@ -184,7 +184,7 @@ export const translations = {
             dateRange: "Rentang Tanggal",
         },
         stockInForm: {
-            title: "Buat Catatan Stok Masuk",
+            title: "Catat Stok Masuk",
             description: "Tambahkan stok baru yang diterima dari pemasok atau sumber lain.",
             selectProducts: "Pilih Produk",
             noProducts: "Belum ada produk dipilih. Klik \"Pilih Produk\" untuk memulai.",

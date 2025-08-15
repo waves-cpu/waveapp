@@ -205,6 +205,17 @@ export function StockInForm() {
     return { groups, simpleItems };
   }, [fields]);
 
+  const handleToggleParentSelection = (variants: (StockInItem & { originalIndex: number })[], checked: boolean) => {
+    const newSelectedIds = new Set(bulkSelectedIds);
+    const variantIds = variants.map(v => v.itemId);
+
+    if (checked) {
+        variantIds.forEach(id => newSelectedIds.add(id));
+    } else {
+        variantIds.forEach(id => newSelectedIds.delete(id));
+    }
+    setBulkSelectedIds(newSelectedIds);
+  };
 
   function onSubmit(values: z.infer<typeof formSchema>) {
     values.stockInItems.forEach(item => {
@@ -228,7 +239,6 @@ export function StockInForm() {
             <div className="flex justify-between items-start">
                 <div>
                     <CardTitle>{t.stockInForm.title}</CardTitle>
-                    <CardDescription>{t.stockInForm.description}</CardDescription>
                 </div>
                  <div className="flex gap-2">
                     <Button type="button" variant="outline" onClick={() => setBulkStockInOpen(true)} disabled={bulkSelectedIds.size === 0}>
@@ -320,10 +330,21 @@ export function StockInForm() {
                                 ))}
                                 {Array.from(groupedItems.groups.entries()).map(([parentName, variants]) => {
                                     const parent = variants[0];
+                                    const variantIds = variants.map(v => v.itemId);
+                                    const selectedCount = variantIds.filter(id => bulkSelectedIds.has(id)).length;
+                                    const isParentAllSelected = selectedCount === variantIds.length;
+                                    const isParentPartiallySelected = selectedCount > 0 && !isParentAllSelected;
+
                                     return (
                                     <React.Fragment key={parentName}>
                                         <TableRow className="bg-muted/20 hover:bg-muted/40">
-                                            <TableCell></TableCell>
+                                            <TableCell>
+                                                <Checkbox
+                                                    checked={isParentAllSelected ? true : (isParentPartiallySelected ? "indeterminate" : false)}
+                                                    onCheckedChange={(checked) => handleToggleParentSelection(variants, !!checked)}
+                                                    aria-label={`Select all variants for ${parentName}`}
+                                                />
+                                            </TableCell>
                                              <TableCell className="align-middle">
                                                 <div className="flex items-center gap-4 font-semibold text-primary">
                                                     <Image 
