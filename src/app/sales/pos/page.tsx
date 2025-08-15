@@ -43,11 +43,12 @@ const PosProductGrid = ({
     isVariantDialogOpen: boolean;
     cart: PosCartItem[];
 }) => {
-    const { items, loading, allSales } = useInventory();
+    const { items, loading, allSales, categories } = useInventory();
     const [searchTerm, setSearchTerm] = useState('');
     const debouncedSearchTerm = useDebounce(searchTerm, 300);
     const skuInputRef = useRef<HTMLInputElement>(null);
     const [currentPage, setCurrentPage] = useState(1);
+    const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
     const cartQuantityMap = React.useMemo(() => {
         const map = new Map<string, number>();
@@ -83,6 +84,9 @@ const PosProductGrid = ({
                 : (item.stock ?? 0) - (cartQuantityMap.get(item.sku!) || 0) > 0;
 
             if (!hasStock) return false;
+
+            const matchesCategory = selectedCategory ? item.category === selectedCategory : true;
+            if (!matchesCategory) return false;
             
             if (!debouncedSearchTerm) return true;
 
@@ -94,7 +98,7 @@ const PosProductGrid = ({
 
             return matchesName || matchesSku || matchesVariant;
         });
-    }, [items, debouncedSearchTerm, cartQuantityMap]);
+    }, [items, debouncedSearchTerm, cartQuantityMap, selectedCategory]);
 
     const totalPages = Math.ceil(availableItems.length / ITEMS_PER_PAGE);
 
@@ -113,7 +117,7 @@ const PosProductGrid = ({
     
     useEffect(() => {
         setCurrentPage(1);
-    }, [debouncedSearchTerm]);
+    }, [debouncedSearchTerm, selectedCategory]);
 
 
     if (loading) {
@@ -127,83 +131,110 @@ const PosProductGrid = ({
     }
     
     return (
-        <div className="flex flex-col h-full">
-             <div className="flex flex-col sm:flex-row gap-4 mb-4">
-                 <form onSubmit={handleSkuFormSubmit} className="flex-grow">
-                  <div className="relative">
-                      <ScanLine className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input
-                          ref={skuInputRef}
-                          placeholder="Scan atau masukkan SKU / Nama Produk, lalu tekan Enter"
-                          value={searchTerm}
-                          onChange={(e) => setSearchTerm(e.target.value)}
-                          className="pl-10 w-full"
-                          disabled={isSubmitting || isVariantDialogOpen}
-                      />
-                  </div>
-              </form>
+        <div className="flex flex-row gap-6 h-full overflow-hidden">
+            <div className="w-48 shrink-0 border-r pr-6">
+                <h3 className="font-semibold mb-2 px-2">Kategori</h3>
+                <ScrollArea className="h-full -ml-2">
+                     <div className="flex flex-col gap-1 pr-4 pl-2">
+                        <Button 
+                            variant={selectedCategory === null ? 'secondary' : 'ghost'} 
+                            className="justify-start"
+                            onClick={() => setSelectedCategory(null)}
+                        >
+                           Semua Kategori
+                        </Button>
+                        {categories.map(category => (
+                            <Button
+                                key={category}
+                                variant={selectedCategory === category ? 'secondary' : 'ghost'}
+                                className="justify-start truncate"
+                                title={category}
+                                onClick={() => setSelectedCategory(category)}
+                            >
+                                {category}
+                            </Button>
+                        ))}
+                     </div>
+                </ScrollArea>
             </div>
-            <ScrollArea className="flex-grow -mx-2">
-                <div className="px-2">
-                {paginatedItems.length > 0 ? (
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 pr-4">
-                        {paginatedItems.map(item => {
-                            const hasVariants = item.variants && item.variants.length > 0;
-                            let priceDisplay;
-                            let stockDisplay;
+            <div className="flex flex-col h-full flex-grow min-w-0">
+                <div className="mb-4">
+                    <form onSubmit={handleSkuFormSubmit} className="flex-grow">
+                        <div className="relative">
+                            <ScanLine className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                            <Input
+                                ref={skuInputRef}
+                                placeholder="Scan atau masukkan SKU / Nama Produk, lalu tekan Enter"
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                className="pl-10 w-full"
+                                disabled={isSubmitting || isVariantDialogOpen}
+                            />
+                        </div>
+                    </form>
+                </div>
+                <ScrollArea className="flex-grow -mx-2">
+                    <div className="px-2">
+                    {paginatedItems.length > 0 ? (
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 pr-4">
+                            {paginatedItems.map(item => {
+                                const hasVariants = item.variants && item.variants.length > 0;
+                                let priceDisplay;
+                                let stockDisplay;
 
-                            if (hasVariants) {
-                                const prices = item.variants!.map(v => v.price).filter(p => p !== undefined);
-                                const minPrice = Math.min(...prices);
-                                const maxPrice = Math.max(...prices);
-                                priceDisplay = prices.length > 0 
-                                    ? (minPrice === maxPrice ? `Rp${minPrice.toLocaleString('id-ID')}` : `Rp${minPrice.toLocaleString('id-ID')} - Rp${maxPrice.toLocaleString('id-ID')}`)
-                                    : '-';
-                                const totalStock = item.variants!.reduce((acc, v) => acc + v.stock - (cartQuantityMap.get(v.sku!) || 0), 0);
-                                stockDisplay = `Stok: ${totalStock}`;
-                            } else {
-                                priceDisplay = `Rp${(item.price ?? 0).toLocaleString('id-ID')}`;
-                                const availableStock = (item.stock ?? 0) - (cartQuantityMap.get(item.sku!) || 0);
-                                stockDisplay = `Stok: ${availableStock}`;
-                            }
-                            
-                            const totalSold = soldCounts.get(item.id) || 0;
+                                if (hasVariants) {
+                                    const prices = item.variants!.map(v => v.price).filter(p => p !== undefined);
+                                    const minPrice = Math.min(...prices);
+                                    const maxPrice = Math.max(...prices);
+                                    priceDisplay = prices.length > 0 
+                                        ? (minPrice === maxPrice ? `Rp${minPrice.toLocaleString('id-ID')}` : `Rp${minPrice.toLocaleString('id-ID')} - Rp${maxPrice.toLocaleString('id-ID')}`)
+                                        : '-';
+                                    const totalStock = item.variants!.reduce((acc, v) => acc + v.stock - (cartQuantityMap.get(v.sku!) || 0), 0);
+                                    stockDisplay = `Stok: ${totalStock}`;
+                                } else {
+                                    priceDisplay = `Rp${(item.price ?? 0).toLocaleString('id-ID')}`;
+                                    const availableStock = (item.stock ?? 0) - (cartQuantityMap.get(item.sku!) || 0);
+                                    stockDisplay = `Stok: ${availableStock}`;
+                                }
+                                
+                                const totalSold = soldCounts.get(item.id) || 0;
 
-                            return (
-                                <button key={item.id} onClick={() => onProductSelect(item)} className="border bg-card rounded-lg p-2 text-left hover:bg-accent transition-colors flex flex-col">
-                                    <div className="aspect-square bg-muted rounded-md flex items-center justify-center mb-2 overflow-hidden">
-                                        <Image src={item.imageUrl || 'https://placehold.co/150x150.png'} alt={item.name} width={150} height={150} className="rounded-md object-cover h-full w-full" data-ai-hint="product image"/>
-                                    </div>
-                                    <div className="flex-grow">
-                                        <p className="font-semibold text-sm leading-tight line-clamp-2" title={item.name}>{item.name}</p>
-                                        <p className="text-xs text-muted-foreground">{stockDisplay}</p>
-                                    </div>
-                                    <div className="mt-1">
-                                        <p className="font-bold text-primary text-sm">{priceDisplay}</p>
-                                        <p className="text-xs text-muted-foreground">{formatSoldCount(totalSold)}</p>
-                                    </div>
-                                </button>
-                            );
-                        })}
+                                return (
+                                    <button key={item.id} onClick={() => onProductSelect(item)} className="border bg-card rounded-lg p-2 text-left hover:bg-accent transition-colors flex flex-col">
+                                        <div className="aspect-square bg-muted rounded-md flex items-center justify-center mb-2 overflow-hidden">
+                                            <Image src={item.imageUrl || 'https://placehold.co/150x150.png'} alt={item.name} width={150} height={150} className="rounded-md object-cover h-full w-full" data-ai-hint="product image"/>
+                                        </div>
+                                        <div className="flex-grow">
+                                            <p className="font-semibold text-sm leading-tight line-clamp-2" title={item.name}>{item.name}</p>
+                                            <p className="text-xs text-muted-foreground">{stockDisplay}</p>
+                                        </div>
+                                        <div className="mt-1">
+                                            <p className="font-bold text-primary text-sm">{priceDisplay}</p>
+                                            <p className="text-xs text-muted-foreground">{formatSoldCount(totalSold)}</p>
+                                        </div>
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    ) : (
+                        <div className="flex-grow flex flex-col items-center justify-center text-muted-foreground p-6 h-full">
+                            <ShoppingBag className="h-16 w-16 mb-4" />
+                            <p className="font-semibold">Produk Tidak Ditemukan</p>
+                            <p className="text-sm text-center">Coba kata kunci lain atau periksa stok produk.</p>
+                        </div>
+                    )}
                     </div>
-                ) : (
-                     <div className="flex-grow flex flex-col items-center justify-center text-muted-foreground p-6 h-full">
-                        <ShoppingBag className="h-16 w-16 mb-4" />
-                        <p className="font-semibold">Produk Tidak Ditemukan</p>
-                        <p className="text-sm text-center">Coba kata kunci lain atau periksa stok produk.</p>
+                </ScrollArea>
+                {totalPages > 1 && (
+                    <div className="mt-4 shrink-0">
+                        <Pagination
+                            totalPages={totalPages}
+                            currentPage={currentPage}
+                            onPageChange={setCurrentPage}
+                        />
                     </div>
                 )}
-                </div>
-            </ScrollArea>
-             {totalPages > 1 && (
-                <div className="mt-4 shrink-0">
-                    <Pagination
-                        totalPages={totalPages}
-                        currentPage={currentPage}
-                        onPageChange={setCurrentPage}
-                    />
-                </div>
-            )}
+            </div>
         </div>
     );
 };
@@ -429,8 +460,8 @@ export default function PosSalesPage() {
           </div>
         </header>
 
-        <div className="flex-1 grid grid-cols-1 lg:grid-cols-5 gap-4 p-4 overflow-hidden">
-              <div className="lg:col-span-3 flex flex-col gap-4 h-full overflow-hidden">
+        <div className="flex-1 grid grid-cols-1 lg:grid-cols-[1fr_450px] gap-4 p-4 overflow-hidden">
+              <div className="flex flex-col gap-4 h-full overflow-hidden">
                   <PosProductGrid 
                     onProductSelect={handleProductSelect}
                     onSkuSubmit={handleSkuSubmit}
@@ -439,7 +470,7 @@ export default function PosSalesPage() {
                     cart={cart}
                   />
               </div>
-              <div className="lg:col-span-2 h-full overflow-hidden">
+              <div className="h-full overflow-hidden">
                   <PosOrderSummary 
                       cart={cart}
                       setCart={setCart}
