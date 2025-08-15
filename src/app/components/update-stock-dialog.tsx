@@ -28,11 +28,6 @@ import { useLanguage } from '@/hooks/use-language';
 import { translations } from '@/types/language';
 import type { InventoryItem, InventoryItemVariant } from '@/types';
 
-const formSchema = z.object({
-  change: z.coerce.number().int().refine(val => val !== 0, {message: 'Change cannot be zero.'}),
-  reason: z.string().min(2, { message: 'Reason must be at least 2 characters.' }),
-});
-
 interface UpdateStockDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -44,32 +39,59 @@ export function UpdateStockDialog({ open, onOpenChange, itemId }: UpdateStockDia
   const { toast } = useToast();
   const { language } = useLanguage();
   const t = translations[language];
-  
+
+  const formSchema = z.object({
+    newStockLevel: z.coerce.number().int().min(0, { message: t.updateStockDialog.stockMustBePositive }),
+    reason: z.string().min(2, { message: t.updateStockDialog.reasonRequired }),
+  });
+
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      change: 0,
+      newStockLevel: 0,
       reason: '',
     },
   });
 
-  const item = itemId ? getItem(itemId) : null;
-  const stock = item ? ('stock' in item ? item.stock : undefined) : undefined;
+  const itemWithStock = itemId ? getItem(itemId) : null;
+  
+  // Determine if it's a variant or a simple product to get the correct stock
+  let item;
+  let stock;
+  if(itemWithStock){
+    if (itemWithStock.variants && itemId) {
+        item = itemWithStock.variants.find(v => v.id === itemId);
+        stock = item?.stock;
+    } else {
+        item = itemWithStock;
+        stock = item?.stock;
+    }
+  }
 
 
   useEffect(() => {
-    if (!open) {
-      form.reset({ change: 0, reason: '' });
+    if (open && stock !== undefined) {
+      form.reset({ newStockLevel: stock, reason: '' });
     }
-  }, [open, form]);
+    if (!open) {
+      form.reset({ newStockLevel: 0, reason: '' });
+    }
+  }, [open, stock, form]);
 
   function onSubmit(values: z.infer<typeof formSchema>) {
-    if (!itemId) return;
-    updateStock(itemId, values.change, values.reason);
-    toast({
-      title: t.updateStockDialog.stockUpdated,
-      description: `${t.updateStockDialog.stockFor} ${item?.name} ${t.updateStockDialog.hasBeenAdjusted}`,
-    });
+    if (!itemId || stock === undefined) return;
+    
+    const change = values.newStockLevel - stock;
+    
+    // Only update if there is a change
+    if (change !== 0) {
+        updateStock(itemId, change, values.reason);
+        toast({
+        title: t.updateStockDialog.stockUpdated,
+        description: `${t.updateStockDialog.stockFor} ${item?.name} ${t.updateStockDialog.hasBeenAdjusted}`,
+        });
+    }
+
     onOpenChange(false);
   }
 
@@ -86,12 +108,12 @@ export function UpdateStockDialog({ open, onOpenChange, itemId }: UpdateStockDia
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
             <FormField
               control={form.control}
-              name="change"
+              name="newStockLevel"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>{t.updateStockDialog.stockAdjustment}</FormLabel>
+                  <FormLabel>{t.updateStockDialog.newStockLevel}</FormLabel>
                   <FormControl>
-                    <Input type="number" placeholder={t.updateStockDialog.stockAdjustmentPlaceholder} {...field} />
+                    <Input type="number" placeholder="e.g., 50" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
