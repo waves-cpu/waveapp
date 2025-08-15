@@ -460,7 +460,7 @@ export default function PosSalesPage() {
           </div>
         </header>
 
-        <div className="flex-1 grid grid-cols-1 lg:grid-cols-[1fr_400px] gap-4 p-4 overflow-hidden">
+        <div className="flex-1 grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-4 p-4 overflow-hidden">
               <div className="flex flex-col gap-4 h-full overflow-hidden">
                   <PosProductGrid 
                     onProductSelect={handleProductSelect}
