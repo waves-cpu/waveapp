@@ -20,7 +20,7 @@ interface InventoryContextType {
   getHistory: (itemId: string) => Promise<AdjustmentHistory[]>;
   categories: string[];
   bulkUpdateVariants: (itemId: string, variants: InventoryItemVariant[]) => Promise<void>;
-  fetchItems: () => void;
+  fetchItems: () => Promise<void>;
   loading: boolean;
 }
 

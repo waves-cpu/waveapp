@@ -70,6 +70,7 @@ export function StockInForm({
   const { items, updateStock, categories } = useInventory();
   const { toast } = useToast();
   const router = useRouter();
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -240,19 +241,30 @@ export function StockInForm({
     sortedIndices.forEach(index => remove(index));
   }
 
-  function onSubmit(values: z.infer<typeof formSchema>) {
-    values.stockInItems.forEach(item => {
-        if(item.quantity > 0){
-            updateStock(item.itemId, item.quantity, item.reason);
-        }
-    });
+  async function onSubmit(values: z.infer<typeof formSchema>) {
+    setIsSubmitting(true);
+    const stockUpdates = values.stockInItems
+        .filter(item => item.quantity > 0)
+        .map(item => updateStock(item.itemId, item.quantity, item.reason));
 
-    toast({
-        title: t.stockInForm.successTitle,
-        description: t.stockInForm.successDescription.replace('{count}', values.stockInItems.filter(i => i.quantity > 0).length.toString()),
-    });
-    form.reset();
-    router.push('/');
+    try {
+        await Promise.all(stockUpdates);
+        toast({
+            title: t.stockInForm.successTitle,
+            description: t.stockInForm.successDescription.replace('{count}', stockUpdates.length.toString()),
+        });
+        form.reset();
+        router.push('/');
+    } catch (error) {
+         console.error("Failed to stock in:", error);
+         toast({
+            title: "Error",
+            description: "Failed to update stock. Please try again.",
+            variant: "destructive"
+        });
+    } finally {
+        setIsSubmitting(false);
+    }
   }
 
   return (
@@ -454,8 +466,10 @@ export function StockInForm({
                 <FormMessage>{form.formState.errors.stockInItems?.message}</FormMessage>
 
                 <div className="flex justify-end gap-2 pt-4">
-                    <Button type="button" variant="ghost" onClick={() => router.push('/')}>{t.common.cancel}</Button>
-                    <Button type="submit" disabled={fields.length === 0}>{t.stockInForm.submit}</Button>
+                    <Button type="button" variant="ghost" onClick={() => router.push('/')} disabled={isSubmitting}>{t.common.cancel}</Button>
+                    <Button type="submit" disabled={fields.length === 0 || isSubmitting}>
+                        {isSubmitting ? 'Submitting...' : t.stockInForm.submit}
+                    </Button>
                 </div>
             </form>
             </Form>

@@ -30,8 +30,9 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { PlusCircle, Trash2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { InventoryItem } from '@/types';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const variantSchema = z.object({
     id: z.string().optional(),
@@ -99,6 +100,7 @@ export function AddProductForm({ existingItem }: AddProductFormProps) {
   const { addItem, updateItem } = useInventory();
   const { toast } = useToast();
   const router = useRouter();
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const isEditMode = !!existingItem;
 
@@ -148,21 +150,33 @@ export function AddProductForm({ existingItem }: AddProductFormProps) {
 
   const hasVariants = form.watch('hasVariants');
   
-  function onSubmit(values: z.infer<typeof formSchema>) {
-    if (isEditMode) {
-        updateItem(values.id!, values);
+  async function onSubmit(values: z.infer<typeof formSchema>) {
+    setIsSubmitting(true);
+    try {
+        if (isEditMode) {
+            await updateItem(values.id!, values);
+            toast({
+                title: "Product Updated",
+                description: `${values.name} has been updated.`,
+            });
+        } else {
+            await addItem(values);
+            toast({
+            title: t.addItemDialog.itemAdded,
+            description: `${values.name} ${t.addItemDialog.hasBeenAdded}`,
+            });
+        }
+        router.push('/');
+    } catch (error) {
+        console.error("Failed to save product:", error);
         toast({
-            title: "Product Updated",
-            description: `${values.name} has been updated.`,
-        });
-    } else {
-        addItem(values);
-        toast({
-        title: t.addItemDialog.itemAdded,
-        description: `${values.name} ${t.addItemDialog.hasBeenAdded}`,
-        });
+            title: "Error",
+            description: "Failed to save product. Please try again.",
+            variant: "destructive"
+        })
+    } finally {
+        setIsSubmitting(false);
     }
-    router.push('/');
   }
 
   return (
@@ -380,8 +394,10 @@ export function AddProductForm({ existingItem }: AddProductFormProps) {
                     </div>
                 )}
                 <div className="flex justify-end gap-2">
-                    <Button type="button" variant="ghost" onClick={() => router.push('/')}>{t.common.cancel}</Button>
-                    <Button type="submit">{isEditMode ? t.inventoryTable.editProduct : t.addItemDialog.addItem}</Button>
+                    <Button type="button" variant="ghost" onClick={() => router.push('/')} disabled={isSubmitting}>{t.common.cancel}</Button>
+                    <Button type="submit" disabled={isSubmitting}>
+                        {isSubmitting ? 'Saving...' : (isEditMode ? t.inventoryTable.editProduct : t.addItemDialog.addItem)}
+                    </Button>
                 </div>
             </form>
             </Form>
@@ -389,7 +405,3 @@ export function AddProductForm({ existingItem }: AddProductFormProps) {
     </Card>
   );
 }
-
-    
-
-    
