@@ -441,8 +441,7 @@ export function InventoryTable({ onUpdateStock }: InventoryTableProps) {
             )}
           </TableBody>
         </Table>
-      </ScrollArea>
-       <div className="flex items-center justify-end p-4 border-t">
+        <div className="flex items-center justify-end p-4 border-t">
             <div className="flex items-center gap-4">
                 <Pagination
                     totalPages={totalPages}
@@ -469,6 +468,7 @@ export function InventoryTable({ onUpdateStock }: InventoryTableProps) {
                 </Select>
             </div>
         </div>
+      </ScrollArea>
     </div>
     {selectedBulkEditItem && (
         <BulkEditVariantsDialog 
