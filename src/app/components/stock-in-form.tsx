@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useMemo, useEffect } from 'react';
@@ -407,8 +408,8 @@ export function StockInForm({
                                                 </TableCell>
                                                 <TableCell>
                                                     <div className="flex items-center gap-4">
-                                                        <div className="flex h-10 w-10 items-center justify-center rounded-sm bg-muted text-muted-foreground">
-                                                            <Store className="h-5 w-5" />
+                                                        <div className="flex h-10 w-10 items-center justify-center rounded-sm bg-muted">
+                                                            <Store className="h-5 w-5 text-muted-foreground" />
                                                         </div>
                                                         <div>
                                                             <div className="font-medium text-sm">{field.variantName}</div>
