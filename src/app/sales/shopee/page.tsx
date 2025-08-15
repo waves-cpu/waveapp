@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
@@ -44,9 +45,9 @@ export default function ShopeeSalesPage() {
   const { fetchSales, recordSale, cancelSale, getProductBySku } = useInventory();
   const { toast } = useToast();
 
-  const [date, setDate] = useState<Date>(new Date());
+  const [date, setDate] = useState<Date | undefined>(undefined);
   const [sales, setSales] = useState<Sale[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [sku, setSku] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const skuInputRef = useRef<HTMLInputElement>(null);
@@ -69,7 +70,14 @@ export default function ShopeeSalesPage() {
   }, [fetchSales, toast]);
 
   useEffect(() => {
-    loadSales(date);
+    // Set initial date on client to avoid hydration mismatch
+    setDate(new Date());
+  }, []);
+
+  useEffect(() => {
+    if (date) {
+      loadSales(date);
+    }
   }, [date, loadSales]);
   
   useEffect(() => {
@@ -79,7 +87,7 @@ export default function ShopeeSalesPage() {
 
   const handleSkuSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!sku || isSubmitting) return;
+    if (!sku || isSubmitting || !date) return;
 
     setIsSubmitting(true);
     try {
@@ -116,6 +124,7 @@ export default function ShopeeSalesPage() {
   };
   
   const handleCancelSale = async (saleId: string) => {
+    if (!date) return;
     try {
         await cancelSale(saleId);
         toast({
