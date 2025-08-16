@@ -223,7 +223,7 @@ export function PosCart() {
                                 <TableHeader>
                                     <TableRow>
                                         <TableHead className="w-[50%] text-xs">{t.pos.item}</TableHead>
-                                        <TableHead className="text-xs">{t.pos.qty}</TableHead>
+                                        <TableHead className="text-left text-xs">{t.pos.qty}</TableHead>
                                         <TableHead className="text-right text-xs">{t.pos.price}</TableHead>
                                         <TableHead className="text-right text-xs">Total</TableHead>
                                         <TableHead className="w-[50px]"></TableHead>
@@ -291,3 +291,4 @@ export function PosCart() {
         </div>
     );
 }
+
