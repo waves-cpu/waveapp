@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useMemo } from 'react'
+import React, { useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -97,13 +97,6 @@ export function PosOrderSummary({ cart, setCart, onCheckout }: PosOrderSummaryPr
       
         {cart.length > 0 && (
             <CardFooter className="flex-col gap-4 p-4 border-t shrink-0">
-                <div className="w-full space-y-2 text-sm">
-                    <div className="flex justify-between items-center">
-                        <span className="text-muted-foreground">Subtotal</span>
-                        <span className="font-medium">Rp{subtotal.toLocaleString('id-ID')}</span>
-                    </div>
-                </div>
-                <Separator/>
                 <div className="w-full flex justify-between items-center font-bold text-base">
                     <span>Total</span>
                     <span>Rp{subtotal.toLocaleString('id-ID')}</span>
