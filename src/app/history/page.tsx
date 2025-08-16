@@ -253,7 +253,7 @@ export default function HistoryPage({
         </div>
         <div className="bg-card rounded-lg border shadow-sm">
           <div className="p-4 flex flex-col gap-4 border-b">
-            <div className="flex flex-col md:flex-row gap-4 justify-between items-center">
+            <div className="flex flex-col md:flex-row gap-4 justify-between items-start">
                 <div className="flex flex-col md:flex-row gap-4 w-full flex-1">
                     <div className="relative w-full md:w-auto md:flex-grow">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -314,11 +314,9 @@ export default function HistoryPage({
                         </div>
                         </PopoverContent>
                     </Popover>
-                </div>
-                <div className="flex items-center gap-2 w-full md:w-auto justify-end">
                     <Button onClick={downloadCSV} variant="outline" size="sm">
                         <FileDown className="mr-2 h-4 w-4" />
-                        {t.inventoryTable.exportCsv}
+                        {t.inventoryTable.exportCsv.replace('Excel', 'CSV')}
                     </Button>
                 </div>
             </div>
@@ -465,4 +463,5 @@ export default function HistoryPage({
     </AppLayout>
   );
 }
+
 
