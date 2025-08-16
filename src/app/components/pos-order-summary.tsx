@@ -28,7 +28,7 @@ interface PosOrderSummaryProps {
 
 export function PosOrderSummary({ cart, setCart, onCheckout }: PosOrderSummaryProps) {
     const totalItems = useMemo(() => cart.reduce((sum, item) => sum + item.quantity, 0), [cart]);
-    const subtotal = useMemo(() => cart.reduce((sum, item) => sum + item.price * item.quantity, 0), [cart]);
+    const total = useMemo(() => cart.reduce((sum, item) => sum + item.price * item.quantity, 0), [cart]);
 
     const updateQuantity = (sku: string, newQuantity: number) => {
         setCart(prevCart =>
@@ -99,7 +99,7 @@ export function PosOrderSummary({ cart, setCart, onCheckout }: PosOrderSummaryPr
             <CardFooter className="flex-col gap-4 p-4 border-t shrink-0">
                 <div className="w-full flex justify-between items-center font-bold text-base">
                     <span>Total</span>
-                    <span>Rp{subtotal.toLocaleString('id-ID')}</span>
+                    <span>Rp{total.toLocaleString('id-ID')}</span>
                 </div>
                 <Button className="w-full" onClick={onCheckout}>
                     Lanjut ke Pembayaran
