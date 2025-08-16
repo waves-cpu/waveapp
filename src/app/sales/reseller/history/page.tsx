@@ -1,7 +1,7 @@
 
 'use client'
 
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { useInventory } from '@/hooks/use-inventory';
 import type { Sale } from '@/types';
 import { AppLayout } from '@/app/components/app-layout';
@@ -16,7 +16,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-import { Calendar as CalendarIcon, Trash2, Users } from 'lucide-react';
+import { Calendar as CalendarIcon, Trash2, Users, Printer } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -32,6 +32,8 @@ import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
 import { History as HistoryIcon } from 'lucide-react';
 import { DailySalesDetailDialog } from '@/app/components/daily-sales-detail-dialog';
+import { PosReceipt, type ReceiptData } from '@/app/components/pos-receipt';
+import { useReactToPrint } from 'react-to-print';
 
 
 type GroupedSale = {
@@ -53,6 +55,19 @@ export default function ResellerHistoryPage() {
     const [date, setDate] = useState<Date | undefined>(new Date());
     const [selectedSaleItems, setSelectedSaleItems] = useState<Sale[]>([]);
     const [isDetailOpen, setIsDetailOpen] = useState(false);
+    const [receiptToPrint, setReceiptToPrint] = useState<ReceiptData | null>(null);
+    const receiptRef = useRef(null);
+
+     const handlePrint = useReactToPrint({
+      content: () => receiptRef.current,
+      onAfterPrint: () => setReceiptToPrint(null),
+    });
+
+    useEffect(() => {
+        if (receiptToPrint) {
+            handlePrint();
+        }
+    }, [receiptToPrint, handlePrint]);
 
     useEffect(() => {
         fetchItems();
@@ -115,6 +130,28 @@ export default function ResellerHistoryPage() {
     const handleViewDetails = (items: Sale[]) => {
         setSelectedSaleItems(items);
         setIsDetailOpen(true);
+    };
+
+    const triggerPrint = (group: GroupedSale) => {
+        const receiptData: ReceiptData = {
+            items: group.items.map(item => ({
+                ...item,
+                productId: item.productId,
+                productName: item.productName,
+                quantity: item.quantity,
+                price: item.priceAtSale,
+                stock: 0, // Not relevant for receipt
+                id: item.variantId || item.productId,
+            })),
+            subtotal: group.totalAmount,
+            discount: 0, // Assuming no discount data is stored for reprint
+            total: group.totalAmount,
+            paymentMethod: group.paymentMethod || 'N/A',
+            cashReceived: group.totalAmount, // For non-cash, cash received equals total
+            change: 0,
+            transactionId: group.transactionId,
+        };
+        setReceiptToPrint(receiptData);
     };
 
 
@@ -198,6 +235,9 @@ export default function ResellerHistoryPage() {
                                                 {group.totalAmount.toLocaleString('id-ID', { style: 'currency', currency: 'IDR' })}
                                             </TableCell>
                                             <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
+                                                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => triggerPrint(group)}>
+                                                    <Printer className="h-4 w-4" />
+                                                </Button>
                                                 <AlertDialog>
                                                     <AlertDialogTrigger asChild>
                                                         <Button variant="ghost" size="icon" className="text-destructive h-8 w-8">
@@ -245,6 +285,13 @@ export default function ResellerHistoryPage() {
                 title="Detail Transaksi Reseller"
                 description={`Detail item untuk transaksi #${selectedSaleItems[0]?.transactionId?.slice(-6) ?? 'N/A'}`}
             />
+             {receiptToPrint && (
+                <div className="print-only">
+                    <div ref={receiptRef}>
+                        <PosReceipt receipt={receiptToPrint} />
+                    </div>
+                </div>
+            )}
         </AppLayout>
     );
 }
