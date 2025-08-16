@@ -107,14 +107,6 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                       </CollapsibleTrigger>
                       <CollapsibleContent>
                           <SidebarMenu className="ml-4 mt-2 border-l border-muted-foreground/20 pl-4">
-                                <SidebarMenuItem>
-                                   <Link href="/sales/pos">
-                                       <SidebarMenuButton variant="ghost" size="sm" isActive={pathname.startsWith('/sales/pos')}>
-                                           <SquareTerminal />
-                                           {t.sales.pos}
-                                       </SidebarMenuButton>
-                                   </Link>
-                               </SidebarMenuItem>
                                <SidebarMenuItem>
                                   <Link href="/sales/shopee">
                                       <SidebarMenuButton variant="ghost" size="sm" isActive={pathname === '/sales/shopee'}>
@@ -139,6 +131,14 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                                       </SidebarMenuButton>
                                   </Link>
                               </SidebarMenuItem>
+                                <SidebarMenuItem>
+                                   <Link href="/sales/pos">
+                                       <SidebarMenuButton variant="ghost" size="sm" isActive={pathname.startsWith('/sales/pos')}>
+                                           <SquareTerminal />
+                                           {t.sales.pos}
+                                       </SidebarMenuButton>
+                                   </Link>
+                               </SidebarMenuItem>
                                <SidebarMenuItem>
                                   <Link href="/sales/reseller">
                                       <SidebarMenuButton variant="ghost" size="sm" isActive={pathname === '/sales/reseller'}>
