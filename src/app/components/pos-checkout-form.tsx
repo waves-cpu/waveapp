@@ -127,14 +127,7 @@ export function PosCheckoutForm({ cart }: PosCheckoutFormProps) {
                 <CardContent className='space-y-6'>
                     <div className="space-y-4 border rounded-md p-4">
                         {cart.map(item => (
-                            <div key={item.sku} className="grid grid-cols-[auto_1fr_auto] items-start gap-x-4">
-                                <Image 
-                                    src={item.imageUrl || 'https://placehold.co/64x64.png'} 
-                                    alt={item.name} 
-                                    width={64} height={64} 
-                                    className="rounded-md object-cover" 
-                                    data-ai-hint="product image"
-                                />
+                            <div key={item.sku} className="grid grid-cols-[1fr_auto] items-start gap-x-4">
                                 <div className="flex-grow">
                                     <p className="font-medium" title={item.name}>{item.name}</p>
                                     {item.variantName && <p className="text-sm text-muted-foreground">{item.variantName}</p>}
