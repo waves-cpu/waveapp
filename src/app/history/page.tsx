@@ -66,6 +66,8 @@ export default function HistoryPage({
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
+  const [tempDateRange, setTempDateRange] = useState<DateRange | undefined>(dateRange);
+  const [isDatePickerOpen, setDatePickerOpen] = useState(false);
   const [adjustmentTypeFilter, setAdjustmentTypeFilter] = useState<'all' | 'in' | 'out'>('all');
   const [selectedSales, setSelectedSales] = useState<Sale[]>([]);
   const [isSalesDetailOpen, setSalesDetailOpen] = useState(false);
@@ -202,6 +204,15 @@ export default function HistoryPage({
       return [...categories, 'Penjualan'].sort()
   },[categories])
 
+  const handleApplyDateRange = () => {
+    setDateRange(tempDateRange);
+    setDatePickerOpen(false);
+  };
+  
+  const handleCancelDateRange = () => {
+    setTempDateRange(dateRange);
+    setDatePickerOpen(false);
+  };
 
   return (
     <AppLayout>
@@ -238,7 +249,7 @@ export default function HistoryPage({
                         ))}
                         </SelectContent>
                     </Select>
-                    <Popover>
+                    <Popover open={isDatePickerOpen} onOpenChange={setDatePickerOpen}>
                         <PopoverTrigger asChild>
                         <Button
                             id="date"
@@ -264,11 +275,15 @@ export default function HistoryPage({
                         <Calendar
                             initialFocus
                             mode="range"
-                            defaultMonth={dateRange?.from}
-                            selected={dateRange}
-                            onSelect={setDateRange}
+                            defaultMonth={tempDateRange?.from}
+                            selected={tempDateRange}
+                            onSelect={setTempDateRange}
                             numberOfMonths={2}
                         />
+                        <div className="p-2 border-t flex justify-end gap-2">
+                          <Button variant="ghost" onClick={handleCancelDateRange}>{t.common.cancel}</Button>
+                          <Button onClick={handleApplyDateRange}>{t.common.apply}</Button>
+                        </div>
                         </PopoverContent>
                     </Popover>
                 </div>
