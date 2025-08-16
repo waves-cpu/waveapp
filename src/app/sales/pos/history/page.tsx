@@ -33,7 +33,6 @@ import Link from 'next/link';
 import { History as HistoryIcon } from 'lucide-react';
 import { DailySalesDetailDialog } from '@/app/components/daily-sales-detail-dialog';
 import { PosReceipt, type ReceiptData } from '@/app/components/pos-receipt';
-import { useReactToPrint } from 'react-to-print';
 
 
 type GroupedSale = {
@@ -58,12 +57,6 @@ export default function PosHistoryPage() {
     const [receiptToPrint, setReceiptToPrint] = useState<ReceiptData | null>(null);
     const receiptRef = useRef<HTMLDivElement>(null);
     
-    const handlePrint = useReactToPrint({
-      content: () => receiptRef.current,
-      onAfterPrint: () => {
-        setReceiptToPrint(null);
-      }
-    });
 
     useEffect(() => {
         fetchItems();
@@ -150,16 +143,18 @@ export default function PosHistoryPage() {
         setReceiptToPrint(receiptData);
     };
 
-     useEffect(() => {
-        if (receiptToPrint && receiptRef.current) {
-            handlePrint();
+    useEffect(() => {
+        if (receiptToPrint) {
+            window.print();
+            setReceiptToPrint(null); // Reset after printing
         }
-    }, [receiptToPrint, handlePrint]);
+    }, [receiptToPrint]);
 
 
     return (
+        <>
         <AppLayout>
-            <main className="flex-1 p-4 md:p-10">
+            <main className="flex-1 p-4 md:p-10 no-print">
                 <div className="flex items-center gap-4 mb-6">
                     <SidebarTrigger className="md:hidden" />
                     <h1 className="text-lg font-bold">{t.pos.history}</h1>
@@ -213,23 +208,23 @@ export default function PosHistoryPage() {
                                     </TableRow>
                                 ) : groupedSales.length > 0 ? (
                                     groupedSales.map(group => (
-                                        <TableRow key={group.transactionId} className="cursor-pointer" onClick={() => handleViewDetails(group.items)}>
-                                            <TableCell className="font-medium text-sm">
+                                        <TableRow key={group.transactionId}>
+                                            <TableCell className="font-medium text-sm" onClick={() => handleViewDetails(group.items)}>
                                                 {format(new Date(group.saleDate), 'HH:mm:ss')}
                                             </TableCell>
-                                            <TableCell>
+                                            <TableCell onClick={() => handleViewDetails(group.items)}>
                                                 <div className="font-medium text-sm">{group.items.length} jenis produk ({group.totalItems} item)</div>
                                                 <div className="text-xs text-muted-foreground max-w-xs truncate">
                                                     {group.items.map(i => i.productName).join(', ')}
                                                 </div>
                                             </TableCell>
-                                            <TableCell>
+                                            <TableCell onClick={() => handleViewDetails(group.items)}>
                                                 <Badge variant="outline">{group.paymentMethod || 'N/A'}</Badge>
                                             </TableCell>
-                                            <TableCell className="text-right font-semibold text-sm">
+                                            <TableCell className="text-right font-semibold text-sm" onClick={() => handleViewDetails(group.items)}>
                                                 {group.totalAmount.toLocaleString('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                                             </TableCell>
-                                            <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
+                                            <TableCell className="text-center">
                                                 <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => triggerPrint(group)}>
                                                     <Printer className="h-4 w-4" />
                                                 </Button>
@@ -281,9 +276,10 @@ export default function PosHistoryPage() {
                 title="Detail Transaksi"
                 description={`Detail item untuk transaksi #${selectedSaleItems[0]?.transactionId?.slice(-6) ?? 'N/A'}`}
             />
-            <div className="hidden">
-                {receiptToPrint && <PosReceipt ref={receiptRef} receipt={receiptToPrint} />}
-            </div>
         </AppLayout>
+        <div className="print-only">
+            {receiptToPrint && <PosReceipt receipt={receiptToPrint} />}
+        </div>
+        </>
     );
 }
