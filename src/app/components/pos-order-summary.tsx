@@ -60,7 +60,7 @@ export function PosOrderSummary({ cart, onSaleComplete, clearCart }: PosOrderSum
     
     if (saleCompleted) {
         return (
-            <Card className="flex-grow flex flex-col justify-center items-center text-center p-8">
+            <Card className="flex-grow flex flex-col justify-center items-center text-center p-8 h-full">
                 <CardTitle className="text-2xl font-bold mb-2">{t.pos.saleCompleted}</CardTitle>
                 <p className="text-muted-foreground mb-4">Total: {total.toLocaleString('id-ID', { style: 'currency', currency: 'IDR' })}</p>
                 <div className="space-y-4">
@@ -72,7 +72,7 @@ export function PosOrderSummary({ cart, onSaleComplete, clearCart }: PosOrderSum
     }
 
     return (
-        <Card className="flex flex-col sticky top-4">
+        <Card className="flex flex-col h-full sticky top-4">
             <CardHeader>
                 <CardTitle>{t.pos.paymentDetails}</CardTitle>
             </CardHeader>
@@ -97,7 +97,7 @@ export function PosOrderSummary({ cart, onSaleComplete, clearCart }: PosOrderSum
                     <Input id="cashReceived" type="number" placeholder="0" value={cashReceived || ''} onChange={(e) => setCashReceived(Number(e.target.value))} className="h-10 text-lg" />
                 </div>
             </CardContent>
-            <CardFooter className="flex-col !p-4">
+            <CardFooter className="flex-col !p-4 mt-auto">
                 <div className="w-full space-y-2 text-lg font-bold mb-4 p-4 bg-muted rounded-md">
                     <div className="flex justify-between">
                         <span>{t.pos.total}</span>

@@ -167,8 +167,8 @@ export function PosCart() {
 
 
     return (
-        <div className="flex-grow grid grid-cols-1 lg:grid-cols-5 gap-4 p-4 items-start">
-            <div className="lg:col-span-3 flex flex-col gap-4">
+        <div className="flex-grow grid grid-cols-1 lg:grid-cols-5 gap-4 p-4">
+            <div className="lg:col-span-3 flex flex-col gap-4 h-full">
                 <PosSearch onProductSelect={handleProductSelect} />
                 <Card className="flex-grow flex flex-col">
                     <CardHeader>
@@ -229,7 +229,7 @@ export function PosCart() {
                     </CardContent>
                 </Card>
             </div>
-            <div className="lg:col-span-2">
+            <div className="lg:col-span-2 h-full">
                  <PosOrderSummary
                     cart={cart}
                     onSaleComplete={handleSaleComplete}

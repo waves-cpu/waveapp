@@ -17,7 +17,7 @@ export default function PosPage() {
   return (
     <AppLayout>
       <div className="h-screen flex flex-col">
-         <header className="flex items-center justify-between p-4 border-b">
+         <header className="flex items-center justify-between p-4 border-b shrink-0">
             <div className="flex items-center gap-4">
                 <SidebarTrigger className="md:hidden" />
                 <h1 className="text-lg font-bold">{t.pos.title}</h1>
