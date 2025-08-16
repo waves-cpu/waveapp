@@ -101,14 +101,14 @@ function StockBar({ stock, onUpdateClick }: { stock: number; onUpdateClick: () =
     };
 
     return (
-        <div className="w-36">
-            <div className="flex items-center gap-2 mb-1 group">
-                <span className="font-medium text-left">{stock}</span>
+        <div className="relative w-36 group">
+            <Progress value={stock > 100 ? 100 : stock} className="h-6" indicatorClassName={getStockColor(stock)} />
+            <div className="absolute inset-0 flex items-center justify-between px-2">
+                <span className="font-medium text-xs text-white mix-blend-difference">{stock}</span>
                 <Button variant="ghost" size="icon" onClick={onUpdateClick} className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity" aria-label={t.inventoryTable.updateStock}>
-                    <Edit className="h-3 w-3" />
+                    <Edit className="h-3 w-3 text-white" />
                 </Button>
             </div>
-            <Progress value={stock > 100 ? 100 : stock} className="h-2" indicatorClassName={getStockColor(stock)} />
         </div>
     );
 }
@@ -489,6 +489,8 @@ export function InventoryTable({ onUpdateStock }: InventoryTableProps) {
 
 
 
+
+    
 
     
 
