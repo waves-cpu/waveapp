@@ -146,11 +146,11 @@ export function PosCart() {
         setCart([]);
     };
 
-    const handleSaleComplete = async () => {
+    const handleSaleComplete = async (paymentMethod: string) => {
         const transactionId = `trans-${Date.now()}`;
         try {
              const salePromises = cart.map(item =>
-                recordSale(item.sku!, 'pos', item.quantity, new Date(), transactionId)
+                recordSale(item.sku!, 'pos', item.quantity, new Date(), transactionId, paymentMethod)
             );
             await Promise.all(salePromises);
             clearCart();
@@ -167,7 +167,7 @@ export function PosCart() {
 
 
     return (
-        <div className="flex-grow grid grid-cols-1 lg:grid-cols-5 gap-4 p-4">
+        <div className="flex-grow grid grid-cols-1 lg:grid-cols-5 gap-4 p-4 h-full">
             <div className="lg:col-span-3 flex flex-col gap-4 h-full">
                 <PosSearch onProductSelect={handleProductSelect} />
                 <Card className="flex-grow flex flex-col">

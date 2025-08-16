@@ -39,6 +39,7 @@ type GroupedSale = {
     items: Sale[];
     totalAmount: number;
     totalItems: number;
+    paymentMethod?: string;
 }
 
 export default function PosHistoryPage() {
@@ -73,6 +74,7 @@ export default function PosHistoryPage() {
                 groups.set(id, {
                     transactionId: id,
                     saleDate: sale.saleDate,
+                    paymentMethod: sale.paymentMethod,
                     items: [],
                     totalAmount: 0,
                     totalItems: 0,
@@ -150,6 +152,7 @@ export default function PosHistoryPage() {
                                 <TableRow>
                                     <TableHead className="text-xs">Waktu</TableHead>
                                     <TableHead className="text-xs">Detail Transaksi</TableHead>
+                                    <TableHead className="text-xs">Metode Bayar</TableHead>
                                     <TableHead className="text-right text-xs">Total</TableHead>
                                     <TableHead className="text-center text-xs">Aksi</TableHead>
                                 </TableRow>
@@ -157,7 +160,7 @@ export default function PosHistoryPage() {
                             <TableBody>
                                 {loading ? (
                                     <TableRow>
-                                        <TableCell colSpan={4} className="h-24 text-center text-sm">Memuat riwayat...</TableCell>
+                                        <TableCell colSpan={5} className="h-24 text-center text-sm">Memuat riwayat...</TableCell>
                                     </TableRow>
                                 ) : groupedSales.length > 0 ? (
                                     groupedSales.map(group => (
@@ -170,6 +173,9 @@ export default function PosHistoryPage() {
                                                 <div className="text-xs text-muted-foreground max-w-xs truncate">
                                                     {group.items.map(i => i.productName).join(', ')}
                                                 </div>
+                                            </TableCell>
+                                            <TableCell>
+                                                <Badge variant="outline">{group.paymentMethod || 'N/A'}</Badge>
                                             </TableCell>
                                             <TableCell className="text-right font-semibold text-sm">
                                                 {group.totalAmount.toLocaleString('id-ID', { style: 'currency', currency: 'IDR' })}
@@ -201,7 +207,7 @@ export default function PosHistoryPage() {
                                     ))
                                 ) : (
                                      <TableRow>
-                                        <TableCell colSpan={4} className="h-48 text-center">
+                                        <TableCell colSpan={5} className="h-48 text-center">
                                             <div className="flex flex-col items-center justify-center gap-4 text-muted-foreground">
                                                 <HistoryIcon className="h-12 w-12" />
                                                 <p className="font-semibold text-sm">Tidak Ada Transaksi</p>

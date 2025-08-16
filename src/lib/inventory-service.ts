@@ -322,7 +322,7 @@ export async function findProductBySku(sku: string): Promise<InventoryItem | nul
 }
 
 
-export async function performSale(sku: string, channel: string, quantity: number, saleDate?: Date, transactionId?: string) {
+export async function performSale(sku: string, channel: string, quantity: number, saleDate?: Date, transactionId?: string, paymentMethod?: string) {
     const getProductStmt = db.prepare('SELECT id, price, stock FROM products WHERE sku = ? AND hasVariants = 0');
     const getVariantStmt = db.prepare('SELECT id, price, stock, productId FROM variants WHERE sku = ?');
     
@@ -333,8 +333,8 @@ export async function performSale(sku: string, channel: string, quantity: number
                 throw new Error('Insufficient stock for variant.');
             }
             adjustStock(variant.id.toString(), -quantity, `Sale (${channel})`);
-            db.prepare('INSERT INTO sales (transactionId, productId, variantId, channel, quantity, priceAtSale, saleDate) VALUES (?, ?, ?, ?, ?, ?, ?)')
-              .run(transactionId, variant.productId, variant.id, channel, quantity, variant.price, (saleDate || new Date()).toISOString());
+            db.prepare('INSERT INTO sales (transactionId, paymentMethod, productId, variantId, channel, quantity, priceAtSale, saleDate) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
+              .run(transactionId, paymentMethod, variant.productId, variant.id, channel, quantity, variant.price, (saleDate || new Date()).toISOString());
         } else {
             const product = getProductStmt.get(sku) as { id: number, price: number, stock: number } | undefined;
             if (product) {
@@ -342,8 +342,8 @@ export async function performSale(sku: string, channel: string, quantity: number
                     throw new Error('Insufficient stock for product.');
                 }
                 adjustStock(product.id.toString(), -quantity, `Sale (${channel})`);
-                db.prepare('INSERT INTO sales (transactionId, productId, variantId, channel, quantity, priceAtSale, saleDate) VALUES (?, ?, ?, ?, ?, ?, ?)')
-                  .run(transactionId, product.id, null, channel, quantity, product.price, (saleDate || new Date()).toISOString());
+                db.prepare('INSERT INTO sales (transactionId, paymentMethod, productId, variantId, channel, quantity, priceAtSale, saleDate) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
+                  .run(transactionId, paymentMethod, product.id, null, channel, quantity, product.price, (saleDate || new Date()).toISOString());
             } else {
                 throw new Error('Product or variant with specified SKU not found or has variants.');
             }
@@ -354,7 +354,7 @@ export async function performSale(sku: string, channel: string, quantity: number
 export async function fetchAllSales(): Promise<Sale[]> {
      const salesQuery = db.prepare(`
         SELECT 
-            s.id, s.transactionId, s.productId, s.variantId, s.channel, s.quantity, s.priceAtSale, s.saleDate,
+            s.id, s.transactionId, s.paymentMethod, s.productId, s.variantId, s.channel, s.quantity, s.priceAtSale, s.saleDate,
             p.name as productName,
             v.name as variantName,
             COALESCE(v.sku, p.sku) as sku
@@ -376,7 +376,7 @@ export async function getSalesByDate(channel: string, date: Date): Promise<Sale[
 
     const salesQuery = db.prepare(`
         SELECT 
-            s.id, s.transactionId, s.productId, s.variantId, s.channel, s.quantity, s.priceAtSale, s.saleDate,
+            s.id, s.transactionId, s.paymentMethod, s.productId, s.variantId, s.channel, s.quantity, s.priceAtSale, s.saleDate,
             p.name as productName,
             v.name as variantName,
             COALESCE(v.sku, p.sku) as sku

@@ -34,6 +34,7 @@ export interface InventoryItem {
 export interface Sale {
   id: string;
   transactionId?: string;
+  paymentMethod?: string;
   productId: string;
   variantId?: string;
   channel: string;

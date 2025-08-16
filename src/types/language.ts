@@ -128,6 +128,8 @@ export const translations = {
             history: "Transaction History",
             cancel: "Cancel Sale",
             transactionCancelled: "Transaction Cancelled",
+            paymentMethod: "Payment Method",
+            cash: "Cash"
         },
         settings: {
             back: "Back",
@@ -292,6 +294,8 @@ export const translations = {
             history: "Riwayat Transaksi",
             cancel: "Batalkan Penjualan",
             transactionCancelled: "Transaksi Dibatalkan",
+            paymentMethod: "Metode Bayar",
+            cash: "Tunai",
         },
         settings: {
             back: "Kembali",
