@@ -67,7 +67,7 @@ export function PosOrderSummary({ cart, onSaleComplete, clearCart }: PosOrderSum
         return (
             <Card className="flex-grow flex flex-col justify-center items-center text-center p-8 h-full">
                 <CardTitle className="text-xl font-bold mb-2">{t.pos.saleCompleted}</CardTitle>
-                <p className="text-muted-foreground mb-4 text-sm">Total: {total.toLocaleString('id-ID', { style: 'currency', currency: 'IDR' })}</p>
+                <p className="text-muted-foreground mb-4 text-sm">Total: {total.toLocaleString('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0, maximumFractionDigits: 0 })}</p>
                 <div className="space-y-4">
                     <Button onClick={handleNewSale} size="lg">{t.pos.newSale}</Button>
                     <Button variant="outline" size="lg" disabled>{t.pos.printReceipt}</Button>
@@ -85,7 +85,7 @@ export function PosOrderSummary({ cart, onSaleComplete, clearCart }: PosOrderSum
                  <div className="space-y-2 text-sm">
                     <div className="flex justify-between">
                         <span>{t.pos.subtotal}</span>
-                        <span>{subtotal.toLocaleString('id-ID', { style: 'currency', currency: 'IDR' })}</span>
+                        <span>{subtotal.toLocaleString('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0, maximumFractionDigits: 0 })}</span>
                     </div>
                     <div className="flex justify-between items-center">
                         <Label htmlFor="discount">{t.pos.discount}</Label>
@@ -137,12 +137,12 @@ export function PosOrderSummary({ cart, onSaleComplete, clearCart }: PosOrderSum
                 <div className="w-full space-y-2 text-base font-bold mb-4 p-4 bg-muted rounded-md">
                     <div className="flex justify-between">
                         <span>{t.pos.total}</span>
-                        <span className="text-primary">{total.toLocaleString('id-ID', { style: 'currency', currency: 'IDR' })}</span>
+                        <span className="text-primary">{total.toLocaleString('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0, maximumFractionDigits: 0 })}</span>
                     </div>
                      {paymentMethod === 'Cash' && (
                         <div className="flex justify-between text-sm">
                             <span>{t.pos.change}</span>
-                            <span>{change >= 0 ? change.toLocaleString('id-ID', { style: 'currency', currency: 'IDR' }) : '-'}</span>
+                            <span>{change >= 0 ? change.toLocaleString('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0, maximumFractionDigits: 0 }) : '-'}</span>
                         </div>
                      )}
                 </div>
