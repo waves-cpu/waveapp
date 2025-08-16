@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { useLanguage } from '@/hooks/use-language';
 import { translations } from '@/types/language';
 import type { CartItem } from './pos-cart';
@@ -20,7 +20,7 @@ export interface ReceiptData {
 
 interface PosReceiptProps {
     receipt: ReceiptData;
-    onReady?: () => void;
+    onReady: () => void;
 }
 
 const formatCurrency = (amount: number) => {
@@ -35,7 +35,7 @@ export const PosReceipt = React.forwardRef<HTMLDivElement, PosReceiptProps>((pro
 
     useEffect(() => {
         // Signal that the component is mounted and ready to be printed.
-        onReady?.();
+        onReady();
     }, [onReady]);
 
 

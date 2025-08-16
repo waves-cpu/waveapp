@@ -65,6 +65,12 @@ export default function ResellerHistoryPage() {
       },
     });
 
+     useEffect(() => {
+        if (receiptToPrint && receiptRef.current) {
+            handlePrint();
+        }
+    }, [receiptToPrint, handlePrint]);
+
     useEffect(() => {
         fetchItems();
     }, [fetchItems]);
@@ -281,11 +287,9 @@ export default function ResellerHistoryPage() {
                 title="Detail Transaksi Reseller"
                 description={`Detail item untuk transaksi #${selectedSaleItems[0]?.transactionId?.slice(-6) ?? 'N/A'}`}
             />
-            {receiptToPrint && (
-                <div className="hidden">
-                    <PosReceipt ref={receiptRef} receipt={receiptToPrint} onReady={handlePrint} />
-                </div>
-            )}
+            <div className="hidden">
+                {receiptToPrint && <PosReceipt ref={receiptRef} receipt={receiptToPrint} onReady={handlePrint} />}
+            </div>
         </AppLayout>
     );
 }
