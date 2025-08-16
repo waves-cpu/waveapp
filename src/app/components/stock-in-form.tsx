@@ -18,7 +18,7 @@ import { useInventory } from '@/hooks/use-inventory';
 import { useToast } from '@/hooks/use-toast';
 import { useLanguage } from '@/hooks/use-language';
 import { translations } from '@/types/language';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Trash2, ShoppingBag, Store } from 'lucide-react';
 import { useRouter } from 'next/navigation';
@@ -270,214 +270,215 @@ export function StockInForm({
 
   return (
     <>
-    <Card>
-        <CardContent className="p-0">
-            <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                <div className="border rounded-md">
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead className="w-[50px]">
-                                    <Checkbox
-                                        checked={isAllSelected ? true : (isSomeSelected ? "indeterminate" : false)}
-                                        onCheckedChange={(checked) => handleSelectAll(!!checked)}
-                                        aria-label="Select all"
-                                        disabled={fields.length === 0}
-                                    />
-                                </TableHead>
-                                <TableHead className="w-[45%]">{t.inventoryTable.name}</TableHead>
-                                <TableHead className="w-[15%]">{t.stockInForm.quantity}</TableHead>
-                                <TableHead>{t.stockInForm.reason}</TableHead>
-                                <TableHead className="w-[50px]"></TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {fields.length === 0 ? (
+    <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)}>
+            <Card>
+                <CardContent className="p-0">
+                    <div className="border rounded-md">
+                        <Table>
+                            <TableHeader>
                                 <TableRow>
-                                    <TableCell colSpan={5} className="text-center h-48">
-                                         <div className="flex flex-col items-center justify-center gap-4 text-muted-foreground">
-                                            <ShoppingBag className="h-16 w-16" />
-                                            <div className="text-center">
-                                                <p className="font-semibold">{t.stockInForm.noProducts}</p>
-                                                <p className="text-sm">{t.stockInForm.selectProducts} to begin.</p>
-                                            </div>
-                                        </div>
-                                    </TableCell>
+                                    <TableHead className="w-[50px]">
+                                        <Checkbox
+                                            checked={isAllSelected ? true : (isSomeSelected ? "indeterminate" : false)}
+                                            onCheckedChange={(checked) => handleSelectAll(!!checked)}
+                                            aria-label="Select all"
+                                            disabled={fields.length === 0}
+                                        />
+                                    </TableHead>
+                                    <TableHead className="w-[45%]">{t.inventoryTable.name}</TableHead>
+                                    <TableHead className="w-[15%]">{t.stockInForm.quantity}</TableHead>
+                                    <TableHead>{t.stockInForm.reason}</TableHead>
+                                    <TableHead className="w-[50px]"></TableHead>
                                 </TableRow>
-                            ) : (
-                                <>
-                                {groupedItems.simpleItems.map((field) => (
-                                     <TableRow key={field.itemId} data-state={bulkSelectedIds.has(field.itemId) ? "selected" : ""}>
-                                        <TableCell>
-                                            <Checkbox
-                                                checked={bulkSelectedIds.has(field.itemId)}
-                                                onCheckedChange={() => handleToggleSelection(field.itemId)}
-                                                aria-label={`Select ${field.itemName}`}
-                                            />
-                                        </TableCell>
-                                        <TableCell>
-                                            <div className="flex items-center gap-4">
-                                                <Image 
-                                                    src={field.parentImageUrl || 'https://placehold.co/40x40.png'} 
-                                                    alt={field.itemName} 
-                                                    width={40} height={40} 
-                                                    className="rounded-sm" 
-                                                    data-ai-hint="product image"
-                                                />
-                                                <div>
-                                                    <span className="font-medium text-sm">{field.itemName}</span>
-                                                    <div className="text-xs text-muted-foreground">SKU: {field.parentSku}</div>
+                            </TableHeader>
+                            <TableBody>
+                                {fields.length === 0 ? (
+                                    <TableRow>
+                                        <TableCell colSpan={5} className="text-center h-48">
+                                            <div className="flex flex-col items-center justify-center gap-4 text-muted-foreground">
+                                                <ShoppingBag className="h-16 w-16" />
+                                                <div className="text-center">
+                                                    <p className="font-semibold">{t.stockInForm.noProducts}</p>
+                                                    <p className="text-sm">{t.stockInForm.selectProducts} to begin.</p>
                                                 </div>
                                             </div>
                                         </TableCell>
-                                        <TableCell>
-                                            <FormField
-                                                control={form.control}
-                                                name={`stockInItems.${field.originalIndex}.quantity`}
-                                                render={({ field: formField }) => (
-                                                    <FormItem><FormControl><Input type="number" placeholder="10" {...formField} /></FormControl><FormMessage/></FormItem>
-                                                )}
-                                            />
-                                        </TableCell>
-                                        <TableCell>
-                                            <FormField
-                                                control={form.control}
-                                                name={`stockInItems.${field.originalIndex}.reason`}
-                                                render={({ field: formField }) => (
-                                                    <FormItem><FormControl><Input placeholder={t.updateStockDialog.reasonPlaceholder} {...formField} /></FormControl><FormMessage/></FormItem>
-                                                )}
-                                            />
-                                        </TableCell>
-                                        <TableCell>
-                                            <Button type="button" variant="ghost" size="icon" className="text-destructive hover:text-destructive-foreground hover:bg-destructive" onClick={() => handleRemove([field.originalIndex])}>
-                                                <Trash2 className="h-4 w-4" />
-                                            </Button>
-                                        </TableCell>
                                     </TableRow>
-                                ))}
-                                {Array.from(groupedItems.groups.entries()).map(([parentName, variants]) => {
-                                    const parent = variants[0];
-                                    const variantIds = variants.map(v => v.itemId);
-                                    const selectedCount = variantIds.filter(id => bulkSelectedIds.has(id)).length;
-                                    const isParentAllSelected = selectedCount === variantIds.length;
-                                    const isParentPartiallySelected = selectedCount > 0 && !isParentAllSelected;
-
-                                    return (
-                                    <React.Fragment key={parentName}>
-                                        <TableRow className="bg-muted/20 hover:bg-muted/40">
+                                ) : (
+                                    <>
+                                    {groupedItems.simpleItems.map((field) => (
+                                        <TableRow key={field.itemId} data-state={bulkSelectedIds.has(field.itemId) ? "selected" : ""}>
                                             <TableCell>
                                                 <Checkbox
-                                                    checked={isParentAllSelected ? true : (isParentPartiallySelected ? "indeterminate" : false)}
-                                                    onCheckedChange={(checked) => handleToggleParentSelection(variants, !!checked)}
-                                                    aria-label={`Select all variants for ${parentName}`}
+                                                    checked={bulkSelectedIds.has(field.itemId)}
+                                                    onCheckedChange={() => handleToggleSelection(field.itemId)}
+                                                    aria-label={`Select ${field.itemName}`}
                                                 />
                                             </TableCell>
-                                             <TableCell>
-                                                <div className="flex items-center gap-4 font-semibold text-primary">
+                                            <TableCell>
+                                                <div className="flex items-center gap-4">
                                                     <Image 
-                                                        src={parent.parentImageUrl || 'https://placehold.co/40x40.png'} 
-                                                        alt={parentName} 
+                                                        src={field.parentImageUrl || 'https://placehold.co/40x40.png'} 
+                                                        alt={field.itemName} 
                                                         width={40} height={40} 
                                                         className="rounded-sm" 
                                                         data-ai-hint="product image"
                                                     />
                                                     <div>
-                                                        <span className="text-sm">{parentName}</span>
-                                                        <div className="text-xs text-muted-foreground font-normal">SKU: {parent.parentSku}</div>
+                                                        <span className="font-medium text-sm">{field.itemName}</span>
+                                                        <div className="text-xs text-muted-foreground">SKU: {field.parentSku}</div>
                                                     </div>
                                                 </div>
-                                             </TableCell>
-                                             <TableCell colSpan={2}>
-                                                <div className="flex items-center gap-2">
-                                                    <FormField
-                                                        control={form.control}
-                                                        name={`masterQuantities.${parentName}`}
-                                                        render={({ field }) => (
-                                                            <FormItem className="flex-grow">
-                                                               <FormControl><Input type="number" placeholder={t.stockInForm.quantity} {...field} value={field.value ?? ''} /></FormControl>
-                                                            </FormItem>
-                                                        )}
-                                                    />
-                                                    <Button type="button" variant="outline" size="sm" onClick={() => applyMasterQuantity(parentName)}>
-                                                        {t.bulkStockInDialog.applyToAll}
-                                                    </Button>
-                                                </div>
-                                             </TableCell>
-                                             <TableCell>
-                                                <Button type="button" variant="ghost" size="icon" className="text-destructive hover:text-destructive-foreground hover:bg-destructive" onClick={() => handleRemove(variants.map(v => v.originalIndex))}>
+                                            </TableCell>
+                                            <TableCell>
+                                                <FormField
+                                                    control={form.control}
+                                                    name={`stockInItems.${field.originalIndex}.quantity`}
+                                                    render={({ field: formField }) => (
+                                                        <FormItem><FormControl><Input type="number" placeholder="10" {...formField} /></FormControl><FormMessage/></FormItem>
+                                                    )}
+                                                />
+                                            </TableCell>
+                                            <TableCell>
+                                                <FormField
+                                                    control={form.control}
+                                                    name={`stockInItems.${field.originalIndex}.reason`}
+                                                    render={({ field: formField }) => (
+                                                        <FormItem><FormControl><Input placeholder={t.updateStockDialog.reasonPlaceholder} {...formField} /></FormControl><FormMessage/></FormItem>
+                                                    )}
+                                                />
+                                            </TableCell>
+                                            <TableCell>
+                                                <Button type="button" variant="ghost" size="icon" className="text-destructive hover:text-destructive-foreground hover:bg-destructive" onClick={() => handleRemove([field.originalIndex])}>
                                                     <Trash2 className="h-4 w-4" />
                                                 </Button>
-                                             </TableCell>
+                                            </TableCell>
                                         </TableRow>
-                                        {variants.map((field) => (
-                                            <TableRow key={field.itemId} data-state={bulkSelectedIds.has(field.itemId) ? "selected" : ""}>
+                                    ))}
+                                    {Array.from(groupedItems.groups.entries()).map(([parentName, variants]) => {
+                                        const parent = variants[0];
+                                        const variantIds = variants.map(v => v.itemId);
+                                        const selectedCount = variantIds.filter(id => bulkSelectedIds.has(id)).length;
+                                        const isParentAllSelected = selectedCount === variantIds.length;
+                                        const isParentPartiallySelected = selectedCount > 0 && !isParentAllSelected;
+
+                                        return (
+                                        <React.Fragment key={parentName}>
+                                            <TableRow className="bg-muted/20 hover:bg-muted/40">
                                                 <TableCell>
-                                                     <Checkbox
-                                                        checked={bulkSelectedIds.has(field.itemId)}
-                                                        onCheckedChange={() => handleToggleSelection(field.itemId)}
-                                                        aria-label={`Select ${field.itemName}`}
+                                                    <Checkbox
+                                                        checked={isParentAllSelected ? true : (isParentPartiallySelected ? "indeterminate" : false)}
+                                                        onCheckedChange={(checked) => handleToggleParentSelection(variants, !!checked)}
+                                                        aria-label={`Select all variants for ${parentName}`}
                                                     />
                                                 </TableCell>
                                                 <TableCell>
-                                                    <div className="flex items-center gap-4">
-                                                        <div className="flex h-10 w-10 items-center justify-center rounded-sm">
-                                                            <Store className="h-5 w-5 text-gray-400" />
-                                                        </div>
+                                                    <div className="flex items-center gap-4 font-semibold text-primary">
+                                                        <Image 
+                                                            src={parent.parentImageUrl || 'https://placehold.co/40x40.png'} 
+                                                            alt={parentName} 
+                                                            width={40} height={40} 
+                                                            className="rounded-sm" 
+                                                            data-ai-hint="product image"
+                                                        />
                                                         <div>
-                                                            <div className="font-medium text-sm">{field.variantName}</div>
-                                                            <div className="text-xs text-muted-foreground">SKU: {field.variantSku}</div>
+                                                            <span className="text-sm">{parentName}</span>
+                                                            <div className="text-xs text-muted-foreground font-normal">SKU: {parent.parentSku}</div>
                                                         </div>
                                                     </div>
                                                 </TableCell>
-                                                <TableCell>
-                                                    <FormField
-                                                        control={form.control}
-                                                        name={`stockInItems.${field.originalIndex}.quantity`}
-                                                        render={({ field: formField }) => (
-                                                            <FormItem><FormControl><Input type="number" placeholder="10" {...formField} /></FormControl><FormMessage/></FormItem>
-                                                        )}
-                                                    />
+                                                <TableCell colSpan={2}>
+                                                    <div className="flex items-center gap-2">
+                                                        <FormField
+                                                            control={form.control}
+                                                            name={`masterQuantities.${parentName}`}
+                                                            render={({ field }) => (
+                                                                <FormItem className="flex-grow">
+                                                                <FormControl><Input type="number" placeholder={t.stockInForm.quantity} {...field} value={field.value ?? ''} /></FormControl>
+                                                                </FormItem>
+                                                            )}
+                                                        />
+                                                        <Button type="button" variant="outline" size="sm" onClick={() => applyMasterQuantity(parentName)}>
+                                                            {t.bulkStockInDialog.applyToAll}
+                                                        </Button>
+                                                    </div>
                                                 </TableCell>
                                                 <TableCell>
-                                                    <FormField
-                                                        control={form.control}
-                                                        name={`stockInItems.${field.originalIndex}.reason`}
-                                                        render={({ field: formField }) => (
-                                                            <FormItem><FormControl><Input placeholder={t.updateStockDialog.reasonPlaceholder} {...formField} /></FormControl><FormMessage/></FormItem>
-                                                )}
-                                                    />
-                                                </TableCell>
-                                                <TableCell>
-                                                    <Button type="button" variant="ghost" size="icon" className="text-destructive hover:text-destructive-foreground hover:bg-destructive" onClick={() => handleRemove([field.originalIndex])}>
+                                                    <Button type="button" variant="ghost" size="icon" className="text-destructive hover:text-destructive-foreground hover:bg-destructive" onClick={() => handleRemove(variants.map(v => v.originalIndex))}>
                                                         <Trash2 className="h-4 w-4" />
                                                     </Button>
                                                 </TableCell>
                                             </TableRow>
-                                        ))}
-                                    </React.Fragment>
-                                    )
-                                })}
-                                </>
-                            )}
-                        </TableBody>
-                    </Table>
-                </div>
-                
-                <FormMessage>{form.formState.errors.stockInItems?.message}</FormMessage>
+                                            {variants.map((field) => (
+                                                <TableRow key={field.itemId} data-state={bulkSelectedIds.has(field.itemId) ? "selected" : ""}>
+                                                    <TableCell>
+                                                        <Checkbox
+                                                            checked={bulkSelectedIds.has(field.itemId)}
+                                                            onCheckedChange={() => handleToggleSelection(field.itemId)}
+                                                            aria-label={`Select ${field.itemName}`}
+                                                        />
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        <div className="flex items-center gap-4">
+                                                            <div className="flex h-10 w-10 items-center justify-center rounded-sm">
+                                                                <Store className="h-5 w-5 text-gray-400" />
+                                                            </div>
+                                                            <div>
+                                                                <div className="font-medium text-sm">{field.variantName}</div>
+                                                                <div className="text-xs text-muted-foreground">SKU: {field.variantSku}</div>
+                                                            </div>
+                                                        </div>
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        <FormField
+                                                            control={form.control}
+                                                            name={`stockInItems.${field.originalIndex}.quantity`}
+                                                            render={({ field: formField }) => (
+                                                                <FormItem><FormControl><Input type="number" placeholder="10" {...formField} /></FormControl><FormMessage/></FormItem>
+                                                            )}
+                                                        />
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        <FormField
+                                                            control={form.control}
+                                                            name={`stockInItems.${field.originalIndex}.reason`}
+                                                            render={({ field: formField }) => (
+                                                                <FormItem><FormControl><Input placeholder={t.updateStockDialog.reasonPlaceholder} {...formField} /></FormControl><FormMessage/></FormItem>
+                                                    )}
+                                                        />
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        <Button type="button" variant="ghost" size="icon" className="text-destructive hover:text-destructive-foreground hover:bg-destructive" onClick={() => handleRemove([field.originalIndex])}>
+                                                            <Trash2 className="h-4 w-4" />
+                                                        </Button>
+                                                    </TableCell>
+                                                </TableRow>
+                                            ))}
+                                        </React.Fragment>
+                                        )
+                                    })}
+                                    </>
+                                )}
+                            </TableBody>
+                        </Table>
+                    </div>
+                    
+                    <FormMessage>{form.formState.errors.stockInItems?.message}</FormMessage>
 
+                </CardContent>
                 {fields.length > 0 && (
-                    <div className="flex justify-end gap-2 mt-4">
+                    <CardFooter className="justify-end gap-2 pt-6">
                         <Button type="button" variant="ghost" onClick={() => router.push('/')} disabled={isSubmitting}>{t.common.cancel}</Button>
                         <Button type="submit" disabled={isSubmitting}>
                             {isSubmitting ? 'Submitting...' : t.stockInForm.submit}
                         </Button>
-                    </div>
+                    </CardFooter>
                 )}
-            </form>
-            </Form>
-        </CardContent>
-    </Card>
+            </Card>
+        </form>
+    </Form>
+
     <ProductSelectionDialog
         open={isProductSelectionOpen}
         onOpenChange={setProductSelectionOpen}
