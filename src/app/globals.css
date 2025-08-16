@@ -104,17 +104,30 @@ body {
 }
 
 @media print {
-  body {
-    background-color: white;
+  html, body {
+    width: 80mm;
+    height: auto;
+    margin: 0;
+    padding: 0;
+    background: white;
   }
-  .no-print {
-    display: none;
+  body * {
+    visibility: hidden;
+  }
+  .print-only, .print-only * {
+    visibility: visible;
   }
   .print-only {
-    display: block;
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+  }
+  .no-print {
+    display: none !important;
   }
   @page {
-    size: 80mm auto; /* Set page size for 80mm thermal printer */
-    margin: 0;
+    size: 80mm auto;
+    margin: 2mm;
   }
 }
