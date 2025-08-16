@@ -22,6 +22,7 @@ import { Button } from '@/components/ui/button';
 import { useEffect } from 'react';
 import { Badge } from '@/components/ui/badge';
 import type { CartItem } from './pos-cart';
+import { cn } from '@/lib/utils';
 
 
 interface VariantSelectionDialogProps {
