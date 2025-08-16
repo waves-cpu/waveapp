@@ -131,14 +131,6 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                                       </SidebarMenuButton>
                                   </Link>
                               </SidebarMenuItem>
-                              <SidebarMenuItem>
-                                  <Link href="/sales/pos" target='_blank'>
-                                      <SidebarMenuButton variant="ghost" size="sm" isActive={pathname === '/sales/pos'}>
-                                          <SquareTerminal />
-                                          {t.sales.pos}
-                                      </SidebarMenuButton>
-                                  </Link>
-                              </SidebarMenuItem>
                                <SidebarMenuItem>
                                   <Link href="/sales/reseller">
                                       <SidebarMenuButton variant="ghost" size="sm" isActive={pathname === '/sales/reseller'}>
