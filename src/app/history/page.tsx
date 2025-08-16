@@ -35,6 +35,7 @@ import { Badge } from '@/components/ui/badge';
 import Image from 'next/image';
 import { DailySalesDetailDialog } from '@/app/components/daily-sales-detail-dialog';
 import { AppLayout } from '../components/app-layout';
+import { Pagination } from '@/components/ui/pagination';
 
 type HistoryEntry = {
     type: 'adjustment' | 'sales_summary';
@@ -67,6 +68,8 @@ export default function HistoryPage({
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
   const [selectedSales, setSelectedSales] = useState<Sale[]>([]);
   const [isSalesDetailOpen, setSalesDetailOpen] = useState(false);
+  const [itemsPerPage, setItemsPerPage] = useState(20);
+  const [currentPage, setCurrentPage] = useState(1);
 
   const allHistory = useMemo((): HistoryEntry[] => {
     const historyList: HistoryEntry[] = [];
@@ -130,7 +133,7 @@ export default function HistoryPage({
   }, [items, allSales]);
 
   const filteredHistory = useMemo(() => {
-    return allHistory
+    const filtered = allHistory
       .filter(entry => {
         if (!categoryFilter) return true;
         if (categoryFilter === 'Penjualan') return entry.type === 'sales_summary';
@@ -157,7 +160,17 @@ export default function HistoryPage({
           }
           return true;
       });
+
+      setCurrentPage(1);
+      return filtered;
   }, [allHistory, categoryFilter, searchTerm, dateRange]);
+
+  const totalPages = Math.ceil(filteredHistory.length / itemsPerPage);
+  
+  const paginatedHistory = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    return filteredHistory.slice(startIndex, startIndex + itemsPerPage);
+  }, [filteredHistory, currentPage, itemsPerPage]);
 
   const historyTotals = useMemo(() => {
     let totalIn = 0;
@@ -268,8 +281,8 @@ export default function HistoryPage({
                     <TableRow>
                         <TableCell colSpan={6} className="h-24 text-center">Memuat riwayat...</TableCell>
                     </TableRow>
-                ) : filteredHistory.length > 0 ? (
-                filteredHistory.map((entry, index) => (
+                ) : paginatedHistory.length > 0 ? (
+                paginatedHistory.map((entry, index) => (
                     <TableRow key={index}>
                         <TableCell>
                             {entry.type === 'adjustment' ? (
@@ -346,6 +359,33 @@ export default function HistoryPage({
                 </TableRow>
             </TableFooter>
             </Table>
+            <div className="flex items-center justify-end p-4 border-t">
+                <div className="flex items-center gap-4">
+                    <Pagination
+                        totalPages={totalPages}
+                        currentPage={currentPage}
+                        onPageChange={setCurrentPage}
+                    />
+                    <Select
+                        value={`${itemsPerPage}`}
+                        onValueChange={(value) => {
+                            setItemsPerPage(Number(value))
+                            setCurrentPage(1)
+                        }}
+                        >
+                        <SelectTrigger className="h-8 w-[200px]">
+                            <SelectValue placeholder={itemsPerPage} />
+                        </SelectTrigger>
+                        <SelectContent side="top">
+                            {[10, 20, 50, 100].map((pageSize) => (
+                            <SelectItem key={pageSize} value={`${pageSize}`}>
+                                {`${pageSize} / ${t.productSelectionDialog.page}`}
+                            </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                </div>
+            </div>
         </div>
       </main>
       <DailySalesDetailDialog 
@@ -356,3 +396,5 @@ export default function HistoryPage({
     </AppLayout>
   );
 }
+
+    
