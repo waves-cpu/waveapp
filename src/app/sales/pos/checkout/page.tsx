@@ -3,12 +3,16 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Receipt } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { PosCheckoutForm } from '@/app/components/pos-checkout-form';
 
 
-export default function PosCheckoutPage() {
+export default function PosCheckoutPage({
+  searchParams,
+}: {
+  searchParams?: { [key: string]: string | string[] | undefined };
+}) {
 
   return (
     <main className="flex flex-col h-screen bg-muted/40">
@@ -24,8 +28,8 @@ export default function PosCheckoutPage() {
           </div>
         </header>
 
-        <div className="flex-1 p-4 lg:p-8 overflow-y-auto">
-            <div className="max-w-md mx-auto">
+        <div className="flex-1 p-4 lg:p-6 overflow-y-auto">
+            <div className="max-w-4xl mx-auto">
               <PosCheckoutForm />
             </div>
         </div>
