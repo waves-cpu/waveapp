@@ -29,7 +29,7 @@ import { Search } from 'lucide-react';
 import { Pagination } from '@/components/ui/pagination';
 import { useRouter } from 'next/navigation';
 
-const ITEMS_PER_PAGE = 9;
+const ITEMS_PER_PAGE = 12;
 
 const PosProductGrid = ({ 
     onProductSelect, 
@@ -123,8 +123,8 @@ const PosProductGrid = ({
 
     if (loading) {
         return (
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                {Array.from({ length: 9 }).map((_, i) => (
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                {Array.from({ length: 12 }).map((_, i) => (
                     <Skeleton key={i} className="h-48 w-full" />
                 ))}
             </div>
@@ -177,7 +177,7 @@ const PosProductGrid = ({
                 <ScrollArea className="flex-grow -mx-2">
                     <div className="px-2">
                     {paginatedItems.length > 0 ? (
-                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 pr-4">
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pr-4">
                             {paginatedItems.map(item => {
                                 const hasVariants = item.variants && item.variants.length > 0;
                                 let priceDisplay;
