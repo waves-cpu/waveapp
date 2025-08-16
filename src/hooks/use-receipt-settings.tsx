@@ -1,7 +1,9 @@
 
 'use client';
 
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
+import { getSetting, saveSetting } from '@/lib/inventory-service';
+import { useToast } from './use-toast';
 
 export interface ReceiptSettings {
     shopName: string;
@@ -13,7 +15,7 @@ export interface ReceiptSettings {
 
 interface ReceiptSettingsContextType {
     settings: ReceiptSettings;
-    setSettings: (newSettings: ReceiptSettings) => void;
+    setSettings: (newSettings: ReceiptSettings) => Promise<void>;
     isLoaded: boolean;
 }
 
@@ -25,32 +27,47 @@ const defaultSettings: ReceiptSettings = {
     paperSize: '80mm'
 };
 
-const LOCAL_STORAGE_KEY = 'receiptSettings';
+const SETTINGS_KEY = 'receiptSettings';
 
 const ReceiptSettingsContext = createContext<ReceiptSettingsContextType | undefined>(undefined);
 
 export const ReceiptSettingsProvider = ({ children }: { children: ReactNode }) => {
     const [settings, setSettingsState] = useState<ReceiptSettings>(defaultSettings);
     const [isLoaded, setIsLoaded] = useState(false);
+    const { toast } = useToast();
 
-    useEffect(() => {
+    const fetchSettings = useCallback(async () => {
         try {
-            const savedSettings = localStorage.getItem(LOCAL_STORAGE_KEY);
+            const savedSettings = await getSetting<ReceiptSettings>(SETTINGS_KEY);
             if (savedSettings) {
-                setSettingsState(JSON.parse(savedSettings));
+                setSettingsState(savedSettings);
             }
         } catch (error) {
-            console.error("Failed to load receipt settings from localStorage", error);
+            console.error("Failed to load receipt settings from database", error);
+        } finally {
+            setIsLoaded(true);
         }
-        setIsLoaded(true);
     }, []);
 
-    const setSettings = (newSettings: ReceiptSettings) => {
+    useEffect(() => {
+        fetchSettings();
+    }, [fetchSettings]);
+
+    const setSettings = async (newSettings: ReceiptSettings) => {
         try {
-            localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(newSettings));
+            await saveSetting(SETTINGS_KEY, newSettings);
             setSettingsState(newSettings);
+             toast({
+                title: "Pengaturan Disimpan",
+                description: "Pengaturan struk Anda telah berhasil diperbarui ke database.",
+            });
         } catch (error) {
-             console.error("Failed to save receipt settings to localStorage", error);
+             console.error("Failed to save receipt settings to database", error);
+             toast({
+                variant: 'destructive',
+                title: "Gagal Menyimpan",
+                description: "Terjadi kesalahan saat menyimpan pengaturan ke database.",
+            });
         }
     };
 

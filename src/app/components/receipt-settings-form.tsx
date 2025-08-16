@@ -24,7 +24,6 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import { PosReceipt, type ReceiptData } from "./pos-receipt";
 import { useMemo, useState, useEffect } from "react";
@@ -40,24 +39,28 @@ const formSchema = z.object({
 });
 
 export function ReceiptSettingsForm() {
-    const { settings, setSettings } = useReceiptSettings();
-    const { toast } = useToast();
+    const { settings, setSettings, isLoaded } = useReceiptSettings();
     const router = useRouter();
     const [isJustSaved, setIsJustSaved] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
         defaultValues: settings,
     });
     
+    useEffect(() => {
+        if(isLoaded) {
+            form.reset(settings);
+        }
+    }, [isLoaded, settings, form]);
+
     const watchedValues = form.watch();
 
-    const onSubmit = (values: z.infer<typeof formSchema>) => {
-        setSettings(values);
-        toast({
-            title: "Pengaturan Disimpan",
-            description: "Pengaturan struk Anda telah berhasil diperbarui.",
-        });
+    const onSubmit = async (values: z.infer<typeof formSchema>) => {
+        setIsSubmitting(true);
+        await setSettings(values);
+        setIsSubmitting(false);
         setIsJustSaved(true);
     };
 
@@ -81,6 +84,10 @@ export function ReceiptSettingsForm() {
         change: 35000,
         transactionId: 'PREVIEW-123'
     }), []);
+
+    if (!isLoaded) {
+        return <div>Loading settings...</div>; // Or a skeleton loader
+    }
 
 
     return (
@@ -162,7 +169,7 @@ export function ReceiptSettingsForm() {
                                 render={({ field }) => (
                                     <FormItem>
                                         <FormLabel>Ukuran Kertas Struk</FormLabel>
-                                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                        <Select onValueChange={field.onChange} value={field.value}>
                                             <FormControl>
                                             <SelectTrigger>
                                                 <SelectValue placeholder="Pilih ukuran kertas" />
@@ -183,8 +190,10 @@ export function ReceiptSettingsForm() {
                         </CardContent>
 
                         <CardFooter className="justify-end gap-2">
-                            <Button type="button" variant="ghost" onClick={() => router.back()}>Kembali</Button>
-                            <Button type="submit">Simpan Pengaturan</Button>
+                            <Button type="button" variant="ghost" onClick={() => router.back()} disabled={isSubmitting}>Kembali</Button>
+                            <Button type="submit" disabled={isSubmitting}>
+                                {isSubmitting ? 'Menyimpan...' : 'Simpan Pengaturan'}
+                            </Button>
                         </CardFooter>
                     </form>
                 </Form>

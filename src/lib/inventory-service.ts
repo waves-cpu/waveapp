@@ -4,6 +4,21 @@
 import { db } from './db';
 import type { InventoryItem, AdjustmentHistory, InventoryItemVariant, Sale, Reseller } from '@/types';
 
+// Settings Functions
+export async function saveSetting(key: string, value: any) {
+    const valueJson = JSON.stringify(value);
+    db.prepare('INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value').run(key, valueJson);
+}
+
+export async function getSetting<T>(key: string): Promise<T | null> {
+    const row = db.prepare('SELECT value FROM settings WHERE key = ?').get(key) as { value: string } | undefined;
+    if (row) {
+        return JSON.parse(row.value) as T;
+    }
+    return null;
+}
+
+
 export async function fetchInventoryData() {
     const fetchedItems = db.prepare('SELECT * FROM products').all();
     const fetchedVariants = db.prepare('SELECT * FROM variants').all();
