@@ -1,7 +1,7 @@
 
 'use client';
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useLanguage } from '@/hooks/use-language';
 import { translations } from '@/types/language';
 import type { CartItem } from './pos-cart';
@@ -37,6 +37,14 @@ export const PosReceipt = React.forwardRef<HTMLDivElement, PosReceiptProps>((pro
     const { settings: globalSettings } = useReceiptSettings();
 
     const settings = previewSettings ? { ...globalSettings, ...previewSettings } : globalSettings;
+    
+    // State to hold the date, initialized after client-side mount to prevent hydration errors.
+    const [displayDate, setDisplayDate] = useState<Date | null>(null);
+
+    useEffect(() => {
+      // Set the date only on the client side.
+      setDisplayDate(new Date());
+    }, []);
 
 
     return (
@@ -52,7 +60,8 @@ export const PosReceipt = React.forwardRef<HTMLDivElement, PosReceiptProps>((pro
             <section className="mb-2">
                 <div className="flex justify-between">
                     <span>{receiptTranslations.date}</span>
-                    <span>{format(new Date(), 'dd/MM/yy HH:mm')}</span>
+                    {/* Only render the date once it has been set on the client */}
+                    <span>{displayDate ? format(displayDate, 'dd/MM/yy HH:mm') : ''}</span>
                 </div>
                 <div className="flex justify-between">
                     <span>{receiptTranslations.receiptNo}</span>
