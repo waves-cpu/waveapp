@@ -1,18 +1,11 @@
-
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
-import { Calendar } from '@/components/ui/calendar';
-import { ScanLine, History, ShoppingBag, Store } from 'lucide-react';
+import { ScanLine, History, ShoppingBag } from 'lucide-react';
 import { useInventory } from '@/hooks/use-inventory';
-import type { InventoryItem, InventoryItemVariant } from '@/types';
+import type { InventoryItem } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { VariantSelectionDialog } from '@/app/components/variant-selection-dialog';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -21,7 +14,6 @@ import Link from 'next/link';
 import { useDebounce } from '@/hooks/use-debounce';
 import Image from 'next/image';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Search } from 'lucide-react';
 import { Pagination } from '@/components/ui/pagination';
 import { useRouter } from 'next/navigation';
 
@@ -29,21 +21,14 @@ const ITEMS_PER_PAGE = 12;
 
 const PosProductGrid = ({ 
     onProductSelect, 
-    onSkuSubmit, 
-    isSubmitting,
-    isVariantDialogOpen,
     cart
 }: { 
     onProductSelect: (item: InventoryItem) => void,
-    onSkuSubmit: (sku: string) => void;
-    isSubmitting: boolean;
-    isVariantDialogOpen: boolean;
     cart: PosCartItem[];
 }) => {
     const { items, loading, allSales, categories } = useInventory();
     const [searchTerm, setSearchTerm] = useState('');
     const debouncedSearchTerm = useDebounce(searchTerm, 300);
-    const skuInputRef = useRef<HTMLInputElement>(null);
     const [currentPage, setCurrentPage] = useState(1);
     const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
@@ -104,13 +89,6 @@ const PosProductGrid = ({
          return availableItems.slice(startIndex, startIndex + ITEMS_PER_PAGE);
     }, [availableItems, currentPage]);
 
-    const handleSkuFormSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-        e.preventDefault();
-        if (searchTerm) {
-            onSkuSubmit(searchTerm);
-            setSearchTerm('');
-        }
-    };
     
     useEffect(() => {
         setCurrentPage(1);
@@ -119,10 +97,23 @@ const PosProductGrid = ({
 
     if (loading) {
         return (
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                {Array.from({ length: 12 }).map((_, i) => (
-                    <Skeleton key={i} className="h-48 w-full" />
-                ))}
+             <div className="flex flex-row gap-6 h-full overflow-hidden">
+                <div className="w-48 shrink-0 border-r pr-6">
+                    <Skeleton className="h-6 w-24 mb-2" />
+                    <div className="flex flex-col gap-1">
+                        {[...Array(8)].map((_, i) => <Skeleton key={i} className="h-8 w-full" />)}
+                    </div>
+                </div>
+                <div className="flex flex-col h-full flex-grow min-w-0">
+                    <div className="mb-4">
+                        <Skeleton className="h-9 w-full" />
+                    </div>
+                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                        {Array.from({ length: 12 }).map((_, i) => (
+                            <Skeleton key={i} className="h-48 w-full" />
+                        ))}
+                    </div>
+                </div>
             </div>
         );
     }
@@ -156,19 +147,15 @@ const PosProductGrid = ({
             </div>
             <div className="flex flex-col h-full flex-grow min-w-0">
                 <div className="mb-4">
-                    <form onSubmit={handleSkuFormSubmit} className="flex-grow">
-                        <div className="relative">
-                            <ScanLine className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                            <Input
-                                ref={skuInputRef}
-                                placeholder="Scan atau masukkan SKU / Nama Produk, lalu tekan Enter"
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                className="pl-10 w-full"
-                                disabled={isSubmitting || isVariantDialogOpen}
-                            />
-                        </div>
-                    </form>
+                    <div className="relative">
+                        <ScanLine className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                            placeholder="Scan atau masukkan SKU / Nama Produk"
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="pl-10 w-full"
+                        />
+                    </div>
                 </div>
                 <ScrollArea className="flex-grow -mx-2">
                     <div className="px-2">
@@ -242,11 +229,9 @@ export default function PosSalesPage({
 }: {
   searchParams?: { [key: string]: string | string[] | undefined };
 }) {
-  const { getProductBySku, items, recordSale } = useInventory();
+  const { items } = useInventory();
   const { toast } = useToast();
   const [mounted, setMounted] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const skuInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
 
   const [productForVariantSelection, setProductForVariantSelection] = useState<InventoryItem | null>(null);
@@ -381,97 +366,25 @@ export default function PosSalesPage({
     }
   }, [handleAddToCart, toast, cart]);
 
-
-  const handleSkuSubmit = async (skuValue: string) => {
-    if (!skuValue || isSubmitting) return;
-
-    setIsSubmitting(true);
-    try {
-      const product = await getProductBySku(skuValue);
-
-      if (!product) {
-        toast({
-            variant: 'destructive',
-            title: 'SKU Tidak Ditemukan',
-            description: `Produk dengan SKU atau Nama "${skuValue}" tidak ditemukan.`,
-        });
-        return;
-      }
-      
-       handleProductSelect(product);
-    } catch (error) {
-      console.error('Failed to process SKU:', error);
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: 'Terjadi kesalahan saat memproses SKU.',
-      });
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
   const handleVariantSelect = (variantSku: string | null) => {
     setIsVariantDialogOpen(false);
     setProductForVariantSelection(null);
     if (variantSku) {
         handleAddToCart(variantSku);
-    } 
-    skuInputRef.current?.focus();
+    }
   };
   
-  const handleCheckout = async (paymentDetails: {
-      discount: number;
-      paymentMethod: string;
-      bank?: string;
-      cashReceived?: number;
-    }) => {
-        if (cart.length === 0) {
-            toast({
-                variant: 'destructive',
-                title: 'Keranjang Kosong',
-                description: 'Tambahkan item ke keranjang sebelum melanjutkan.',
-            });
-            return;
-        }
-        
-        setIsSubmitting(true);
-        try {
-            const saleDate = new Date();
-            const transactionId = `POS-${saleDate.getTime()}`; 
-            
-            for (const item of cart) {
-                await recordSale(item.sku, 'pos', item.quantity, saleDate, transactionId);
-            }
-
-            toast({
-                title: 'Transaksi Berhasil',
-                description: `${cart.length} jenis item berhasil terjual. No. Transaksi: ${transactionId}`,
-            });
-            
-            // Clear cart
-            setCart([]);
-            localStorage.removeItem('posCart');
-
-            // TODO: Implement receipt printing logic
-            // You can pass the cart and paymentDetails to a printing service/component
-            toast({
-                title: 'Struk Siap Dicetak',
-                description: `Fungsi cetak struk akan diimplementasikan di sini. Diskon: ${paymentDetails.discount}`,
-            });
-
-        } catch (error) {
-            const message = error instanceof Error ? error.message : 'Terjadi kesalahan.';
-            toast({
-                variant: 'destructive',
-                title: 'Transaksi Gagal',
-                description: message,
-            });
-        } finally {
-            setIsSubmitting(false);
-        }
-    };
-
+  const handleProceedToCheckout = () => {
+    if (cart.length === 0) {
+        toast({
+            variant: "destructive",
+            title: "Keranjang Kosong",
+            description: "Silakan tambahkan produk ke keranjang terlebih dahulu.",
+        });
+        return;
+    }
+    router.push('/sales/pos/checkout');
+  }
 
   return (
     <>
@@ -492,9 +405,6 @@ export default function PosSalesPage({
               <div className="flex flex-col gap-4 h-full overflow-hidden">
                   <PosProductGrid 
                     onProductSelect={handleProductSelect}
-                    onSkuSubmit={handleSkuSubmit}
-                    isSubmitting={isSubmitting}
-                    isVariantDialogOpen={isVariantDialogOpen}
                     cart={cart}
                   />
               </div>
@@ -502,8 +412,7 @@ export default function PosSalesPage({
                   <PosOrderSummary 
                       cart={cart}
                       setCart={setCart}
-                      onCheckout={handleCheckout}
-                      isSubmitting={isSubmitting}
+                      onCheckout={handleProceedToCheckout}
                   />
               </div>
         </div>
