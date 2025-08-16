@@ -8,15 +8,27 @@ import { PosSearch } from './pos-search';
 import { PosOrderSummary } from './pos-order-summary';
 import { VariantSelectionDialog } from './variant-selection-dialog';
 import { useToast } from '@/hooks/use-toast';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import Image from 'next/image';
+import { Minus, Plus, ShoppingCart, Trash2 } from 'lucide-react';
+import { useLanguage } from '@/hooks/use-language';
+import { translations } from '@/types/language';
 
 export interface CartItem extends InventoryItemVariant {
     productId: string;
     productName: string;
     quantity: number;
+    parentImageUrl?: string;
 }
 
 export function PosCart() {
-    const { getProductBySku, recordSale, cancelSaleTransaction, fetchItems } = useInventory();
+    const { getProductBySku, recordSale, fetchItems } = useInventory();
+    const { language } = useLanguage();
+    const t = translations[language];
     const { toast } = useToast();
     const [cart, setCart] = useState<CartItem[]>([]);
     const [productForVariantSelection, setProductForVariantSelection] = useState<InventoryItem | null>(null);
@@ -27,7 +39,9 @@ export function PosCart() {
     }, [fetchItems]);
 
     const addToCart = (item: InventoryItem, variant?: InventoryItemVariant) => {
-        const itemToAdd = variant ? { ...variant, productId: item.id, productName: item.name } : { ...item, id: item.id, productId: item.id, productName: item.name, price: item.price!, stock: item.stock! };
+        const itemToAdd = variant ? 
+            { ...variant, productId: item.id, productName: item.name, parentImageUrl: item.imageUrl } : 
+            { ...item, id: item.id, productId: item.id, productName: item.name, price: item.price!, stock: item.stock!, parentImageUrl: item.imageUrl };
 
         setCart(currentCart => {
             const existingItem = currentCart.find(cartItem => cartItem.id === itemToAdd.id);
@@ -67,6 +81,14 @@ export function PosCart() {
             } else if (product.variants && product.variants.length === 1) {
                 addToCart(product, product.variants[0]);
             } else {
+                 if (product.stock === undefined || product.stock <= 0) {
+                     toast({
+                        variant: "destructive",
+                        title: "Stok tidak mencukupi",
+                        description: `Stok untuk ${product.name} habis.`,
+                    });
+                    return;
+                }
                 addToCart(product);
             }
         } catch (error) {
@@ -84,7 +106,15 @@ export function PosCart() {
         if (variantSku && productForVariantSelection) {
             const variant = productForVariantSelection.variants?.find(v => v.sku === variantSku);
             if (variant) {
-                addToCart(productForVariantSelection, variant);
+                if(variant.stock <= 0) {
+                    toast({
+                        variant: "destructive",
+                        title: "Stok tidak mencukupi",
+                        description: `Stok untuk ${productForVariantSelection.name} - ${variant.name} habis.`,
+                    });
+                } else {
+                    addToCart(productForVariantSelection, variant);
+                }
             }
         }
         setProductForVariantSelection(null);
@@ -137,13 +167,71 @@ export function PosCart() {
 
 
     return (
-        <div className="flex-grow grid grid-cols-1 lg:grid-cols-3 gap-4 p-4">
-            <div className="lg:col-span-2 flex flex-col gap-4">
+        <div className="flex-grow grid grid-cols-1 lg:grid-cols-5 gap-4 p-4 items-start">
+            <div className="lg:col-span-3 flex flex-col gap-4">
                 <PosSearch onProductSelect={handleProductSelect} />
-                <PosOrderSummary
+                <Card className="flex-grow flex flex-col">
+                    <CardHeader>
+                        <CardTitle>{t.pos.orderSummary}</CardTitle>
+                    </CardHeader>
+                    <CardContent className="flex-grow overflow-hidden p-0">
+                        <ScrollArea className="h-full max-h-[calc(100vh-20rem)]">
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead className="w-[50%]">{t.pos.item}</TableHead>
+                                        <TableHead>{t.pos.qty}</TableHead>
+                                        <TableHead className="text-right">{t.pos.price}</TableHead>
+                                        <TableHead className="text-right">Total</TableHead>
+                                        <TableHead className="w-[50px]"></TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {cart.length === 0 ? (
+                                        <TableRow>
+                                            <TableCell colSpan={5} className="h-48 text-center">
+                                                <div className="flex flex-col items-center justify-center gap-4 text-muted-foreground">
+                                                    <ShoppingCart className="h-16 w-16" />
+                                                    <p className="font-semibold">{t.pos.emptyCart}</p>
+                                                </div>
+                                            </TableCell>
+                                        </TableRow>
+                                    ) : cart.map(item => (
+                                        <TableRow key={item.id}>
+                                            <TableCell>
+                                                <div className="flex items-center gap-4">
+                                                    <Image src={item.parentImageUrl || 'https://placehold.co/40x40.png'} alt={item.productName} width={40} height={40} className="rounded-md" data-ai-hint="product image" />
+                                                    <div>
+                                                        <p className="font-medium">{item.productName}</p>
+                                                        <p className="text-xs text-muted-foreground">{item.name}</p>
+                                                    </div>
+                                                </div>
+                                            </TableCell>
+                                            <TableCell>
+                                                <div className="flex items-center gap-1">
+                                                    <Button variant="outline" size="icon" className="h-6 w-6" onClick={() => updateQuantity(item.id, item.quantity - 1)}><Minus className="h-3 w-3"/></Button>
+                                                    <Input type="number" value={item.quantity} onChange={(e) => updateQuantity(item.id, parseInt(e.target.value) || 0)} className="w-12 h-8 text-center" />
+                                                    <Button variant="outline" size="icon" className="h-6 w-6" onClick={() => updateQuantity(item.id, item.quantity + 1)}><Plus className="h-3 w-3" /></Button>
+                                                </div>
+                                            </TableCell>
+                                            <TableCell className="text-right">{item.price.toLocaleString('id-ID')}</TableCell>
+                                            <TableCell className="text-right font-medium">{(item.price * item.quantity).toLocaleString('id-ID')}</TableCell>
+                                            <TableCell>
+                                                 <Button variant="ghost" size="icon" className="text-destructive h-8 w-8" onClick={() => removeFromCart(item.id)}>
+                                                    <Trash2 className="h-4 w-4" />
+                                                 </Button>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        </ScrollArea>
+                    </CardContent>
+                </Card>
+            </div>
+            <div className="lg:col-span-2">
+                 <PosOrderSummary
                     cart={cart}
-                    updateQuantity={updateQuantity}
-                    removeFromCart={removeFromCart}
                     onSaleComplete={handleSaleComplete}
                     clearCart={clearCart}
                 />
