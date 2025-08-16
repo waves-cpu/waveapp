@@ -33,7 +33,7 @@ export default function StockInPage() {
 
     return (
         <AppLayout>
-            <main className="flex min-h-screen flex-col items-center p-4 md:p-10 pb-8">
+            <main className="flex min-h-screen flex-col items-center p-4 md:p-10 pb-24">
                 <div className="w-full max-w-7xl">
                     <div className="flex items-center justify-between gap-4 mb-6">
                         <div className="flex items-center gap-4">
@@ -61,11 +61,15 @@ export default function StockInPage() {
                         isSubmitting={isSubmitting}
                         handleSubmit={() => formSubmitRef.current?.()}
                     />
-                    <div className="flex justify-end gap-2 mt-4">
-                         <Button type="button" variant="ghost" onClick={() => router.push('/')} disabled={isSubmitting}>{t.common.cancel}</Button>
-                        <Button onClick={handleFormSubmit} disabled={isSubmitting}>
-                            {isSubmitting ? 'Submitting...' : t.stockInForm.submit}
-                        </Button>
+                </div>
+                 <div className="fixed bottom-0 left-0 md:left-[var(--sidebar-width)] group-data-[collapsible=icon]:md:left-[var(--sidebar-width-icon)] w-full transition-[left] duration-200 ease-linear">
+                    <div className="bg-background/95 backdrop-blur-sm border-t p-4">
+                         <div className="max-w-7xl mx-auto flex justify-end gap-2">
+                            <Button type="button" variant="ghost" onClick={() => router.push('/')} disabled={isSubmitting}>{t.common.cancel}</Button>
+                            <Button onClick={handleFormSubmit} disabled={isSubmitting}>
+                                {isSubmitting ? 'Submitting...' : t.stockInForm.submit}
+                            </Button>
+                        </div>
                     </div>
                 </div>
             </main>
