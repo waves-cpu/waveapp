@@ -64,12 +64,6 @@ export default function ResellerHistoryPage() {
     });
 
     useEffect(() => {
-        if (receiptToPrint && receiptRef.current) {
-            handlePrint();
-        }
-    }, [receiptToPrint, handlePrint]);
-
-    useEffect(() => {
         fetchItems();
     }, [fetchItems]);
     
@@ -286,11 +280,23 @@ export default function ResellerHistoryPage() {
                 description={`Detail item untuk transaksi #${selectedSaleItems[0]?.transactionId?.slice(-6) ?? 'N/A'}`}
             />
              {receiptToPrint && (
-                <div className="print-only">
-                    <div ref={receiptRef}>
-                        <PosReceipt receipt={receiptToPrint} />
-                    </div>
-                </div>
+                 <AlertDialog open={!!receiptToPrint} onOpenChange={(open) => !open && setReceiptToPrint(null)}>
+                    <AlertDialogContent>
+                        <AlertDialogHeader>
+                            <AlertDialogTitle>Siapkan Printer</AlertDialogTitle>
+                            <AlertDialogDescription>Struk siap untuk dicetak. Pastikan printer Anda terhubung dan siap.</AlertDialogDescription>
+                        </AlertDialogHeader>
+                         <div className="print-only">
+                            <div ref={receiptRef}>
+                                <PosReceipt receipt={receiptToPrint} />
+                            </div>
+                        </div>
+                        <AlertDialogFooter>
+                            <AlertDialogCancel onClick={() => setReceiptToPrint(null)}>Batal</AlertDialogCancel>
+                            <AlertDialogAction onClick={handlePrint}>Lanjutkan Mencetak</AlertDialogAction>
+                        </AlertDialogFooter>
+                    </AlertDialogContent>
+                </AlertDialog>
             )}
         </AppLayout>
     );
