@@ -5,7 +5,6 @@ import React, { useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -126,27 +125,25 @@ export function PosCheckoutForm({ cart }: PosCheckoutFormProps) {
                     </CardDescription>
                 </CardHeader>
                 <CardContent className='space-y-6'>
-                    <ScrollArea className="h-64 pr-4 border rounded-md p-4">
-                        <div className="space-y-4">
-                            {cart.map(item => (
-                                <div key={item.sku} className="grid grid-cols-[auto_1fr_auto] items-start gap-x-4">
-                                    <Image 
-                                        src={item.imageUrl || 'https://placehold.co/64x64.png'} 
-                                        alt={item.name} 
-                                        width={64} height={64} 
-                                        className="rounded-md object-cover" 
-                                        data-ai-hint="product image"
-                                    />
-                                    <div className="flex-grow">
-                                        <p className="font-medium" title={item.name}>{item.name}</p>
-                                        {item.variantName && <p className="text-sm text-muted-foreground">{item.variantName}</p>}
-                                        <p className="text-sm text-muted-foreground">Qty: {item.quantity}</p>
-                                    </div>
-                                    <p className="font-semibold text-sm whitespace-nowrap text-right">{`Rp${(item.price * item.quantity).toLocaleString('id-ID')}`}</p>
+                    <div className="space-y-4 border rounded-md p-4">
+                        {cart.map(item => (
+                            <div key={item.sku} className="grid grid-cols-[auto_1fr_auto] items-start gap-x-4">
+                                <Image 
+                                    src={item.imageUrl || 'https://placehold.co/64x64.png'} 
+                                    alt={item.name} 
+                                    width={64} height={64} 
+                                    className="rounded-md object-cover" 
+                                    data-ai-hint="product image"
+                                />
+                                <div className="flex-grow">
+                                    <p className="font-medium" title={item.name}>{item.name}</p>
+                                    {item.variantName && <p className="text-sm text-muted-foreground">{item.variantName}</p>}
+                                    <p className="text-sm text-muted-foreground">Qty: {item.quantity}</p>
                                 </div>
-                            ))}
-                        </div>
-                    </ScrollArea>
+                                <p className="font-semibold text-sm whitespace-nowrap text-right">{`Rp${(item.price * item.quantity).toLocaleString('id-ID')}`}</p>
+                            </div>
+                        ))}
+                    </div>
                 
                     <div className="w-full space-y-2 text-sm">
                         <div className="flex justify-between">
