@@ -150,7 +150,7 @@ export default function PosHistoryPage() {
         setReceiptToPrint(receiptData);
     };
 
-    useEffect(() => {
+     useEffect(() => {
         if (receiptToPrint && receiptRef.current) {
             handlePrint();
         }
@@ -287,4 +287,3 @@ export default function PosHistoryPage() {
         </AppLayout>
     );
 }
-
