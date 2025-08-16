@@ -107,174 +107,170 @@ export function PosOrderSummary({ cart, setCart, onCheckout, isSubmitting }: Pos
     };
 
   return (
-    <Card className="sticky top-0 flex flex-col h-full">
-      <CardHeader className="py-4 px-4 border-b">
-        <CardTitle className="text-lg">Pesanan Saat Ini</CardTitle>
+    <Card className="flex flex-col h-full">
+      <CardHeader className="border-b">
+        <CardTitle>Pesanan Saat Ini</CardTitle>
       </CardHeader>
-      <div className="flex-grow flex flex-col min-h-0">
-        <ScrollArea className="flex-grow">
-            <CardContent className="space-y-6 p-4">
-                {cart.length > 0 ? (
-                    <div className="space-y-4">
-                        {cart.map(item => (
-                            <div key={item.sku} className="flex items-center gap-4">
-                                <Image 
-                                    src={item.imageUrl || 'https://placehold.co/64x64.png'} 
-                                    alt={item.name} 
-                                    width={64} height={64} 
-                                    className="rounded-md object-cover" 
-                                    data-ai-hint="product image"
-                                />
-                                <div className="flex-grow">
-                                    <p className="font-medium leading-tight text-sm truncate" title={item.name}>{item.name}</p>
-                                    {item.variantName && <p className="text-xs text-muted-foreground">{item.variantName}</p>}
-                                    <p className="font-semibold text-sm mt-1">{`Rp${item.price.toLocaleString('id-ID')}`}</p>
-                                </div>
-                                <div className="flex items-center gap-1.5">
-                                    <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => updateQuantity(item.sku, item.quantity - 1)}>
-                                        <Minus className="h-3.5 w-3.5" />
-                                    </Button>
-                                    <span className="font-bold text-sm w-6 text-center">{item.quantity}</span>
-                                    <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => updateQuantity(item.sku, item.quantity + 1)} disabled={item.quantity >= item.maxStock}>
-                                        <Plus className="h-3.5 w-3.5" />
-                                    </Button>
-                                </div>
-                                <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive-foreground hover:bg-destructive shrink-0" onClick={() => removeItem(item.sku)}>
-                                    <X className="h-4 w-4" />
+      <CardContent className="p-4 flex-1 space-y-4">
+            {cart.length > 0 ? (
+                <div className="space-y-4">
+                    {cart.map(item => (
+                        <div key={item.sku} className="flex items-center gap-4">
+                            <Image 
+                                src={item.imageUrl || 'https://placehold.co/64x64.png'} 
+                                alt={item.name} 
+                                width={64} height={64} 
+                                className="rounded-md object-cover" 
+                                data-ai-hint="product image"
+                            />
+                            <div className="flex-grow">
+                                <p className="font-medium leading-tight text-sm" title={item.name}>{item.name}</p>
+                                {item.variantName && <p className="text-xs text-muted-foreground">{item.variantName}</p>}
+                                <p className="font-semibold text-sm mt-1">{`Rp${item.price.toLocaleString('id-ID')}`}</p>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                                <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => updateQuantity(item.sku, item.quantity - 1)}>
+                                    <Minus className="h-3.5 w-3.5" />
+                                </Button>
+                                <span className="font-bold text-sm w-6 text-center">{item.quantity}</span>
+                                <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => updateQuantity(item.sku, item.quantity + 1)} disabled={item.quantity >= item.maxStock}>
+                                    <Plus className="h-3.5 w-3.5" />
                                 </Button>
                             </div>
-                        ))}
-                    </div>
-                ) : (
-                    <div className="flex-grow flex flex-col items-center justify-center text-muted-foreground pt-16 text-center">
-                        <ShoppingCart className="h-16 w-16 mb-4" />
-                        <p className="font-semibold">Keranjang Kosong</p>
-                        <p className="text-sm">Scan atau pilih produk untuk ditambahkan.</p>
-                    </div>
-                )}
-            </CardContent>
-        </ScrollArea>
+                            <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive-foreground hover:bg-destructive shrink-0" onClick={() => removeItem(item.sku)}>
+                                <X className="h-4 w-4" />
+                            </Button>
+                        </div>
+                    ))}
+                </div>
+            ) : (
+                <div className="flex flex-col items-center justify-center text-muted-foreground pt-16 text-center">
+                    <ShoppingCart className="h-16 w-16 mb-4" />
+                    <p className="font-semibold">Keranjang Kosong</p>
+                    <p className="text-sm">Scan atau pilih produk untuk ditambahkan.</p>
+                </div>
+            )}
+      </CardContent>
         
         {cart.length > 0 && (
-            <div className='border-t mt-auto'>
-                 <Form {...form}>
-                    <form onSubmit={form.handleSubmit(handleFormSubmit)}>
-                        <CardContent className="p-4 space-y-4">
-                            <div className="space-y-2 text-sm">
-                                <div className="flex justify-between items-center">
-                                    <span className="text-muted-foreground">Subtotal</span>
-                                    <span className="font-medium">Rp{subtotal.toLocaleString('id-ID')}</span>
-                                </div>
-                                <div className="flex justify-between items-center">
-                                    <span className="text-muted-foreground">Diskon</span>
-                                     <FormField
-                                        control={form.control}
-                                        name="discount"
-                                        render={({ field }) => (
-                                            <FormItem>
-                                                <FormControl><Input type="number" placeholder="0" {...field} className="w-28 h-8 text-right" /></FormControl>
-                                            </FormItem>
-                                        )}
-                                    />
-                                </div>
+             <Form {...form}>
+                <form onSubmit={form.handleSubmit(handleFormSubmit)}>
+                    <CardContent className="p-4 space-y-4 border-t">
+                        <div className="space-y-2 text-sm">
+                            <div className="flex justify-between items-center">
+                                <span className="text-muted-foreground">Subtotal</span>
+                                <span className="font-medium">Rp{subtotal.toLocaleString('id-ID')}</span>
                             </div>
-                             <Separator />
-                            <div className="flex justify-between items-center font-bold text-base">
-                                <span>Total</span>
-                                <span>Rp{totalAfterDiscount.toLocaleString('id-ID')}</span>
+                            <div className="flex justify-between items-center">
+                                <span className="text-muted-foreground">Diskon</span>
+                                    <FormField
+                                    control={form.control}
+                                    name="discount"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormControl><Input type="number" placeholder="0" {...field} className="w-28 h-8 text-right" /></FormControl>
+                                        </FormItem>
+                                    )}
+                                />
                             </div>
-                             <Separator />
+                        </div>
+                            <Separator />
+                        <div className="flex justify-between items-center font-bold text-base">
+                            <span>Total</span>
+                            <span>Rp{totalAfterDiscount.toLocaleString('id-ID')}</span>
+                        </div>
+                            <Separator />
 
+                        <FormField
+                            control={form.control}
+                            name="paymentMethod"
+                            render={({ field }) => (
+                                <FormItem className="space-y-3">
+                                <FormLabel>Metode Pembayaran</FormLabel>
+                                <FormControl>
+                                    <RadioGroup
+                                    onValueChange={field.onChange}
+                                    defaultValue={field.value}
+                                    className="grid grid-cols-2 gap-4"
+                                    >
+                                    {paymentMethods.map(method => (
+                                        <FormItem key={method} className="flex items-center space-x-3 space-y-0">
+                                            <FormControl>
+                                                <RadioGroupItem value={method} />
+                                            </FormControl>
+                                            <FormLabel className="font-normal">{method}</FormLabel>
+                                        </FormItem>
+                                    ))}
+                                    </RadioGroup>
+                                </FormControl>
+                                <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+
+                        { (watchPaymentMethod === 'Debit' || watchPaymentMethod === 'Transfer') && (
                             <FormField
                                 control={form.control}
-                                name="paymentMethod"
+                                name="bank"
                                 render={({ field }) => (
-                                    <FormItem className="space-y-3">
-                                    <FormLabel>Metode Pembayaran</FormLabel>
-                                    <FormControl>
-                                        <RadioGroup
-                                        onValueChange={field.onChange}
-                                        defaultValue={field.value}
-                                        className="grid grid-cols-2 gap-4"
-                                        >
-                                        {paymentMethods.map(method => (
-                                            <FormItem key={method} className="flex items-center space-x-3 space-y-0">
-                                                <FormControl>
-                                                    <RadioGroupItem value={method} />
-                                                </FormControl>
-                                                <FormLabel className="font-normal">{method}</FormLabel>
-                                            </FormItem>
+                                    <FormItem>
+                                    <FormLabel>Pilih Bank</FormLabel>
+                                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                        <FormControl>
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Pilih bank tujuan" />
+                                        </SelectTrigger>
+                                        </FormControl>
+                                        <SelectContent>
+                                        {banks.map(bank => (
+                                            <SelectItem key={bank} value={bank}>{bank}</SelectItem>
                                         ))}
-                                        </RadioGroup>
+                                        </SelectContent>
+                                    </Select>
+                                    <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                        )}
+
+                            { watchPaymentMethod === 'Cash' && (
+                            <div className='space-y-2'>
+                            <FormField
+                                control={form.control}
+                                name="cashReceived"
+                                render={({ field }) => (
+                                    <FormItem>
+                                    <FormLabel>Uang Tunai Diterima</FormLabel>
+                                    <FormControl>
+                                        <Input type="number" placeholder="Masukkan jumlah uang" {...field} />
                                     </FormControl>
                                     <FormMessage />
                                     </FormItem>
                                 )}
                             />
-
-                            { (watchPaymentMethod === 'Debit' || watchPaymentMethod === 'Transfer') && (
-                                <FormField
-                                    control={form.control}
-                                    name="bank"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                        <FormLabel>Pilih Bank</FormLabel>
-                                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                            <FormControl>
-                                            <SelectTrigger>
-                                                <SelectValue placeholder="Pilih bank tujuan" />
-                                            </SelectTrigger>
-                                            </FormControl>
-                                            <SelectContent>
-                                            {banks.map(bank => (
-                                                <SelectItem key={bank} value={bank}>{bank}</SelectItem>
-                                            ))}
-                                            </SelectContent>
-                                        </Select>
-                                        <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                            )}
-
-                             { watchPaymentMethod === 'Cash' && (
-                                <div className='space-y-2'>
-                                <FormField
-                                    control={form.control}
-                                    name="cashReceived"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                        <FormLabel>Uang Tunai Diterima</FormLabel>
-                                        <FormControl>
-                                            <Input type="number" placeholder="Masukkan jumlah uang" {...field} />
-                                        </FormControl>
-                                        <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                                 {change > 0 && (
-                                    <div className="flex justify-between items-center text-sm">
-                                        <span className="text-muted-foreground">Kembalian</span>
-                                        <span className="font-medium">Rp{change.toLocaleString('id-ID')}</span>
-                                    </div>
-                                )}
+                                {change > 0 && (
+                                <div className="flex justify-between items-center text-sm">
+                                    <span className="text-muted-foreground">Kembalian</span>
+                                    <span className="font-medium">Rp{change.toLocaleString('id-ID')}</span>
                                 </div>
                             )}
-                        </CardContent>
-                        <CardFooter className="flex-col gap-2 p-4 border-t">
-                            <Button type="submit" className="w-full" disabled={isSubmitting || cart.length === 0 || !form.formState.isValid}>
-                                {isSubmitting ? 'Memproses...' : 'Bayar Sekarang'}
-                            </Button>
-                            <Button type="button" variant="outline" className="w-full" onClick={() => window.print()} disabled={isSubmitting}>
-                                <Printer className="mr-2 h-4 w-4" />
-                                Cetak Struk Terakhir
-                            </Button>
-                        </CardFooter>
-                    </form>
-                 </Form>
-            </div>
+                            </div>
+                        )}
+                    </CardContent>
+                    <CardFooter className="flex-col gap-2 p-4 border-t">
+                        <Button type="submit" className="w-full" disabled={isSubmitting || cart.length === 0 || !form.formState.isValid}>
+                            {isSubmitting ? 'Memproses...' : 'Bayar Sekarang'}
+                        </Button>
+                        <Button type="button" variant="outline" className="w-full" onClick={() => window.print()} disabled={isSubmitting}>
+                            <Printer className="mr-2 h-4 w-4" />
+                            Cetak Struk Terakhir
+                        </Button>
+                    </CardFooter>
+                </form>
+                </Form>
         )}
-      </div>
     </Card>
   );
 }
+
+    
