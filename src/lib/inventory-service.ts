@@ -322,28 +322,41 @@ export async function findProductBySku(sku: string): Promise<InventoryItem | nul
 }
 
 
-export async function performSale(sku: string, channel: string, quantity: number, saleDate?: Date, transactionId?: string, paymentMethod?: string) {
+export async function performSale(
+    sku: string, 
+    channel: string, 
+    quantity: number, 
+    options?: {
+        saleDate?: Date, 
+        transactionId?: string, 
+        paymentMethod?: string,
+        resellerName?: string
+    }
+) {
     const getProductStmt = db.prepare('SELECT id, price, stock FROM products WHERE sku = ? AND hasVariants = 0');
     const getVariantStmt = db.prepare('SELECT id, price, stock, productId FROM variants WHERE sku = ?');
     
     db.transaction(() => {
+        const saleDate = options?.saleDate || new Date();
+        const saleReason = `Sale (${channel})` + (options?.resellerName ? ` - ${options.resellerName}` : '');
+
         const variant = getVariantStmt.get(sku) as { id: number, price: number, stock: number, productId: number } | undefined;
         if (variant) {
             if (variant.stock < quantity) {
                 throw new Error('Insufficient stock for variant.');
             }
-            adjustStock(variant.id.toString(), -quantity, `Sale (${channel})`);
-            db.prepare('INSERT INTO sales (transactionId, paymentMethod, productId, variantId, channel, quantity, priceAtSale, saleDate) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
-              .run(transactionId, paymentMethod, variant.productId, variant.id, channel, quantity, variant.price, (saleDate || new Date()).toISOString());
+            adjustStock(variant.id.toString(), -quantity, saleReason);
+            db.prepare('INSERT INTO sales (transactionId, paymentMethod, resellerName, productId, variantId, channel, quantity, priceAtSale, saleDate) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)')
+              .run(options?.transactionId, options?.paymentMethod, options?.resellerName, variant.productId, variant.id, channel, quantity, variant.price, saleDate.toISOString());
         } else {
             const product = getProductStmt.get(sku) as { id: number, price: number, stock: number } | undefined;
             if (product) {
                  if (product.stock < quantity) {
                     throw new Error('Insufficient stock for product.');
                 }
-                adjustStock(product.id.toString(), -quantity, `Sale (${channel})`);
-                db.prepare('INSERT INTO sales (transactionId, paymentMethod, productId, variantId, channel, quantity, priceAtSale, saleDate) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
-                  .run(transactionId, paymentMethod, product.id, null, channel, quantity, product.price, (saleDate || new Date()).toISOString());
+                adjustStock(product.id.toString(), -quantity, saleReason);
+                db.prepare('INSERT INTO sales (transactionId, paymentMethod, resellerName, productId, variantId, channel, quantity, priceAtSale, saleDate) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)')
+                  .run(options?.transactionId, options?.paymentMethod, options?.resellerName, product.id, null, channel, quantity, product.price, saleDate.toISOString());
             } else {
                 throw new Error('Product or variant with specified SKU not found or has variants.');
             }
@@ -354,7 +367,7 @@ export async function performSale(sku: string, channel: string, quantity: number
 export async function fetchAllSales(): Promise<Sale[]> {
      const salesQuery = db.prepare(`
         SELECT 
-            s.id, s.transactionId, s.paymentMethod, s.productId, s.variantId, s.channel, s.quantity, s.priceAtSale, s.saleDate,
+            s.id, s.transactionId, s.paymentMethod, s.resellerName, s.productId, s.variantId, s.channel, s.quantity, s.priceAtSale, s.saleDate,
             p.name as productName,
             v.name as variantName,
             COALESCE(v.sku, p.sku) as sku
@@ -376,7 +389,7 @@ export async function getSalesByDate(channel: string, date: Date): Promise<Sale[
 
     const salesQuery = db.prepare(`
         SELECT 
-            s.id, s.transactionId, s.paymentMethod, s.productId, s.variantId, s.channel, s.quantity, s.priceAtSale, s.saleDate,
+            s.id, s.transactionId, s.paymentMethod, s.resellerName, s.productId, s.variantId, s.channel, s.quantity, s.priceAtSale, s.saleDate,
             p.name as productName,
             v.name as variantName,
             COALESCE(v.sku, p.sku) as sku
@@ -403,14 +416,15 @@ export async function revertSale(saleId: string) {
     const deleteSaleStmt = db.prepare('DELETE FROM sales WHERE id = ?');
     
     db.transaction(() => {
-        const sale = getSaleStmt.get(saleId) as { id: number, productId: number, variantId?: number, quantity: number, channel: string } | undefined;
+        const sale = getSaleStmt.get(saleId) as { id: number, productId: number, variantId?: number, quantity: number, channel: string, resellerName?: string } | undefined;
         if (!sale) {
             throw new Error('Sale not found.');
         }
 
         const idToAdjust = sale.variantId ? sale.variantId.toString() : sale.productId.toString();
-        
-        adjustStock(idToAdjust, sale.quantity, `Cancelled Sale (${sale.channel})`);
+        const reason = `Cancelled Sale (${sale.channel})` + (sale.resellerName ? ` - ${sale.resellerName}` : '');
+
+        adjustStock(idToAdjust, sale.quantity, reason);
         
         deleteSaleStmt.run(saleId);
     })();
@@ -421,27 +435,43 @@ export async function revertSaleByTransaction(id: string) {
     const isSingleSale = id.startsWith('sale-');
 
     if (isSingleSale) {
-        // Handle old sales without transactionId
         const saleId = id.replace('sale-', '');
         revertSale(saleId);
     } else {
-        // Handle new sales with transactionId
         const getSalesStmt = db.prepare('SELECT * FROM sales WHERE transactionId = ?');
         const deleteSalesStmt = db.prepare('DELETE FROM sales WHERE transactionId = ?');
 
         db.transaction(() => {
-            const sales = getSalesStmt.all(id) as { id: number, productId: number, variantId?: number, quantity: number, channel: string }[];
+            const sales = getSalesStmt.all(id) as { id: number, productId: number, variantId?: number, quantity: number, channel: string, resellerName?: string }[];
             if (!sales || sales.length === 0) {
-                // This shouldn't happen if called correctly, but as a safeguard.
                 throw new Error('Transaction not found.');
             }
 
             sales.forEach(sale => {
                 const idToAdjust = sale.variantId ? sale.variantId.toString() : sale.productId.toString();
-                adjustStock(idToAdjust, sale.quantity, `Cancelled Transaction #${id} (${sale.channel})`);
+                const reason = `Cancelled Transaction #${id} (${sale.channel})` + (sale.resellerName ? ` - ${sale.resellerName}` : '');
+                adjustStock(idToAdjust, sale.quantity, reason);
             });
 
             deleteSalesStmt.run(id);
         })();
+    }
+}
+
+
+// Reseller functions
+export async function getResellers(): Promise<{id: number, name: string}[]> {
+    return db.prepare('SELECT * FROM resellers ORDER BY name').all() as {id: number, name: string}[];
+}
+
+export async function addReseller(name: string): Promise<{id: number, name: string}> {
+    try {
+        const result = db.prepare('INSERT INTO resellers (name) VALUES (?)').run(name);
+        return { id: result.lastInsertRowid as number, name };
+    } catch(error) {
+        if (error instanceof Error && error.message.includes('UNIQUE constraint failed')) {
+            throw new Error('Reseller name already exists.');
+        }
+        throw error;
     }
 }

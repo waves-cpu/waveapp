@@ -3,7 +3,7 @@
 
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { useInventory } from '@/hooks/use-inventory';
-import type { InventoryItem, InventoryItemVariant } from '@/types';
+import type { InventoryItem, InventoryItemVariant, Reseller } from '@/types';
 import { PosSearch } from './pos-search';
 import { PosOrderSummary } from './pos-order-summary';
 import { VariantSelectionDialog } from './variant-selection-dialog';
@@ -26,10 +26,13 @@ export interface CartItem extends InventoryItemVariant {
     parentImageUrl?: string;
 }
 
-const LOCAL_STORAGE_KEY = 'posCart';
+interface ResellerCartProps {
+    reseller: Reseller;
+}
 
-export function PosCart() {
-    const { getProductBySku, recordSale } = useInventory();
+export function ResellerCart({ reseller }: ResellerCartProps) {
+    const LOCAL_STORAGE_KEY = `resellerCart_${reseller.id}`;
+    const { getProductBySku, recordSale, items: inventoryItems, loading: inventoryLoading } = useInventory();
     const { language } = useLanguage();
     const { playSuccessSound, playErrorSound } = useScanSounds();
     const t = translations[language];
@@ -48,7 +51,7 @@ export function PosCart() {
         } catch (error) {
             console.error("Failed to load cart from localStorage", error);
         }
-    }, []);
+    }, [LOCAL_STORAGE_KEY]);
 
     useEffect(() => {
         if (isClient) {
@@ -58,7 +61,7 @@ export function PosCart() {
                 console.error("Failed to save cart to localStorage", error);
             }
         }
-    }, [cart, isClient]);
+    }, [cart, isClient, LOCAL_STORAGE_KEY]);
 
     const addToCart = (item: InventoryItem, variant?: InventoryItemVariant) => {
         const itemToAdd = variant ? 
@@ -182,10 +185,10 @@ export function PosCart() {
         const transactionId = `trans-${Date.now()}`;
         try {
             const salePromises = cart.map(item =>
-                recordSale(item.sku!, 'pos', item.quantity, {
-                    saleDate: new Date(),
+                recordSale(item.sku!, 'reseller', item.quantity, {
                     transactionId,
                     paymentMethod,
+                    resellerName: reseller.name,
                 })
             );
             await Promise.all(salePromises);
@@ -203,7 +206,6 @@ export function PosCart() {
             });
         }
     };
-
 
     return (
         <div className="flex-grow grid grid-cols-1 lg:grid-cols-5 gap-4 p-4 h-full">

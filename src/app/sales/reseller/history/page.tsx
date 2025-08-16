@@ -16,7 +16,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-import { Calendar as CalendarIcon, Trash2 } from 'lucide-react';
+import { Calendar as CalendarIcon, Trash2, Users } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -40,9 +40,10 @@ type GroupedSale = {
     totalAmount: number;
     totalItems: number;
     paymentMethod?: string;
+    resellerName?: string;
 }
 
-export default function PosHistoryPage() {
+export default function ResellerHistoryPage() {
     const { allSales, fetchItems, cancelSaleTransaction, loading } = useInventory();
     const { language } = useLanguage();
     const { toast } = useToast();
@@ -55,7 +56,7 @@ export default function PosHistoryPage() {
     }, [fetchItems]);
     
     const posSales = useMemo(() => {
-        const filtered = allSales.filter(s => s.channel === 'pos');
+        const filtered = allSales.filter(s => s.channel === 'reseller');
         if (date) {
             const selectedDateString = format(date, 'yyyy-MM-dd');
             return filtered.filter(s => format(new Date(s.saleDate), 'yyyy-MM-dd') === selectedDateString);
@@ -75,6 +76,7 @@ export default function PosHistoryPage() {
                     transactionId: id,
                     saleDate: sale.saleDate,
                     paymentMethod: sale.paymentMethod,
+                    resellerName: sale.resellerName,
                     items: [],
                     totalAmount: 0,
                     totalItems: 0,
@@ -113,10 +115,10 @@ export default function PosHistoryPage() {
             <main className="flex-1 p-4 md:p-10">
                 <div className="flex items-center gap-4 mb-6">
                     <SidebarTrigger className="md:hidden" />
-                    <h1 className="text-lg font-bold">{t.pos.history}</h1>
+                    <h1 className="text-lg font-bold">Riwayat Transaksi Reseller</h1>
                     <div className="ml-auto flex items-center gap-2">
-                        <Link href="/sales/pos">
-                             <Button variant="outline">{t.pos.title}</Button>
+                        <Link href="/sales/reseller">
+                             <Button variant="outline">{t.sales.reseller}</Button>
                         </Link>
                          <Popover>
                             <PopoverTrigger asChild>
@@ -144,13 +146,14 @@ export default function PosHistoryPage() {
                 <Card>
                     <CardHeader>
                         <CardTitle className="text-base">Transaksi pada {date ? format(date, 'PPPP', { locale: language === 'id' ? aing : undefined }) : ''}</CardTitle>
-                        <CardDescription className="text-xs">Menampilkan semua transaksi dari channel Point of Sale.</CardDescription>
+                        <CardDescription className="text-xs">Menampilkan semua transaksi dari channel Reseller.</CardDescription>
                     </CardHeader>
                     <CardContent>
                        <Table>
                             <TableHeader>
                                 <TableRow>
                                     <TableHead className="text-xs">Waktu</TableHead>
+                                    <TableHead className="text-xs">Reseller</TableHead>
                                     <TableHead className="text-xs">Detail Transaksi</TableHead>
                                     <TableHead className="text-xs">Metode Bayar</TableHead>
                                     <TableHead className="text-right text-xs">Total</TableHead>
@@ -160,13 +163,19 @@ export default function PosHistoryPage() {
                             <TableBody>
                                 {loading ? (
                                     <TableRow>
-                                        <TableCell colSpan={5} className="h-24 text-center text-sm">Memuat riwayat...</TableCell>
+                                        <TableCell colSpan={6} className="h-24 text-center text-sm">Memuat riwayat...</TableCell>
                                     </TableRow>
                                 ) : groupedSales.length > 0 ? (
                                     groupedSales.map(group => (
                                         <TableRow key={group.transactionId}>
                                             <TableCell className="font-medium text-sm">
                                                 {format(new Date(group.saleDate), 'HH:mm:ss')}
+                                            </TableCell>
+                                            <TableCell>
+                                                <div className="flex items-center gap-2">
+                                                    <Users className="h-4 w-4 text-muted-foreground" />
+                                                    <span className="font-medium text-sm">{group.resellerName}</span>
+                                                </div>
                                             </TableCell>
                                             <TableCell>
                                                 <div className="font-medium text-sm">{group.items.length} jenis produk ({group.totalItems} item)</div>
@@ -178,7 +187,7 @@ export default function PosHistoryPage() {
                                                 <Badge variant="outline">{group.paymentMethod || 'N/A'}</Badge>
                                             </TableCell>
                                             <TableCell className="text-right font-semibold text-sm">
-                                                {group.totalAmount.toLocaleString('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                                                {group.totalAmount.toLocaleString('id-ID', { style: 'currency', currency: 'IDR' })}
                                             </TableCell>
                                             <TableCell className="text-center">
                                                 <AlertDialog>
@@ -207,7 +216,7 @@ export default function PosHistoryPage() {
                                     ))
                                 ) : (
                                      <TableRow>
-                                        <TableCell colSpan={5} className="h-48 text-center">
+                                        <TableCell colSpan={6} className="h-48 text-center">
                                             <div className="flex flex-col items-center justify-center gap-4 text-muted-foreground">
                                                 <HistoryIcon className="h-12 w-12" />
                                                 <p className="font-semibold text-sm">Tidak Ada Transaksi</p>

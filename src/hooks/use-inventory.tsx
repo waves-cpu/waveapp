@@ -2,7 +2,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
-import type { InventoryItem, AdjustmentHistory, InventoryItemVariant, Sale } from '@/types';
+import type { InventoryItem, AdjustmentHistory, InventoryItemVariant, Sale, Reseller } from '@/types';
 import {
   fetchInventoryData,
   addProduct,
@@ -15,6 +15,8 @@ import {
   findProductBySku,
   fetchAllSales,
   revertSaleByTransaction,
+  getResellers,
+  addReseller as addResellerDb,
 } from '@/lib/inventory-service';
 
 
@@ -29,12 +31,15 @@ interface InventoryContextType {
   bulkUpdateVariants: (itemId: string, variants: InventoryItemVariant[]) => Promise<void>;
   fetchItems: () => Promise<void>;
   loading: boolean;
-  recordSale: (sku: string, channel: string, quantity: number, saleDate?: Date, transactionId?: string, paymentMethod?: string) => Promise<void>;
+  recordSale: (sku: string, channel: string, quantity: number, options?: { saleDate?: Date; transactionId?: string; paymentMethod?: string; resellerName?: string; }) => Promise<void>;
   fetchSales: (channel: string, date: Date) => Promise<Sale[]>;
   cancelSale: (saleId: string) => Promise<void>;
   cancelSaleTransaction: (transactionId: string) => Promise<void>;
   getProductBySku: (sku: string) => Promise<InventoryItem | null>;
   allSales: Sale[];
+  resellers: Reseller[];
+  addReseller: (name: string) => Promise<void>;
+  fetchResellers: () => Promise<void>;
 }
 
 const InventoryContext = createContext<InventoryContextType | undefined>(undefined);
@@ -43,19 +48,22 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
   const [items, setItems] = useState<InventoryItem[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
   const [allSales, setAllSales] = useState<Sale[]>([]);
+  const [resellers, setResellers] = useState<Reseller[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchAllData = useCallback(async () => {
     setLoading(true);
     try {
-      const [inventoryData, salesData] = await Promise.all([
+      const [inventoryData, salesData, resellerData] = await Promise.all([
         fetchInventoryData(),
-        fetchAllSales()
+        fetchAllSales(),
+        getResellers(),
       ]);
       
       setItems(inventoryData.items);
       setCategories(inventoryData.categories);
       setAllSales(salesData);
+      setResellers(resellerData);
 
     } catch (error) {
       console.error("Failed to fetch data:", error);
@@ -68,6 +76,19 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
     fetchAllData();
   }, [fetchAllData]);
 
+  const fetchResellers = useCallback(async () => {
+    try {
+      const resellerData = await getResellers();
+      setResellers(resellerData);
+    } catch(error) {
+      console.error("Failed to fetch resellers:", error);
+    }
+  }, []);
+
+  const addReseller = async (name: string) => {
+    await addResellerDb(name);
+    await fetchResellers();
+  };
 
   const addItem = async (itemData: any) => {
     await addProduct(itemData);
@@ -109,10 +130,10 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
     return undefined;
   }, [items]);
 
-  const recordSale = async (sku: string, channel: string, quantity: number, saleDate?: Date, transactionId?: string, paymentMethod?: string) => {
-    await performSale(sku, channel, quantity, saleDate, transactionId, paymentMethod);
-    // For POS, we don't need to refetch all sales, just inventory
-    if (channel !== 'pos') {
+  const recordSale = async (sku: string, channel: string, quantity: number, options?: { saleDate?: Date, transactionId?: string, paymentMethod?: string, resellerName?: string }) => {
+    await performSale(sku, channel, quantity, options);
+    // For channels other than marketplace ones, we don't need to refetch all sales, just inventory.
+    if (['shopee', 'lazada', 'tiktok'].includes(channel)) {
       await fetchAllData();
     } else {
        const inventoryData = await fetchInventoryData();
@@ -149,7 +170,7 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
         getHistory, 
         getItem, 
         categories, 
-        fetchItems: fetchAllData, // Renamed for clarity in the context of this provider
+        fetchItems: fetchAllData,
         loading,
         recordSale,
         fetchSales,
@@ -157,6 +178,9 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
         cancelSaleTransaction,
         getProductBySku,
         allSales,
+        resellers,
+        addReseller,
+        fetchResellers
       }}>
       {children}
     </InventoryContext.Provider>

@@ -35,6 +35,7 @@ export interface Sale {
   id: string;
   transactionId?: string;
   paymentMethod?: string;
+  resellerName?: string;
   productId: string;
   variantId?: string;
   channel: string;
@@ -44,4 +45,9 @@ export interface Sale {
   productName: string;
   variantName?: string;
   sku?: string;
+}
+
+export interface Reseller {
+    id: number;
+    name: string;
 }

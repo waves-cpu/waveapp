@@ -14,10 +14,10 @@ db.pragma('journal_mode = WAL');
 // Simple migration logic
 const runMigrations = () => {
   try {
-    // Check if transactionId column exists in sales table
     const columns = db.pragma('table_info(sales)');
     const hasTransactionId = columns.some((col: any) => col.name === 'transactionId');
     const hasPaymentMethod = columns.some((col: any) => col.name === 'paymentMethod');
+    const hasResellerName = columns.some((col: any) => col.name === 'resellerName');
 
     if (!hasTransactionId) {
       console.log('Adding transactionId column to sales table...');
@@ -28,9 +28,12 @@ const runMigrations = () => {
       console.log('Adding paymentMethod column to sales table...');
       db.exec('ALTER TABLE sales ADD COLUMN paymentMethod TEXT');
     }
+    
+    if (!hasResellerName) {
+        console.log('Adding resellerName column to sales table...');
+        db.exec('ALTER TABLE sales ADD COLUMN resellerName TEXT');
+    }
   } catch (error) {
-    // This might happen if the sales table doesn't exist yet, which is fine.
-    // The createSchema function will handle creating it.
     if (error instanceof Error && error.message.includes('no such table: sales')) {
         // ignore
     } else {
@@ -82,6 +85,7 @@ const createSchema = () => {
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         transactionId TEXT,
         paymentMethod TEXT,
+        resellerName TEXT,
         productId INTEGER NOT NULL,
         variantId INTEGER,
         channel TEXT NOT NULL,
@@ -90,6 +94,11 @@ const createSchema = () => {
         saleDate TEXT NOT NULL,
         FOREIGN KEY (productId) REFERENCES products(id),
         FOREIGN KEY (variantId) REFERENCES variants(id)
+    );
+
+     CREATE TABLE IF NOT EXISTS resellers (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL UNIQUE
     );
   `);
 };
