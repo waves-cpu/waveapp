@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -43,7 +43,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { useInventory } from '@/hooks/use-inventory';
-import { MoreVertical, UserPlus, Trash2, Pencil } from 'lucide-react';
+import { MoreVertical, UserPlus, Trash2, Pencil, Search } from 'lucide-react';
 
 interface ResellerFormDialogProps {
   onSave: (resellerData: Omit<Reseller, 'id'>) => Promise<void>;
@@ -155,6 +155,17 @@ export function ResellerSelectionDialog({
     const { toast } = useToast();
     const [resellerToEdit, setResellerToEdit] = useState<Reseller | null>(null);
     const [resellerToDelete, setResellerToDelete] = useState<Reseller | null>(null);
+    const [searchTerm, setSearchTerm] = useState('');
+
+    const filteredResellers = useMemo(() => {
+        if (!searchTerm) return resellers;
+        const lowercasedFilter = searchTerm.toLowerCase();
+        return resellers.filter(reseller => 
+            reseller.name.toLowerCase().includes(lowercasedFilter) ||
+            reseller.phone?.toLowerCase().includes(lowercasedFilter) ||
+            reseller.address?.toLowerCase().includes(lowercasedFilter)
+        );
+    }, [resellers, searchTerm]);
 
     const handleAddReseller = async (resellerData: Omit<Reseller, 'id'>) => {
         try {
@@ -221,16 +232,25 @@ export function ResellerSelectionDialog({
           </DialogDescription>
         </DialogHeader>
         
-        <div className="mt-4">
+        <div className="flex flex-col md:flex-row gap-4 pt-4">
            <ResellerFormDialog onSave={handleAddReseller}>
-             <Button variant="outline" className="w-full">
+             <Button variant="outline" className="w-full md:w-auto">
                 <UserPlus className="mr-2 h-4 w-4" />
                 Tambah Reseller Baru
             </Button>
            </ResellerFormDialog>
+           <div className="relative flex-grow">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input 
+                placeholder="Cari reseller..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10 w-full"
+              />
+           </div>
         </div>
         
-        <ScrollArea className="h-80 border rounded-md mt-4">
+        <ScrollArea className="h-80 border rounded-md">
           <Table>
             <TableHeader>
                 <TableRow>
@@ -241,8 +261,8 @@ export function ResellerSelectionDialog({
                 </TableRow>
             </TableHeader>
             <TableBody>
-              {resellers.length > 0 ? (
-                resellers.map((reseller) => (
+              {filteredResellers.length > 0 ? (
+                filteredResellers.map((reseller) => (
                   <TableRow
                     key={reseller.id}
                     onClick={() => onSelect(reseller)}
@@ -252,7 +272,7 @@ export function ResellerSelectionDialog({
                     <TableCell>{reseller.phone || '-'}</TableCell>
                     <TableCell className="max-w-[200px] truncate">{reseller.address || '-'}</TableCell>
                     <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
-                        <ResellerFormDialog onSave={handleEditReseller} reseller={resellerToEdit}>
+                        <ResellerFormDialog onSave={handleEditReseller} reseller={reseller}>
                             <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
                                     <Button variant="ghost" size="icon" className="h-8 w-8">
@@ -277,7 +297,7 @@ export function ResellerSelectionDialog({
               ) : (
                 <TableRow>
                   <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
-                    Belum ada reseller. Tambahkan di atas.
+                    {searchTerm ? 'Reseller tidak ditemukan.' : 'Belum ada reseller. Tambahkan di atas.'}
                   </TableCell>
                 </TableRow>
               )}
