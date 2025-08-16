@@ -167,7 +167,50 @@ export function PosCheckoutForm() {
 
   return (
     <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            <Card>
+                <CardHeader>
+                    <CardTitle>Ringkasan Pesanan</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <ScrollArea className="max-h-60 mb-4">
+                        <div className="space-y-4 pr-6">
+                        {cart.map(item => (
+                            <div key={item.sku} className="flex justify-between items-start text-sm">
+                                <div className="flex-grow">
+                                    <p className="font-medium truncate">{item.name} {item.variantName && `(${item.variantName})`}</p>
+                                    <p className="text-muted-foreground">{item.quantity} x Rp{item.price.toLocaleString('id-ID')}</p>
+                                </div>
+                                <p className="font-medium">Rp{(item.quantity * item.price).toLocaleString('id-ID')}</p>
+                            </div>
+                        ))}
+                        </div>
+                    </ScrollArea>
+                    <Separator />
+                    <div className="space-y-2 text-sm mt-4">
+                        <div className="flex justify-between">
+                            <span className="text-muted-foreground">Subtotal ({totalItems} item)</span>
+                            <span>Rp{subtotal.toLocaleString('id-ID')}</span>
+                        </div>
+                        <div className="flex justify-between">
+                            <span className="text-muted-foreground">Diskon</span>
+                            <span className="text-red-500">- Rp{(watchDiscount || 0).toLocaleString('id-ID')}</span>
+                        </div>
+                         <Separator />
+                         <div className="flex justify-between font-bold text-base">
+                            <span>Total</span>
+                            <span>Rp{totalAfterDiscount.toLocaleString('id-ID')}</span>
+                        </div>
+                         {watchPaymentMethod === 'Cash' && change >= 0 && (
+                             <div className="flex justify-between text-muted-foreground">
+                                <span>Kembalian</span>
+                                <span>Rp{change.toLocaleString('id-ID')}</span>
+                            </div>
+                         )}
+                    </div>
+                </CardContent>
+            </Card>
+
             <Card>
                 <CardHeader>
                     <CardTitle>Detail Pembayaran</CardTitle>
@@ -254,50 +297,7 @@ export function PosCheckoutForm() {
                         />
                     )}
                 </CardContent>
-            </Card>
-
-            <Card className="sticky top-8">
-                <CardHeader>
-                    <CardTitle>Ringkasan Pesanan</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <ScrollArea className="h-48 mb-4">
-                        <div className="space-y-4 pr-6">
-                        {cart.map(item => (
-                            <div key={item.sku} className="flex justify-between items-start text-sm">
-                                <div className="flex-grow">
-                                    <p className="font-medium truncate">{item.name} {item.variantName && `(${item.variantName})`}</p>
-                                    <p className="text-muted-foreground">{item.quantity} x Rp{item.price.toLocaleString('id-ID')}</p>
-                                </div>
-                                <p className="font-medium">Rp{(item.quantity * item.price).toLocaleString('id-ID')}</p>
-                            </div>
-                        ))}
-                        </div>
-                    </ScrollArea>
-                    <Separator />
-                    <div className="space-y-2 text-sm mt-4">
-                        <div className="flex justify-between">
-                            <span className="text-muted-foreground">Subtotal ({totalItems} item)</span>
-                            <span>Rp{subtotal.toLocaleString('id-ID')}</span>
-                        </div>
-                        <div className="flex justify-between">
-                            <span className="text-muted-foreground">Diskon</span>
-                            <span className="text-red-500">- Rp{(watchDiscount || 0).toLocaleString('id-ID')}</span>
-                        </div>
-                         <Separator />
-                         <div className="flex justify-between font-bold text-base">
-                            <span>Total</span>
-                            <span>Rp{totalAfterDiscount.toLocaleString('id-ID')}</span>
-                        </div>
-                         {watchPaymentMethod === 'Cash' && change >= 0 && (
-                             <div className="flex justify-between text-muted-foreground">
-                                <span>Kembalian</span>
-                                <span>Rp{change.toLocaleString('id-ID')}</span>
-                            </div>
-                         )}
-                    </div>
-                </CardContent>
-                <CardFooter className="flex-col gap-2 !p-4">
+                <CardFooter className="flex-col gap-2 !p-4 border-t">
                      <Button type="submit" className="w-full" disabled={isSubmitting || !form.formState.isValid}>
                         {isSubmitting ? 'Memproses...' : 'Bayar Sekarang'}
                     </Button>
@@ -307,7 +307,6 @@ export function PosCheckoutForm() {
                     </Button>
                 </CardFooter>
             </Card>
-            
         </form>
     </Form>
   );

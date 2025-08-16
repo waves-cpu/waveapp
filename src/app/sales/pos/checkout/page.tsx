@@ -29,7 +29,7 @@ export default function PosCheckoutPage({
         </header>
 
         <div className="flex-1 p-4 lg:p-8 overflow-auto">
-            <div className="max-w-4xl mx-auto">
+            <div className="max-w-2xl mx-auto">
               <PosCheckoutForm />
             </div>
         </div>
