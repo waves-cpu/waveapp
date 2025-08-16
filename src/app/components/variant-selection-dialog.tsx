@@ -49,9 +49,6 @@ export function VariantSelectionDialog({ open, onOpenChange, item, onSelect, car
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>{t.variantSelectionDialog.title}</DialogTitle>
-          <DialogDescription>
-            {t.variantSelectionDialog.description}
-          </DialogDescription>
         </DialogHeader>
         <div className="-mt-2">
             <h4 className="font-medium text-lg leading-tight">{item.name}</h4>
