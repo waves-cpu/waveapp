@@ -101,14 +101,14 @@ function StockBar({ stock, onUpdateClick }: { stock: number; onUpdateClick: () =
     };
 
     return (
-        <div className="flex items-center gap-2 w-36 group">
-             <div className="flex items-center gap-1">
-                <span className="font-medium w-10 text-left">{stock}</span>
+        <div className="w-36">
+            <div className="flex items-center gap-2 mb-1 group">
+                <span className="font-medium text-left">{stock}</span>
                 <Button variant="ghost" size="icon" onClick={onUpdateClick} className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity" aria-label={t.inventoryTable.updateStock}>
                     <Edit className="h-3 w-3" />
                 </Button>
             </div>
-            <Progress value={stock > 100 ? 100 : stock} className="h-2 flex-1" indicatorClassName={getStockColor(stock)} />
+            <Progress value={stock > 100 ? 100 : stock} className="h-2" indicatorClassName={getStockColor(stock)} />
         </div>
     );
 }
@@ -309,7 +309,7 @@ export function InventoryTable({ onUpdateStock }: InventoryTableProps) {
                         <React.Fragment key={item.id}>
                             <TableRow className="bg-muted/20 hover:bg-muted/40" noBorder>
                                 <TableCell>
-                                    <div className="flex items-center gap-4">
+                                    <div className="flex items-center gap-4 group">
                                         <Image 
                                             src={item.imageUrl || 'https://placehold.co/40x40.png'} 
                                             alt={item.name} 
@@ -317,15 +317,12 @@ export function InventoryTable({ onUpdateStock }: InventoryTableProps) {
                                             className="rounded-sm" 
                                             data-ai-hint="product image"
                                         />
-                                        <div className="group relative">
-                                            <button onClick={() => handleBulkEdit(item)} className="text-left">
-                                                <div className="font-medium text-primary text-sm">{item.name}</div>
-                                                <div className="text-xs text-muted-foreground">SKU: {item.sku}</div>
-                                                <div className="absolute -bottom-1 left-0 right-0 h-px bg-transparent transition-all group-hover:bg-primary"></div>
-                                                <div className="absolute top-1/2 -right-6 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                    <Pencil className="h-3 w-3" />
-                                                </div>
+                                        <div>
+                                            <button onClick={() => handleBulkEdit(item)} className="text-left flex items-center gap-2">
+                                                <div className="font-medium text-primary text-sm hover:underline">{item.name}</div>
+                                                <Pencil className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
                                             </button>
+                                            <div className="text-xs text-muted-foreground">SKU: {item.sku}</div>
                                         </div>
                                     </div>
                                 </TableCell>
