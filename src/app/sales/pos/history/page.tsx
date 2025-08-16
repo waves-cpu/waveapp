@@ -57,7 +57,7 @@ export default function PosHistoryPage() {
     
     const [receiptToPrint, setReceiptToPrint] = useState<ReceiptData | null>(null);
     const receiptRef = useRef<HTMLDivElement>(null);
-
+    
     const handlePrint = useReactToPrint({
       content: () => receiptRef.current,
       onAfterPrint: () => {
@@ -66,7 +66,7 @@ export default function PosHistoryPage() {
     });
 
     useEffect(() => {
-        if (receiptToPrint && receiptRef.current) {
+        if (receiptToPrint) {
             handlePrint();
         }
     }, [receiptToPrint, handlePrint]);
@@ -281,7 +281,7 @@ export default function PosHistoryPage() {
                 description={`Detail item untuk transaksi #${selectedSaleItems[0]?.transactionId?.slice(-6) ?? 'N/A'}`}
             />
             <div className="hidden">
-                {receiptToPrint && <PosReceipt ref={receiptRef} receipt={receiptToPrint} onReady={handlePrint} />}
+                {receiptToPrint && <PosReceipt ref={receiptRef} receipt={receiptToPrint} />}
             </div>
         </AppLayout>
     );
