@@ -6,7 +6,11 @@ import { SidebarTrigger } from "@/components/ui/sidebar";
 import { useLanguage } from "@/hooks/use-language";
 import { translations } from "@/types/language";
 
-export default function AddProductPage() {
+export default function AddProductPage({
+  searchParams,
+}: {
+  searchParams?: { [key: string]: string | string[] | undefined };
+}) {
     const { language } = useLanguage();
     const t = translations[language];
 

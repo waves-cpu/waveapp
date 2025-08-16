@@ -31,7 +31,11 @@ function EditProductPageSkeleton() {
 }
 
 
-export default function EditProductPage() {
+export default function EditProductPage({
+  searchParams,
+}: {
+  searchParams?: { [key: string]: string | string[] | undefined };
+}) {
     const { language } = useLanguage();
     const t = translations[language];
     const params = useParams();

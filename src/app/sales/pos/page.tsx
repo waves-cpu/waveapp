@@ -241,7 +241,11 @@ const PosProductGrid = ({
 };
 
 
-export default function PosSalesPage() {
+export default function PosSalesPage({
+  searchParams,
+}: {
+  searchParams?: { [key: string]: string | string[] | undefined };
+}) {
   const { language } = useLanguage();
   const t = translations[language];
   const { getProductBySku, items } = useInventory();

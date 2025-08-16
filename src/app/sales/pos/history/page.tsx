@@ -51,7 +51,11 @@ interface GroupedSale {
     isSingleSale: boolean; // To identify legacy sales
 }
 
-export default function PosHistoryPage() {
+export default function PosHistoryPage({
+  searchParams,
+}: {
+  searchParams?: { [key: string]: string | string[] | undefined };
+}) {
   const { language } = useLanguage();
   const t = translations[language];
   const { fetchSales, cancelSaleTransaction } = useInventory();

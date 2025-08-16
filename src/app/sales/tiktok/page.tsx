@@ -42,7 +42,11 @@ import { VariantSelectionDialog } from '@/app/components/variant-selection-dialo
 import { Skeleton } from '@/components/ui/skeleton';
 import { AppLayout } from '@/app/components/app-layout';
 
-export default function TiktokSalesPage() {
+export default function TiktokSalesPage({
+  searchParams,
+}: {
+  searchParams?: { [key: string]: string | string[] | undefined };
+}) {
   const { language } = useLanguage();
   const t = translations[language];
   const { fetchSales, recordSale, cancelSale, getProductBySku } = useInventory();

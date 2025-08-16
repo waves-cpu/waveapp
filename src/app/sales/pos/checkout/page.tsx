@@ -8,7 +8,11 @@ import Link from 'next/link';
 import { PosCheckoutForm } from '@/app/components/pos-checkout-form';
 
 
-export default function PosCheckoutPage() {
+export default function PosCheckoutPage({
+  searchParams,
+}: {
+  searchParams?: { [key: string]: string | string[] | undefined };
+}) {
 
   return (
     <main className="flex flex-col h-screen bg-muted/40">

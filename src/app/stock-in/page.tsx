@@ -10,7 +10,11 @@ import { translations } from "@/types/language";
 import { PackagePlus, PlusCircle } from 'lucide-react';
 import { AppLayout } from '../components/app-layout';
 
-export default function StockInPage() {
+export default function StockInPage({
+  searchParams,
+}: {
+  searchParams?: { [key: string]: string | string[] | undefined };
+}) {
     const { language } = useLanguage();
     const t = translations[language];
     const [isProductSelectionOpen, setProductSelectionOpen] = useState(false);
@@ -19,7 +23,7 @@ export default function StockInPage() {
 
     return (
         <AppLayout>
-            <main className="flex min-h-screen flex-col items-center p-4 md:p-10">
+            <main className="flex min-h-screen flex-col items-center p-4 md:p-10 pb-8">
                 <div className="w-full max-w-7xl">
                     <div className="flex items-center justify-between gap-4 mb-6">
                         <div className="flex items-center gap-4">
