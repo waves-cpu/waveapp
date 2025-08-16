@@ -65,6 +65,12 @@ export default function ResellerHistoryPage() {
       },
     });
 
+     useEffect(() => {
+        if (receiptToPrint && receiptRef.current) {
+            handlePrint();
+        }
+    }, [receiptToPrint, handlePrint]);
+
     useEffect(() => {
         fetchItems();
     }, [fetchItems]);
@@ -148,10 +154,7 @@ export default function ResellerHistoryPage() {
             transactionId: group.transactionId,
         };
         
-        // Use a callback with setState to ensure handlePrint is called after the state update.
-        setReceiptToPrint(receiptData, () => {
-            handlePrint();
-        });
+        setReceiptToPrint(receiptData);
     };
 
 
@@ -291,5 +294,3 @@ export default function ResellerHistoryPage() {
         </AppLayout>
     );
 }
-
-    

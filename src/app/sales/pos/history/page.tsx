@@ -66,6 +66,12 @@ export default function PosHistoryPage() {
     });
 
     useEffect(() => {
+        if (receiptToPrint && receiptRef.current) {
+            handlePrint();
+        }
+    }, [receiptToPrint, handlePrint]);
+
+    useEffect(() => {
         fetchItems();
     }, [fetchItems]);
     
@@ -142,15 +148,12 @@ export default function PosHistoryPage() {
             discount: 0, // Assuming no discount data is stored for reprint
             total: group.totalAmount,
             paymentMethod: group.paymentMethod || 'N/A',
-            cashReceived: group.paymentMethod === 'Cash' ? group.totalAmount : group.totalAmount, // Placeholder
-            change: 0, // Placeholder
+            cashReceived: group.totalAmount, // For non-cash, cash received equals total
+            change: 0,
             transactionId: group.transactionId,
         };
         
-        // Use a callback with setState to ensure handlePrint is called after the state update.
-        setReceiptToPrint(receiptData, () => {
-            handlePrint();
-        });
+        setReceiptToPrint(receiptData);
     };
 
 
@@ -284,6 +287,3 @@ export default function PosHistoryPage() {
         </AppLayout>
     );
 }
-
-
-    
