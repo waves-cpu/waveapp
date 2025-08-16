@@ -181,14 +181,14 @@ export default function HistoryPage() {
 
   return (
     <AppLayout>
-      <main className="flex min-h-[calc(100vh_-_theme(spacing.16))] flex-1 flex-col gap-4 bg-muted/40 p-4 md:gap-8 md:p-10">
+      <main className="flex min-h-screen flex-1 flex-col gap-4 bg-muted/40 p-4 pb-8 md:gap-8 md:p-10">
         <div className="flex items-center gap-4">
           <SidebarTrigger className="md:hidden" />
           <h1 className="text-lg md:text-xl font-bold font-headline text-foreground">
             {t.stockHistory.title}
           </h1>
         </div>
-        <div className="bg-card rounded-lg border shadow-sm pb-4">
+        <div className="bg-card rounded-lg border shadow-sm">
           <div className="p-4 flex flex-col md:flex-row gap-4 justify-between items-center border-b">
               <div className="flex flex-col md:flex-row gap-4 w-full">
                   <div className="relative w-full md:w-auto md:flex-grow">
