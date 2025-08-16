@@ -105,9 +105,9 @@ function StockBar({ stock, onUpdateClick }: { stock: number; onUpdateClick: () =
             <Progress value={stock > 100 ? 100 : stock} className="h-6" indicatorClassName={getStockColor(stock)} />
             <div className="absolute inset-0 flex items-center justify-start px-2">
                 <div className="flex items-center gap-1">
-                    <span className="font-medium text-xs text-white mix-blend-difference">{stock}</span>
+                    <span className="font-medium text-xs text-foreground">{stock}</span>
                     <Button variant="ghost" size="icon" onClick={onUpdateClick} className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity" aria-label={t.inventoryTable.updateStock}>
-                        <Edit className="h-3 w-3 text-white" />
+                        <Edit className="h-3 w-3 text-foreground/80" />
                     </Button>
                 </div>
             </div>
@@ -322,7 +322,7 @@ export function InventoryTable({ onUpdateStock }: InventoryTableProps) {
                                         <div>
                                             <button onClick={() => handleBulkEdit(item)} className="text-left flex items-center gap-2">
                                                 <div className="font-medium text-primary text-sm hover:underline">{item.name}</div>
-                                                <Pencil className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                                <Edit className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
                                             </button>
                                             <div className="text-xs text-muted-foreground">SKU: {item.sku}</div>
                                         </div>
@@ -488,6 +488,8 @@ export function InventoryTable({ onUpdateStock }: InventoryTableProps) {
 
 
 
+
+    
 
     
 
