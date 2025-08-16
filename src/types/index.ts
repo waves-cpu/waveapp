@@ -50,4 +50,6 @@ export interface Sale {
 export interface Reseller {
     id: number;
     name: string;
+    phone?: string;
+    address?: string;
 }

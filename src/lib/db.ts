@@ -14,10 +14,10 @@ db.pragma('journal_mode = WAL');
 // Simple migration logic
 const runMigrations = () => {
   try {
-    const columns = db.pragma('table_info(sales)');
-    const hasTransactionId = columns.some((col: any) => col.name === 'transactionId');
-    const hasPaymentMethod = columns.some((col: any) => col.name === 'paymentMethod');
-    const hasResellerName = columns.some((col: any) => col.name === 'resellerName');
+    const salesColumns = db.pragma('table_info(sales)');
+    const hasTransactionId = salesColumns.some((col: any) => col.name === 'transactionId');
+    const hasPaymentMethod = salesColumns.some((col: any) => col.name === 'paymentMethod');
+    const hasResellerName = salesColumns.some((col: any) => col.name === 'resellerName');
 
     if (!hasTransactionId) {
       console.log('Adding transactionId column to sales table...');
@@ -33,9 +33,23 @@ const runMigrations = () => {
         console.log('Adding resellerName column to sales table...');
         db.exec('ALTER TABLE sales ADD COLUMN resellerName TEXT');
     }
+
+    const resellerColumns = db.pragma('table_info(resellers)');
+    const hasPhone = resellerColumns.some((col: any) => col.name === 'phone');
+    const hasAddress = resellerColumns.some((col: any) => col.name === 'address');
+
+    if(!hasPhone) {
+        console.log('Adding phone column to resellers table...');
+        db.exec('ALTER TABLE resellers ADD COLUMN phone TEXT');
+    }
+    if(!hasAddress) {
+        console.log('Adding address column to resellers table...');
+        db.exec('ALTER TABLE resellers ADD COLUMN address TEXT');
+    }
+
   } catch (error) {
-    if (error instanceof Error && error.message.includes('no such table: sales')) {
-        // ignore
+    if (error instanceof Error && error.message.includes('no such table:')) {
+        // ignore if tables don't exist yet
     } else {
         console.error('Migration failed:', error);
     }
@@ -98,7 +112,9 @@ const createSchema = () => {
 
      CREATE TABLE IF NOT EXISTS resellers (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT NOT NULL UNIQUE
+        name TEXT NOT NULL UNIQUE,
+        phone TEXT,
+        address TEXT
     );
   `);
 };

@@ -2,7 +2,7 @@
 'use server';
 
 import { db } from './db';
-import type { InventoryItem, AdjustmentHistory, InventoryItemVariant, Sale } from '@/types';
+import type { InventoryItem, AdjustmentHistory, InventoryItemVariant, Sale, Reseller } from '@/types';
 
 export async function fetchInventoryData() {
     const fetchedItems = db.prepare('SELECT * FROM products').all();
@@ -460,14 +460,14 @@ export async function revertSaleByTransaction(id: string) {
 
 
 // Reseller functions
-export async function getResellers(): Promise<{id: number, name: string}[]> {
-    return db.prepare('SELECT * FROM resellers ORDER BY name').all() as {id: number, name: string}[];
+export async function getResellers(): Promise<Reseller[]> {
+    return db.prepare('SELECT * FROM resellers ORDER BY name').all() as Reseller[];
 }
 
-export async function addReseller(name: string): Promise<{id: number, name: string}> {
+export async function addReseller(name: string, phone?: string, address?: string): Promise<Reseller> {
     try {
-        const result = db.prepare('INSERT INTO resellers (name) VALUES (?)').run(name);
-        return { id: result.lastInsertRowid as number, name };
+        const result = db.prepare('INSERT INTO resellers (name, phone, address) VALUES (@name, @phone, @address)').run({name, phone, address});
+        return { id: result.lastInsertRowid as number, name, phone, address };
     } catch(error) {
         if (error instanceof Error && error.message.includes('UNIQUE constraint failed')) {
             throw new Error('Reseller name already exists.');

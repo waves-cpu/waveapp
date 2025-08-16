@@ -38,7 +38,7 @@ interface InventoryContextType {
   getProductBySku: (sku: string) => Promise<InventoryItem | null>;
   allSales: Sale[];
   resellers: Reseller[];
-  addReseller: (name: string) => Promise<void>;
+  addReseller: (name: string, phone?: string, address?: string) => Promise<void>;
   fetchResellers: () => Promise<void>;
 }
 
@@ -85,8 +85,8 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
     }
   }, []);
 
-  const addReseller = async (name: string) => {
-    await addResellerDb(name);
+  const addReseller = async (name: string, phone?: string, address?: string) => {
+    await addResellerDb(name, phone, address);
     await fetchResellers();
   };
 
