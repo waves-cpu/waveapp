@@ -202,10 +202,10 @@ export function ReceiptSettingsForm() {
             <div className="sticky top-10">
                 <h3 className="text-sm font-medium mb-2">Pratinjau Struk</h3>
                 <div className={cn(
-                    "bg-gray-200 p-4 border rounded-md shadow-sm transition-all duration-300",
+                    "bg-gray-200 p-4 border rounded-md shadow-sm transition-all duration-300 flex justify-center",
                     isJustSaved && "shadow-lg shadow-primary/40 ring-2 ring-primary ring-offset-2"
                     )}>
-                    <div className="bg-white mx-auto p-2">
+                    <div className={cn("bg-white p-2", watchedValues.paperSize === '58mm' ? 'w-[58mm]' : 'w-[80mm]')}>
                         <PosReceipt 
                             receipt={mockReceiptData} 
                             previewSettings={watchedValues} 
