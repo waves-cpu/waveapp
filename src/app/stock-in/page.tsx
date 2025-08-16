@@ -40,7 +40,7 @@ export default function StockInPage() {
                             <SidebarTrigger className="md:hidden" />
                             <h1 className="text-lg font-bold">{t.dashboard.stockIn}</h1>
                         </div>
-                        <div className="flex items-center gap-2">
+                         <div className="flex items-center gap-2">
                             <Button type="button" variant="outline" onClick={() => setBulkStockInOpen(true)} disabled={bulkSelectedIds.size === 0}>
                                 <PackagePlus className="mr-2 h-4 w-4" />
                                 {t.stockInForm.bulkAdd}
@@ -48,11 +48,6 @@ export default function StockInPage() {
                             <Button type="button" onClick={() => setProductSelectionOpen(true)}>
                                 <PlusCircle className="mr-2 h-4 w-4" />
                                 {t.stockInForm.selectProducts}
-                            </Button>
-                            <div className="w-[1px] h-6 bg-border mx-2"></div>
-                             <Button type="button" variant="ghost" onClick={() => router.push('/')} disabled={isSubmitting}>{t.common.cancel}</Button>
-                            <Button onClick={handleFormSubmit} disabled={isSubmitting}>
-                                {isSubmitting ? 'Submitting...' : t.stockInForm.submit}
                             </Button>
                         </div>
                     </div>
@@ -66,6 +61,12 @@ export default function StockInPage() {
                         isSubmitting={isSubmitting}
                         handleSubmit={() => formSubmitRef.current?.()}
                     />
+                    <div className="flex justify-end gap-2 mt-4">
+                         <Button type="button" variant="ghost" onClick={() => router.push('/')} disabled={isSubmitting}>{t.common.cancel}</Button>
+                        <Button onClick={handleFormSubmit} disabled={isSubmitting}>
+                            {isSubmitting ? 'Submitting...' : t.stockInForm.submit}
+                        </Button>
+                    </div>
                 </div>
             </main>
         </AppLayout>
