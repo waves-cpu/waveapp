@@ -108,54 +108,59 @@ export function PosOrderSummary({ cart, setCart, onCheckout, isSubmitting }: Pos
 
   return (
     <Card className="flex flex-col h-full">
-      <CardHeader className="border-b">
+      <CardHeader className="border-b shrink-0">
         <CardTitle>Pesanan Saat Ini</CardTitle>
       </CardHeader>
-      <CardContent className="p-4 flex-1 space-y-4">
-            {cart.length > 0 ? (
-                <div className="space-y-4">
-                    {cart.map(item => (
-                        <div key={item.sku} className="flex items-center gap-4">
-                            <Image 
-                                src={item.imageUrl || 'https://placehold.co/64x64.png'} 
-                                alt={item.name} 
-                                width={64} height={64} 
-                                className="rounded-md object-cover" 
-                                data-ai-hint="product image"
-                            />
-                            <div className="flex-grow">
-                                <p className="font-medium leading-tight text-sm" title={item.name}>{item.name}</p>
-                                {item.variantName && <p className="text-xs text-muted-foreground">{item.variantName}</p>}
-                                <p className="font-semibold text-sm mt-1">{`Rp${item.price.toLocaleString('id-ID')}`}</p>
-                            </div>
-                            <div className="flex items-center gap-1.5">
-                                <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => updateQuantity(item.sku, item.quantity - 1)}>
-                                    <Minus className="h-3.5 w-3.5" />
-                                </Button>
-                                <span className="font-bold text-sm w-6 text-center">{item.quantity}</span>
-                                <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => updateQuantity(item.sku, item.quantity + 1)} disabled={item.quantity >= item.maxStock}>
-                                    <Plus className="h-3.5 w-3.5" />
-                                </Button>
-                            </div>
-                            <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive-foreground hover:bg-destructive shrink-0" onClick={() => removeItem(item.sku)}>
-                                <X className="h-4 w-4" />
-                            </Button>
-                        </div>
-                    ))}
-                </div>
-            ) : (
-                <div className="flex flex-col items-center justify-center text-muted-foreground pt-16 text-center">
-                    <ShoppingCart className="h-16 w-16 mb-4" />
-                    <p className="font-semibold">Keranjang Kosong</p>
-                    <p className="text-sm">Scan atau pilih produk untuk ditambahkan.</p>
-                </div>
-            )}
-      </CardContent>
+
+      <div className="flex-1 flex flex-col min-h-0">
+        <ScrollArea className="flex-grow">
+          <CardContent className="p-4">
+              {cart.length > 0 ? (
+                  <div className="space-y-4">
+                      {cart.map(item => (
+                          <div key={item.sku} className="flex items-center gap-4">
+                              <Image 
+                                  src={item.imageUrl || 'https://placehold.co/64x64.png'} 
+                                  alt={item.name} 
+                                  width={48} height={48} 
+                                  className="rounded-md object-cover" 
+                                  data-ai-hint="product image"
+                              />
+                              <div className="flex-grow">
+                                  <p className="font-medium leading-tight text-sm" title={item.name}>{item.name}</p>
+                                  {item.variantName && <p className="text-xs text-muted-foreground">{item.variantName}</p>}
+                                  <p className="font-semibold text-sm mt-1">{`Rp${item.price.toLocaleString('id-ID')}`}</p>
+                              </div>
+                              <div className="flex items-center gap-1.5">
+                                  <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => updateQuantity(item.sku, item.quantity - 1)}>
+                                      <Minus className="h-3.5 w-3.5" />
+                                  </Button>
+                                  <span className="font-bold text-sm w-6 text-center">{item.quantity}</span>
+                                  <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => updateQuantity(item.sku, item.quantity + 1)} disabled={item.quantity >= item.maxStock}>
+                                      <Plus className="h-3.5 w-3.5" />
+                                  </Button>
+                              </div>
+                              <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive-foreground hover:bg-destructive shrink-0" onClick={() => removeItem(item.sku)}>
+                                  <X className="h-4 w-4" />
+                              </Button>
+                          </div>
+                      ))}
+                  </div>
+              ) : (
+                  <div className="flex flex-col items-center justify-center text-muted-foreground pt-16 text-center">
+                      <ShoppingCart className="h-16 w-16 mb-4" />
+                      <p className="font-semibold">Keranjang Kosong</p>
+                      <p className="text-sm">Scan atau pilih produk untuk ditambahkan.</p>
+                  </div>
+              )}
+          </CardContent>
+        </ScrollArea>
         
         {cart.length > 0 && (
-             <Form {...form}>
+            <div className="shrink-0 border-t">
+              <Form {...form}>
                 <form onSubmit={form.handleSubmit(handleFormSubmit)}>
-                    <CardContent className="p-4 space-y-4 border-t">
+                    <CardContent className="p-4 space-y-4">
                         <div className="space-y-2 text-sm">
                             <div className="flex justify-between items-center">
                                 <span className="text-muted-foreground">Subtotal</span>
@@ -268,7 +273,9 @@ export function PosOrderSummary({ cart, setCart, onCheckout, isSubmitting }: Pos
                     </CardFooter>
                 </form>
                 </Form>
+            </div>
         )}
+      </div>
     </Card>
   );
 }
