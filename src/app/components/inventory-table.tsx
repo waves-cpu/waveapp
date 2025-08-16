@@ -101,9 +101,9 @@ function StockBar({ stock, onUpdateClick }: { stock: number; onUpdateClick: () =
     };
 
     return (
-        <div className="flex items-center gap-2 w-32 group">
+        <div className="flex items-center gap-2 w-36 group">
              <div className="flex items-center gap-1">
-                <span className="font-medium w-8 text-right">{stock}</span>
+                <span className="font-medium w-10 text-left">{stock}</span>
                 <Button variant="ghost" size="icon" onClick={onUpdateClick} className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity" aria-label={t.inventoryTable.updateStock}>
                     <Edit className="h-3 w-3" />
                 </Button>
@@ -492,5 +492,7 @@ export function InventoryTable({ onUpdateStock }: InventoryTableProps) {
 
 
 
+
+    
 
     
