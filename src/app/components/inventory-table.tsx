@@ -488,3 +488,4 @@ export function InventoryTable({ onUpdateStock }: InventoryTableProps) {
 
     
 
+
