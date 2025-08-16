@@ -27,7 +27,8 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import { PosReceipt, type ReceiptData } from "./pos-receipt";
-import { useMemo } from "react";
+import { useMemo, useState, useEffect } from "react";
+import { cn } from "@/lib/utils";
 
 
 const formSchema = z.object({
@@ -42,6 +43,7 @@ export function ReceiptSettingsForm() {
     const { settings, setSettings } = useReceiptSettings();
     const { toast } = useToast();
     const router = useRouter();
+    const [isJustSaved, setIsJustSaved] = useState(false);
 
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
@@ -56,7 +58,15 @@ export function ReceiptSettingsForm() {
             title: "Pengaturan Disimpan",
             description: "Pengaturan struk Anda telah berhasil diperbarui.",
         });
+        setIsJustSaved(true);
     };
+
+    useEffect(() => {
+        if (isJustSaved) {
+            const timer = setTimeout(() => setIsJustSaved(false), 2000);
+            return () => clearTimeout(timer);
+        }
+    }, [isJustSaved]);
     
     const mockReceiptData: ReceiptData = useMemo(() => ({
         items: [
@@ -74,8 +84,8 @@ export function ReceiptSettingsForm() {
 
 
     return (
-        <div className="grid md:grid-cols-2 gap-8 items-start">
-             <Card>
+        <div className="grid md:grid-cols-3 gap-8 items-start">
+             <Card className="md:col-span-2">
                 <Form {...form}>
                     <form onSubmit={form.handleSubmit(onSubmit)}>
                         <CardHeader>
@@ -182,11 +192,16 @@ export function ReceiptSettingsForm() {
 
             <div className="sticky top-10">
                 <h3 className="text-sm font-medium mb-2">Pratinjau Struk</h3>
-                <div className="bg-white p-2 border rounded-md shadow-sm">
-                    <PosReceipt 
-                        receipt={mockReceiptData} 
-                        previewSettings={watchedValues} 
-                    />
+                <div className={cn(
+                    "bg-gray-200 p-4 border rounded-md shadow-sm transition-all duration-300",
+                    isJustSaved && "shadow-lg shadow-primary/40 ring-2 ring-primary ring-offset-2"
+                    )}>
+                    <div className="bg-white mx-auto p-2">
+                        <PosReceipt 
+                            receipt={mockReceiptData} 
+                            previewSettings={watchedValues} 
+                        />
+                    </div>
                 </div>
             </div>
 
