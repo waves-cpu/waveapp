@@ -55,6 +55,8 @@ interface StockInFormProps {
     setBulkStockInOpen: (open: boolean) => void;
     bulkSelectedIds: Set<string>;
     setBulkSelectedIds: React.Dispatch<React.SetStateAction<Set<string>>>;
+    isSubmitting: boolean;
+    handleSubmit: () => void;
 }
 
 export function StockInForm({
@@ -63,14 +65,15 @@ export function StockInForm({
     isBulkStockInOpen,
     setBulkStockInOpen,
     bulkSelectedIds,
-    setBulkSelectedIds
+    setBulkSelectedIds,
+    isSubmitting,
+    handleSubmit,
 }: StockInFormProps) {
   const { language } = useLanguage();
   const t = translations[language];
   const { items, updateStock, categories } = useInventory();
   const { toast } = useToast();
   const router = useRouter();
-  const [isSubmitting, setIsSubmitting] = useState(false);
   
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -241,38 +244,42 @@ export function StockInForm({
     sortedIndices.forEach(index => remove(index));
   }
 
-  async function onSubmit(values: z.infer<typeof formSchema>) {
-    setIsSubmitting(true);
-    const stockUpdates = values.stockInItems
-        .filter(item => item.quantity > 0)
-        .map(item => updateStock(item.itemId, item.quantity, item.reason));
+  // Expose the form's handleSubmit to the parent
+  useEffect(() => {
+    const parentSubmit = async (values: z.infer<typeof formSchema>) => {
+        const stockUpdates = values.stockInItems
+            .filter(item => item.quantity > 0)
+            .map(item => updateStock(item.itemId, item.quantity, item.reason));
 
-    try {
-        await Promise.all(stockUpdates);
-        toast({
-            title: t.stockInForm.successTitle,
-            description: t.stockInForm.successDescription.replace('{count}', stockUpdates.length.toString()),
-        });
-        form.reset();
-        router.push('/');
-    } catch (error) {
-         console.error("Failed to stock in:", error);
-         toast({
-            title: "Error",
-            description: "Failed to update stock. Please try again.",
-            variant: "destructive"
-        });
-    } finally {
-        setIsSubmitting(false);
-    }
-  }
+        try {
+            await Promise.all(stockUpdates);
+            toast({
+                title: t.stockInForm.successTitle,
+                description: t.stockInForm.successDescription.replace('{count}', stockUpdates.length.toString()),
+            });
+            form.reset();
+            router.push('/');
+        } catch (error) {
+            console.error("Failed to stock in:", error);
+            toast({
+                title: "Error",
+                description: "Failed to update stock. Please try again.",
+                variant: "destructive"
+            });
+        }
+    };
+    // This is a way to link parent's handleSubmit to the form's logic
+    // We are essentially overriding the parent's `handleSubmit` function here
+    (handleSubmit as any).__current = form.handleSubmit(parentSubmit);
+  }, [form, updateStock, toast, t, router, handleSubmit]);
+
 
   return (
     <>
     <Card>
         <CardContent className="p-0">
             <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            <form onSubmit={e => e.preventDefault()} className="space-y-6">
                 <div className="border rounded-md">
                     <Table>
                         <TableHeader>
@@ -465,12 +472,6 @@ export function StockInForm({
                 
                 <FormMessage>{form.formState.errors.stockInItems?.message}</FormMessage>
 
-                <div className="flex justify-end gap-2 pt-4">
-                    <Button type="button" variant="ghost" onClick={() => router.push('/')} disabled={isSubmitting}>{t.common.cancel}</Button>
-                    <Button type="submit" disabled={fields.length === 0 || isSubmitting}>
-                        {isSubmitting ? 'Submitting...' : t.stockInForm.submit}
-                    </Button>
-                </div>
             </form>
             </Form>
         </CardContent>

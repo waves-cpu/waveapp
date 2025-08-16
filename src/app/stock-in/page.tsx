@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { StockInForm } from "@/app/components/stock-in-form";
 import { Button } from '@/components/ui/button';
 import { SidebarTrigger } from "@/components/ui/sidebar";
@@ -9,6 +9,7 @@ import { useLanguage } from "@/hooks/use-language";
 import { translations } from "@/types/language";
 import { PackagePlus, PlusCircle } from 'lucide-react';
 import { AppLayout } from '../components/app-layout';
+import { useRouter } from 'next/navigation';
 
 export default function StockInPage() {
     const { language } = useLanguage();
@@ -16,6 +17,19 @@ export default function StockInPage() {
     const [isProductSelectionOpen, setProductSelectionOpen] = useState(false);
     const [isBulkStockInOpen, setBulkStockInOpen] = useState(false);
     const [bulkSelectedIds, setBulkSelectedIds] = useState<Set<string>>(new Set());
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const router = useRouter();
+
+    // A ref to hold the form's submit function, which will be populated by the child form component
+    const formSubmitRef = useRef<() => void>();
+
+    const handleFormSubmit = async () => {
+        setIsSubmitting(true);
+        if (formSubmitRef.current) {
+           await formSubmitRef.current();
+        }
+        setIsSubmitting(false);
+    };
 
     return (
         <AppLayout>
@@ -26,7 +40,7 @@ export default function StockInPage() {
                             <SidebarTrigger className="md:hidden" />
                             <h1 className="text-lg font-bold">{t.dashboard.stockIn}</h1>
                         </div>
-                        <div className="flex gap-2">
+                        <div className="flex items-center gap-2">
                             <Button type="button" variant="outline" onClick={() => setBulkStockInOpen(true)} disabled={bulkSelectedIds.size === 0}>
                                 <PackagePlus className="mr-2 h-4 w-4" />
                                 {t.stockInForm.bulkAdd}
@@ -34,6 +48,11 @@ export default function StockInPage() {
                             <Button type="button" onClick={() => setProductSelectionOpen(true)}>
                                 <PlusCircle className="mr-2 h-4 w-4" />
                                 {t.stockInForm.selectProducts}
+                            </Button>
+                            <div className="w-[1px] h-6 bg-border mx-2"></div>
+                             <Button type="button" variant="ghost" onClick={() => router.push('/')} disabled={isSubmitting}>{t.common.cancel}</Button>
+                            <Button onClick={handleFormSubmit} disabled={isSubmitting}>
+                                {isSubmitting ? 'Submitting...' : t.stockInForm.submit}
                             </Button>
                         </div>
                     </div>
@@ -44,6 +63,8 @@ export default function StockInPage() {
                         setBulkStockInOpen={setBulkStockInOpen}
                         bulkSelectedIds={bulkSelectedIds}
                         setBulkSelectedIds={setBulkSelectedIds}
+                        isSubmitting={isSubmitting}
+                        handleSubmit={() => formSubmitRef.current?.()}
                     />
                 </div>
             </main>
