@@ -58,22 +58,12 @@ export default function ResellerHistoryPage() {
     const [receiptToPrint, setReceiptToPrint] = useState<ReceiptData | null>(null);
     const receiptRef = useRef<HTMLDivElement>(null);
 
-    const printTrigger = useRef<() => void>(null);
-
     const handlePrint = useReactToPrint({
       content: () => receiptRef.current,
       onAfterPrint: () => {
         setReceiptToPrint(null);
       },
-      trigger: () => {
-        printTrigger.current = () => {};
-        return <div style={{display: 'none'}} />;
-      }
     });
-
-    if (typeof handlePrint === 'function') {
-        (printTrigger as React.MutableRefObject<() => void>).current = handlePrint;
-    }
 
     useEffect(() => {
         fetchItems();
@@ -138,7 +128,7 @@ export default function ResellerHistoryPage() {
         setIsDetailOpen(true);
     };
 
-    const prepareAndPrint = (group: GroupedSale) => {
+    const triggerPrint = (group: GroupedSale) => {
         const receiptData: ReceiptData = {
             items: group.items.map(item => ({
                 ...item,
@@ -159,13 +149,13 @@ export default function ResellerHistoryPage() {
         };
         
         setReceiptToPrint(receiptData);
-
-        setTimeout(() => {
-            if (printTrigger.current) {
-                printTrigger.current();
-            }
-        }, 0);
     };
+
+    useEffect(() => {
+        if (receiptToPrint && receiptRef.current) {
+            handlePrint();
+        }
+    }, [receiptToPrint, handlePrint]);
 
 
     return (
@@ -248,7 +238,7 @@ export default function ResellerHistoryPage() {
                                                 {group.totalAmount.toLocaleString('id-ID', { style: 'currency', currency: 'IDR' })}
                                             </TableCell>
                                             <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
-                                                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => prepareAndPrint(group)}>
+                                                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => triggerPrint(group)}>
                                                     <Printer className="h-4 w-4" />
                                                 </Button>
                                                 <AlertDialog>
