@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -10,12 +10,8 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-import { Calendar as CalendarIcon, ScanLine, History, ShoppingBag, Store } from 'lucide-react';
-import { format } from 'date-fns';
+import { ScanLine, History, ShoppingBag, Store } from 'lucide-react';
 import { useInventory } from '@/hooks/use-inventory';
-import { useLanguage } from '@/hooks/use-language';
-import { translations } from '@/types/language';
-import { cn } from '@/lib/utils';
 import type { InventoryItem, InventoryItemVariant } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { VariantSelectionDialog } from '@/app/components/variant-selection-dialog';
@@ -246,9 +242,7 @@ export default function PosSalesPage({
 }: {
   searchParams?: { [key: string]: string | string[] | undefined };
 }) {
-  const { language } = useLanguage();
-  const t = translations[language];
-  const { getProductBySku, items } = useInventory();
+  const { getProductBySku, items, recordSale } = useInventory();
   const { toast } = useToast();
   const [mounted, setMounted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -425,17 +419,57 @@ export default function PosSalesPage({
     skuInputRef.current?.focus();
   };
   
-  const handleCheckout = () => {
-    if (cart.length === 0) {
-        toast({
-            variant: 'destructive',
-            title: 'Keranjang Kosong',
-            description: 'Tambahkan item ke keranjang sebelum melanjutkan.',
-        });
-        return;
-    }
-    router.push('/sales/pos/checkout');
-  };
+  const handleCheckout = async (paymentDetails: {
+      discount: number;
+      paymentMethod: string;
+      bank?: string;
+      cashReceived?: number;
+    }) => {
+        if (cart.length === 0) {
+            toast({
+                variant: 'destructive',
+                title: 'Keranjang Kosong',
+                description: 'Tambahkan item ke keranjang sebelum melanjutkan.',
+            });
+            return;
+        }
+        
+        setIsSubmitting(true);
+        try {
+            const saleDate = new Date();
+            const transactionId = `POS-${saleDate.getTime()}`; 
+            
+            for (const item of cart) {
+                await recordSale(item.sku, 'pos', item.quantity, saleDate, transactionId);
+            }
+
+            toast({
+                title: 'Transaksi Berhasil',
+                description: `${cart.length} jenis item berhasil terjual. No. Transaksi: ${transactionId}`,
+            });
+            
+            // Clear cart
+            setCart([]);
+            localStorage.removeItem('posCart');
+
+            // TODO: Implement receipt printing logic
+            // You can pass the cart and paymentDetails to a printing service/component
+            toast({
+                title: 'Struk Siap Dicetak',
+                description: `Fungsi cetak struk akan diimplementasikan di sini. Diskon: ${paymentDetails.discount}`,
+            });
+
+        } catch (error) {
+            const message = error instanceof Error ? error.message : 'Terjadi kesalahan.';
+            toast({
+                variant: 'destructive',
+                title: 'Transaksi Gagal',
+                description: message,
+            });
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
 
 
   return (
@@ -453,7 +487,7 @@ export default function PosSalesPage({
           </div>
         </header>
 
-        <div className="flex-1 grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-4 p-4 overflow-hidden">
+        <div className="flex-1 grid grid-cols-1 lg:grid-cols-[1fr_420px] gap-4 p-4 overflow-hidden">
               <div className="flex flex-col gap-4 h-full overflow-hidden">
                   <PosProductGrid 
                     onProductSelect={handleProductSelect}
