@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState } from 'react';
@@ -134,7 +135,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                                 <SidebarMenuItem>
                                    <Link href="/sales/pos">
                                        <SidebarMenuButton variant="ghost" size="sm" isActive={pathname.startsWith('/sales/pos')}>
-                                           <SquareTerminal />
+                                           <Store />
                                            {t.sales.pos}
                                        </SidebarMenuButton>
                                    </Link>
