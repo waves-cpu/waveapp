@@ -51,7 +51,7 @@ export const PosReceipt = React.forwardRef<HTMLDivElement, PosReceiptProps>((pro
         <div ref={ref} className={cn("bg-white text-black font-mono p-2 mx-auto", `receipt-${settings.paperSize}`)}>
             <header className="text-center mb-2">
                 <h1 className="text-sm font-bold">{settings.shopName}</h1>
-                <p>{settings.addressLine1}</p>
+                <p className="text-[0.8em]">{settings.addressLine1}</p>
                 <p>{settings.phone}</p>
             </header>
 
