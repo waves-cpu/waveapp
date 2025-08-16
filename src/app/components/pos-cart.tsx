@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { useInventory } from '@/hooks/use-inventory';
 import type { InventoryItem, InventoryItemVariant } from '@/types';
 import { PosSearch } from './pos-search';
@@ -25,41 +25,79 @@ export interface CartItem extends InventoryItemVariant {
     parentImageUrl?: string;
 }
 
+const LOCAL_STORAGE_KEY = 'posCart';
+
 export function PosCart() {
-    const { getProductBySku, recordSale, fetchItems } = useInventory();
+    const { getProductBySku, recordSale, fetchItems, items: inventoryItems, loading: inventoryLoading } = useInventory();
     const { language } = useLanguage();
     const t = translations[language];
     const { toast } = useToast();
     const [cart, setCart] = useState<CartItem[]>([]);
     const [productForVariantSelection, setProductForVariantSelection] = useState<InventoryItem | null>(null);
+    const [isClient, setIsClient] = useState(false);
 
-    // Refetch items on mount to ensure stock levels are up-to-date
     useEffect(() => {
-        fetchItems();
-    }, [fetchItems]);
+        setIsClient(true);
+        try {
+            const savedCart = localStorage.getItem(LOCAL_STORAGE_KEY);
+            if (savedCart) {
+                setCart(JSON.parse(savedCart));
+            }
+        } catch (error) {
+            console.error("Failed to load cart from localStorage", error);
+        }
+    }, []);
+
+    useEffect(() => {
+        if (isClient) {
+            try {
+                localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(cart));
+            } catch (error) {
+                console.error("Failed to save cart to localStorage", error);
+            }
+        }
+    }, [cart, isClient]);
+
+    const allItemsMap = useMemo(() => {
+        const map = new Map<string, { product: InventoryItem, variant?: InventoryItemVariant }>();
+        if (!inventoryLoading) {
+            inventoryItems.forEach(item => {
+                if (item.variants && item.variants.length > 0) {
+                    item.variants.forEach(variant => {
+                        map.set(variant.id, { product: item, variant });
+                    });
+                } else {
+                    map.set(item.id, { product: item });
+                }
+            });
+        }
+        return map;
+    }, [inventoryItems, inventoryLoading]);
 
     const addToCart = (item: InventoryItem, variant?: InventoryItemVariant) => {
         const itemToAdd = variant ? 
             { ...variant, productId: item.id, productName: item.name, parentImageUrl: item.imageUrl } : 
             { ...item, id: item.id, productId: item.id, productName: item.name, price: item.price!, stock: item.stock!, parentImageUrl: item.imageUrl };
 
+        const existingCartItem = cart.find(ci => ci.id === itemToAdd.id);
+        const quantityInCart = existingCartItem?.quantity || 0;
+        
+        if (quantityInCart >= itemToAdd.stock) {
+             toast({
+                variant: "destructive",
+                title: "Stok tidak mencukupi",
+                description: `Anda tidak dapat menambahkan ${itemToAdd.name} lagi.`,
+            });
+            return;
+        }
+
         setCart(currentCart => {
-            const existingItem = currentCart.find(cartItem => cartItem.id === itemToAdd.id);
-            if (existingItem) {
-                if (existingItem.quantity < itemToAdd.stock) {
-                    return currentCart.map(cartItem =>
-                        cartItem.id === itemToAdd.id
-                            ? { ...cartItem, quantity: cartItem.quantity + 1 }
-                            : cartItem
-                    );
-                } else {
-                     toast({
-                        variant: "destructive",
-                        title: "Stok tidak mencukupi",
-                        description: `Anda tidak dapat menambahkan ${itemToAdd.name} lagi.`,
-                    });
-                    return currentCart;
-                }
+            if (existingCartItem) {
+                return currentCart.map(cartItem =>
+                    cartItem.id === itemToAdd.id
+                        ? { ...cartItem, quantity: cartItem.quantity + 1 }
+                        : cartItem
+                );
             }
             return [...currentCart, { ...itemToAdd, quantity: 1 }];
         });
@@ -81,7 +119,8 @@ export function PosCart() {
             } else if (product.variants && product.variants.length === 1) {
                 addToCart(product, product.variants[0]);
             } else {
-                 if (product.stock === undefined || product.stock <= 0) {
+                 const itemInCart = cart.find(ci => ci.id === product.id);
+                 if (product.stock === undefined || (product.stock - (itemInCart?.quantity || 0)) <= 0) {
                      toast({
                         variant: "destructive",
                         title: "Stok tidak mencukupi",
@@ -99,22 +138,20 @@ export function PosCart() {
                 description: "Gagal mengambil data produk.",
             });
         }
-    }, [getProductBySku, toast]);
+    }, [getProductBySku, toast, cart]);
 
 
-    const handleVariantSelect = (variantSku: string | null) => {
-        if (variantSku && productForVariantSelection) {
-            const variant = productForVariantSelection.variants?.find(v => v.sku === variantSku);
-            if (variant) {
-                if(variant.stock <= 0) {
-                    toast({
-                        variant: "destructive",
-                        title: "Stok tidak mencukupi",
-                        description: `Stok untuk ${productForVariantSelection.name} - ${variant.name} habis.`,
-                    });
-                } else {
-                    addToCart(productForVariantSelection, variant);
-                }
+    const handleVariantSelect = (variant: InventoryItemVariant | null) => {
+        if (variant && productForVariantSelection) {
+            const itemInCart = cart.find(ci => ci.id === variant.id);
+            if(variant.stock - (itemInCart?.quantity || 0) <= 0) {
+                toast({
+                    variant: "destructive",
+                    title: "Stok tidak mencukupi",
+                    description: `Stok untuk ${productForVariantSelection.name} - ${variant.name} habis.`,
+                });
+            } else {
+                addToCart(productForVariantSelection, variant);
             }
         }
         setProductForVariantSelection(null);
@@ -122,6 +159,10 @@ export function PosCart() {
 
     const updateQuantity = (itemId: string, newQuantity: number) => {
         setCart(currentCart => {
+            if (newQuantity <= 0) {
+                return currentCart.filter(ci => ci.id !== itemId);
+            }
+            
             const item = currentCart.find(ci => ci.id === itemId);
             if (item && newQuantity > item.stock) {
                 toast({
@@ -131,9 +172,7 @@ export function PosCart() {
                 });
                 return currentCart.map(ci => ci.id === itemId ? { ...ci, quantity: item.stock } : ci);
             }
-            if (newQuantity <= 0) {
-                return currentCart.filter(ci => ci.id !== itemId);
-            }
+
             return currentCart.map(ci => ci.id === itemId ? { ...ci, quantity: newQuantity } : ci);
         });
     };
@@ -144,17 +183,21 @@ export function PosCart() {
 
     const clearCart = () => {
         setCart([]);
+        localStorage.removeItem(LOCAL_STORAGE_KEY);
     };
 
     const handleSaleComplete = async (paymentMethod: string) => {
         const transactionId = `trans-${Date.now()}`;
         try {
-             const salePromises = cart.map(item =>
+            const salePromises = cart.map(item =>
                 recordSale(item.sku!, 'pos', item.quantity, new Date(), transactionId, paymentMethod)
             );
             await Promise.all(salePromises);
+            toast({
+                title: "Penjualan Berhasil",
+                description: "Transaksi telah berhasil dicatat."
+            });
             clearCart();
-            // No need to call fetchItems here as recordSale for 'pos' only updates local state
         } catch (error) {
             console.error("Failed to complete sale:", error);
             toast({
@@ -242,10 +285,9 @@ export function PosCart() {
                     onOpenChange={(isOpen) => !isOpen && setProductForVariantSelection(null)}
                     item={productForVariantSelection}
                     onSelect={handleVariantSelect}
+                    cart={cart}
                 />
             )}
         </div>
     );
 }
-
-    
