@@ -328,10 +328,7 @@ export function InventoryTable({ onUpdateStock }: InventoryTableProps) {
                                 </TableCell>
                                 <TableCell>{priceDisplay}</TableCell>
                                 <TableCell>
-                                    <div className="flex items-center gap-2 w-32">
-                                        <span className="font-medium w-8">{totalStock}</span>
-                                        <Progress value={totalStock > 100 ? 100 : totalStock} className="h-2 flex-1" />
-                                    </div>
+                                    <StockBar stock={totalStock} onUpdateClick={() => handleBulkEdit(item)} />
                                 </TableCell>
                                 <TableCell className="text-center">
                                     <DropdownMenu>
