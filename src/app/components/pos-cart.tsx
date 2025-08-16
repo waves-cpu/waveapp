@@ -223,9 +223,9 @@ export function PosCart() {
                                 <TableHeader>
                                     <TableRow>
                                         <TableHead className="w-[50%] text-xs">{t.pos.item}</TableHead>
-                                        <TableHead className="text-left text-xs">{t.pos.qty}</TableHead>
-                                        <TableHead className="text-right text-xs">{t.pos.price}</TableHead>
-                                        <TableHead className="text-right text-xs">Total</TableHead>
+                                        <TableHead className="text-center text-xs">{t.pos.qty}</TableHead>
+                                        <TableHead className="text-left text-xs">{t.pos.price}</TableHead>
+                                        <TableHead className="text-left text-xs">Total</TableHead>
                                         <TableHead className="w-[50px]"></TableHead>
                                     </TableRow>
                                 </TableHeader>
@@ -250,15 +250,15 @@ export function PosCart() {
                                                     </div>
                                                 </div>
                                             </TableCell>
-                                            <TableCell>
-                                                <div className="flex items-center gap-1">
+                                            <TableCell className="text-center">
+                                                <div className="flex items-center justify-center gap-1">
                                                     <Button variant="outline" size="icon" className="h-6 w-6" onClick={() => updateQuantity(item.id, item.quantity - 1)}><Minus className="h-3 w-3"/></Button>
                                                     <Input type="number" value={item.quantity} onChange={(e) => updateQuantity(item.id, parseInt(e.target.value) || 0)} className="w-10 h-8 text-center text-sm" />
                                                     <Button variant="outline" size="icon" className="h-6 w-6" onClick={() => updateQuantity(item.id, item.quantity + 1)}><Plus className="h-3 w-3" /></Button>
                                                 </div>
                                             </TableCell>
-                                            <TableCell className="text-right text-sm">{item.price.toLocaleString('id-ID')}</TableCell>
-                                            <TableCell className="text-right font-medium text-sm">{(item.price * item.quantity).toLocaleString('id-ID')}</TableCell>
+                                            <TableCell className="text-left text-sm">{(item.price || 0).toLocaleString('id-ID')}</TableCell>
+                                            <TableCell className="text-left font-medium text-sm">{((item.price || 0) * item.quantity).toLocaleString('id-ID')}</TableCell>
                                             <TableCell>
                                                  <Button variant="ghost" size="icon" className="text-destructive h-8 w-8" onClick={() => removeFromCart(item.id)}>
                                                     <Trash2 className="h-4 w-4" />
@@ -291,4 +291,3 @@ export function PosCart() {
         </div>
     );
 }
-
