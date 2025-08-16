@@ -64,7 +64,7 @@ export default function ResellerHistoryPage() {
     });
 
     useEffect(() => {
-        if (receiptToPrint) {
+        if (receiptToPrint && receiptRef.current) {
             handlePrint();
         }
     }, [receiptToPrint, handlePrint]);

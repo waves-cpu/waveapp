@@ -63,7 +63,7 @@ export default function PosHistoryPage() {
     });
 
     useEffect(() => {
-        if (receiptToPrint) {
+        if (receiptToPrint && receiptRef.current) {
             handlePrint();
         }
     }, [receiptToPrint, handlePrint]);
