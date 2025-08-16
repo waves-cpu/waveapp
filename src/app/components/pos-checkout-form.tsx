@@ -11,7 +11,6 @@ import * as z from 'zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import Image from 'next/image';
 import type { PosCartItem } from './pos-order-summary';
 import { Separator } from '@/components/ui/separator';
 import { useInventory } from '@/hooks/use-inventory';
@@ -54,6 +53,7 @@ export function PosCheckoutForm({ cart }: PosCheckoutFormProps) {
         resolver: zodResolver(formSchema),
         defaultValues: {
           discount: 0,
+          cashReceived: 0,
         },
     });
 
@@ -150,7 +150,7 @@ export function PosCheckoutForm({ cart }: PosCheckoutFormProps) {
                                 name="discount"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormControl><Input type="number" placeholder="0" {...field} className="w-28 h-8 text-right" /></FormControl>
+                                        <FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''} className="w-28 h-8 text-right" /></FormControl>
                                     </FormItem>
                                 )}
                             />
@@ -226,7 +226,7 @@ export function PosCheckoutForm({ cart }: PosCheckoutFormProps) {
                                     <FormItem>
                                     <FormLabel>Uang Tunai Diterima</FormLabel>
                                     <FormControl>
-                                        <Input type="number" placeholder="Masukkan jumlah uang" {...field} />
+                                        <Input type="number" placeholder="Masukkan jumlah uang" {...field} value={field.value ?? ''} />
                                     </FormControl>
                                     <FormMessage />
                                     </FormItem>
