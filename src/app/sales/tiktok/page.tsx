@@ -25,7 +25,7 @@ import { useLanguage } from '@/hooks/use-language';
 import { translations } from '@/types/language';
 import { cn } from '@/lib/utils';
 import { SidebarTrigger } from '@/components/ui/sidebar';
-import type { Sale, InventoryItem } from '@/types';
+import type { Sale, InventoryItem, InventoryItemVariant } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import {
   AlertDialog,
@@ -41,6 +41,7 @@ import {
 import { VariantSelectionDialog } from '@/app/components/variant-selection-dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AppLayout } from '@/app/components/app-layout';
+import { useScanSounds } from '@/hooks/use-scan-sounds';
 
 export default function TiktokSalesPage({
   searchParams,
@@ -51,6 +52,7 @@ export default function TiktokSalesPage({
   const t = translations[language];
   const { fetchSales, recordSale, cancelSale, getProductBySku } = useInventory();
   const { toast } = useToast();
+  const { playSuccessSound, playErrorSound } = useScanSounds();
 
   const [date, setDate] = useState<Date | undefined>(undefined);
   const [sales, setSales] = useState<Sale[]>([]);
@@ -101,6 +103,7 @@ export default function TiktokSalesPage({
     setIsSubmitting(true);
     try {
         await recordSale(saleSku, 'tiktok', 1);
+        playSuccessSound();
         toast({
             title: 'Penjualan Berhasil',
             description: `1 item dengan SKU ${saleSku} berhasil terjual.`,
@@ -108,6 +111,7 @@ export default function TiktokSalesPage({
         setSku(''); // Clear main input
         loadSales(date);
     } catch (error) {
+        playErrorSound();
         const message = error instanceof Error ? error.message : 'Terjadi kesalahan saat mencatat penjualan.';
         toast({
             variant: 'destructive',
@@ -118,7 +122,7 @@ export default function TiktokSalesPage({
         setIsSubmitting(false);
         skuInputRef.current?.focus();
     }
-  }, [date, recordSale, toast, loadSales]);
+  }, [date, recordSale, toast, loadSales, playSuccessSound, playErrorSound]);
 
   const handleSkuSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -129,6 +133,7 @@ export default function TiktokSalesPage({
       const product = await getProductBySku(sku);
 
       if (!product) {
+        playErrorSound();
         toast({
             variant: 'destructive',
             title: 'SKU Tidak Ditemukan',
@@ -137,23 +142,25 @@ export default function TiktokSalesPage({
         return;
       }
       
-      if (product.variants && product.variants.length > 0) {
+      if (product.variants && product.variants.length > 1) {
         // Parent SKU entered, open variant selection dialog
         setProductForVariantSelection(product);
         setIsVariantDialogOpen(true);
       } else {
-        // Simple product SKU entered, record sale directly
-        if (product.stock !== undefined && product.stock <= 0) {
+         const itemToSell = (product.variants && product.variants.length === 1) ? product.variants[0] : product;
+         if (itemToSell.stock !== undefined && itemToSell.stock <= 0) {
+            playErrorSound();
             toast({
                 variant: 'destructive',
                 title: 'Stok Habis',
-                description: `Stok untuk produk dengan SKU "${sku}" sudah habis.`,
+                description: `Stok untuk produk dengan SKU "${itemToSell.sku || sku}" sudah habis.`,
             });
             return;
         }
-        await handleRecordSale(sku);
+        await handleRecordSale(itemToSell.sku || sku);
       }
     } catch (error) {
+      playErrorSound();
       console.error('Failed to process SKU:', error);
       toast({
         variant: 'destructive',
@@ -166,11 +173,21 @@ export default function TiktokSalesPage({
     }
   };
 
-  const handleVariantSelect = (variantSku: string | null) => {
+  const handleVariantSelect = (variant: InventoryItemVariant | null) => {
     setIsVariantDialogOpen(false);
     setProductForVariantSelection(null);
-    if (variantSku) {
-        handleRecordSale(variantSku);
+    if (variant && variant.sku) {
+        if(variant.stock <= 0) {
+            playErrorSound();
+            toast({
+                variant: 'destructive',
+                title: 'Stok Habis',
+                description: `Stok untuk varian "${variant.name}" sudah habis.`,
+            });
+            skuInputRef.current?.focus();
+            return;
+        }
+        handleRecordSale(variant.sku);
     } else {
         skuInputRef.current?.focus();
     }
@@ -328,6 +345,7 @@ export default function TiktokSalesPage({
               onOpenChange={setIsVariantDialogOpen}
               item={productForVariantSelection}
               onSelect={handleVariantSelect}
+              cart={[]}
           />
       )}
     </AppLayout>

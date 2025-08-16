@@ -67,8 +67,8 @@ export function VariantSelectionDialog({ open, onOpenChange, item, onSelect, car
                         return (
                             <TableRow 
                                 key={variant.id} 
-                                onClick={() => onSelect(variant)} 
-                                className="cursor-pointer"
+                                onClick={() => !isOutOfStock && onSelect(variant)} 
+                                className={cn("cursor-pointer", isOutOfStock && "opacity-50 cursor-not-allowed")}
                                 aria-disabled={isOutOfStock}
                             >
                                 <TableCell>
