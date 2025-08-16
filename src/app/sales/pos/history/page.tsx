@@ -26,7 +26,6 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
@@ -55,16 +54,20 @@ export default function PosHistoryPage() {
     const [selectedSaleItems, setSelectedSaleItems] = useState<Sale[]>([]);
     const [isDetailOpen, setIsDetailOpen] = useState(false);
     const [receiptToPrint, setReceiptToPrint] = useState<ReceiptData | null>(null);
-    const [isPrintDialogOpen, setPrintDialogOpen] = useState(false);
     const receiptRef = useRef(null);
 
     const handlePrint = useReactToPrint({
-      content: () => receiptRef.current,
-      onAfterPrint: () => {
-        setReceiptToPrint(null);
-        setPrintDialogOpen(false);
-      },
+        content: () => receiptRef.current,
+        onAfterPrint: () => {
+            setReceiptToPrint(null);
+        },
     });
+
+    useEffect(() => {
+        if (receiptToPrint && receiptRef.current) {
+            handlePrint();
+        }
+    }, [receiptToPrint, handlePrint]);
 
     useEffect(() => {
         fetchItems();
@@ -148,7 +151,6 @@ export default function PosHistoryPage() {
             transactionId: group.transactionId,
         };
         setReceiptToPrint(receiptData);
-        setPrintDialogOpen(true);
     };
 
 
@@ -277,24 +279,12 @@ export default function PosHistoryPage() {
                 description={`Detail item untuk transaksi #${selectedSaleItems[0]?.transactionId?.slice(-6) ?? 'N/A'}`}
             />
             {receiptToPrint && (
-                 <div className="hidden">
+                <div className="hidden">
                     <div ref={receiptRef}>
                         <PosReceipt receipt={receiptToPrint} />
                     </div>
                 </div>
             )}
-            <AlertDialog open={isPrintDialogOpen} onOpenChange={setPrintDialogOpen}>
-                <AlertDialogContent>
-                    <AlertDialogHeader>
-                        <AlertDialogTitle>Siapkan Printer</AlertDialogTitle>
-                        <AlertDialogDescription>Struk siap untuk dicetak. Pastikan printer Anda terhubung dan siap.</AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                        <AlertDialogCancel onClick={() => setPrintDialogOpen(false)}>Batal</AlertDialogCancel>
-                        <AlertDialogAction onClick={handlePrint}>Lanjutkan Mencetak</AlertDialogAction>
-                    </AlertDialogFooter>
-                </AlertDialogContent>
-            </AlertDialog>
         </AppLayout>
     );
 }
