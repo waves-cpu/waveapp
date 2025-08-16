@@ -102,3 +102,19 @@ body {
     -moz-appearance: textfield;
   }
 }
+
+@media print {
+  body {
+    background-color: white;
+  }
+  .no-print {
+    display: none;
+  }
+  .print-only {
+    display: block;
+  }
+  @page {
+    size: 80mm auto; /* Set page size for 80mm thermal printer */
+    margin: 0;
+  }
+}

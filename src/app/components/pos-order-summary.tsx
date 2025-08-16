@@ -23,6 +23,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { PosReceipt, type ReceiptData } from './pos-receipt';
 
 interface PosOrderSummaryProps {
   cart: CartItem[];
@@ -39,7 +40,7 @@ export function PosOrderSummary({ cart, onSaleComplete, clearCart, channel }: Po
     const [discount, setDiscount] = useState(0);
     const [cashReceived, setCashReceived] = useState(0);
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [saleCompleted, setSaleCompleted] = useState(false);
+    const [lastCompletedSale, setLastCompletedSale] = useState<ReceiptData | null>(null);
     const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(channel === 'reseller' ? 'Transfer' : 'Cash');
 
     useEffect(() => {
@@ -52,34 +53,53 @@ export function PosOrderSummary({ cart, onSaleComplete, clearCart, channel }: Po
 
     const handleSale = async () => {
         setIsSubmitting(true);
+        const saleData: ReceiptData = {
+            items: cart,
+            subtotal,
+            discount,
+            total,
+            paymentMethod,
+            cashReceived: paymentMethod === 'Cash' ? cashReceived : total,
+            change: paymentMethod === 'Cash' ? change : 0,
+            transactionId: `trans-${Date.now()}`
+        };
         await onSaleComplete(paymentMethod);
+        setLastCompletedSale(saleData);
         setIsSubmitting(false);
-        setSaleCompleted(true);
     };
 
     const handleNewSale = () => {
-        setSaleCompleted(false);
+        setLastCompletedSale(null);
         setDiscount(0);
         setCashReceived(0);
         setPaymentMethod(channel === 'reseller' ? 'Transfer' : 'Cash');
         clearCart();
     };
+
+    const handlePrint = () => {
+        window.print();
+    }
     
-    if (saleCompleted) {
+    if (lastCompletedSale) {
         return (
-            <Card className="flex-grow flex flex-col justify-center items-center text-center p-8 h-full">
-                <CardTitle className="text-xl font-bold mb-2">{t.pos.saleCompleted}</CardTitle>
-                <p className="text-muted-foreground mb-4 text-sm">Total: {total.toLocaleString('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0, maximumFractionDigits: 0 })}</p>
-                <div className="space-y-4">
-                    <Button onClick={handleNewSale} size="lg">{t.pos.newSale}</Button>
-                    <Button variant="outline" size="lg" disabled>{t.pos.printReceipt}</Button>
+            <>
+                <div className="print-only">
+                    <PosReceipt receipt={lastCompletedSale} />
                 </div>
-            </Card>
+                <Card className="flex-grow flex flex-col justify-center items-center text-center p-8 h-full no-print">
+                    <CardTitle className="text-xl font-bold mb-2">{t.pos.saleCompleted}</CardTitle>
+                    <p className="text-muted-foreground mb-4 text-sm">Total: {lastCompletedSale.total.toLocaleString('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0, maximumFractionDigits: 0 })}</p>
+                    <div className="space-y-4">
+                        <Button onClick={handleNewSale} size="lg">{t.pos.newSale}</Button>
+                        <Button variant="outline" size="lg" onClick={handlePrint}>{t.pos.printReceipt}</Button>
+                    </div>
+                </Card>
+            </>
         )
     }
 
     return (
-        <Card className="flex flex-col h-full sticky top-4">
+        <Card className="flex flex-col h-full sticky top-4 no-print">
             <CardHeader>
                 <CardTitle className="text-base">{t.pos.paymentDetails}</CardTitle>
             </CardHeader>
