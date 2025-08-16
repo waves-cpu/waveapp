@@ -84,8 +84,8 @@ export function ReceiptSettingsForm() {
 
 
     return (
-        <div className="grid md:grid-cols-3 gap-8 items-start">
-             <Card className="md:col-span-2">
+        <div className="grid md:grid-cols-2 gap-8 items-start">
+             <Card>
                 <Form {...form}>
                     <form onSubmit={form.handleSubmit(onSubmit)}>
                         <CardHeader>
