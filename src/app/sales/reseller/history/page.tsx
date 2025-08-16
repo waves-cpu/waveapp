@@ -31,6 +31,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
 import { History as HistoryIcon } from 'lucide-react';
+import { DailySalesDetailDialog } from '@/app/components/daily-sales-detail-dialog';
 
 
 type GroupedSale = {
@@ -50,6 +51,8 @@ export default function ResellerHistoryPage() {
     const t = translations[language];
 
     const [date, setDate] = useState<Date | undefined>(new Date());
+    const [selectedSaleItems, setSelectedSaleItems] = useState<Sale[]>([]);
+    const [isDetailOpen, setIsDetailOpen] = useState(false);
 
     useEffect(() => {
         fetchItems();
@@ -108,6 +111,11 @@ export default function ResellerHistoryPage() {
             });
         }
     }, [cancelSaleTransaction, t.pos.transactionCancelled, toast]);
+    
+    const handleViewDetails = (items: Sale[]) => {
+        setSelectedSaleItems(items);
+        setIsDetailOpen(true);
+    };
 
 
     return (
@@ -167,7 +175,7 @@ export default function ResellerHistoryPage() {
                                     </TableRow>
                                 ) : groupedSales.length > 0 ? (
                                     groupedSales.map(group => (
-                                        <TableRow key={group.transactionId}>
+                                        <TableRow key={group.transactionId} className="cursor-pointer" onClick={() => handleViewDetails(group.items)}>
                                             <TableCell className="font-medium text-sm">
                                                 {format(new Date(group.saleDate), 'HH:mm:ss')}
                                             </TableCell>
@@ -189,7 +197,7 @@ export default function ResellerHistoryPage() {
                                             <TableCell className="text-right font-semibold text-sm">
                                                 {group.totalAmount.toLocaleString('id-ID', { style: 'currency', currency: 'IDR' })}
                                             </TableCell>
-                                            <TableCell className="text-center">
+                                            <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
                                                 <AlertDialog>
                                                     <AlertDialogTrigger asChild>
                                                         <Button variant="ghost" size="icon" className="text-destructive h-8 w-8">
@@ -230,6 +238,13 @@ export default function ResellerHistoryPage() {
                     </CardContent>
                 </Card>
             </main>
+             <DailySalesDetailDialog
+                open={isDetailOpen}
+                onOpenChange={setIsDetailOpen}
+                sales={selectedSaleItems}
+                title="Detail Transaksi Reseller"
+                description={`Detail item untuk transaksi #${selectedSaleItems[0]?.transactionId?.slice(-6) ?? 'N/A'}`}
+            />
         </AppLayout>
     );
 }

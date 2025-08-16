@@ -28,6 +28,8 @@ interface DailySalesDetailDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   sales: Sale[];
+  title?: string;
+  description?: string;
 }
 
 interface AggregatedSale {
@@ -38,13 +40,15 @@ interface AggregatedSale {
     quantity: number;
 }
 
-export function DailySalesDetailDialog({ open, onOpenChange, sales }: DailySalesDetailDialogProps) {
+export function DailySalesDetailDialog({ open, onOpenChange, sales, title, description }: DailySalesDetailDialogProps) {
     
     const { aggregatedSales, totalQuantity } = useMemo(() => {
+        if (!sales) return { aggregatedSales: [], totalQuantity: 0 };
         const aggregationMap = new Map<string, AggregatedSale>();
 
         sales.forEach(sale => {
-            const key = sale.sku || sale.productId; // Use SKU as the primary key for aggregation
+            // Use a composite key to correctly aggregate items that might share an SKU but are different products/variants
+            const key = `${sale.productId}-${sale.variantId || 'none'}`;
             const existingEntry = aggregationMap.get(key);
 
             if (existingEntry) {
@@ -67,19 +71,22 @@ export function DailySalesDetailDialog({ open, onOpenChange, sales }: DailySales
     }, [sales]);
 
     const salesDate = useMemo(() => {
-        if (sales.length > 0) {
+        if (sales && sales.length > 0) {
             return format(new Date(sales[0].saleDate), 'PP');
         }
         return '';
     }, [sales]);
 
+    const defaultTitle = "Detail Penjualan Harian";
+    const defaultDescription = `Menampilkan semua item yang terjual pada tanggal ${salesDate}.`;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle>Detail Penjualan Harian</DialogTitle>
+          <DialogTitle>{title || defaultTitle}</DialogTitle>
           <DialogDescription>
-            Menampilkan semua item yang terjual pada tanggal {salesDate}.
+            {description || defaultDescription}
           </DialogDescription>
         </DialogHeader>
         <ScrollArea className="max-h-96 border rounded-md">
@@ -92,8 +99,8 @@ export function DailySalesDetailDialog({ open, onOpenChange, sales }: DailySales
                     </TableRow>
                 </TableHeader>
                 <TableBody>
-                    {aggregatedSales.map(sale => (
-                        <TableRow key={sale.sku || sale.productName}>
+                    {aggregatedSales.map((sale, index) => (
+                        <TableRow key={`${sale.sku}-${index}` || `${sale.productName}-${index}`}>
                             <TableCell>
                                 <div className="font-medium">{sale.productName}</div>
                                 {sale.variantName && <div className="text-xs text-muted-foreground">{sale.variantName}</div>}
