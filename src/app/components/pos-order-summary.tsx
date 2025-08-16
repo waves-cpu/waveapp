@@ -61,8 +61,8 @@ export function PosOrderSummary({ cart, onSaleComplete, clearCart }: PosOrderSum
     if (saleCompleted) {
         return (
             <Card className="flex-grow flex flex-col justify-center items-center text-center p-8 h-full">
-                <CardTitle className="text-2xl font-bold mb-2">{t.pos.saleCompleted}</CardTitle>
-                <p className="text-muted-foreground mb-4">Total: {total.toLocaleString('id-ID', { style: 'currency', currency: 'IDR' })}</p>
+                <CardTitle className="text-xl font-bold mb-2">{t.pos.saleCompleted}</CardTitle>
+                <p className="text-muted-foreground mb-4 text-sm">Total: {total.toLocaleString('id-ID', { style: 'currency', currency: 'IDR' })}</p>
                 <div className="space-y-4">
                     <Button onClick={handleNewSale} size="lg">{t.pos.newSale}</Button>
                     <Button variant="outline" size="lg" disabled>{t.pos.printReceipt}</Button>
@@ -74,7 +74,7 @@ export function PosOrderSummary({ cart, onSaleComplete, clearCart }: PosOrderSum
     return (
         <Card className="flex flex-col h-full sticky top-4">
             <CardHeader>
-                <CardTitle>{t.pos.paymentDetails}</CardTitle>
+                <CardTitle className="text-base">{t.pos.paymentDetails}</CardTitle>
             </CardHeader>
             <CardContent className="flex-grow space-y-4">
                  <div className="space-y-2 text-sm">
@@ -84,26 +84,26 @@ export function PosOrderSummary({ cart, onSaleComplete, clearCart }: PosOrderSum
                     </div>
                     <div className="flex justify-between items-center">
                         <Label htmlFor="discount">{t.pos.discount}</Label>
-                        <Input id="discount" type="number" value={discount} onChange={(e) => setDiscount(Number(e.target.value))} className="w-32 h-8"/>
+                        <Input id="discount" type="number" value={discount} onChange={(e) => setDiscount(Number(e.target.value))} className="w-32 h-8 text-sm"/>
                     </div>
                      <div className="flex justify-between items-center">
                         <Label htmlFor="tax">{t.pos.tax}</Label>
-                        <Input id="tax" type="number" value={tax} onChange={(e) => setTax(Number(e.target.value))} className="w-32 h-8"/>
+                        <Input id="tax" type="number" value={tax} onChange={(e) => setTax(Number(e.target.value))} className="w-32 h-8 text-sm"/>
                     </div>
                 </div>
                 <Separator />
                 <div className="space-y-2">
                     <Label htmlFor="cashReceived">{t.pos.cashReceived}</Label>
-                    <Input id="cashReceived" type="number" placeholder="0" value={cashReceived || ''} onChange={(e) => setCashReceived(Number(e.target.value))} className="h-10 text-lg" />
+                    <Input id="cashReceived" type="number" placeholder="0" value={cashReceived || ''} onChange={(e) => setCashReceived(Number(e.target.value))} className="h-10 text-base" />
                 </div>
             </CardContent>
             <CardFooter className="flex-col !p-4 mt-auto">
-                <div className="w-full space-y-2 text-lg font-bold mb-4 p-4 bg-muted rounded-md">
+                <div className="w-full space-y-2 text-base font-bold mb-4 p-4 bg-muted rounded-md">
                     <div className="flex justify-between">
                         <span>{t.pos.total}</span>
                         <span className="text-primary">{total.toLocaleString('id-ID', { style: 'currency', currency: 'IDR' })}</span>
                     </div>
-                     <div className="flex justify-between text-base">
+                     <div className="flex justify-between text-sm">
                         <span>{t.pos.change}</span>
                         <span>{change >= 0 ? change.toLocaleString('id-ID', { style: 'currency', currency: 'IDR' }) : '-'}</span>
                     </div>

@@ -141,43 +141,43 @@ export default function PosHistoryPage() {
 
                 <Card>
                     <CardHeader>
-                        <CardTitle>Transaksi pada {date ? format(date, 'PPPP', { locale: language === 'id' ? aing : undefined }) : ''}</CardTitle>
-                        <CardDescription>Menampilkan semua transaksi dari channel Point of Sale.</CardDescription>
+                        <CardTitle className="text-base">Transaksi pada {date ? format(date, 'PPPP', { locale: language === 'id' ? aing : undefined }) : ''}</CardTitle>
+                        <CardDescription className="text-xs">Menampilkan semua transaksi dari channel Point of Sale.</CardDescription>
                     </CardHeader>
                     <CardContent>
                        <Table>
                             <TableHeader>
                                 <TableRow>
-                                    <TableHead>Waktu</TableHead>
-                                    <TableHead>Detail Transaksi</TableHead>
-                                    <TableHead className="text-right">Total</TableHead>
-                                    <TableHead className="text-center">Aksi</TableHead>
+                                    <TableHead className="text-xs">Waktu</TableHead>
+                                    <TableHead className="text-xs">Detail Transaksi</TableHead>
+                                    <TableHead className="text-right text-xs">Total</TableHead>
+                                    <TableHead className="text-center text-xs">Aksi</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
                                 {loading ? (
                                     <TableRow>
-                                        <TableCell colSpan={4} className="h-24 text-center">Memuat riwayat...</TableCell>
+                                        <TableCell colSpan={4} className="h-24 text-center text-sm">Memuat riwayat...</TableCell>
                                     </TableRow>
                                 ) : groupedSales.length > 0 ? (
                                     groupedSales.map(group => (
                                         <TableRow key={group.transactionId}>
-                                            <TableCell className="font-medium">
+                                            <TableCell className="font-medium text-sm">
                                                 {format(new Date(group.saleDate), 'HH:mm:ss')}
                                             </TableCell>
                                             <TableCell>
-                                                <div className="font-medium">{group.items.length} jenis produk ({group.totalItems} item)</div>
+                                                <div className="font-medium text-sm">{group.items.length} jenis produk ({group.totalItems} item)</div>
                                                 <div className="text-xs text-muted-foreground max-w-xs truncate">
                                                     {group.items.map(i => i.productName).join(', ')}
                                                 </div>
                                             </TableCell>
-                                            <TableCell className="text-right font-semibold">
+                                            <TableCell className="text-right font-semibold text-sm">
                                                 {group.totalAmount.toLocaleString('id-ID', { style: 'currency', currency: 'IDR' })}
                                             </TableCell>
                                             <TableCell className="text-center">
                                                 <AlertDialog>
                                                     <AlertDialogTrigger asChild>
-                                                        <Button variant="ghost" size="icon" className="text-destructive">
+                                                        <Button variant="ghost" size="icon" className="text-destructive h-8 w-8">
                                                             <Trash2 className="h-4 w-4" />
                                                         </Button>
                                                     </AlertDialogTrigger>
@@ -203,9 +203,9 @@ export default function PosHistoryPage() {
                                      <TableRow>
                                         <TableCell colSpan={4} className="h-48 text-center">
                                             <div className="flex flex-col items-center justify-center gap-4 text-muted-foreground">
-                                                <HistoryIcon className="h-16 w-16" />
-                                                <p className="font-semibold">Tidak Ada Transaksi</p>
-                                                <p className="text-sm">Tidak ada transaksi yang tercatat pada tanggal yang dipilih.</p>
+                                                <HistoryIcon className="h-12 w-12" />
+                                                <p className="font-semibold text-sm">Tidak Ada Transaksi</p>
+                                                <p className="text-xs">Tidak ada transaksi yang tercatat pada tanggal yang dipilih.</p>
                                             </div>
                                         </TableCell>
                                     </TableRow>

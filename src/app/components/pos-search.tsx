@@ -40,7 +40,7 @@ export function PosSearch({ onProductSelect }: PosSearchProps) {
                     value={sku}
                     onChange={(e) => setSku(e.target.value)}
                     placeholder={t.pos.searchPlaceholder}
-                    className="pl-10 h-12 text-base"
+                    className="pl-10 h-10 text-sm"
                 />
                 {sku && (
                      <Button 

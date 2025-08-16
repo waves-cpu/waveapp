@@ -172,17 +172,17 @@ export function PosCart() {
                 <PosSearch onProductSelect={handleProductSelect} />
                 <Card className="flex-grow flex flex-col">
                     <CardHeader>
-                        <CardTitle>{t.pos.orderSummary}</CardTitle>
+                        <CardTitle className="text-base">{t.pos.orderSummary}</CardTitle>
                     </CardHeader>
                     <CardContent className="flex-grow overflow-hidden p-0">
                         <ScrollArea className="h-full max-h-[calc(100vh-20rem)]">
                             <Table>
                                 <TableHeader>
                                     <TableRow>
-                                        <TableHead className="w-[50%]">{t.pos.item}</TableHead>
-                                        <TableHead>{t.pos.qty}</TableHead>
-                                        <TableHead className="text-right">{t.pos.price}</TableHead>
-                                        <TableHead className="text-right">Total</TableHead>
+                                        <TableHead className="w-[50%] text-xs">{t.pos.item}</TableHead>
+                                        <TableHead className="text-xs">{t.pos.qty}</TableHead>
+                                        <TableHead className="text-right text-xs">{t.pos.price}</TableHead>
+                                        <TableHead className="text-right text-xs">Total</TableHead>
                                         <TableHead className="w-[50px]"></TableHead>
                                     </TableRow>
                                 </TableHeader>
@@ -191,18 +191,18 @@ export function PosCart() {
                                         <TableRow>
                                             <TableCell colSpan={5} className="h-48 text-center">
                                                 <div className="flex flex-col items-center justify-center gap-4 text-muted-foreground">
-                                                    <ShoppingCart className="h-16 w-16" />
-                                                    <p className="font-semibold">{t.pos.emptyCart}</p>
+                                                    <ShoppingCart className="h-12 w-12" />
+                                                    <p className="font-semibold text-sm">{t.pos.emptyCart}</p>
                                                 </div>
                                             </TableCell>
                                         </TableRow>
                                     ) : cart.map(item => (
                                         <TableRow key={item.id}>
                                             <TableCell>
-                                                <div className="flex items-center gap-4">
-                                                    <Image src={item.parentImageUrl || 'https://placehold.co/40x40.png'} alt={item.productName} width={40} height={40} className="rounded-md" data-ai-hint="product image" />
+                                                <div className="flex items-center gap-3">
+                                                    <Image src={item.parentImageUrl || 'https://placehold.co/40x40.png'} alt={item.productName} width={32} height={32} className="rounded-md" data-ai-hint="product image" />
                                                     <div>
-                                                        <p className="font-medium">{item.productName}</p>
+                                                        <p className="font-medium text-sm">{item.productName}</p>
                                                         <p className="text-xs text-muted-foreground">{item.name}</p>
                                                     </div>
                                                 </div>
@@ -210,12 +210,12 @@ export function PosCart() {
                                             <TableCell>
                                                 <div className="flex items-center gap-1">
                                                     <Button variant="outline" size="icon" className="h-6 w-6" onClick={() => updateQuantity(item.id, item.quantity - 1)}><Minus className="h-3 w-3"/></Button>
-                                                    <Input type="number" value={item.quantity} onChange={(e) => updateQuantity(item.id, parseInt(e.target.value) || 0)} className="w-12 h-8 text-center" />
+                                                    <Input type="number" value={item.quantity} onChange={(e) => updateQuantity(item.id, parseInt(e.target.value) || 0)} className="w-10 h-8 text-center text-sm" />
                                                     <Button variant="outline" size="icon" className="h-6 w-6" onClick={() => updateQuantity(item.id, item.quantity + 1)}><Plus className="h-3 w-3" /></Button>
                                                 </div>
                                             </TableCell>
-                                            <TableCell className="text-right">{item.price.toLocaleString('id-ID')}</TableCell>
-                                            <TableCell className="text-right font-medium">{(item.price * item.quantity).toLocaleString('id-ID')}</TableCell>
+                                            <TableCell className="text-right text-sm">{item.price.toLocaleString('id-ID')}</TableCell>
+                                            <TableCell className="text-right font-medium text-sm">{(item.price * item.quantity).toLocaleString('id-ID')}</TableCell>
                                             <TableCell>
                                                  <Button variant="ghost" size="icon" className="text-destructive h-8 w-8" onClick={() => removeFromCart(item.id)}>
                                                     <Trash2 className="h-4 w-4" />
