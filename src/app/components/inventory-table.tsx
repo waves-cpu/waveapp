@@ -27,7 +27,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
-  Edit,
   FileDown,
   Search,
   Pencil,
@@ -35,6 +34,7 @@ import {
   MoreVertical,
   Store,
   ShoppingBag,
+  Edit,
 } from 'lucide-react';
 import type { InventoryItem } from '@/types';
 import { useLanguage } from '@/hooks/use-language';
