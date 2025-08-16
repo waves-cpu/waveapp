@@ -17,6 +17,8 @@ import {
   revertSaleByTransaction,
   getResellers,
   addReseller as addResellerDb,
+  editReseller as editResellerDb,
+  deleteReseller as deleteResellerDb,
 } from '@/lib/inventory-service';
 
 
@@ -39,6 +41,8 @@ interface InventoryContextType {
   allSales: Sale[];
   resellers: Reseller[];
   addReseller: (name: string, phone?: string, address?: string) => Promise<void>;
+  editReseller: (id: number, data: Omit<Reseller, 'id'>) => Promise<void>;
+  deleteReseller: (id: number) => Promise<void>;
   fetchResellers: () => Promise<void>;
 }
 
@@ -87,6 +91,16 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
 
   const addReseller = async (name: string, phone?: string, address?: string) => {
     await addResellerDb(name, phone, address);
+    await fetchResellers();
+  };
+  
+  const editReseller = async (id: number, data: Omit<Reseller, 'id'>) => {
+    await editResellerDb(id, data);
+    await fetchResellers();
+  };
+  
+  const deleteReseller = async (id: number) => {
+    await deleteResellerDb(id);
     await fetchResellers();
   };
 
@@ -180,6 +194,8 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
         allSales,
         resellers,
         addReseller,
+        editReseller,
+        deleteReseller,
         fetchResellers
       }}>
       {children}

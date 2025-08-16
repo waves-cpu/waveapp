@@ -464,14 +464,37 @@ export async function getResellers(): Promise<Reseller[]> {
     return db.prepare('SELECT * FROM resellers ORDER BY name').all() as Reseller[];
 }
 
-export async function addReseller(name: string, phone?: string, address?: string): Promise<Reseller> {
+export async function addReseller(name: string, phone?: string, address?: string) {
     try {
-        const result = db.prepare('INSERT INTO resellers (name, phone, address) VALUES (@name, @phone, @address)').run({name, phone, address});
-        return { id: result.lastInsertRowid as number, name, phone, address };
+        db.prepare('INSERT INTO resellers (name, phone, address) VALUES (@name, @phone, @address)').run({
+            name, 
+            phone: phone || null, 
+            address: address || null
+        });
     } catch(error) {
         if (error instanceof Error && error.message.includes('UNIQUE constraint failed')) {
             throw new Error('Reseller name already exists.');
         }
         throw error;
     }
+}
+
+export async function editReseller(id: number, data: Omit<Reseller, 'id'>) {
+     try {
+        db.prepare('UPDATE resellers SET name = @name, phone = @phone, address = @address WHERE id = @id').run({
+            id,
+            name: data.name,
+            phone: data.phone || null,
+            address: data.address || null
+        });
+    } catch(error) {
+        if (error instanceof Error && error.message.includes('UNIQUE constraint failed')) {
+            throw new Error('Reseller name already exists.');
+        }
+        throw error;
+    }
+}
+
+export async function deleteReseller(id: number) {
+    db.prepare('DELETE FROM resellers WHERE id = ?').run(id);
 }
