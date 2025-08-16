@@ -170,6 +170,7 @@ export default function LazadaSalesPage({
     } finally {
       setIsSubmitting(false);
       setSku('');
+      skuInputRef.current?.focus();
     }
   };
 
@@ -342,7 +343,12 @@ export default function LazadaSalesPage({
       {productForVariantSelection && (
           <VariantSelectionDialog
               open={isVariantDialogOpen}
-              onOpenChange={setIsVariantDialogOpen}
+              onOpenChange={(isOpen) => {
+                  setIsVariantDialogOpen(isOpen);
+                  if (!isOpen) {
+                    skuInputRef.current?.focus();
+                  }
+              }}
               item={productForVariantSelection}
               onSelect={handleVariantSelect}
               cart={[]}
@@ -351,3 +357,5 @@ export default function LazadaSalesPage({
     </AppLayout>
   );
 }
+
+    
