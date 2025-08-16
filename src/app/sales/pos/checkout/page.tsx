@@ -3,7 +3,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, ShoppingCart, Printer } from 'lucide-react';
+import { ArrowLeft, Printer } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { type PosCartItem } from '@/app/components/pos-order-summary';
@@ -47,7 +47,7 @@ export default function CheckoutPage() {
     }
   
   return (
-    <main className="flex flex-col h-screen bg-muted/40">
+    <main className="flex flex-col min-h-screen bg-muted/40">
         <header className="flex items-center justify-between p-4 border-b bg-background shrink-0">
           <div className="flex items-center gap-4">
               <Button variant="outline" size="icon" asChild>
@@ -65,11 +65,10 @@ export default function CheckoutPage() {
         </header>
 
         <div className="flex-1 p-4 lg:p-8 overflow-auto">
-            <div className="max-w-4xl mx-auto">
+            <div className="max-w-xl mx-auto">
                <PosCheckoutForm cart={cart} />
             </div>
         </div>
     </main>
   );
 }
-
