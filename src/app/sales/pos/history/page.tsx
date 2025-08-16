@@ -26,6 +26,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
+  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
@@ -58,9 +59,7 @@ export default function PosHistoryPage() {
 
     const handlePrint = useReactToPrint({
         content: () => receiptRef.current,
-        onAfterPrint: () => {
-            setReceiptToPrint(null);
-        },
+        onAfterPrint: () => setReceiptToPrint(null),
     });
 
     useEffect(() => {
