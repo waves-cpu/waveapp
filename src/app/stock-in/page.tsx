@@ -19,7 +19,7 @@ export default function StockInPage() {
 
     return (
         <AppLayout>
-            <main className="flex min-h-screen flex-col items-center p-4 md:p-10">
+            <main className="flex min-h-screen flex-col items-center p-4 md:p-10 pb-8">
                 <div className="w-full max-w-7xl">
                     <div className="flex items-center justify-between gap-4 mb-6">
                         <div className="flex items-center gap-4">
