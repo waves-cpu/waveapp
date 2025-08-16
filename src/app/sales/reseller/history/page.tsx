@@ -66,12 +66,6 @@ export default function ResellerHistoryPage() {
     });
 
     useEffect(() => {
-        if (receiptToPrint && receiptRef.current) {
-            handlePrint();
-        }
-    }, [receiptToPrint, handlePrint]);
-
-    useEffect(() => {
         fetchItems();
     }, [fetchItems]);
     
@@ -289,7 +283,7 @@ export default function ResellerHistoryPage() {
             />
             {receiptToPrint && (
                 <div className="hidden">
-                    <PosReceipt ref={receiptRef} receipt={receiptToPrint} />
+                    <PosReceipt ref={receiptRef} receipt={receiptToPrint} onReady={handlePrint} />
                 </div>
             )}
         </AppLayout>

@@ -1,12 +1,11 @@
 
 'use client';
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useLanguage } from '@/hooks/use-language';
 import { translations } from '@/types/language';
 import type { CartItem } from './pos-cart';
 import { format } from 'date-fns';
-import { id as localeId } from 'date-fns/locale';
 
 export interface ReceiptData {
     items: CartItem[];
@@ -21,6 +20,7 @@ export interface ReceiptData {
 
 interface PosReceiptProps {
     receipt: ReceiptData;
+    onReady?: () => void;
 }
 
 const formatCurrency = (amount: number) => {
@@ -28,10 +28,16 @@ const formatCurrency = (amount: number) => {
 };
 
 export const PosReceipt = React.forwardRef<HTMLDivElement, PosReceiptProps>((props, ref) => {
-    const { receipt } = props;
+    const { receipt, onReady } = props;
     const { language } = useLanguage();
     const t = translations[language];
     const receiptTranslations = t.receipt;
+
+    useEffect(() => {
+        // Signal that the component is mounted and ready to be printed.
+        onReady?.();
+    }, [onReady]);
+
 
     return (
         <div ref={ref} className="bg-white text-black text-[10px] font-mono p-2 w-[80mm] mx-auto">
