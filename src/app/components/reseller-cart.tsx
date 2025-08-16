@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState, useCallback, useEffect, useMemo } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { useInventory } from '@/hooks/use-inventory';
 import type { InventoryItem, InventoryItemVariant, Reseller } from '@/types';
 import { PosSearch } from './pos-search';
@@ -18,6 +18,7 @@ import { ShoppingCart, Trash2 } from 'lucide-react';
 import { useLanguage } from '@/hooks/use-language';
 import { translations } from '@/types/language';
 import { useScanSounds } from '@/hooks/use-scan-sounds';
+import { PosReceipt, type ReceiptData } from './pos-receipt';
 
 export interface CartItem extends InventoryItemVariant {
     productId: string;
@@ -40,6 +41,9 @@ export function ResellerCart({ reseller }: ResellerCartProps) {
     const [cart, setCart] = useState<CartItem[]>([]);
     const [productForVariantSelection, setProductForVariantSelection] = useState<InventoryItem | null>(null);
     const [isClient, setIsClient] = useState(false);
+    const [receiptToPrint, setReceiptToPrint] = useState<ReceiptData | null>(null);
+    const receiptRef = useRef<HTMLDivElement>(null);
+
 
     useEffect(() => {
         setIsClient(true);
@@ -67,6 +71,18 @@ export function ResellerCart({ reseller }: ResellerCartProps) {
             }
         }
     }, [cart, isClient, LOCAL_STORAGE_KEY]);
+
+     // This useEffect handles the printing after the state has been updated
+    useEffect(() => {
+        if (receiptToPrint) {
+            // Timeout ensures the component has time to render before printing
+            const timer = setTimeout(() => {
+                window.print();
+                setReceiptToPrint(null); // Reset after printing
+            }, 100); 
+            return () => clearTimeout(timer);
+        }
+    }, [receiptToPrint]);
 
     const addToCart = (item: InventoryItem, variant?: InventoryItemVariant) => {
         const itemToAdd = variant ? 
@@ -186,12 +202,11 @@ export function ResellerCart({ reseller }: ResellerCartProps) {
         localStorage.removeItem(LOCAL_STORAGE_KEY);
     };
 
-    const handleSaleComplete = async (paymentMethod: string) => {
-        const transactionId = `trans-${Date.now()}`;
+    const handleSaleComplete = async (paymentMethod: string, receiptData: ReceiptData) => {
         try {
             const salePromises = cart.map(item =>
                 recordSale(item.sku!, 'reseller', item.quantity, {
-                    transactionId,
+                    transactionId: receiptData.transactionId,
                     paymentMethod,
                     resellerName: reseller.name,
                 })
@@ -201,7 +216,7 @@ export function ResellerCart({ reseller }: ResellerCartProps) {
                 title: "Penjualan Berhasil",
                 description: "Transaksi telah berhasil dicatat."
             });
-            clearCart();
+            setReceiptToPrint(receiptData);
         } catch (error) {
             console.error("Failed to complete sale:", error);
             toast({
@@ -209,87 +224,93 @@ export function ResellerCart({ reseller }: ResellerCartProps) {
                 title: "Gagal Menyelesaikan Penjualan",
                 description: "Terjadi kesalahan saat memproses transaksi.",
             });
+            throw error;
         }
     };
 
     return (
-        <div className="flex-grow grid grid-cols-1 lg:grid-cols-5 gap-4 p-4 h-full">
-            <div className="lg:col-span-3 flex flex-col gap-4 h-full">
-                <PosSearch onProductSelect={handleProductSelect} />
-                <Card className="flex-grow flex flex-col">
-                    <CardHeader>
-                        <CardTitle className="text-base">{t.pos.orderSummary}</CardTitle>
-                    </CardHeader>
-                    <CardContent className="flex-grow overflow-hidden p-0">
-                        <ScrollArea className="h-full max-h-[calc(100vh-20rem)]">
-                            <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead className="w-[50%] text-xs">{t.pos.item}</TableHead>
-                                        <TableHead className="text-center text-xs">{t.pos.qty}</TableHead>
-                                        <TableHead className="text-left text-xs">{t.pos.price}</TableHead>
-                                        <TableHead className="text-left text-xs">Total</TableHead>
-                                        <TableHead className="w-[50px]"></TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {cart.length === 0 ? (
+        <>
+            <div className="flex-grow grid grid-cols-1 lg:grid-cols-5 gap-4 p-4 h-full no-print">
+                <div className="lg:col-span-3 flex flex-col gap-4 h-full">
+                    <PosSearch onProductSelect={handleProductSelect} />
+                    <Card className="flex-grow flex flex-col">
+                        <CardHeader>
+                            <CardTitle className="text-base">{t.pos.orderSummary}</CardTitle>
+                        </CardHeader>
+                        <CardContent className="flex-grow overflow-hidden p-0">
+                            <ScrollArea className="h-full max-h-[calc(100vh-20rem)]">
+                                <Table>
+                                    <TableHeader>
                                         <TableRow>
-                                            <TableCell colSpan={5} className="h-48 text-center">
-                                                <div className="flex flex-col items-center justify-center gap-4 text-muted-foreground">
-                                                    <ShoppingCart className="h-12 w-12" />
-                                                    <p className="font-semibold text-sm">{t.pos.emptyCart}</p>
-                                                </div>
-                                            </TableCell>
+                                            <TableHead className="w-[50%] text-xs">{t.pos.item}</TableHead>
+                                            <TableHead className="text-center text-xs">{t.pos.qty}</TableHead>
+                                            <TableHead className="text-left text-xs">{t.pos.price}</TableHead>
+                                            <TableHead className="text-left text-xs">Total</TableHead>
+                                            <TableHead className="w-[50px]"></TableHead>
                                         </TableRow>
-                                    ) : cart.map(item => (
-                                        <TableRow key={item.id}>
-                                            <TableCell>
-                                                <div className="flex items-center gap-3">
-                                                    <Image src={item.parentImageUrl || 'https://placehold.co/40x40.png'} alt={item.productName} width={32} height={32} className="rounded-md" data-ai-hint="product image" />
-                                                    <div>
-                                                        <p className="font-medium text-sm">{item.productName}</p>
-                                                        <p className="text-xs text-muted-foreground">{item.name}</p>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {cart.length === 0 ? (
+                                            <TableRow>
+                                                <TableCell colSpan={5} className="h-48 text-center">
+                                                    <div className="flex flex-col items-center justify-center gap-4 text-muted-foreground">
+                                                        <ShoppingCart className="h-12 w-12" />
+                                                        <p className="font-semibold text-sm">{t.pos.emptyCart}</p>
                                                     </div>
-                                                </div>
-                                            </TableCell>
-                                            <TableCell className="text-center">
-                                                <div className="flex items-center justify-center">
-                                                    <Input type="number" value={item.quantity} onChange={(e) => updateQuantity(item.id, parseInt(e.target.value) || 0)} className="w-16 h-8 text-center text-sm focus-visible:ring-1" />
-                                                </div>
-                                            </TableCell>
-                                            <TableCell className="text-left text-sm">{item.price.toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</TableCell>
-                                            <TableCell className="text-left font-medium text-sm">{(item.price * item.quantity).toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</TableCell>
-                                            <TableCell>
-                                                 <Button variant="ghost" size="icon" className="text-destructive h-8 w-8" onClick={() => removeFromCart(item.id)}>
-                                                    <Trash2 className="h-4 w-4" />
-                                                 </Button>
-                                            </TableCell>
-                                        </TableRow>
-                                    ))}
-                                </TableBody>
-                            </Table>
-                        </ScrollArea>
-                    </CardContent>
-                </Card>
+                                                </TableCell>
+                                            </TableRow>
+                                        ) : cart.map(item => (
+                                            <TableRow key={item.id}>
+                                                <TableCell>
+                                                    <div className="flex items-center gap-3">
+                                                        <Image src={item.parentImageUrl || 'https://placehold.co/40x40.png'} alt={item.productName} width={32} height={32} className="rounded-md" data-ai-hint="product image" />
+                                                        <div>
+                                                            <p className="font-medium text-sm">{item.productName}</p>
+                                                            <p className="text-xs text-muted-foreground">{item.name}</p>
+                                                        </div>
+                                                    </div>
+                                                </TableCell>
+                                                <TableCell className="text-center">
+                                                    <div className="flex items-center justify-center">
+                                                        <Input type="number" value={item.quantity} onChange={(e) => updateQuantity(item.id, parseInt(e.target.value) || 0)} className="w-16 h-8 text-center text-sm focus-visible:ring-1" />
+                                                    </div>
+                                                </TableCell>
+                                                <TableCell className="text-left text-sm">{item.price.toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</TableCell>
+                                                <TableCell className="text-left font-medium text-sm">{(item.price * item.quantity).toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</TableCell>
+                                                <TableCell>
+                                                    <Button variant="ghost" size="icon" className="text-destructive h-8 w-8" onClick={() => removeFromCart(item.id)}>
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </Button>
+                                                </TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            </ScrollArea>
+                        </CardContent>
+                    </Card>
+                </div>
+                <div className="lg:col-span-2 h-full">
+                    <PosOrderSummary
+                        cart={cart}
+                        onSaleComplete={handleSaleComplete}
+                        clearCart={clearCart}
+                        channel="reseller"
+                    />
+                </div>
+                {productForVariantSelection && (
+                    <VariantSelectionDialog
+                        open={!!productForVariantSelection}
+                        onOpenChange={(isOpen) => !isOpen && setProductForVariantSelection(null)}
+                        item={productForVariantSelection}
+                        onSelect={handleVariantSelect}
+                        cart={cart}
+                    />
+                )}
             </div>
-            <div className="lg:col-span-2 h-full">
-                 <PosOrderSummary
-                    cart={cart}
-                    onSaleComplete={handleSaleComplete}
-                    clearCart={clearCart}
-                    channel="reseller"
-                />
+             <div className="print-only">
+                {receiptToPrint && <PosReceipt ref={receiptRef} receipt={receiptToPrint} />}
             </div>
-             {productForVariantSelection && (
-                <VariantSelectionDialog
-                    open={!!productForVariantSelection}
-                    onOpenChange={(isOpen) => !isOpen && setProductForVariantSelection(null)}
-                    item={productForVariantSelection}
-                    onSelect={handleVariantSelect}
-                    cart={cart}
-                />
-            )}
-        </div>
+        </>
     );
 }

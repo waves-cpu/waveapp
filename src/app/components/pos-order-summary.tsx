@@ -8,7 +8,7 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/componen
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
-import { X } from 'lucide-react';
+import { X, Printer } from 'lucide-react';
 import { useLanguage } from '@/hooks/use-language';
 import { translations } from '@/types/language';
 import {
@@ -23,11 +23,11 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { PosReceipt, type ReceiptData } from './pos-receipt';
+import { type ReceiptData } from './pos-receipt';
 
 interface PosOrderSummaryProps {
   cart: CartItem[];
-  onSaleComplete: (paymentMethod: string) => Promise<void>;
+  onSaleComplete: (paymentMethod: string, receiptData: ReceiptData) => Promise<void>;
   clearCart: () => void;
   channel: 'pos' | 'reseller';
 }
@@ -40,7 +40,6 @@ export function PosOrderSummary({ cart, onSaleComplete, clearCart, channel }: Po
     const [discount, setDiscount] = useState(0);
     const [cashReceived, setCashReceived] = useState(0);
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [lastCompletedSale, setLastCompletedSale] = useState<ReceiptData | null>(null);
     const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(channel === 'reseller' ? 'Transfer' : 'Cash');
 
     useEffect(() => {
@@ -50,6 +49,13 @@ export function PosOrderSummary({ cart, onSaleComplete, clearCart, channel }: Po
     const subtotal = useMemo(() => cart.reduce((acc, item) => acc + item.price * item.quantity, 0), [cart]);
     const total = useMemo(() => subtotal - discount, [subtotal, discount]);
     const change = useMemo(() => cashReceived - total, [cashReceived, total]);
+
+    const resetForm = () => {
+        setDiscount(0);
+        setCashReceived(0);
+        setPaymentMethod(channel === 'reseller' ? 'Transfer' : 'Cash');
+        clearCart();
+    }
 
     const handleSale = async () => {
         setIsSubmitting(true);
@@ -63,40 +69,19 @@ export function PosOrderSummary({ cart, onSaleComplete, clearCart, channel }: Po
             change: paymentMethod === 'Cash' ? change : 0,
             transactionId: `trans-${Date.now()}`
         };
-        await onSaleComplete(paymentMethod);
-        setLastCompletedSale(saleData);
-        setIsSubmitting(false);
+        
+        try {
+            await onSaleComplete(paymentMethod, saleData);
+            // The parent component (PosCart or ResellerCart) will handle the printing
+            resetForm();
+        } catch (error) {
+            // Error toast is handled in the parent
+            console.error("Sale failed, not resetting form.", error);
+        } finally {
+            setIsSubmitting(false);
+        }
     };
-
-    const handleNewSale = () => {
-        setLastCompletedSale(null);
-        setDiscount(0);
-        setCashReceived(0);
-        setPaymentMethod(channel === 'reseller' ? 'Transfer' : 'Cash');
-        clearCart();
-    };
-
-    const handlePrint = () => {
-        window.print();
-    }
     
-    if (lastCompletedSale) {
-        return (
-            <>
-                <div className="print-only">
-                    <PosReceipt receipt={lastCompletedSale} />
-                </div>
-                <Card className="flex-grow flex flex-col justify-center items-center text-center p-8 h-full no-print">
-                    <CardTitle className="text-xl font-bold mb-2">{t.pos.saleCompleted}</CardTitle>
-                    <p className="text-muted-foreground mb-4 text-sm">Total: {lastCompletedSale.total.toLocaleString('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0, maximumFractionDigits: 0 })}</p>
-                    <div className="space-y-4">
-                        <Button onClick={handleNewSale} size="lg">{t.pos.newSale}</Button>
-                        <Button variant="outline" size="lg" onClick={handlePrint}>{t.pos.printReceipt}</Button>
-                    </div>
-                </Card>
-            </>
-        )
-    }
 
     return (
         <Card className="flex flex-col h-full sticky top-4 no-print">
@@ -185,7 +170,7 @@ export function PosOrderSummary({ cart, onSaleComplete, clearCart, channel }: Po
                             </AlertDialogHeader>
                             <AlertDialogFooter>
                                 <AlertDialogCancel>Lanjut Transaksi</AlertDialogCancel>
-                                <AlertDialogAction onClick={handleNewSale} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                                <AlertDialogAction onClick={resetForm} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
                                     Ya, Batalkan
                                 </AlertDialogAction>
                             </AlertDialogFooter>
@@ -193,6 +178,7 @@ export function PosOrderSummary({ cart, onSaleComplete, clearCart, channel }: Po
                     </AlertDialog>
 
                     <Button size="lg" onClick={handleSale} disabled={cart.length === 0 || (paymentMethod === 'Cash' && change < 0) || isSubmitting}>
+                        <Printer className="mr-2 h-4 w-4" />
                         {isSubmitting ? 'Memproses...' : t.pos.completeSale}
                     </Button>
                 </div>

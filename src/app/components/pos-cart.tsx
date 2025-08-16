@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState, useCallback, useEffect, useMemo } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { useInventory } from '@/hooks/use-inventory';
 import type { InventoryItem, InventoryItemVariant } from '@/types';
 import { PosSearch } from './pos-search';
@@ -18,6 +18,7 @@ import { ShoppingCart, Trash2 } from 'lucide-react';
 import { useLanguage } from '@/hooks/use-language';
 import { translations } from '@/types/language';
 import { useScanSounds } from '@/hooks/use-scan-sounds';
+import { PosReceipt, type ReceiptData } from './pos-receipt';
 
 export interface CartItem extends InventoryItemVariant {
     productId: string;
@@ -37,6 +38,9 @@ export function PosCart() {
     const [cart, setCart] = useState<CartItem[]>([]);
     const [productForVariantSelection, setProductForVariantSelection] = useState<InventoryItem | null>(null);
     const [isClient, setIsClient] = useState(false);
+    const [receiptToPrint, setReceiptToPrint] = useState<ReceiptData | null>(null);
+    const receiptRef = useRef<HTMLDivElement>(null);
+
 
     useEffect(() => {
         setIsClient(true);
@@ -59,6 +63,18 @@ export function PosCart() {
             }
         }
     }, [cart, isClient]);
+
+    // This useEffect handles the printing after the state has been updated
+    useEffect(() => {
+        if (receiptToPrint) {
+            // Timeout ensures the component has time to render before printing
+            const timer = setTimeout(() => {
+                window.print();
+                setReceiptToPrint(null); // Reset after printing
+            }, 100); 
+            return () => clearTimeout(timer);
+        }
+    }, [receiptToPrint]);
 
     const addToCart = (item: InventoryItem, variant?: InventoryItemVariant) => {
         const itemToAdd = variant ? 
@@ -178,13 +194,12 @@ export function PosCart() {
         localStorage.removeItem(LOCAL_STORAGE_KEY);
     };
 
-    const handleSaleComplete = async (paymentMethod: string) => {
-        const transactionId = `trans-${Date.now()}`;
+    const handleSaleComplete = async (paymentMethod: string, receiptData: ReceiptData) => {
         try {
             const salePromises = cart.map(item =>
                 recordSale(item.sku!, 'pos', item.quantity, {
                     saleDate: new Date(),
-                    transactionId,
+                    transactionId: receiptData.transactionId,
                     paymentMethod,
                 })
             );
@@ -193,7 +208,7 @@ export function PosCart() {
                 title: "Penjualan Berhasil",
                 description: "Transaksi telah berhasil dicatat."
             });
-            clearCart();
+            setReceiptToPrint(receiptData); // Set the receipt data to trigger printing
         } catch (error) {
             console.error("Failed to complete sale:", error);
             toast({
@@ -201,12 +216,14 @@ export function PosCart() {
                 title: "Gagal Menyelesaikan Penjualan",
                 description: "Terjadi kesalahan saat memproses transaksi.",
             });
+            throw error; // Re-throw to prevent form reset in summary component
         }
     };
 
 
     return (
-        <div className="flex-grow grid grid-cols-1 lg:grid-cols-5 gap-4 p-4 h-full">
+        <>
+        <div className="flex-grow grid grid-cols-1 lg:grid-cols-5 gap-4 p-4 h-full no-print">
             <div className="lg:col-span-3 flex flex-col gap-4 h-full">
                 <PosSearch onProductSelect={handleProductSelect} />
                 <Card className="flex-grow flex flex-col">
@@ -284,5 +301,9 @@ export function PosCart() {
                 />
             )}
         </div>
+         <div className="print-only">
+            {receiptToPrint && <PosReceipt ref={receiptRef} receipt={receiptToPrint} />}
+        </div>
+        </>
     );
 }
