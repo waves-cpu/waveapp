@@ -90,7 +90,10 @@ function InventoryTableSkeleton() {
     )
 }
 
-function StockBar({ stock }: { stock: number }) {
+function StockBar({ stock, onUpdateClick }: { stock: number; onUpdateClick: () => void }) {
+    const { language } = useLanguage();
+    const t = translations[language];
+
     const getStockColor = (stock: number) => {
         if (stock > 10) return 'bg-green-500';
         if (stock > 0) return 'bg-yellow-500';
@@ -98,8 +101,13 @@ function StockBar({ stock }: { stock: number }) {
     };
 
     return (
-        <div className="flex items-center gap-2 w-32">
-            <span className="font-medium w-8">{stock}</span>
+        <div className="flex items-center gap-2 w-32 group">
+             <div className="flex items-center gap-1">
+                <span className="font-medium w-8 text-right">{stock}</span>
+                <Button variant="ghost" size="icon" onClick={onUpdateClick} className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity" aria-label={t.inventoryTable.updateStock}>
+                    <Edit className="h-3 w-3" />
+                </Button>
+            </div>
             <Progress value={stock > 100 ? 100 : stock} className="h-2 flex-1" indicatorClassName={getStockColor(stock)} />
         </div>
     );
@@ -286,7 +294,7 @@ export function InventoryTable({ onUpdateStock }: InventoryTableProps) {
           <TableBody>
             {paginatedItems.length > 0 ? (
               paginatedItems.flatMap((item, itemIndex) => {
-                const totalStock = item.variants?.reduce((sum, v) => sum + v.stock, 0) ?? item.stock;
+                const totalStock = item.variants?.reduce((sum, v) => sum + v.stock, 0) ?? item.stock ?? 0;
 
                 if (item.variants && item.variants.length > 0) {
                     const prices = item.variants.map(v => v.price);
@@ -295,6 +303,7 @@ export function InventoryTable({ onUpdateStock }: InventoryTableProps) {
                     const priceDisplay = minPrice === maxPrice 
                         ? `Rp${Math.round(minPrice).toLocaleString('id-ID')}`
                         : `Rp${Math.round(minPrice).toLocaleString('id-ID')} - Rp${Math.round(maxPrice).toLocaleString('id-ID')}`;
+                    const totalStock = item.variants.reduce((sum, v) => sum + v.stock, 0);
 
                     return (
                         <React.Fragment key={item.id}>
@@ -322,7 +331,10 @@ export function InventoryTable({ onUpdateStock }: InventoryTableProps) {
                                 </TableCell>
                                 <TableCell>{priceDisplay}</TableCell>
                                 <TableCell>
-                                    <StockBar stock={totalStock ?? 0} />
+                                    <div className="flex items-center gap-2 w-32">
+                                        <span className="font-medium w-8">{totalStock}</span>
+                                        <Progress value={totalStock > 100 ? 100 : totalStock} className="h-2 flex-1" />
+                                    </div>
                                 </TableCell>
                                 <TableCell className="text-center">
                                     <DropdownMenu>
@@ -364,12 +376,7 @@ export function InventoryTable({ onUpdateStock }: InventoryTableProps) {
                                     </TableCell>
                                     <TableCell>{`Rp${Math.round(variant.price).toLocaleString('id-ID')}`}</TableCell>
                                     <TableCell>
-                                        <div className="group relative flex items-center justify-start gap-2">
-                                            <StockBar stock={variant.stock} />
-                                            <Button variant="ghost" size="icon" onClick={() => onUpdateStock(variant.id)} className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity" aria-label={t.inventoryTable.updateStock}>
-                                                <Edit className="h-3 w-3" />
-                                            </Button>
-                                        </div>
+                                        <StockBar stock={variant.stock} onUpdateClick={() => onUpdateStock(variant.id)} />
                                     </TableCell>
                                     <TableCell className="text-center">
                                     </TableCell>
@@ -397,12 +404,7 @@ export function InventoryTable({ onUpdateStock }: InventoryTableProps) {
                             </TableCell>
                              <TableCell>{item.price ? `Rp${Math.round(item.price).toLocaleString('id-ID')}` : '-'}</TableCell>
                             <TableCell>
-                                <div className="group relative flex items-center justify-start gap-2">
-                                    <StockBar stock={item.stock ?? 0} />
-                                    <Button variant="ghost" size="icon" onClick={() => onUpdateStock(item.id)} className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity" aria-label={t.inventoryTable.updateStock}>
-                                        <Edit className="h-3 w-3" />
-                                    </Button>
-                                </div>
+                               <StockBar stock={item.stock ?? 0} onUpdateClick={() => onUpdateStock(item.id)} />
                             </TableCell>
                              <TableCell className="text-center">
                                 <DropdownMenu>
@@ -489,3 +491,6 @@ export function InventoryTable({ onUpdateStock }: InventoryTableProps) {
     
 
 
+
+
+    
