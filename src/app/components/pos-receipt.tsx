@@ -27,13 +27,14 @@ const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('id-ID').format(amount);
 };
 
-export function PosReceipt({ receipt }: PosReceiptProps) {
+export const PosReceipt = React.forwardRef<HTMLDivElement, PosReceiptProps>((props, ref) => {
+    const { receipt } = props;
     const { language } = useLanguage();
     const t = translations[language];
     const receiptTranslations = t.receipt;
 
     return (
-        <div className="bg-white text-black text-[10px] font-mono p-2 w-[80mm] mx-auto">
+        <div ref={ref} className="bg-white text-black text-[10px] font-mono p-2 w-[80mm] mx-auto">
             <header className="text-center mb-2">
                 <h1 className="text-sm font-bold">{receiptTranslations.shopName}</h1>
                 <p>Jl. Inovasi No. 1, Kota Teknologi</p>
@@ -112,4 +113,6 @@ export function PosReceipt({ receipt }: PosReceiptProps) {
             </footer>
         </div>
     );
-}
+});
+
+PosReceipt.displayName = 'PosReceipt';

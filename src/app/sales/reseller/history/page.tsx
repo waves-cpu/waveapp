@@ -56,7 +56,7 @@ export default function ResellerHistoryPage() {
     const [selectedSaleItems, setSelectedSaleItems] = useState<Sale[]>([]);
     const [isDetailOpen, setIsDetailOpen] = useState(false);
     const [receiptToPrint, setReceiptToPrint] = useState<ReceiptData | null>(null);
-    const receiptRef = useRef(null);
+    const receiptRef = useRef<HTMLDivElement>(null);
 
     const handlePrint = useReactToPrint({
       content: () => receiptRef.current,
@@ -289,9 +289,7 @@ export default function ResellerHistoryPage() {
             />
             {receiptToPrint && (
                 <div className="hidden">
-                    <div ref={receiptRef}>
-                        <PosReceipt receipt={receiptToPrint} />
-                    </div>
+                    <PosReceipt ref={receiptRef} receipt={receiptToPrint} />
                 </div>
             )}
         </AppLayout>

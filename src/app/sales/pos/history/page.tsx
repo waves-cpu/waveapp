@@ -54,12 +54,15 @@ export default function PosHistoryPage() {
     const [date, setDate] = useState<Date | undefined>(new Date());
     const [selectedSaleItems, setSelectedSaleItems] = useState<Sale[]>([]);
     const [isDetailOpen, setIsDetailOpen] = useState(false);
+    
     const [receiptToPrint, setReceiptToPrint] = useState<ReceiptData | null>(null);
-    const receiptRef = useRef(null);
+    const receiptRef = useRef<HTMLDivElement>(null);
 
     const handlePrint = useReactToPrint({
-        content: () => receiptRef.current,
-        onAfterPrint: () => setReceiptToPrint(null),
+      content: () => receiptRef.current,
+      onAfterPrint: () => {
+        setReceiptToPrint(null);
+      },
     });
 
     useEffect(() => {
@@ -279,9 +282,7 @@ export default function PosHistoryPage() {
             />
             {receiptToPrint && (
                 <div className="hidden">
-                    <div ref={receiptRef}>
-                        <PosReceipt receipt={receiptToPrint} />
-                    </div>
+                    <PosReceipt ref={receiptRef} receipt={receiptToPrint} />
                 </div>
             )}
         </AppLayout>
