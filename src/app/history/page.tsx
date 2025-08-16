@@ -21,7 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Search, Calendar as CalendarIcon, Eye, ShoppingCart, ShoppingBag } from 'lucide-react';
+import { Search, Calendar as CalendarIcon, Eye, ShoppingCart, ShoppingBag, FileDown } from 'lucide-react';
 import type { InventoryItem, AdjustmentHistory, InventoryItemVariant, Sale } from '@/types';
 import { useLanguage } from '@/hooks/use-language';
 import { translations } from '@/types/language';
@@ -214,6 +214,34 @@ export default function HistoryPage({
     setDatePickerOpen(false);
   };
 
+  const downloadCSV = () => {
+    const headers = ['Tanggal', 'Nama Produk', 'Varian', 'SKU', 'Kategori', 'Alasan', 'Perubahan', 'Stok Akhir'];
+    const rows = filteredHistory.map(entry => {
+        const rowData = [
+            format(entry.date, 'yyyy-MM-dd HH:mm:ss'),
+            entry.itemName || (entry.type === 'sales_summary' ? 'Ringkasan Penjualan' : ''),
+            entry.variantName || '',
+            entry.variantSku || '',
+            entry.itemCategory || '',
+            `"${entry.reason.replace(/"/g, '""')}"`, // Escape double quotes
+            entry.change,
+            entry.newStockLevel ?? 'N/A'
+        ];
+        return rowData.join(',');
+    });
+
+    const csvString = [headers.join(','), ...rows].join('\n');
+    const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', 'riwayat_stok.csv');
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <AppLayout>
       <main className="flex min-h-screen flex-1 flex-col gap-4 bg-muted/40 p-4 pb-8 md:gap-8 md:p-10">
@@ -226,7 +254,7 @@ export default function HistoryPage({
         <div className="bg-card rounded-lg border shadow-sm">
           <div className="p-4 flex flex-col gap-4 border-b">
             <div className="flex flex-col md:flex-row gap-4 justify-between items-center">
-                <div className="flex flex-col md:flex-row gap-4 w-full">
+                <div className="flex flex-col md:flex-row gap-4 w-full flex-1">
                     <div className="relative w-full md:w-auto md:flex-grow">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                         <Input
@@ -286,6 +314,12 @@ export default function HistoryPage({
                         </div>
                         </PopoverContent>
                     </Popover>
+                </div>
+                <div className="flex items-center gap-2 w-full md:w-auto justify-end">
+                    <Button onClick={downloadCSV} variant="outline" size="sm">
+                        <FileDown className="mr-2 h-4 w-4" />
+                        {t.inventoryTable.exportCsv}
+                    </Button>
                 </div>
             </div>
              <div className="px-1 py-2 flex items-center gap-2 border-b border-dashed">
@@ -431,3 +465,4 @@ export default function HistoryPage({
     </AppLayout>
   );
 }
+
