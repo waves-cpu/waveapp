@@ -281,7 +281,7 @@ export default function PosHistoryPage() {
                 title="Detail Transaksi"
                 description={`Detail item untuk transaksi #${selectedSaleItems[0]?.transactionId?.slice(-6) ?? 'N/A'}`}
             />
-             <div className="hidden">
+            <div className="hidden">
                 {receiptToPrint && <PosReceipt ref={receiptRef} receipt={receiptToPrint} />}
             </div>
         </AppLayout>
