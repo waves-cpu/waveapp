@@ -6,7 +6,7 @@ import { useLanguage } from '@/hooks/use-language';
 import { translations } from '@/types/language';
 import type { CartItem } from './pos-cart';
 import { format } from 'date-fns';
-import { useReceiptSettings } from '@/hooks/use-receipt-settings';
+import { useReceiptSettings, type ReceiptSettings } from '@/hooks/use-receipt-settings';
 import { cn } from '@/lib/utils';
 
 export interface ReceiptData {
@@ -22,6 +22,7 @@ export interface ReceiptData {
 
 interface PosReceiptProps {
     receipt: ReceiptData;
+    previewSettings?: Partial<ReceiptSettings>;
 }
 
 const formatCurrency = (amount: number) => {
@@ -29,11 +30,14 @@ const formatCurrency = (amount: number) => {
 };
 
 export const PosReceipt = React.forwardRef<HTMLDivElement, PosReceiptProps>((props, ref) => {
-    const { receipt } = props;
+    const { receipt, previewSettings } = props;
     const { language } = useLanguage();
     const t = translations[language];
     const receiptTranslations = t.receipt;
-    const { settings } = useReceiptSettings();
+    const { settings: globalSettings } = useReceiptSettings();
+
+    const settings = previewSettings ? { ...globalSettings, ...previewSettings } : globalSettings;
+
 
     return (
         <div ref={ref} className={cn("bg-white text-black font-mono p-2 mx-auto", `receipt-${settings.paperSize}`)}>

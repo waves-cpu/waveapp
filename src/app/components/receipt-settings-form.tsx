@@ -26,6 +26,8 @@ import {
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
+import { PosReceipt, type ReceiptData } from "./pos-receipt";
+import { useMemo } from "react";
 
 
 const formSchema = z.object({
@@ -45,6 +47,8 @@ export function ReceiptSettingsForm() {
         resolver: zodResolver(formSchema),
         defaultValues: settings,
     });
+    
+    const watchedValues = form.watch();
 
     const onSubmit = (values: z.infer<typeof formSchema>) => {
         setSettings(values);
@@ -54,111 +58,138 @@ export function ReceiptSettingsForm() {
         });
     };
     
+    const mockReceiptData: ReceiptData = useMemo(() => ({
+        items: [
+            { id: '1', productId: 'prod1', productName: 'T-Shirt Keren', name: 'L', price: 125000, quantity: 1, stock: 10, sku: 'TS-L' },
+            { id: '2', productId: 'prod2', productName: 'Topi Gaul', name: 'All Size', price: 75000, quantity: 2, stock: 10, sku: 'CAP-ALL' },
+        ],
+        subtotal: 275000,
+        discount: 10000,
+        total: 265000,
+        paymentMethod: 'Cash',
+        cashReceived: 300000,
+        change: 35000,
+        transactionId: 'PREVIEW-123'
+    }), []);
+
+
     return (
-        <Card>
-            <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)}>
-                    <CardHeader>
-                        <CardTitle className="text-base">Informasi Toko</CardTitle>
-                        <CardDescription>
-                            Informasi ini akan ditampilkan di bagian atas struk.
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                        <FormField
-                            control={form.control}
-                            name="shopName"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Nama Toko</FormLabel>
-                                    <FormControl>
-                                        <Input placeholder="Nama Toko Anda" {...field} />
-                                    </FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                         <FormField
-                            control={form.control}
-                            name="addressLine1"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Alamat</FormLabel>
-                                    <FormControl>
-                                        <Input placeholder="Alamat toko" {...field} />
-                                    </FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                        <FormField
-                            control={form.control}
-                            name="phone"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Nomor Telepon</FormLabel>
-                                    <FormControl>
-                                        <Input placeholder="Nomor telepon toko" {...field} />
-                                    </FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                    </CardContent>
-
-                    <CardHeader>
-                        <CardTitle className="text-base">Pengaturan Struk</CardTitle>
-                         <CardDescription>
-                            Atur detail lain yang akan muncul di struk.
-                        </CardDescription>
-                    </CardHeader>
-                     <CardContent className="space-y-4">
-                        <FormField
-                            control={form.control}
-                            name="cashierName"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Nama Kasir Default</FormLabel>
-                                    <FormControl>
-                                        <Input placeholder="Nama kasir" {...field} />
-                                    </FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                        <FormField
-                            control={form.control}
-                            name="paperSize"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Ukuran Kertas Struk</FormLabel>
-                                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+        <div className="grid md:grid-cols-2 gap-8 items-start">
+             <Card>
+                <Form {...form}>
+                    <form onSubmit={form.handleSubmit(onSubmit)}>
+                        <CardHeader>
+                            <CardTitle className="text-base">Informasi Toko</CardTitle>
+                            <CardDescription>
+                                Informasi ini akan ditampilkan di bagian atas struk.
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                            <FormField
+                                control={form.control}
+                                name="shopName"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Nama Toko</FormLabel>
                                         <FormControl>
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="Pilih ukuran kertas" />
-                                        </SelectTrigger>
+                                            <Input placeholder="Nama Toko Anda" {...field} />
                                         </FormControl>
-                                        <SelectContent>
-                                        <SelectItem value="80mm">80mm (Standar)</SelectItem>
-                                        <SelectItem value="58mm">58mm (Kecil)</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                     <FormDescription>
-                                        Pilih ukuran kertas yang sesuai dengan printer thermal Anda.
-                                    </FormDescription>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                    </CardContent>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                            <FormField
+                                control={form.control}
+                                name="addressLine1"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Alamat</FormLabel>
+                                        <FormControl>
+                                            <Input placeholder="Alamat toko" {...field} />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                            <FormField
+                                control={form.control}
+                                name="phone"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Nomor Telepon</FormLabel>
+                                        <FormControl>
+                                            <Input placeholder="Nomor telepon toko" {...field} />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                        </CardContent>
 
-                    <CardFooter className="justify-end gap-2">
-                        <Button type="button" variant="ghost" onClick={() => router.back()}>Kembali</Button>
-                        <Button type="submit">Simpan Pengaturan</Button>
-                    </CardFooter>
-                </form>
-            </Form>
-        </Card>
+                        <CardHeader>
+                            <CardTitle className="text-base">Pengaturan Struk</CardTitle>
+                            <CardDescription>
+                                Atur detail lain yang akan muncul di struk.
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                            <FormField
+                                control={form.control}
+                                name="cashierName"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Nama Kasir Default</FormLabel>
+                                        <FormControl>
+                                            <Input placeholder="Nama kasir" {...field} />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                            <FormField
+                                control={form.control}
+                                name="paperSize"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Ukuran Kertas Struk</FormLabel>
+                                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                            <FormControl>
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="Pilih ukuran kertas" />
+                                            </SelectTrigger>
+                                            </FormControl>
+                                            <SelectContent>
+                                            <SelectItem value="80mm">80mm (Standar)</SelectItem>
+                                            <SelectItem value="58mm">58mm (Kecil)</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                        <FormDescription>
+                                            Pilih ukuran kertas yang sesuai dengan printer thermal Anda.
+                                        </FormDescription>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                        </CardContent>
+
+                        <CardFooter className="justify-end gap-2">
+                            <Button type="button" variant="ghost" onClick={() => router.back()}>Kembali</Button>
+                            <Button type="submit">Simpan Pengaturan</Button>
+                        </CardFooter>
+                    </form>
+                </Form>
+            </Card>
+
+            <div className="sticky top-10">
+                <h3 className="text-sm font-medium mb-2">Pratinjau Struk</h3>
+                <div className="bg-white p-2 border rounded-md shadow-sm">
+                    <PosReceipt 
+                        receipt={mockReceiptData} 
+                        previewSettings={watchedValues} 
+                    />
+                </div>
+            </div>
+
+        </div>
     );
 }
-
