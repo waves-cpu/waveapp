@@ -400,7 +400,7 @@ export function StockInForm({
                                                             )}
                                                         />
                                                         <Button type="button" variant="outline" size="sm" onClick={() => applyMasterQuantity(parentName)}>
-                                                            {t.bulkStockInDialog.applyToAll}
+                                                            {t.common.apply}
                                                         </Button>
                                                     </div>
                                                 </TableCell>
