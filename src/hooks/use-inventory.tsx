@@ -146,14 +146,8 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
 
   const recordSale = async (sku: string, channel: string, quantity: number, options?: { saleDate?: Date, transactionId?: string, paymentMethod?: string, resellerName?: string }) => {
     await performSale(sku, channel, quantity, options);
-    // For channels other than marketplace ones, we don't need to refetch all sales, just inventory.
-    if (['shopee', 'lazada', 'tiktok'].includes(channel)) {
-      await fetchAllData();
-    } else {
-       const inventoryData = await fetchInventoryData();
-       setItems(inventoryData.items);
-       setCategories(inventoryData.categories);
-    }
+    // After a sale, we need fresh data for both inventory and sales history
+    await fetchAllData();
   };
 
   const fetchSales = async (channel: string, date: Date): Promise<Sale[]> => {

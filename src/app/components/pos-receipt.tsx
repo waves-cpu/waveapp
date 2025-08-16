@@ -1,3 +1,4 @@
+
 'use client';
 
 import React from 'react';
@@ -5,6 +6,8 @@ import { useLanguage } from '@/hooks/use-language';
 import { translations } from '@/types/language';
 import type { CartItem } from './pos-cart';
 import { format } from 'date-fns';
+import { useReceiptSettings } from '@/hooks/use-receipt-settings';
+import { cn } from '@/lib/utils';
 
 export interface ReceiptData {
     items: CartItem[];
@@ -30,13 +33,14 @@ export const PosReceipt = React.forwardRef<HTMLDivElement, PosReceiptProps>((pro
     const { language } = useLanguage();
     const t = translations[language];
     const receiptTranslations = t.receipt;
+    const { settings } = useReceiptSettings();
 
     return (
-        <div ref={ref} className="bg-white text-black text-[10px] font-mono p-2 w-[80mm] mx-auto">
+        <div ref={ref} className={cn("bg-white text-black font-mono p-2 mx-auto", `receipt-${settings.paperSize}`)}>
             <header className="text-center mb-2">
-                <h1 className="text-sm font-bold">{receiptTranslations.shopName}</h1>
-                <p>Jl. Inovasi No. 1, Kota Teknologi</p>
-                <p>0812-3456-7890</p>
+                <h1 className="text-sm font-bold">{settings.shopName}</h1>
+                <p>{settings.addressLine1}</p>
+                <p>{settings.phone}</p>
             </header>
 
             <hr className="border-t border-dashed border-black my-2" />
@@ -52,7 +56,7 @@ export const PosReceipt = React.forwardRef<HTMLDivElement, PosReceiptProps>((pro
                 </div>
                  <div className="flex justify-between">
                     <span>{receiptTranslations.cashier}</span>
-                    <span>Admin</span>
+                    <span>{settings.cashierName}</span>
                 </div>
             </section>
             
@@ -71,7 +75,7 @@ export const PosReceipt = React.forwardRef<HTMLDivElement, PosReceiptProps>((pro
             </section>
 
             <hr className="border-t border-dashed border-black my-2" />
-
+            
             <section className="space-y-1">
                 <div className="flex justify-between">
                     <span>{receiptTranslations.subtotal}</span>

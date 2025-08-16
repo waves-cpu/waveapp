@@ -9,7 +9,7 @@ import { useLanguage } from '@/hooks/use-language';
 import { translations } from '@/types/language';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { History, Users, UserPlus } from 'lucide-react';
+import { History, Users, UserPlus, Settings } from 'lucide-react';
 import { useInventory } from '@/hooks/use-inventory';
 import type { Reseller } from '@/types';
 import { ResellerSelectionDialog } from '@/app/components/reseller-selection-dialog';
@@ -35,6 +35,11 @@ export default function ResellerPage() {
                 <h1 className="text-lg font-bold">{t.sales.reseller}</h1>
             </div>
             <div className="flex items-center gap-2">
+                 <Link href="/sales/settings">
+                    <Button variant="outline" size="icon">
+                        <Settings className="h-4 w-4" />
+                    </Button>
+                </Link>
                  <Link href="/sales/reseller/history">
                     <Button variant="outline">
                         <History className="mr-2 h-4 w-4" />
@@ -68,7 +73,6 @@ export default function ResellerPage() {
         onOpenChange={setResellerDialogOpen}
         resellers={resellers}
         onSelect={handleSelectReseller}
-        onAddReseller={addReseller}
       />
     </AppLayout>
   );

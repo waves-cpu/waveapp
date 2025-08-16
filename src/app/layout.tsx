@@ -1,9 +1,11 @@
+
 import type { Metadata } from 'next';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster"
 import { ThemeProvider } from './components/theme-provider';
 import { LanguageProvider } from '@/hooks/use-language';
 import { InventoryProvider } from '@/hooks/use-inventory';
+import { ReceiptSettingsProvider } from '@/hooks/use-receipt-settings';
 
 export const metadata: Metadata = {
   title: 'WaveApp',
@@ -31,7 +33,9 @@ export default function RootLayout({
         >
           <LanguageProvider>
             <InventoryProvider>
-              {children}
+                <ReceiptSettingsProvider>
+                    {children}
+                </ReceiptSettingsProvider>
             </InventoryProvider>
           </LanguageProvider>
         </ThemeProvider>

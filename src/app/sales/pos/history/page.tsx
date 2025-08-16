@@ -55,8 +55,6 @@ export default function PosHistoryPage() {
     const [isDetailOpen, setIsDetailOpen] = useState(false);
     
     const [receiptToPrint, setReceiptToPrint] = useState<ReceiptData | null>(null);
-    const receiptRef = useRef<HTMLDivElement>(null);
-    
 
     useEffect(() => {
         fetchItems();
