@@ -251,10 +251,10 @@ export function PosCart() {
                                                 </div>
                                             </TableCell>
                                             <TableCell className="text-center">
-                                                <div className="flex items-center justify-center gap-1">
-                                                    <Button variant="outline" size="icon" className="h-6 w-6" onClick={() => updateQuantity(item.id, item.quantity - 1)}><Minus className="h-3 w-3"/></Button>
-                                                    <Input type="number" value={item.quantity} onChange={(e) => updateQuantity(item.id, parseInt(e.target.value) || 0)} className="w-10 h-8 text-center text-sm" />
-                                                    <Button variant="outline" size="icon" className="h-6 w-6" onClick={() => updateQuantity(item.id, item.quantity + 1)}><Plus className="h-3 w-3" /></Button>
+                                                <div className="flex items-center justify-center">
+                                                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => updateQuantity(item.id, item.quantity - 1)}><Minus className="h-4 w-4"/></Button>
+                                                    <Input type="number" value={item.quantity} onChange={(e) => updateQuantity(item.id, parseInt(e.target.value) || 0)} className="w-12 h-8 text-center text-sm border-x-0 focus-visible:ring-0" />
+                                                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => updateQuantity(item.id, item.quantity + 1)}><Plus className="h-4 w-4" /></Button>
                                                 </div>
                                             </TableCell>
                                             <TableCell className="text-left text-sm">{(item.price || 0).toLocaleString('id-ID')}</TableCell>
