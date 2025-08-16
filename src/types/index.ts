@@ -14,6 +14,7 @@ export interface InventoryItemVariant {
   price: number;
   history: AdjustmentHistory[];
   parentName?: string; // Optional: To hold the parent product's name
+  parentImageUrl?: string;
 }
 
 export interface InventoryItem {

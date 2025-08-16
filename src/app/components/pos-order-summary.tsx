@@ -14,6 +14,7 @@ import * as z from 'zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import Image from 'next/image';
 
 export interface PosCartItem {
   id: string;
@@ -23,6 +24,7 @@ export interface PosCartItem {
   price: number;
   quantity: number;
   maxStock: number;
+  imageUrl?: string;
 }
 
 const paymentMethods = ["Cash", "QRIS", "Debit", "Transfer"] as const;
@@ -82,7 +84,7 @@ export function PosOrderSummary({ cart, setCart, onCheckout, isSubmitting }: Pos
         setCart(prevCart =>
         prevCart.map(item => {
             if (item.sku === sku) {
-            const clampedQuantity = Math.max(1, Math.min(newQuantity, item.maxStock));
+            const clampedQuantity = Math.max(0, Math.min(newQuantity, item.maxStock));
             return { ...item, quantity: clampedQuantity };
             }
             return item;
@@ -100,91 +102,86 @@ export function PosOrderSummary({ cart, setCart, onCheckout, isSubmitting }: Pos
             return;
         }
         onCheckout(values).then(() => {
-            form.reset({ discount: 0 });
+            form.reset({ discount: 0, paymentMethod: undefined, bank: undefined, cashReceived: undefined });
         });
     };
 
   return (
     <Card className="sticky top-0 flex flex-col h-full">
-      <CardHeader className="py-4 px-4">
-        <CardTitle className="text-lg">Pesanan & Pembayaran</CardTitle>
+      <CardHeader className="py-4 px-4 border-b">
+        <CardTitle className="text-lg">Pesanan Saat Ini</CardTitle>
       </CardHeader>
+      <div className="flex-grow flex flex-col min-h-0">
         <ScrollArea className="flex-grow">
-            <CardContent className="space-y-6 px-4">
-                {/* Cart Items */}
-                <div>
-                    {cart.length > 0 ? (
-                    <div className="space-y-3">
+            <CardContent className="space-y-6 p-4">
+                {cart.length > 0 ? (
+                    <div className="space-y-4">
                         {cart.map(item => (
-                            <div key={item.sku} className="flex items-start gap-3">
-                            <div className="flex-grow">
-                                <p className="font-medium leading-tight text-sm truncate" title={item.name}>{item.name}</p>
-                                {item.variantName && <p className="text-xs text-muted-foreground">{item.variantName}</p>}
-                                <p className="text-xs text-muted-foreground">SKU: {item.sku}</p>
-                                <p className="font-semibold text-sm">{`Rp${item.price.toLocaleString('id-ID')}`}</p>
-                            </div>
-                            <div className="flex items-center gap-1">
-                                <Button variant="outline" size="icon" className="h-6 w-6" onClick={() => updateQuantity(item.sku, item.quantity - 1)}>
-                                <Minus className="h-3 w-3" />
-                                </Button>
-                                <Input
-                                type="number"
-                                value={item.quantity}
-                                onChange={e => updateQuantity(item.sku, parseInt(e.target.value, 10) || 1)}
-                                className="h-6 w-10 text-center px-1"
-                                onFocus={(e) => e.target.select()}
+                            <div key={item.sku} className="flex items-center gap-4">
+                                <Image 
+                                    src={item.imageUrl || 'https://placehold.co/64x64.png'} 
+                                    alt={item.name} 
+                                    width={64} height={64} 
+                                    className="rounded-md object-cover" 
+                                    data-ai-hint="product image"
                                 />
-                                <Button variant="outline" size="icon" className="h-6 w-6" onClick={() => updateQuantity(item.sku, item.quantity + 1)} disabled={item.quantity >= item.maxStock}>
-                                <Plus className="h-3 w-3" />
+                                <div className="flex-grow">
+                                    <p className="font-medium leading-tight text-sm truncate" title={item.name}>{item.name}</p>
+                                    {item.variantName && <p className="text-xs text-muted-foreground">{item.variantName}</p>}
+                                    <p className="font-semibold text-sm mt-1">{`Rp${item.price.toLocaleString('id-ID')}`}</p>
+                                </div>
+                                <div className="flex items-center gap-1.5">
+                                    <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => updateQuantity(item.sku, item.quantity - 1)}>
+                                        <Minus className="h-3.5 w-3.5" />
+                                    </Button>
+                                    <span className="font-bold text-sm w-6 text-center">{item.quantity}</span>
+                                    <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => updateQuantity(item.sku, item.quantity + 1)} disabled={item.quantity >= item.maxStock}>
+                                        <Plus className="h-3.5 w-3.5" />
+                                    </Button>
+                                </div>
+                                <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive-foreground hover:bg-destructive shrink-0" onClick={() => removeItem(item.sku)}>
+                                    <X className="h-4 w-4" />
                                 </Button>
-                            </div>
-                            <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground shrink-0" onClick={() => removeItem(item.sku)}>
-                                <X className="h-4 w-4" />
-                            </Button>
                             </div>
                         ))}
                     </div>
-                    ) : (
-                    <div className="flex-grow flex flex-col items-center justify-center text-muted-foreground p-6 text-center">
+                ) : (
+                    <div className="flex-grow flex flex-col items-center justify-center text-muted-foreground pt-16 text-center">
                         <ShoppingCart className="h-16 w-16 mb-4" />
                         <p className="font-semibold">Keranjang Kosong</p>
                         <p className="text-sm">Scan atau pilih produk untuk ditambahkan.</p>
                     </div>
-                    )}
-                </div>
-
-                {/* Checkout Details */}
-                {cart.length > 0 && (
-                    <Form {...form}>
-                         <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-4">
+                )}
+            </CardContent>
+        </ScrollArea>
+        
+        {cart.length > 0 && (
+            <div className='border-t mt-auto'>
+                 <Form {...form}>
+                    <form onSubmit={form.handleSubmit(handleFormSubmit)}>
+                        <CardContent className="p-4 space-y-4">
                             <div className="space-y-2 text-sm">
-                                <div className="grid grid-cols-[1fr_auto] gap-x-4">
-                                    <span className="text-muted-foreground">Subtotal ({totalItems} item)</span>
-                                    <span className="text-right font-medium">Rp{subtotal.toLocaleString('id-ID')}</span>
+                                <div className="flex justify-between items-center">
+                                    <span className="text-muted-foreground">Subtotal</span>
+                                    <span className="font-medium">Rp{subtotal.toLocaleString('id-ID')}</span>
                                 </div>
-                                <div className="grid grid-cols-[1fr_auto] gap-x-4 items-center">
+                                <div className="flex justify-between items-center">
                                     <span className="text-muted-foreground">Diskon</span>
                                      <FormField
                                         control={form.control}
                                         name="discount"
                                         render={({ field }) => (
                                             <FormItem>
-                                                <FormControl><Input type="number" placeholder="0" {...field} className="w-28 h-7 text-right" /></FormControl>
+                                                <FormControl><Input type="number" placeholder="0" {...field} className="w-28 h-8 text-right" /></FormControl>
                                             </FormItem>
                                         )}
                                     />
                                 </div>
-                                    <Separator />
-                                    <div className="grid grid-cols-[1fr_auto] gap-x-4 font-bold text-base">
-                                    <span>Total</span>
-                                    <span className="text-right">Rp{totalAfterDiscount.toLocaleString('id-ID')}</span>
-                                </div>
-                                    {watchPaymentMethod === 'Cash' && change > 0 && (
-                                        <div className="grid grid-cols-[1fr_auto] gap-x-4 text-muted-foreground">
-                                        <span>Kembalian</span>
-                                        <span className="text-right font-medium">Rp{change.toLocaleString('id-ID')}</span>
-                                    </div>
-                                    )}
+                            </div>
+                             <Separator />
+                            <div className="flex justify-between items-center font-bold text-base">
+                                <span>Total</span>
+                                <span>Rp{totalAfterDiscount.toLocaleString('id-ID')}</span>
                             </div>
                              <Separator />
 
@@ -192,7 +189,7 @@ export function PosOrderSummary({ cart, setCart, onCheckout, isSubmitting }: Pos
                                 control={form.control}
                                 name="paymentMethod"
                                 render={({ field }) => (
-                                    <FormItem className="space-y-2">
+                                    <FormItem className="space-y-3">
                                     <FormLabel>Metode Pembayaran</FormLabel>
                                     <FormControl>
                                         <RadioGroup
@@ -241,6 +238,7 @@ export function PosOrderSummary({ cart, setCart, onCheckout, isSubmitting }: Pos
                             )}
 
                              { watchPaymentMethod === 'Cash' && (
+                                <div className='space-y-2'>
                                 <FormField
                                     control={form.control}
                                     name="cashReceived"
@@ -254,23 +252,29 @@ export function PosOrderSummary({ cart, setCart, onCheckout, isSubmitting }: Pos
                                         </FormItem>
                                     )}
                                 />
-                            )}
-                             <CardFooter className="flex-col !p-0 !pt-2">
-                                <div className="w-full flex-col gap-2 space-y-2">
-                                     <Button type="submit" className="w-full" disabled={isSubmitting || cart.length === 0 || !form.formState.isValid}>
-                                        {isSubmitting ? 'Memproses...' : 'Bayar Sekarang'}
-                                    </Button>
-                                    <Button type="button" variant="outline" className="w-full" onClick={() => window.print()} disabled={isSubmitting}>
-                                        <Printer className="mr-2 h-4 w-4" />
-                                        Cetak Struk
-                                    </Button>
+                                 {change > 0 && (
+                                    <div className="flex justify-between items-center text-sm">
+                                        <span className="text-muted-foreground">Kembalian</span>
+                                        <span className="font-medium">Rp{change.toLocaleString('id-ID')}</span>
+                                    </div>
+                                )}
                                 </div>
-                            </CardFooter>
-                         </form>
-                    </Form>
-                )}
-            </CardContent>
-        </ScrollArea>
+                            )}
+                        </CardContent>
+                        <CardFooter className="flex-col gap-2 p-4 border-t">
+                            <Button type="submit" className="w-full" disabled={isSubmitting || cart.length === 0 || !form.formState.isValid}>
+                                {isSubmitting ? 'Memproses...' : 'Bayar Sekarang'}
+                            </Button>
+                            <Button type="button" variant="outline" className="w-full" onClick={() => window.print()} disabled={isSubmitting}>
+                                <Printer className="mr-2 h-4 w-4" />
+                                Cetak Struk Terakhir
+                            </Button>
+                        </CardFooter>
+                    </form>
+                 </Form>
+            </div>
+        )}
+      </div>
     </Card>
   );
 }

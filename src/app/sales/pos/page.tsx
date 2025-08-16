@@ -335,6 +335,7 @@ export default function PosSalesPage({
             price: itemDetails.price!,
             quantity: 1,
             maxStock: itemDetails.stock,
+            imageUrl: 'parentName' in itemDetails ? itemDetails.parentImageUrl : itemDetails.imageUrl,
         };
         setCart(prevCart => [...prevCart, newCartItem]);
     }
