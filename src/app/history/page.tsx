@@ -66,6 +66,7 @@ export default function HistoryPage({
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
+  const [adjustmentTypeFilter, setAdjustmentTypeFilter] = useState<'all' | 'in' | 'out'>('all');
   const [selectedSales, setSelectedSales] = useState<Sale[]>([]);
   const [isSalesDetailOpen, setSalesDetailOpen] = useState(false);
   const [itemsPerPage, setItemsPerPage] = useState(20);
@@ -159,11 +160,17 @@ export default function HistoryPage({
              if(entryDate > toDate) return false;
           }
           return true;
+      })
+      .filter(entry => {
+        if (adjustmentTypeFilter === 'all') return true;
+        if (adjustmentTypeFilter === 'in') return entry.change > 0;
+        if (adjustmentTypeFilter === 'out') return entry.change < 0;
+        return true;
       });
 
       setCurrentPage(1);
       return filtered;
-  }, [allHistory, categoryFilter, searchTerm, dateRange]);
+  }, [allHistory, categoryFilter, searchTerm, dateRange, adjustmentTypeFilter]);
 
   const totalPages = Math.ceil(filteredHistory.length / itemsPerPage);
   
@@ -206,64 +213,77 @@ export default function HistoryPage({
           </h1>
         </div>
         <div className="bg-card rounded-lg border shadow-sm">
-          <div className="p-4 flex flex-col md:flex-row gap-4 justify-between items-center border-b">
-              <div className="flex flex-col md:flex-row gap-4 w-full">
-                  <div className="relative w-full md:w-auto md:flex-grow">
-                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input
-                      placeholder={t.stockHistory.searchPlaceholder}
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="pl-10 w-full"
-                      />
-                  </div>
-                  <Select onValueChange={(value) => setCategoryFilter(value === 'all' ? null : value)} defaultValue="all">
-                      <SelectTrigger className="w-full md:w-[200px]">
-                      <SelectValue placeholder={t.inventoryTable.selectCategoryPlaceholder} />
-                      </SelectTrigger>
-                      <SelectContent>
-                      <SelectItem value="all">{t.inventoryTable.allCategories}</SelectItem>
-                      {uniqueCategoriesWithSales.map((category) => (
-                          <SelectItem key={category} value={category}>
-                          {category}
-                          </SelectItem>
-                      ))}
-                      </SelectContent>
-                  </Select>
-                  <Popover>
-                      <PopoverTrigger asChild>
-                      <Button
-                          id="date"
-                          variant={"outline"}
-                          className={cn(
-                          "w-full md:w-[300px] justify-start text-left font-normal",
-                          !dateRange && "text-muted-foreground"
-                          )}
-                      >
-                          <CalendarIcon className="mr-2 h-4 w-4" />
-                          {dateRange?.from ? (
-                          dateRange.to ? (
-                              <>{format(dateRange.from, "LLL dd, y")} - {format(dateRange.to, "LLL dd, y")}</>
-                          ) : (
-                              format(dateRange.from, "LLL dd, y")
-                          )
-                          ) : (
-                          <span>{t.stockHistory.dateRange}</span>
-                          )}
-                      </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                          initialFocus
-                          mode="range"
-                          defaultMonth={dateRange?.from}
-                          selected={dateRange}
-                          onSelect={setDateRange}
-                          numberOfMonths={2}
-                      />
-                      </PopoverContent>
-                  </Popover>
-              </div>
+          <div className="p-4 flex flex-col gap-4 border-b">
+            <div className="flex flex-col md:flex-row gap-4 justify-between items-center">
+                <div className="flex flex-col md:flex-row gap-4 w-full">
+                    <div className="relative w-full md:w-auto md:flex-grow">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                        placeholder={t.stockHistory.searchPlaceholder}
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="pl-10 w-full"
+                        />
+                    </div>
+                    <Select onValueChange={(value) => setCategoryFilter(value === 'all' ? null : value)} defaultValue="all">
+                        <SelectTrigger className="w-full md:w-[200px]">
+                        <SelectValue placeholder={t.inventoryTable.selectCategoryPlaceholder} />
+                        </SelectTrigger>
+                        <SelectContent>
+                        <SelectItem value="all">{t.inventoryTable.allCategories}</SelectItem>
+                        {uniqueCategoriesWithSales.map((category) => (
+                            <SelectItem key={category} value={category}>
+                            {category}
+                            </SelectItem>
+                        ))}
+                        </SelectContent>
+                    </Select>
+                    <Popover>
+                        <PopoverTrigger asChild>
+                        <Button
+                            id="date"
+                            variant={"outline"}
+                            className={cn(
+                            "w-full md:w-[300px] justify-start text-left font-normal",
+                            !dateRange && "text-muted-foreground"
+                            )}
+                        >
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {dateRange?.from ? (
+                            dateRange.to ? (
+                                <>{format(dateRange.from, "LLL dd, y")} - {format(dateRange.to, "LLL dd, y")}</>
+                            ) : (
+                                format(dateRange.from, "LLL dd, y")
+                            )
+                            ) : (
+                            <span>{t.stockHistory.dateRange}</span>
+                            )}
+                        </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                            initialFocus
+                            mode="range"
+                            defaultMonth={dateRange?.from}
+                            selected={dateRange}
+                            onSelect={setDateRange}
+                            numberOfMonths={2}
+                        />
+                        </PopoverContent>
+                    </Popover>
+                </div>
+            </div>
+             <div className="px-1 py-2 flex items-center gap-2 border-b border-dashed">
+                <Button variant={adjustmentTypeFilter === 'all' ? 'secondary' : 'ghost'} size="sm" onClick={() => setAdjustmentTypeFilter('all')}>
+                    Semua
+                </Button>
+                <Button variant={adjustmentTypeFilter === 'in' ? 'secondary' : 'ghost'} size="sm" onClick={() => setAdjustmentTypeFilter('in')}>
+                    Stok Masuk
+                </Button>
+                <Button variant={adjustmentTypeFilter === 'out' ? 'secondary' : 'ghost'} size="sm" onClick={() => setAdjustmentTypeFilter('out')}>
+                    Stok Keluar
+                </Button>
+            </div>
           </div>
           <Table>
             <TableHeader>
