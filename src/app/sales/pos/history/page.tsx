@@ -66,12 +66,6 @@ export default function PosHistoryPage() {
     });
 
     useEffect(() => {
-        if (receiptToPrint) {
-            handlePrint();
-        }
-    }, [receiptToPrint, handlePrint]);
-
-    useEffect(() => {
         fetchItems();
     }, [fetchItems]);
     
@@ -152,7 +146,11 @@ export default function PosHistoryPage() {
             change: 0, // Placeholder
             transactionId: group.transactionId,
         };
-        setReceiptToPrint(receiptData);
+        
+        // Use a callback with setState to ensure handlePrint is called after the state update.
+        setReceiptToPrint(receiptData, () => {
+            handlePrint();
+        });
     };
 
 
@@ -286,3 +284,6 @@ export default function PosHistoryPage() {
         </AppLayout>
     );
 }
+
+
+    
