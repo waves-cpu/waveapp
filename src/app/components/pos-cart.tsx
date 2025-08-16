@@ -247,3 +247,5 @@ export function PosCart() {
         </div>
     );
 }
+
+    
