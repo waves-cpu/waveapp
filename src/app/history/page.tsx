@@ -188,7 +188,7 @@ export default function HistoryPage() {
             {t.stockHistory.title}
           </h1>
         </div>
-        <div className="bg-card rounded-lg border shadow-sm flex flex-col h-full">
+        <div className="bg-card rounded-lg border shadow-sm">
           <div className="p-4 flex flex-col md:flex-row gap-4 justify-between items-center border-b">
               <div className="flex flex-col md:flex-row gap-4 w-full">
                   <div className="relative w-full md:w-auto md:flex-grow">
@@ -248,102 +248,100 @@ export default function HistoryPage() {
                   </Popover>
               </div>
           </div>
-          <div className="flex-grow overflow-auto">
-              <Table>
-              <TableHeader className="sticky top-0 bg-card">
-                  <TableRow>
-                  <TableHead className="w-[35%]">{t.inventoryTable.name}</TableHead>
-                  <TableHead>{t.stockHistory.date}</TableHead>
-                  <TableHead>{t.stockHistory.reason}</TableHead>
-                  <TableHead>{t.stockHistory.change}</TableHead>
-                  <TableHead>{t.stockHistory.newTotal}</TableHead>
-                  <TableHead className="w-[50px] text-center">Aksi</TableHead>
-                  </TableRow>
-              </TableHeader>
-              <TableBody>
-                  {loading ? (
-                      <TableRow>
-                          <TableCell colSpan={6} className="h-24 text-center">Memuat riwayat...</TableCell>
-                      </TableRow>
-                  ) : filteredHistory.length > 0 ? (
-                  filteredHistory.map((entry, index) => (
-                      <TableRow key={index}>
-                          <TableCell>
-                              {entry.type === 'adjustment' ? (
-                                  <div className="flex items-center gap-4">
-                                       {entry.imageUrl ? (
-                                          <Image 
-                                              src={entry.imageUrl} 
-                                              alt={entry.itemName!} 
-                                              width={40} height={40} 
-                                              className="rounded-sm" 
-                                              data-ai-hint="product image"
-                                          />
-                                       ) : (
-                                          <div className="flex h-10 w-10 items-center justify-center rounded-sm bg-muted">
-                                              <ShoppingBag className="h-5 w-5 text-muted-foreground" />
-                                          </div>
-                                       )}
-                                      <div>
-                                          <div className="font-medium text-sm">{entry.itemName}</div>
-                                          {entry.variantName && (
-                                              <div className="text-xs text-muted-foreground">
-                                                  {entry.variantName}
-                                                  {entry.variantSku && ` (SKU: ${entry.variantSku})`}
-                                              </div>
-                                          )}
-                                      </div>
-                                  </div>
-                              ) : (
-                                  <div className="flex items-center gap-2 font-semibold text-primary">
-                                      <ShoppingCart className="h-5 w-5" />
-                                      <span>{entry.reason}</span>
-                                  </div>
-                              )}
-                          </TableCell>
-                          <TableCell>{format(new Date(entry.date), 'PP')}</TableCell>
-                          <TableCell>{entry.reason}</TableCell>
-                          <TableCell>
-                              <Badge variant={entry.change >= 0 ? 'default' : 'destructive'} className={cn(entry.change >= 0 ? 'bg-green-600' : 'bg-red-600', 'text-white')}>
-                              {entry.change > 0 ? `+${entry.change}` : entry.change}
-                              </Badge>
-                          </TableCell>
-                          <TableCell>{entry.newStockLevel ?? '-'}</TableCell>
-                          <TableCell className="text-center">
-                              {entry.type === 'sales_summary' && entry.sales && (
-                                  <Button variant="ghost" size="icon" onClick={() => viewSalesDetail(entry.sales!)}>
-                                      <Eye className="h-4 w-4" />
-                                  </Button>
-                              )}
-                          </TableCell>
-                      </TableRow>
-                  ))
-                  ) : (
-                  <TableRow>
-                      <TableCell colSpan={6} className="h-24 text-center">
-                      {t.inventoryTable.noItems}
-                      </TableCell>
-                  </TableRow>
-                  )}
-              </TableBody>
-              <TableFooter>
-                  <TableRow>
-                      <TableCell colSpan={3} className="font-semibold text-right">Total Perubahan:</TableCell>
-                      <TableCell colSpan={3} className="font-semibold">
-                          <div className="flex items-center gap-x-4 gap-y-1 flex-wrap">
-                              <span className="text-green-600">Masuk: {historyTotals.totalIn}</span>
-                              <span className="text-red-600">Keluar: {historyTotals.totalOut}</span>
-                              <span>Net: 
-                                  <span className={cn(historyTotals.netChange >= 0 ? "text-green-600" : "text-red-600", "ml-1")}>
-                                      {historyTotals.netChange > 0 && '+'}{historyTotals.netChange}
-                                  </span>
-                              </span>
-                          </div>
-                      </TableCell>
-                  </TableRow>
-              </TableFooter>
-              </Table>
-          </div>
+          <Table>
+            <TableHeader>
+                <TableRow>
+                <TableHead className="w-[35%]">{t.inventoryTable.name}</TableHead>
+                <TableHead>{t.stockHistory.date}</TableHead>
+                <TableHead>{t.stockHistory.reason}</TableHead>
+                <TableHead>{t.stockHistory.change}</TableHead>
+                <TableHead>{t.stockHistory.newTotal}</TableHead>
+                <TableHead className="w-[50px] text-center">Aksi</TableHead>
+                </TableRow>
+            </TableHeader>
+            <TableBody>
+                {loading ? (
+                    <TableRow>
+                        <TableCell colSpan={6} className="h-24 text-center">Memuat riwayat...</TableCell>
+                    </TableRow>
+                ) : filteredHistory.length > 0 ? (
+                filteredHistory.map((entry, index) => (
+                    <TableRow key={index}>
+                        <TableCell>
+                            {entry.type === 'adjustment' ? (
+                                <div className="flex items-center gap-4">
+                                      {entry.imageUrl ? (
+                                        <Image 
+                                            src={entry.imageUrl} 
+                                            alt={entry.itemName!} 
+                                            width={40} height={40} 
+                                            className="rounded-sm" 
+                                            data-ai-hint="product image"
+                                        />
+                                      ) : (
+                                        <div className="flex h-10 w-10 items-center justify-center rounded-sm bg-muted">
+                                            <ShoppingBag className="h-5 w-5 text-muted-foreground" />
+                                        </div>
+                                      )}
+                                    <div>
+                                        <div className="font-medium text-sm">{entry.itemName}</div>
+                                        {entry.variantName && (
+                                            <div className="text-xs text-muted-foreground">
+                                                {entry.variantName}
+                                                {entry.variantSku && ` (SKU: ${entry.variantSku})`}
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="flex items-center gap-2 font-semibold text-primary">
+                                    <ShoppingCart className="h-5 w-5" />
+                                    <span>{entry.reason}</span>
+                                </div>
+                            )}
+                        </TableCell>
+                        <TableCell>{format(new Date(entry.date), 'PP')}</TableCell>
+                        <TableCell>{entry.reason}</TableCell>
+                        <TableCell>
+                            <Badge variant={entry.change >= 0 ? 'default' : 'destructive'} className={cn(entry.change >= 0 ? 'bg-green-600' : 'bg-red-600', 'text-white')}>
+                            {entry.change > 0 ? `+${entry.change}` : entry.change}
+                            </Badge>
+                        </TableCell>
+                        <TableCell>{entry.newStockLevel ?? '-'}</TableCell>
+                        <TableCell className="text-center">
+                            {entry.type === 'sales_summary' && entry.sales && (
+                                <Button variant="ghost" size="icon" onClick={() => viewSalesDetail(entry.sales!)}>
+                                    <Eye className="h-4 w-4" />
+                                </Button>
+                            )}
+                        </TableCell>
+                    </TableRow>
+                ))
+                ) : (
+                <TableRow>
+                    <TableCell colSpan={6} className="h-24 text-center">
+                    {t.inventoryTable.noItems}
+                    </TableCell>
+                </TableRow>
+                )}
+            </TableBody>
+            <TableFooter>
+                <TableRow>
+                    <TableCell colSpan={3} className="font-semibold text-right">Total Perubahan:</TableCell>
+                    <TableCell colSpan={3} className="font-semibold">
+                        <div className="flex items-center gap-x-4 gap-y-1 flex-wrap">
+                            <span className="text-green-600">Masuk: {historyTotals.totalIn}</span>
+                            <span className="text-red-600">Keluar: {historyTotals.totalOut}</span>
+                            <span>Net: 
+                                <span className={cn(historyTotals.netChange >= 0 ? "text-green-600" : "text-red-600", "ml-1")}>
+                                    {historyTotals.netChange > 0 && '+'}{historyTotals.netChange}
+                                </span>
+                            </span>
+                        </div>
+                    </TableCell>
+                </TableRow>
+            </TableFooter>
+            </Table>
         </div>
       </main>
       <DailySalesDetailDialog 
