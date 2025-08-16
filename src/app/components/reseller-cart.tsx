@@ -43,17 +43,22 @@ export function ResellerCart({ reseller }: ResellerCartProps) {
 
     useEffect(() => {
         setIsClient(true);
+        // Load cart from localStorage when reseller changes
         try {
             const savedCart = localStorage.getItem(LOCAL_STORAGE_KEY);
             if (savedCart) {
                 setCart(JSON.parse(savedCart));
+            } else {
+                setCart([]); // Clear cart for new reseller
             }
         } catch (error) {
             console.error("Failed to load cart from localStorage", error);
+            setCart([]);
         }
-    }, [LOCAL_STORAGE_KEY]);
+    }, [reseller.id, LOCAL_STORAGE_KEY]);
 
     useEffect(() => {
+        // Save cart to localStorage whenever it changes
         if (isClient) {
             try {
                 localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(cart));
@@ -287,3 +292,5 @@ export function ResellerCart({ reseller }: ResellerCartProps) {
         </div>
     );
 }
+
+    
