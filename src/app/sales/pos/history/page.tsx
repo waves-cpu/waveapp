@@ -58,18 +58,26 @@ export default function PosHistoryPage() {
     const [receiptToPrint, setReceiptToPrint] = useState<ReceiptData | null>(null);
     const receiptRef = useRef<HTMLDivElement>(null);
     
+    const printTrigger = useRef<() => void>(null);
+
     const handlePrint = useReactToPrint({
       content: () => receiptRef.current,
       onAfterPrint: () => {
         setReceiptToPrint(null);
       },
+      trigger: () => {
+        // We use a ref for the trigger function to avoid re-renders
+        // and to be able to call it imperatively.
+        printTrigger.current = () => {}; // dummy assignment, real trigger is returned by useReactToPrint
+        return <div style={{display: 'none'}} />; // hide the default trigger
+      }
     });
+    
+    // Assign the actual trigger function to the ref
+    if (typeof handlePrint === 'function') {
+        (printTrigger as React.MutableRefObject<() => void>).current = handlePrint;
+    }
 
-    useEffect(() => {
-        if (receiptToPrint && receiptRef.current) {
-            handlePrint();
-        }
-    }, [receiptToPrint, handlePrint]);
 
     useEffect(() => {
         fetchItems();
@@ -132,8 +140,8 @@ export default function PosHistoryPage() {
         setSelectedSaleItems(items);
         setIsDetailOpen(true);
     };
-
-    const triggerPrint = (group: GroupedSale) => {
+    
+    const prepareAndPrint = (group: GroupedSale) => {
         const receiptData: ReceiptData = {
             items: group.items.map(item => ({
                 ...item,
@@ -154,6 +162,13 @@ export default function PosHistoryPage() {
         };
         
         setReceiptToPrint(receiptData);
+        
+        // Use a timeout to allow React to render the component before printing
+        setTimeout(() => {
+            if (printTrigger.current) {
+                printTrigger.current();
+            }
+        }, 0);
     };
 
 
@@ -230,7 +245,7 @@ export default function PosHistoryPage() {
                                                 {group.totalAmount.toLocaleString('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                                             </TableCell>
                                             <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
-                                                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => triggerPrint(group)}>
+                                                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => prepareAndPrint(group)}>
                                                     <Printer className="h-4 w-4" />
                                                 </Button>
                                                 <AlertDialog>
@@ -281,9 +296,10 @@ export default function PosHistoryPage() {
                 title="Detail Transaksi"
                 description={`Detail item untuk transaksi #${selectedSaleItems[0]?.transactionId?.slice(-6) ?? 'N/A'}`}
             />
-            <div className="hidden">
+             <div className="hidden">
                 {receiptToPrint && <PosReceipt ref={receiptRef} receipt={receiptToPrint} />}
             </div>
         </AppLayout>
     );
 }
+
