@@ -271,6 +271,7 @@ export function PosCart() {
                     cart={cart}
                     onSaleComplete={handleSaleComplete}
                     clearCart={clearCart}
+                    channel="pos"
                 />
             </div>
              {productForVariantSelection && (

@@ -278,6 +278,7 @@ export function ResellerCart({ reseller }: ResellerCartProps) {
                     cart={cart}
                     onSaleComplete={handleSaleComplete}
                     clearCart={clearCart}
+                    channel="reseller"
                 />
             </div>
              {productForVariantSelection && (
@@ -292,5 +293,3 @@ export function ResellerCart({ reseller }: ResellerCartProps) {
         </div>
     );
 }
-
-    
