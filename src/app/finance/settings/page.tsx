@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { useForm, useFieldArray } from 'react-hook-form';
+import { useForm, useFieldArray, useWatch, Control } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Button } from '@/components/ui/button';
@@ -21,7 +21,6 @@ import { translations } from '@/types/language';
 import { Card, CardContent, CardFooter, CardHeader, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Trash2, ShoppingBag, Store, Search, PlusCircle } from 'lucide-react';
-import { useRouter } from 'next/navigation';
 import type { InventoryItem, InventoryItemVariant } from '@/types';
 import { ProductSelectionDialog } from '@/app/components/product-selection-dialog';
 import Image from 'next/image';
@@ -183,12 +182,12 @@ export default function PriceSettingsPage() {
         });
 
         // If a parent's variants are all filtered out, the parent should not appear.
-        const activeGroups = new Map<string, (PriceSettingItem & { originalIndex: number })[]>();
+        const activeGroups = new Map<string, (PriceSettingItem & { originalIndex: number; imageUrl?: string; sku?: string })[]>();
         for (const [key, value] of groups.entries()) {
             if (value.length > 0) {
                 // Find a representative for the parent to get SKU/Image
                 const parentInfo = allInventoryItems.find(item => item.name === key);
-                activeGroups.set(key, [{
+                const headerItem: (PriceSettingItem & { originalIndex: number; imageUrl?: string; sku?: string }) = {
                     id: parentInfo?.id || key,
                     name: key,
                     parentName: key,
@@ -196,7 +195,10 @@ export default function PriceSettingsPage() {
                     sku: parentInfo?.sku,
                     type: 'product', // This is just a placeholder for the header row
                     originalIndex: -1, // Indicates this is not a real form field
-                }, ...value]);
+                };
+
+                const parentRow = [headerItem, ...value];
+                activeGroups.set(key, parentRow);
             }
         }
         
@@ -287,7 +289,11 @@ export default function PriceSettingsPage() {
                                             </TableRow>
                                         </TableHeader>
                                         <TableBody>
-                                            {fields.length === 0 ? (
+                                            {loading ? (
+                                                 <TableRow>
+                                                    <TableCell colSpan={7} className="text-center h-24">Memuat...</TableCell>
+                                                 </TableRow>
+                                            ) : fields.length === 0 ? (
                                                 <TableRow>
                                                     <TableCell colSpan={7} className="text-center h-48">
                                                         <div className="flex flex-col items-center justify-center gap-4 text-muted-foreground">
@@ -312,46 +318,60 @@ export default function PriceSettingsPage() {
                                                                     </div>
                                                                 </div>
                                                             </TableCell>
-                                                            <PriceRowFields control={form.control} index={field.originalIndex} onRemove={() => remove(field.originalIndex)} />
+                                                            <PriceRowFields 
+                                                                control={form.control}
+                                                                index={field.originalIndex}
+                                                                onRemove={() => remove(field.originalIndex)}
+                                                                channelPrices={field.channelPrices || []}
+                                                            />
                                                         </TableRow>
                                                     ))}
-                                                     {groupedAndFilteredItems.groups.map((group) => (
-                                                        <React.Fragment key={group[0].id}>
-                                                             <TableRow className="bg-muted/20 hover:bg-muted/40">
-                                                                <TableCell>
-                                                                    <div className="flex items-center gap-4 font-semibold text-primary">
-                                                                        <Image src={group[0].imageUrl || 'https://placehold.co/40x40.png'} alt={group[0].name} width={40} height={40} className="rounded-sm" data-ai-hint="product image" />
-                                                                        <div>
-                                                                            <span className="text-sm">{group[0].name}</span>
-                                                                            <div className="text-xs text-muted-foreground font-normal">SKU: {group[0].sku}</div>
-                                                                        </div>
-                                                                    </div>
-                                                                </TableCell>
-                                                                <TableCell colSpan={5}></TableCell>
-                                                                <TableCell>
-                                                                    <Button type="button" variant="ghost" size="icon" className="text-destructive hover:text-destructive-foreground hover:bg-destructive" onClick={() => remove(group.slice(1).map(v => v.originalIndex))}>
-                                                                        <Trash2 className="h-4 w-4" />
-                                                                    </Button>
-                                                                </TableCell>
-                                                            </TableRow>
-                                                            {group.slice(1).map((field) => (
-                                                                <TableRow key={field.id} className="hover:bg-muted/50">
-                                                                     <TableCell>
-                                                                        <div className="flex items-center gap-4 pl-10">
-                                                                            <div className="flex h-10 w-10 items-center justify-center rounded-sm shrink-0">
-                                                                                <Store className="h-5 w-5 text-gray-400" />
-                                                                            </div>
+                                                     {groupedAndFilteredItems.groups.map((group) => {
+                                                        const parentInfo = group[0];
+                                                        const variants = group.slice(1);
+                                                        return (
+                                                            <React.Fragment key={parentInfo.id}>
+                                                                <TableRow className="bg-muted/20 hover:bg-muted/40">
+                                                                    <TableCell>
+                                                                        <div className="flex items-center gap-4 font-semibold text-primary">
+                                                                            <Image src={parentInfo.imageUrl || 'https://placehold.co/40x40.png'} alt={parentInfo.name} width={40} height={40} className="rounded-sm" data-ai-hint="product image" />
                                                                             <div>
-                                                                                <div className="font-medium text-sm">{field.name}</div>
-                                                                                <div className="text-xs text-muted-foreground">SKU: {field.sku}</div>
+                                                                                <span className="text-sm">{parentInfo.name}</span>
+                                                                                <div className="text-xs text-muted-foreground font-normal">SKU: {parentInfo.sku}</div>
                                                                             </div>
                                                                         </div>
                                                                     </TableCell>
-                                                                    <PriceRowFields control={form.control} index={field.originalIndex} onRemove={() => remove(field.originalIndex)} />
+                                                                    <TableCell colSpan={5}></TableCell>
+                                                                    <TableCell>
+                                                                        <Button type="button" variant="ghost" size="icon" className="text-destructive hover:text-destructive-foreground hover:bg-destructive" onClick={() => remove(variants.map(v => v.originalIndex))}>
+                                                                            <Trash2 className="h-4 w-4" />
+                                                                        </Button>
+                                                                    </TableCell>
                                                                 </TableRow>
-                                                            ))}
-                                                        </React.Fragment>
-                                                     ))}
+                                                                {variants.map((field) => (
+                                                                    <TableRow key={field.id} className="hover:bg-muted/50">
+                                                                        <TableCell>
+                                                                            <div className="flex items-center gap-4 pl-10">
+                                                                                <div className="flex h-10 w-10 items-center justify-center rounded-sm shrink-0">
+                                                                                    <Store className="h-5 w-5 text-gray-400" />
+                                                                                </div>
+                                                                                <div>
+                                                                                    <div className="font-medium text-sm">{field.name}</div>
+                                                                                    <div className="text-xs text-muted-foreground">SKU: {field.sku}</div>
+                                                                                </div>
+                                                                            </div>
+                                                                        </TableCell>
+                                                                         <PriceRowFields 
+                                                                            control={form.control} 
+                                                                            index={field.originalIndex}
+                                                                            onRemove={() => remove(field.originalIndex)}
+                                                                            channelPrices={field.channelPrices || []}
+                                                                         />
+                                                                    </TableRow>
+                                                                ))}
+                                                            </React.Fragment>
+                                                        )
+                                                     })}
                                                 </>
                                             )}
                                         </TableBody>
@@ -380,7 +400,7 @@ export default function PriceSettingsPage() {
     );
 }
 
-const PriceRowFields = ({ control, index, onRemove }: { control: any, index: number, onRemove: () => void }) => {
+const PriceRowFields = ({ control, index, onRemove, channelPrices }: { control: Control<any>, index: number, onRemove: () => void, channelPrices: {channel: string, price?: number}[] }) => {
     return (
         <>
             <TableCell>
@@ -402,8 +422,7 @@ const PriceRowFields = ({ control, index, onRemove }: { control: any, index: num
                 />
             </TableCell>
             {CHANNELS.map(channel => {
-                const fieldName = `items.${index}.channelPrices` as const;
-                const channelPrices = control.getValues(fieldName);
+                const fieldName = `items.${index}.channelPrices`;
                 const channelIndex = channelPrices?.findIndex((cp: any) => cp.channel === channel);
 
                 if (channelIndex === -1) return <TableCell key={channel}></TableCell>;
