@@ -14,6 +14,33 @@ db.pragma('journal_mode = WAL');
 // Simple migration logic
 const runMigrations = () => {
   try {
+    const tables = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='channel_prices'").get();
+    if (tables) {
+        const channelPricesColumns = db.pragma('table_info(channel_prices)');
+        const hasProductId = channelPricesColumns.some((col: any) => col.name === 'product_id');
+        
+        // If the correct column doesn't exist, we assume the table is malformed and recreate it.
+        // This is a simple migration strategy for this specific problem.
+        if (!hasProductId) {
+            console.log('Incorrect schema detected for channel_prices. Recreating table...');
+            db.exec('DROP TABLE channel_prices');
+            db.exec(`
+                 CREATE TABLE channel_prices (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    product_id INTEGER,
+                    variant_id INTEGER,
+                    channel TEXT NOT NULL,
+                    price REAL NOT NULL,
+                    FOREIGN KEY (product_id) REFERENCES products (id) ON DELETE CASCADE,
+                    FOREIGN KEY (variant_id) REFERENCES variants (id) ON DELETE CASCADE,
+                    UNIQUE (product_id, variant_id, channel)
+                );
+            `);
+             console.log('Table channel_prices recreated successfully.');
+        }
+    }
+
+
     const salesColumns = db.pragma('table_info(sales)');
     const hasTransactionId = salesColumns.some((col: any) => col.name === 'transactionId');
     const hasPaymentMethod = salesColumns.some((col: any) => col.name === 'paymentMethod');
