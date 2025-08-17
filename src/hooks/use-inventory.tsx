@@ -172,8 +172,7 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
 
   const updatePrices = async (updates: any[]) => {
     await updatePricesDb(updates);
-    // No need to fetch all data here, as the component will re-fetch if needed.
-    // However, if other components rely on this instantly, a fetch might be necessary.
+    await fetchAllData();
   };
 
   return (

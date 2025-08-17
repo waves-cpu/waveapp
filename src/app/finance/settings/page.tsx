@@ -42,7 +42,7 @@ type FormValues = {
 const CHANNELS = ['pos', 'shopee', 'lazada', 'tiktok', 'reseller'];
 
 export default function FinanceSettingsPage() {
-    const { items, loading, updatePrices, fetchItems } = useInventory();
+    const { items, loading, updatePrices } = useInventory();
     const { toast } = useToast();
     const { language } = useLanguage();
     const t = translations[language];
@@ -52,7 +52,7 @@ export default function FinanceSettingsPage() {
         defaultValues: { items: [] }
     });
 
-    const { fields, remove } = useFieldArray({
+    const { fields } = useFieldArray({
         control,
         name: "items"
     });
@@ -62,7 +62,7 @@ export default function FinanceSettingsPage() {
         items.forEach(item => {
             if (item.variants && item.variants.length > 0) {
                  item.variants.forEach(v => map.set(v.id, { ...v, parentName: item.name, parentImageUrl: item.imageUrl, parentSku: item.sku }));
-            } else {
+            } else if (item.stock !== undefined) { // Only include sellable items
                 map.set(item.id, item);
             }
         });
@@ -97,11 +97,10 @@ export default function FinanceSettingsPage() {
                     tiktokPrice: item.channelPrices?.find(p => p.channel === 'tiktok')?.price,
                     resellerPrice: item.channelPrices?.find(p => p.channel === 'reseller')?.price,
                 };
-            }).filter(Boolean); // remove any empty results
+            }).filter(Boolean);
             reset({ items: allItemsForForm as FormValues['items'] });
         }
     }, [items, loading, reset]);
-    
 
     const onSubmit = async (data: FormValues) => {
         setIsSubmitting(true);
@@ -118,11 +117,12 @@ export default function FinanceSettingsPage() {
 
         try {
             await updatePrices(priceUpdates);
-            await fetchItems(); // Re-fetch to confirm changes
             toast({
                 title: t.priceSettings.toastSuccessTitle,
                 description: t.priceSettings.toastSuccessDesc,
             });
+             // Form state is now in sync, so we can reset dirty state
+            reset(data);
         } catch (error) {
             console.error("Failed to update prices:", error);
             toast({
@@ -274,5 +274,4 @@ export default function FinanceSettingsPage() {
             </main>
         </AppLayout>
     );
-
-    
+}
