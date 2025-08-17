@@ -10,7 +10,7 @@ import React, { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DollarSign, Package, TrendingUp, TrendingDown, Hourglass } from "lucide-react";
-import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from "recharts";
+import { Line, LineChart, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from "recharts";
 import { ChartConfig, ChartContainer, ChartTooltipContent } from "@/components/ui/chart";
 import { subDays, isAfter } from "date-fns";
 
@@ -33,7 +33,6 @@ function AssetReportSkeleton() {
             <Card>
                 <CardHeader>
                     <Skeleton className="h-8 w-1/3" />
-                    <Skeleton className="h-4 w-2/3 mt-2" />
                 </CardHeader>
                 <CardContent>
                     <Skeleton className="h-72 w-full" />
@@ -167,7 +166,7 @@ export default function AssetReportPage() {
                     </Card>
                      <Card>
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">{TAsset.fastMovingAssets}</CardTitle>
+                            <CardTitle className="text-sm font-medium">{TAsset.fastLabel}</CardTitle>
                             <TrendingUp className="h-4 w-4 text-green-500" />
                         </CardHeader>
                         <CardContent>
@@ -176,7 +175,7 @@ export default function AssetReportPage() {
                     </Card>
                     <Card>
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">{TAsset.slowMovingAssets}</CardTitle>
+                            <CardTitle className="text-sm font-medium">{TAsset.slowLabel}</CardTitle>
                             <Hourglass className="h-4 w-4 text-yellow-500" />
                         </CardHeader>
                         <CardContent>
@@ -185,7 +184,7 @@ export default function AssetReportPage() {
                     </Card>
                      <Card>
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">{TAsset.nonMovingAssets}</CardTitle>
+                            <CardTitle className="text-sm font-medium">{TAsset.nonMovingLabel}</CardTitle>
                             <TrendingDown className="h-4 w-4 text-red-500" />
                         </CardHeader>
                         <CardContent>
@@ -203,7 +202,7 @@ export default function AssetReportPage() {
                     </CardHeader>
                     <CardContent>
                        <ChartContainer config={chartConfig} className="min-h-72 w-full">
-                            <BarChart accessibilityLayer data={chartData} margin={{ top: 20 }}>
+                            <LineChart accessibilityLayer data={chartData} margin={{ top: 20, left: 12, right: 12 }}>
                                 <CartesianGrid vertical={false} />
                                 <XAxis
                                     dataKey="name"
@@ -212,6 +211,8 @@ export default function AssetReportPage() {
                                     axisLine={false}
                                 />
                                 <YAxis 
+                                    tickLine={false}
+                                    axisLine={false}
                                     tickFormatter={(value) => `Rp${(Number(value) / 1000000).toLocaleString()} Jt`}
                                 />
                                 <Tooltip 
@@ -233,10 +234,10 @@ export default function AssetReportPage() {
                                         </div>
                                     )
                                 }} />
-                                <Bar dataKey="fast" fill="var(--color-fast)" radius={4} />
-                                <Bar dataKey="slow" fill="var(--color-slow)" radius={4} />
-                                <Bar dataKey="nonMoving" fill="var(--color-nonMoving)" radius={4} />
-                            </BarChart>
+                                <Line dataKey="fast" type="monotone" stroke="var(--color-fast)" strokeWidth={2} dot={true} />
+                                <Line dataKey="slow" type="monotone" stroke="var(--color-slow)" strokeWidth={2} dot={true} />
+                                <Line dataKey="nonMoving" type="monotone" stroke="var(--color-nonMoving)" strokeWidth={2} dot={true} />
+                            </LineChart>
                         </ChartContainer>
                     </CardContent>
                 </Card>
