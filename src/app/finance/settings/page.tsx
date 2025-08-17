@@ -157,7 +157,7 @@ export default function PriceSettingsPage() {
         append(newItems);
     };
 
-     const groupedAndFilteredItems = useMemo(() => {
+    const groupedAndFilteredItems = useMemo(() => {
         const filteredFields = fields
             .map((field, index) => ({ ...field, originalIndex: index }))
             .filter(field => {
@@ -171,17 +171,17 @@ export default function PriceSettingsPage() {
 
                 if (!categoryFilter) return true;
                 
-                // This logic is now corrected
-                const inventoryItem = allInventoryItems.find(i => {
-                    if (field.type === 'product' && i.id === field.id) {
+                const inventoryItem = allInventoryItems.find(item => {
+                     // Check if it's a simple product
+                    if (item.id === field.id && (!item.variants || item.variants.length === 0)) {
                         return true;
                     }
-                    if (field.type === 'variant' && i.variants?.some(v => v.id === field.id)) {
+                    // Check if it's a variant
+                    if (item.variants && item.variants.some(v => v.id === field.id)) {
                         return true;
                     }
                     return false;
                 });
-
                 return inventoryItem?.category === categoryFilter;
             });
         
@@ -401,8 +401,8 @@ export default function PriceSettingsPage() {
                                                                         </TableCell>
                                                                     </>
                                                                 ) : (
-                                                                    <TableCell colSpan={6} className="p-1.5">
-                                                                        <Button type="button" variant="secondary" className="w-full h-8" onClick={() => toggleBulkEdit(header.name, true)}>
+                                                                    <TableCell colSpan={6} className="text-center p-1.5">
+                                                                        <Button type="button" variant="secondary" size="sm" className="h-8" onClick={() => toggleBulkEdit(header.name, true)}>
                                                                             <Pencil className="mr-2 h-3 w-3" />
                                                                             Ubah Massal
                                                                         </Button>
