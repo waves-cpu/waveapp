@@ -22,7 +22,6 @@ const formatCurrency = (amount: number) => `Rp${Math.round(amount).toLocaleStrin
 const ASSET_TURNOVER_DAYS = 30;
 const FAST_MOVING_THRESHOLD = 50;
 const SLOW_MOVING_THRESHOLD = 5;
-const POPULAR_VARIANTS = ['M', 'L', 'XL', 'All Size'];
 
 
 interface RankedAsset {
@@ -123,10 +122,7 @@ export default function AssetReportPage() {
                     salesVolumeMap.set(soldId.toString(), (salesVolumeMap.get(soldId.toString()) || 0) + sale.quantity);
                 }
                 if (sale.variantName) {
-                    const normalizedVariantName = sale.variantName.toUpperCase();
-                    if (POPULAR_VARIANTS.map(v => v.toUpperCase()).includes(normalizedVariantName)) {
-                         variantSalesVolumeMap.set(sale.variantName, (variantSalesVolumeMap.get(sale.variantName) || 0) + sale.quantity);
-                    }
+                    variantSalesVolumeMap.set(sale.variantName, (variantSalesVolumeMap.get(sale.variantName) || 0) + sale.quantity);
                 }
             }
         });
@@ -184,7 +180,10 @@ export default function AssetReportPage() {
         const totalSlowMovingValue = slow.reduce((sum, asset) => sum + asset.stockValue, 0);
         const totalNonMovingValue = non.reduce((sum, asset) => sum + asset.stockValue, 0);
 
-        const popularVariantsData = Array.from(variantSalesVolumeMap.entries()).map(([name, sales]) => ({ name, sales }));
+        const popularVariantsData = Array.from(variantSalesVolumeMap.entries())
+            .map(([name, sales]) => ({ name, sales }))
+            .sort((a, b) => b.sales - a.sales)
+            .slice(0, 5);
 
 
         return {
@@ -218,14 +217,14 @@ export default function AssetReportPage() {
 
     const variantChartConfig = useMemo(() => {
         const config: ChartConfig = {};
-        POPULAR_VARIANTS.forEach((variant, index) => {
-            config[variant] = {
-                label: variant,
+        popularVariantsData.forEach((variant, index) => {
+            config[variant.name] = {
+                label: variant.name,
                 color: `hsl(var(--chart-${(index % 5) + 1}))`
             }
         });
         return config
-    }, []);
+    }, [popularVariantsData]);
     
 
     if (loading) {
