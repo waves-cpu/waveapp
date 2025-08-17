@@ -26,12 +26,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-    Tooltip,
-    TooltipContent,
-    TooltipProvider,
-    TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import {
   FileDown,
   Search,
@@ -125,7 +120,7 @@ const LOW_STOCK_THRESHOLD = 10;
 
 const formatCurrency = (amount: number) => `Rp${Math.round(amount).toLocaleString('id-ID')}`;
 
-const PriceWithTooltip = ({ item }: { item: InventoryItem | InventoryItemVariant }) => {
+const PriceWithDetails = ({ item }: { item: InventoryItem | InventoryItemVariant }) => {
     const { language } = useLanguage();
     const t = translations[language];
     const priceDisplay = item.price ? formatCurrency(item.price) : '-';
@@ -146,31 +141,32 @@ const PriceWithTooltip = ({ item }: { item: InventoryItem | InventoryItemVariant
         return prices;
     }, [item.channelPrices, t]);
 
-    if (aggregatedPrices.length === 0) {
-        return <span>{priceDisplay}</span>;
-    }
-
     return (
-        <TooltipProvider>
-            <Tooltip>
-                <TooltipTrigger asChild>
-                    <span className="cursor-help">{priceDisplay}</span>
-                </TooltipTrigger>
-                <TooltipContent>
-                    <div className="space-y-2">
-                        <p className="font-semibold text-sm">{t.finance.priceSettingsPage.channelPriceDetails}</p>
-                        <div className="space-y-1">
-                            {aggregatedPrices.map(p => (
-                                 <div key={p.channel} className="flex justify-between items-center gap-4 text-xs">
-                                    <span className="text-muted-foreground">{p.channel}:</span>
-                                    <span className="font-medium">{formatCurrency(p.price)}</span>
-                                 </div>
-                            ))}
+        <div>
+            <span>{priceDisplay}</span>
+            {aggregatedPrices.length > 0 && (
+                <Popover>
+                    <PopoverTrigger asChild>
+                         <Badge variant="secondary" className="mt-1 cursor-pointer w-full justify-center">
+                            ({aggregatedPrices.length} Harga Jual)
+                        </Badge>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-60">
+                         <div className="space-y-2">
+                            <p className="font-semibold text-sm">{t.finance.priceSettingsPage.channelPriceDetails}</p>
+                            <div className="space-y-1">
+                                {aggregatedPrices.map(p => (
+                                    <div key={p.channel} className="flex justify-between items-center gap-4 text-xs">
+                                        <span className="text-muted-foreground">{p.channel}:</span>
+                                        <span className="font-medium">{formatCurrency(p.price)}</span>
+                                    </div>
+                                ))}
+                            </div>
                         </div>
-                    </div>
-                </TooltipContent>
-            </Tooltip>
-        </TooltipProvider>
+                    </PopoverContent>
+                </Popover>
+            )}
+        </div>
     );
 };
 
@@ -429,7 +425,7 @@ export function InventoryTable({ onUpdateStock }: InventoryTableProps) {
                                         </div>
                                     </TableCell>
                                     <TableCell>
-                                        <PriceWithTooltip item={variant} />
+                                        <PriceWithDetails item={variant} />
                                     </TableCell>
                                     <TableCell>
                                         <StockBar stock={variant.stock} onUpdateClick={() => onUpdateStock(variant.id)} />
@@ -459,7 +455,7 @@ export function InventoryTable({ onUpdateStock }: InventoryTableProps) {
                                 </div>
                             </TableCell>
                              <TableCell>
-                                <PriceWithTooltip item={item} />
+                                <PriceWithDetails item={item} />
                              </TableCell>
                             <TableCell>
                                <StockBar stock={item.stock ?? 0} onUpdateClick={() => onUpdateStock(item.id)} />
@@ -558,6 +554,7 @@ export function InventoryTable({ onUpdateStock }: InventoryTableProps) {
     
 
     
+
 
 
 
