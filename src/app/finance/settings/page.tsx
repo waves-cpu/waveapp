@@ -20,7 +20,7 @@ import { useLanguage } from '@/hooks/use-language';
 import { translations } from '@/types/language';
 import { Card, CardContent, CardFooter, CardHeader, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Trash2, ShoppingBag, Store, Search, PlusCircle } from 'lucide-react';
+import { Trash2, ShoppingBag, Store, Search, PlusCircle, Pencil, X } from 'lucide-react';
 import type { InventoryItem, InventoryItemVariant } from '@/types';
 import { ProductSelectionDialog } from '@/app/components/product-selection-dialog';
 import Image from 'next/image';
@@ -73,6 +73,7 @@ export default function PriceSettingsPage() {
     const [isProductSelectionOpen, setProductSelectionOpen] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
     const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
+    const [bulkEditStates, setBulkEditStates] = useState<Record<string, boolean>>({});
 
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
@@ -156,7 +157,7 @@ export default function PriceSettingsPage() {
         append(newItems);
     };
 
-    const groupedAndFilteredItems = useMemo(() => {
+     const groupedAndFilteredItems = useMemo(() => {
         const filteredFields = fields
             .map((field, index) => ({ ...field, originalIndex: index }))
             .filter(field => {
@@ -169,14 +170,19 @@ export default function PriceSettingsPage() {
                 if (!searchMatch) return false;
 
                 if (!categoryFilter) return true;
-
-                // Find the parent item from the main inventory list to get its category
-                const parentItem = allInventoryItems.find(i => 
-                    i.id === (field.type === 'product' ? field.id : null) || 
-                    i.variants?.some(v => v.id === field.id)
-                );
                 
-                return parentItem?.category === categoryFilter;
+                // This logic is now corrected
+                const inventoryItem = allInventoryItems.find(i => {
+                    if (field.type === 'product' && i.id === field.id) {
+                        return true;
+                    }
+                    if (field.type === 'variant' && i.variants?.some(v => v.id === field.id)) {
+                        return true;
+                    }
+                    return false;
+                });
+
+                return inventoryItem?.category === categoryFilter;
             });
         
         const groups = new Map<string, (PriceSettingItem & { originalIndex: number })[]>();
@@ -213,6 +219,7 @@ export default function PriceSettingsPage() {
         return { groups: Array.from(activeGroups.values()), simpleItems };
 
     }, [fields, searchTerm, categoryFilter, allInventoryItems]);
+
     
     const applyAllMasterPrices = (parentName: string) => {
         const masterPrices = form.getValues(`masterPrices.${parentName}`);
@@ -224,7 +231,7 @@ export default function PriceSettingsPage() {
             if (field.parentName === parentName) {
                 priceTypes.forEach(priceType => {
                     const masterValue = (masterPrices as any)[priceType];
-                    if (masterValue !== undefined && masterValue !== null) {
+                    if (masterValue !== undefined && masterValue !== null && masterValue !== '') {
                          if (priceType === 'costPrice' || priceType === 'price') {
                             form.setValue(`items.${index}.${priceType}`, masterValue, { shouldDirty: true });
                         } else {
@@ -239,6 +246,10 @@ export default function PriceSettingsPage() {
         });
         form.trigger('items');
         toast({ title: "Harga Diterapkan", description: `Semua harga untuk varian ${parentName} telah diatur.` });
+    };
+
+    const toggleBulkEdit = (parentName: string, state?: boolean) => {
+        setBulkEditStates(prev => ({ ...prev, [parentName]: state ?? !prev[parentName] }));
     };
     
     const onSubmit = async (values: z.infer<typeof formSchema>) => {
@@ -370,21 +381,34 @@ export default function PriceSettingsPage() {
                                                                         </div>
                                                                     </div>
                                                                 </TableCell>
-                                                                <MasterPriceCell form={form} parentName={header.name} priceType="costPrice" />
-                                                                <MasterPriceCell form={form} parentName={header.name} priceType="price" />
-                                                                <MasterPriceCell form={form} parentName={header.name} priceType="pos" />
-                                                                <MasterPriceCell form={form} parentName={header.name} priceType="reseller" />
-                                                                <MasterPriceCell form={form} parentName={header.name} priceType="online" />
-                                                                <TableCell className="p-1.5">
-                                                                    <div className="flex items-center gap-1">
-                                                                        <Button type="button" variant="outline" size="sm" className="h-8" onClick={() => applyAllMasterPrices(header.name)}>
-                                                                            {t.common.apply}
+                                                                
+                                                                {bulkEditStates[header.name] ? (
+                                                                    <>
+                                                                        <MasterPriceCell form={form} parentName={header.name} priceType="costPrice" />
+                                                                        <MasterPriceCell form={form} parentName={header.name} priceType="price" />
+                                                                        <MasterPriceCell form={form} parentName={header.name} priceType="pos" />
+                                                                        <MasterPriceCell form={form} parentName={header.name} priceType="reseller" />
+                                                                        <MasterPriceCell form={form} parentName={header.name} priceType="online" />
+                                                                        <TableCell className="p-1.5 align-middle">
+                                                                            <div className="flex items-center gap-1">
+                                                                                <Button type="button" variant="outline" size="sm" className="h-8" onClick={() => applyAllMasterPrices(header.name)}>
+                                                                                    {t.common.apply}
+                                                                                </Button>
+                                                                                <Button type="button" variant="ghost" size="icon" className="h-8 w-8" onClick={() => toggleBulkEdit(header.name, false)}>
+                                                                                    <X className="h-4 w-4" />
+                                                                                </Button>
+                                                                            </div>
+                                                                        </TableCell>
+                                                                    </>
+                                                                ) : (
+                                                                    <TableCell colSpan={6} className="p-1.5">
+                                                                        <Button type="button" variant="secondary" className="w-full h-8" onClick={() => toggleBulkEdit(header.name, true)}>
+                                                                            <Pencil className="mr-2 h-3 w-3" />
+                                                                            Ubah Massal
                                                                         </Button>
-                                                                        <Button type="button" variant="ghost" size="icon" className="text-destructive hover:text-destructive-foreground hover:bg-destructive h-8 w-8" onClick={() => remove(variants.map(v => v.originalIndex))}>
-                                                                            <Trash2 className="h-4 w-4" />
-                                                                        </Button>
-                                                                    </div>
-                                                                </TableCell>
+                                                                    </TableCell>
+                                                                )}
+
                                                             </TableRow>
                                                             {variants.map((field) => (
                                                                 <TableRow key={field.id} className="hover:bg-muted/50">
@@ -501,7 +525,7 @@ const MasterPriceCell = ({ form, parentName, priceType }: {
     priceType: 'costPrice' | 'price' | 'pos' | 'reseller' | 'online',
 }) => {
     return (
-        <TableCell>
+        <TableCell className="p-1.5 align-middle">
              <FormField
                 control={form.control}
                 name={`masterPrices.${parentName}.${priceType}`}
@@ -514,6 +538,9 @@ const MasterPriceCell = ({ form, parentName, priceType }: {
                                 {...field}
                                 value={field.value ?? ''}
                                 className="h-8"
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter') e.preventDefault();
+                                }}
                             />
                         </FormControl>
                     </FormItem>
