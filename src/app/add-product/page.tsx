@@ -1,3 +1,4 @@
+
 'use client';
 
 import { AddProductForm } from "@/app/components/add-product-form";
