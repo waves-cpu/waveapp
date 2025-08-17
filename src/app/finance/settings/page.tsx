@@ -23,8 +23,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from "@/hooks/use-language";
 import { translations } from "@/types/language";
-import { ProductSelectionDialog } from "@/app/components/product-selection-dialog";
 import { ShoppingBag } from "lucide-react";
+import Link from "next/link";
 
 type FormValues = {
   items: {
@@ -43,23 +43,20 @@ type FormValues = {
 const CHANNELS = ['pos', 'shopee', 'lazada', 'tiktok', 'reseller'];
 
 export default function FinanceSettingsPage() {
-    const { items, loading, updatePrices, categories, fetchItems } = useInventory();
+    const { items, loading, updatePrices, fetchItems } = useInventory();
     const { toast } = useToast();
     const { language } = useLanguage();
     const t = translations[language];
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [isSelectionOpen, setSelectionOpen] = useState(false);
 
-    const { control, handleSubmit, reset, getValues } = useForm<FormValues>({
+    const { control, handleSubmit, reset } = useForm<FormValues>({
         defaultValues: { items: [] }
     });
 
-    const { fields, append, remove } = useFieldArray({
+    const { fields, remove } = useFieldArray({
         control,
         name: "items"
     });
-
-    const existingItemIds = useMemo(() => new Set(fields.map(field => field.id)), [fields]);
 
     const itemMap = useMemo(() => {
         const map = new Map<string, InventoryItem | InventoryItemVariant & { parentName?: string, parentImageUrl?: string, parentSku?: string }>();
@@ -72,36 +69,26 @@ export default function FinanceSettingsPage() {
         });
         return map;
     }, [items]);
-    
-    const availableItemsForSelection = useMemo(() => {
-        return items.filter(item => {
-            if (item.variants && item.variants.length > 0) {
-                return item.variants.some(v => !existingItemIds.has(v.id));
-            }
-            return !existingItemIds.has(item.id);
-        }).map(item => {
-             if (item.variants) {
-                return {
-                    ...item,
-                    variants: item.variants.filter(v => !existingItemIds.has(v.id))
+
+    useEffect(() => {
+        if (!loading && items.length > 0) {
+            const allItemsForForm = items.flatMap(item => {
+                if (item.variants && item.variants.length > 0) {
+                    return item.variants.map(variant => ({
+                        id: variant.id,
+                        type: 'variant' as const,
+                        costPrice: variant.costPrice,
+                        defaultPrice: variant.price,
+                        posPrice: variant.channelPrices?.find(p => p.channel === 'pos')?.price,
+                        shopeePrice: variant.channelPrices?.find(p => p.channel === 'shopee')?.price,
+                        lazadaPrice: variant.channelPrices?.find(p => p.channel === 'lazada')?.price,
+                        tiktokPrice: variant.channelPrices?.find(p => p.channel === 'tiktok')?.price,
+                        resellerPrice: variant.channelPrices?.find(p => p.channel === 'reseller')?.price,
+                    }));
                 }
-            }
-            return item;
-        });
-    }, [items, existingItemIds]);
-
-    const handleProductsSelected = (selectedIds: string[]) => {
-        const newItems = selectedIds
-            .filter(id => !existingItemIds.has(id))
-            .map(id => {
-                const item = itemMap.get(id);
-                if (!item) return null;
-
-                const isVariant = 'parentName' in item;
-
                 return {
                     id: item.id,
-                    type: isVariant ? 'variant' as const : 'product' as const,
+                    type: 'product' as const,
                     costPrice: item.costPrice,
                     defaultPrice: item.price,
                     posPrice: item.channelPrices?.find(p => p.channel === 'pos')?.price,
@@ -110,10 +97,11 @@ export default function FinanceSettingsPage() {
                     tiktokPrice: item.channelPrices?.find(p => p.channel === 'tiktok')?.price,
                     resellerPrice: item.channelPrices?.find(p => p.channel === 'reseller')?.price,
                 };
-            }).filter((item): item is NonNullable<typeof item> => item !== null);
-        
-        append(newItems);
-    }
+            });
+            reset({ items: allItemsForForm });
+        }
+    }, [items, loading, reset]);
+    
 
     const onSubmit = async (data: FormValues) => {
         setIsSubmitting(true);
@@ -158,9 +146,11 @@ export default function FinanceSettingsPage() {
                             <h1 className="text-lg font-bold">{t.finance.priceSettings}</h1>
                         </div>
                         <div className="flex items-center gap-2">
-                             <Button type="button" variant="outline" onClick={() => setSelectionOpen(true)}>
-                                <PlusCircle className="mr-2 h-4 w-4" />
-                                {t.stockInForm.selectProducts}
+                             <Button asChild type="button" variant="outline">
+                                <Link href="/add-product">
+                                    <PlusCircle className="mr-2 h-4 w-4" />
+                                    {t.dashboard.addItem}
+                                </Link>
                             </Button>
                             <Button type="submit" disabled={isSubmitting || fields.length === 0}>
                                 {isSubmitting ? t.common.saveChanges + '...' : t.priceSettings.save}
@@ -282,8 +272,8 @@ export default function FinanceSettingsPage() {
                                             <div className="flex flex-col items-center justify-center gap-4 text-muted-foreground">
                                                 <ShoppingBag className="h-16 w-16" />
                                                 <div className="text-center">
-                                                    <p className="font-semibold">{t.stockInForm.noProducts}</p>
-                                                    <p className="text-sm">{t.stockInForm.selectProducts} to begin.</p>
+                                                    <p className="font-semibold">{t.inventoryTable.noItems}</p>
+                                                    <p className="text-sm">Silakan tambahkan produk terlebih dahulu.</p>
                                                 </div>
                                             </div>
                                         </TableCell>
@@ -294,13 +284,6 @@ export default function FinanceSettingsPage() {
                     </div>
                 </form>
             </main>
-             <ProductSelectionDialog
-                open={isSelectionOpen}
-                onOpenChange={setSelectionOpen}
-                onSelect={handleProductsSelected}
-                availableItems={availableItemsForSelection}
-                categories={categories}
-            />
         </AppLayout>
     );
 }
