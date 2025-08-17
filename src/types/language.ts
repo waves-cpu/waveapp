@@ -43,6 +43,22 @@ export const translations = {
                 successToastDesc: "All price changes have been saved successfully.",
                 errorToast: "Update Failed",
                 channelPriceDetails: "Channel Price Details",
+            },
+            assetReportPage: {
+                totalAssetValue: "Total Asset Value",
+                totalAssetValueDesc: "Total value of all stock",
+                fastMovingAssets: "Fast-Moving Assets",
+                fastMovingAssetsDesc: "Sold >= {count} units/{days} days",
+                slowMovingAssets: "Slow-Moving Assets",
+                slowMovingAssetsDesc: "Sold {min}-{max} units/{days} days",
+                nonMovingAssets: "Non-Moving Assets",
+                nonMovingAssetsDesc: "Sold < {count} units/{days} days",
+                chartTitle: "Asset Turnover Chart",
+                chartDescription: "Comparison of value between fast-moving, slow-moving, and non-moving assets.",
+                chartXAxisLabel: "Asset Classification",
+                fastLabel: "Fast-Moving",
+                slowLabel: "Slow-Moving",
+                nonMovingLabel: "Non-Moving"
             }
         },
         inventoryTable: {
@@ -311,6 +327,22 @@ export const translations = {
                 successToastDesc: "Semua perubahan harga telah berhasil disimpan.",
                 errorToast: "Pembaruan Gagal",
                 channelPriceDetails: "Rincian Harga Kanal",
+            },
+            assetReportPage: {
+                totalAssetValue: "Total Nilai Aset",
+                totalAssetValueDesc: "Nilai total dari semua stok",
+                fastMovingAssets: "Aset Lancar",
+                fastMovingAssetsDesc: "Terjual >= {count} unit/{days} hari",
+                slowMovingAssets: "Aset Lambat",
+                slowMovingAssetsDesc: "Terjual {min}-{max} unit/{days} hari",
+                nonMovingAssets: "Aset Tidak Lancar",
+                nonMovingAssetsDesc: "Terjual < {count} unit/{days} hari",
+                chartTitle: "Grafik Perputaran Aset",
+                chartDescription: "Perbandingan nilai antara aset yang perputarannya cepat, lambat, dan tidak lancar.",
+                chartXAxisLabel: "Klasifikasi Aset",
+                fastLabel: "Lancar",
+                slowLabel: "Lambat",
+                nonMovingLabel: "Tidak Lancar"
             }
         },
         inventoryTable: {
@@ -537,3 +569,5 @@ export const translations = {
         }
     }
 }
+
+    

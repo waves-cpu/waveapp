@@ -46,6 +46,7 @@ function AssetReportSkeleton() {
 export default function AssetReportPage() {
     const { language } = useLanguage();
     const t = translations[language];
+    const TAsset = t.finance.assetReportPage;
     const { items, allSales, loading } = useInventory();
 
     const assetClassification = useMemo(() => {
@@ -107,26 +108,26 @@ export default function AssetReportPage() {
 
     const chartData = [
         {
-            name: "Klasifikasi Aset",
-            lancar: assetClassification.totalFastMovingValue,
-            lambat: assetClassification.totalSlowMovingValue,
-            tidakLancar: assetClassification.totalNonMovingValue,
+            name: TAsset.chartXAxisLabel,
+            fast: assetClassification.totalFastMovingValue,
+            slow: assetClassification.totalSlowMovingValue,
+            nonMoving: assetClassification.totalNonMovingValue,
         }
     ];
 
     const chartConfig: ChartConfig = {
-        lancar: {
-            label: "Aset Lancar",
+        fast: {
+            label: TAsset.fastLabel,
             color: "hsl(var(--chart-2))",
             icon: TrendingUp,
         },
-        lambat: {
-            label: "Aset Lambat",
+        slow: {
+            label: TAsset.slowLabel,
             color: "hsl(var(--chart-3))",
             icon: Hourglass,
         },
-        tidakLancar: {
-            label: "Aset Tidak Lancar",
+        nonMoving: {
+            label: TAsset.nonMovingLabel,
             color: "hsl(var(--chart-5))",
             icon: TrendingDown,
         },
@@ -157,44 +158,44 @@ export default function AssetReportPage() {
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
                     <Card>
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">Total Nilai Aset</CardTitle>
+                            <CardTitle className="text-sm font-medium">{TAsset.totalAssetValue}</CardTitle>
                             <DollarSign className="h-4 w-4 text-muted-foreground" />
                         </CardHeader>
                         <CardContent>
                             <div className="text-2xl font-bold">{formatCurrency(assetClassification.totalAssetValue)}</div>
-                            <p className="text-xs text-muted-foreground">Nilai total dari semua stok</p>
+                            <p className="text-xs text-muted-foreground">{TAsset.totalAssetValueDesc}</p>
                         </CardContent>
                     </Card>
                      <Card>
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">Aset Lancar</CardTitle>
+                            <CardTitle className="text-sm font-medium">{TAsset.fastMovingAssets}</CardTitle>
                             <TrendingUp className="h-4 w-4 text-green-500" />
                         </CardHeader>
                         <CardContent>
                             <div className="text-2xl font-bold">{formatCurrency(assetClassification.totalFastMovingValue)}</div>
-                            <p className="text-xs text-muted-foreground">Terjual &ge;{FAST_MOVING_THRESHOLD} unit/30 hari</p>
+                            <p className="text-xs text-muted-foreground">{TAsset.fastMovingAssetsDesc.replace('{days}', ASSET_TURNOVER_DAYS.toString()).replace('{count}', FAST_MOVING_THRESHOLD.toString())}</p>
                         </CardContent>
                     </Card>
                     <Card>
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">Aset Lambat</CardTitle>
+                            <CardTitle className="text-sm font-medium">{TAsset.slowMovingAssets}</CardTitle>
                             <Hourglass className="h-4 w-4 text-yellow-500" />
                         </CardHeader>
                         <CardContent>
                             <div className="text-2xl font-bold">{formatCurrency(assetClassification.totalSlowMovingValue)}</div>
-                            <p className="text-xs text-muted-foreground">Terjual {SLOW_MOVING_THRESHOLD}-{FAST_MOVING_THRESHOLD-1} unit/30 hari</p>
+                            <p className="text-xs text-muted-foreground">{TAsset.slowMovingAssetsDesc.replace('{days}', ASSET_TURNOVER_DAYS.toString()).replace('{min}', SLOW_MOVING_THRESHOLD.toString()).replace('{max}', (FAST_MOVING_THRESHOLD - 1).toString())}</p>
                         </CardContent>
                     </Card>
                      <Card>
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">Aset Tidak Lancar</CardTitle>
+                            <CardTitle className="text-sm font-medium">{TAsset.nonMovingAssets}</CardTitle>
                             <TrendingDown className="h-4 w-4 text-red-500" />
                         </CardHeader>
                         <CardContent>
                             <div className="text-2xl font-bold">
                                 {formatCurrency(assetClassification.totalNonMovingValue)}
                             </div>
-                            <p className="text-xs text-muted-foreground">Terjual &lt;{SLOW_MOVING_THRESHOLD} unit/30 hari</p>
+                            <p className="text-xs text-muted-foreground">{TAsset.nonMovingAssetsDesc.replace('{days}', ASSET_TURNOVER_DAYS.toString()).replace('{count}', SLOW_MOVING_THRESHOLD.toString())}</p>
                         </CardContent>
                     </Card>
                 </div>
@@ -202,8 +203,8 @@ export default function AssetReportPage() {
 
                 <Card>
                     <CardHeader>
-                        <CardTitle>Grafik Perputaran Aset</CardTitle>
-                        <CardDescription>Perbandingan nilai antara aset yang perputarannya cepat, lambat, dan tidak lancar.</CardDescription>
+                        <CardTitle>{TAsset.chartTitle}</CardTitle>
+                        <CardDescription>{TAsset.chartDescription}</CardDescription>
                     </CardHeader>
                     <CardContent>
                        <ChartContainer config={chartConfig} className="min-h-72 w-full">
@@ -237,9 +238,9 @@ export default function AssetReportPage() {
                                         </div>
                                     )
                                 }} />
-                                <Bar dataKey="lancar" fill="var(--color-lancar)" radius={4} />
-                                <Bar dataKey="lambat" fill="var(--color-lambat)" radius={4} />
-                                <Bar dataKey="tidakLancar" fill="var(--color-tidakLancar)" radius={4} />
+                                <Bar dataKey="fast" fill="var(--color-fast)" radius={4} />
+                                <Bar dataKey="slow" fill="var(--color-slow)" radius={4} />
+                                <Bar dataKey="nonMoving" fill="var(--color-nonMoving)" radius={4} />
                             </BarChart>
                         </ChartContainer>
                     </CardContent>
@@ -248,5 +249,7 @@ export default function AssetReportPage() {
         </AppLayout>
     );
 }
+
+    
 
     
