@@ -1,3 +1,4 @@
+
 'use client';
 
 import { AppLayout } from "@/app/components/app-layout";
@@ -17,106 +18,97 @@ import { useForm, useFieldArray, Controller } from "react-hook-form";
 import type { InventoryItem, InventoryItemVariant } from "@/types";
 import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
-import { Store } from "lucide-react";
+import { Store, PlusCircle, ShoppingBag, Trash2 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from "@/hooks/use-language";
 import { translations } from "@/types/language";
-import { ShoppingBag } from "lucide-react";
-import Link from 'next/link';
+import { ProductSelectionDialog } from "@/app/components/product-selection-dialog";
+
+type PriceFormItem = {
+  id: string; // This will be the product or variant ID
+  type: 'product' | 'variant';
+  costPrice?: number | string;
+  defaultPrice?: number | string;
+  posPrice?: number | string;
+  shopeePrice?: number | string;
+  lazadaPrice?: number | string;
+  tiktokPrice?: number | string;
+  resellerPrice?: number | string;
+};
 
 type FormValues = {
-  items: {
-    id: string;
-    type: 'product' | 'variant';
-    costPrice?: number;
-    defaultPrice?: number;
-    posPrice?: number;
-    shopeePrice?: number;
-    lazadaPrice?: number;
-    tiktokPrice?: number;
-    resellerPrice?: number;
-  }[];
+  items: PriceFormItem[];
 };
 
 const CHANNELS = ['pos', 'shopee', 'lazada', 'tiktok', 'reseller'];
 
-function mapItemsToForm(items: InventoryItem[]): FormValues['items'] {
-    return items.flatMap(item => {
-        if (item.variants && item.variants.length > 0) {
-            return item.variants.map(variant => ({
-                id: variant.id,
-                type: 'variant' as const,
-                costPrice: variant.costPrice,
-                defaultPrice: variant.price,
-                posPrice: variant.channelPrices?.find(p => p.channel === 'pos')?.price,
-                shopeePrice: variant.channelPrices?.find(p => p.channel === 'shopee')?.price,
-                lazadaPrice: variant.channelPrices?.find(p => p.channel === 'lazada')?.price,
-                tiktokPrice: variant.channelPrices?.find(p => p.channel === 'tiktok')?.price,
-                resellerPrice: variant.channelPrices?.find(p => p.channel === 'reseller')?.price,
-            }));
-        }
-        if (item.stock === undefined) return []; // Don't include parent-only products
-        return {
-            id: item.id,
-            type: 'product' as const,
-            costPrice: item.costPrice,
-            defaultPrice: item.price,
-            posPrice: item.channelPrices?.find(p => p.channel === 'pos')?.price,
-            shopeePrice: item.channelPrices?.find(p => p.channel === 'shopee')?.price,
-            lazadaPrice: item.channelPrices?.find(p => p.channel === 'lazada')?.price,
-            tiktokPrice: item.channelPrices?.find(p => p.channel === 'tiktok')?.price,
-            resellerPrice: item.channelPrices?.find(p => p.channel === 'reseller')?.price,
-        };
-    }).filter(Boolean) as FormValues['items'];
-}
-
 export default function FinanceSettingsPage() {
-    const { items, loading, updatePrices } = useInventory();
+    const { items: allInventoryItems, loading, updatePrices, categories } = useInventory();
     const { toast } = useToast();
     const { language } = useLanguage();
     const t = translations[language];
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isSelectionDialogOpen, setSelectionDialogOpen] = useState(false);
 
-    const { control, handleSubmit, reset, formState: { isDirty } } = useForm<FormValues>({
+    const { control, handleSubmit, formState: { isDirty }, reset } = useForm<FormValues>({
         defaultValues: { items: [] }
     });
 
-    const { fields } = useFieldArray({
+    const { fields, append, remove, replace } = useFieldArray({
         control,
         name: "items"
     });
 
     const itemMap = useMemo(() => {
         const map = new Map<string, InventoryItem | InventoryItemVariant & { parentName?: string, parentImageUrl?: string, parentSku?: string }>();
-        items.forEach(item => {
+        allInventoryItems.forEach(item => {
             if (item.variants && item.variants.length > 0) {
                  item.variants.forEach(v => map.set(v.id, { ...v, parentName: item.name, parentImageUrl: item.imageUrl, parentSku: item.sku }));
-            } else if (item.stock !== undefined) { // Only include sellable items
+            } else if (item.stock !== undefined) {
                 map.set(item.id, item);
             }
         });
         return map;
-    }, [items]);
-    
-    useEffect(() => {
-        if (!loading && items.length > 0) {
-            const formItems = mapItemsToForm(items);
-            reset({ items: formItems });
-        }
-    }, [items, loading, reset]);
+    }, [allInventoryItems]);
+
+    const handleProductsSelected = (selectedIds: string[]) => {
+      const newItemsToAppend = selectedIds
+        .filter(id => !fields.some(field => field.id === id)) // Prevent duplicates
+        .map(id => {
+          const item = itemMap.get(id);
+          if (!item) return null;
+          const isVariant = 'productId' in item;
+          
+          const channelPrices = (item.channelPrices || []).reduce((acc, cp) => {
+              acc[`${cp.channel}Price`] = cp.price;
+              return acc;
+          }, {} as {[key: string]: number});
+          
+          return {
+              id: item.id,
+              type: isVariant ? 'variant' as const : 'product' as const,
+              costPrice: item.costPrice ?? '',
+              defaultPrice: item.price ?? '',
+              ...channelPrices
+          };
+        }).filter(Boolean) as PriceFormItem[];
+      
+      append(newItemsToAppend);
+    };
 
     const onSubmit = async (data: FormValues) => {
         setIsSubmitting(true);
         const priceUpdates = data.items.map(item => ({
             id: item.id,
             type: item.type,
-            costPrice: item.costPrice,
-            defaultPrice: item.defaultPrice,
+            costPrice: item.costPrice !== '' ? Number(item.costPrice) : undefined,
+            defaultPrice: item.defaultPrice !== '' ? Number(item.defaultPrice) : undefined,
             channelPrices: CHANNELS.map(channel => ({
                 channel,
                 price: (item as any)[`${channel}Price`]
             })).filter(cp => cp.price !== undefined && cp.price !== null && cp.price !== '')
+             .map(cp => ({ ...cp, price: Number(cp.price) }))
         }));
 
         try {
@@ -125,7 +117,8 @@ export default function FinanceSettingsPage() {
                 title: t.priceSettings.toastSuccessTitle,
                 description: t.priceSettings.toastSuccessDesc,
             });
-            reset(data); // Resets dirty state after successful save
+            // Reset with current data to clear dirty state
+            reset({ items: data.items });
         } catch (error) {
             console.error("Failed to update prices:", error);
             toast({
@@ -140,6 +133,7 @@ export default function FinanceSettingsPage() {
 
 
     return (
+        <>
         <AppLayout>
             <main className="flex-1 p-4 md:p-10">
                 <form onSubmit={handleSubmit(onSubmit)}>
@@ -148,14 +142,10 @@ export default function FinanceSettingsPage() {
                             <SidebarTrigger className="md:hidden" />
                             <h1 className="text-lg font-bold">{t.finance.priceSettings}</h1>
                         </div>
-                        <div className="flex items-center gap-2">
-                             <Link href="/add-product">
-                                <Button type="button" variant="outline">{t.dashboard.addItem}</Button>
-                            </Link>
-                            <Button type="submit" disabled={isSubmitting || !isDirty}>
-                                {isSubmitting ? t.common.saveChanges + '...' : t.priceSettings.save}
-                            </Button>
-                        </div>
+                        <Button type="button" onClick={() => setSelectionDialogOpen(true)}>
+                            <PlusCircle className="mr-2 h-4 w-4"/>
+                            {t.stockInForm.selectProducts}
+                        </Button>
                     </div>
                      <div className="border rounded-md">
                         <Table>
@@ -169,14 +159,15 @@ export default function FinanceSettingsPage() {
                                     <TableHead>{t.priceSettings.lazadaPrice}</TableHead>
                                     <TableHead>{t.priceSettings.tiktokPrice}</TableHead>
                                     <TableHead>{t.priceSettings.resellerPrice}</TableHead>
+                                    <TableHead className="w-[50px]"></TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {loading ? (
-                                    [...Array(5)].map((_, i) => (
+                                {loading && fields.length === 0 ? (
+                                    [...Array(3)].map((_, i) => (
                                         <TableRow key={i}>
                                             <TableCell><Skeleton className="h-10 w-full" /></TableCell>
-                                            {[...Array(7)].map((_, j) => <TableCell key={j}><Skeleton className="h-9 w-full" /></TableCell>)}
+                                            {[...Array(8)].map((_, j) => <TableCell key={j}><Skeleton className="h-9 w-full" /></TableCell>)}
                                         </TableRow>
                                     ))
                                 ) : fields.length > 0 ? (
@@ -212,62 +203,67 @@ export default function FinanceSettingsPage() {
                                                      <Controller
                                                         name={`items.${index}.costPrice`}
                                                         control={control}
-                                                        render={({ field }) => <Input type="number" placeholder={t.priceSettings.placeholderCost} {...field} value={field.value ?? ''} className="h-9" />}
+                                                        render={({ field: controllerField }) => <Input type="number" placeholder={t.priceSettings.placeholderCost} {...controllerField} value={controllerField.value ?? ''} className="h-9" />}
                                                     />
                                                 </TableCell>
                                                 <TableCell>
                                                      <Controller
                                                         name={`items.${index}.defaultPrice`}
                                                         control={control}
-                                                        render={({ field }) => <Input type="number" placeholder={t.priceSettings.placeholderSell} {...field} value={field.value ?? ''} className="h-9" />}
+                                                        render={({ field: controllerField }) => <Input type="number" placeholder={t.priceSettings.placeholderSell} {...controllerField} value={controllerField.value ?? ''} className="h-9" />}
                                                     />
                                                 </TableCell>
                                                 <TableCell>
                                                      <Controller
                                                         name={`items.${index}.posPrice`}
                                                         control={control}
-                                                        render={({ field }) => <Input type="number" placeholder={t.priceSettings.posPrice} {...field} value={field.value ?? ''} className="h-9" />}
+                                                        render={({ field: controllerField }) => <Input type="number" placeholder="POS" {...controllerField} value={controllerField.value ?? ''} className="h-9" />}
                                                     />
                                                 </TableCell>
                                                 <TableCell>
                                                      <Controller
                                                         name={`items.${index}.shopeePrice`}
                                                         control={control}
-                                                        render={({ field }) => <Input type="number" placeholder={t.priceSettings.shopeePrice} {...field} value={field.value ?? ''} className="h-9" />}
+                                                        render={({ field: controllerField }) => <Input type="number" placeholder="Shopee" {...controllerField} value={controllerField.value ?? ''} className="h-9" />}
                                                     />
                                                 </TableCell>
                                                 <TableCell>
                                                      <Controller
                                                         name={`items.${index}.lazadaPrice`}
                                                         control={control}
-                                                        render={({ field }) => <Input type="number" placeholder={t.priceSettings.lazadaPrice} {...field} value={field.value ?? ''} className="h-9" />}
+                                                        render={({ field: controllerField }) => <Input type="number" placeholder="Lazada" {...controllerField} value={controllerField.value ?? ''} className="h-9" />}
                                                     />
                                                 </TableCell>
                                                 <TableCell>
                                                      <Controller
                                                         name={`items.${index}.tiktokPrice`}
                                                         control={control}
-                                                        render={({ field }) => <Input type="number" placeholder={t.priceSettings.tiktokPrice} {...field} value={field.value ?? ''} className="h-9" />}
+                                                        render={({ field: controllerField }) => <Input type="number" placeholder="Tiktok" {...controllerField} value={controllerField.value ?? ''} className="h-9" />}
                                                     />
                                                 </TableCell>
                                                 <TableCell>
                                                      <Controller
                                                         name={`items.${index}.resellerPrice`}
                                                         control={control}
-                                                        render={({ field }) => <Input type="number" placeholder={t.priceSettings.resellerPrice} {...field} value={field.value ?? ''} className="h-9" />}
+                                                        render={({ field: controllerField }) => <Input type="number" placeholder="Reseller" {...controllerField} value={controllerField.value ?? ''} className="h-9" />}
                                                     />
+                                                </TableCell>
+                                                <TableCell>
+                                                    <Button type="button" variant="ghost" size="icon" className="text-destructive h-8 w-8" onClick={() => remove(index)}>
+                                                        <Trash2 className="h-4 w-4"/>
+                                                    </Button>
                                                 </TableCell>
                                             </TableRow>
                                         )
                                     })
                                 ) : (
                                     <TableRow>
-                                        <TableCell colSpan={8} className="h-48 text-center">
+                                        <TableCell colSpan={9} className="h-48 text-center">
                                             <div className="flex flex-col items-center justify-center gap-4 text-muted-foreground">
                                                 <ShoppingBag className="h-16 w-16" />
                                                 <div className="text-center">
-                                                    <p className="font-semibold">{t.inventoryTable.noItems}</p>
-                                                    <p className="text-sm">Silakan tambahkan produk terlebih dahulu.</p>
+                                                    <p className="font-semibold">{t.stockInForm.noProducts}</p>
+                                                    <p className="text-sm">Silakan pilih produk untuk mengatur harganya.</p>
                                                 </div>
                                             </div>
                                         </TableCell>
@@ -276,8 +272,25 @@ export default function FinanceSettingsPage() {
                             </TableBody>
                         </Table>
                     </div>
+                     {fields.length > 0 && (
+                        <div className="flex justify-end mt-6">
+                            <Button type="submit" disabled={isSubmitting || !isDirty}>
+                                {isSubmitting ? t.common.saveChanges + '...' : t.priceSettings.save}
+                            </Button>
+                        </div>
+                     )}
                 </form>
             </main>
         </AppLayout>
+        <ProductSelectionDialog 
+            open={isSelectionDialogOpen}
+            onOpenChange={setSelectionDialogOpen}
+            onSelect={handleProductsSelected}
+            availableItems={allInventoryItems}
+            categories={categories}
+        />
+        </>
     );
 }
+
+    
