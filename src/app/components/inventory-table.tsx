@@ -143,7 +143,7 @@ const PriceWithDetails = ({ item }: { item: InventoryItem | InventoryItemVariant
     }, [item.channelPrices, t, TPrice]);
 
     return (
-        <div>
+        <div className="flex flex-col">
             <span>{priceDisplay}</span>
             {aggregatedPrices.length > 0 && (
                 <Popover>
@@ -555,6 +555,7 @@ export function InventoryTable({ onUpdateStock }: InventoryTableProps) {
     
 
     
+
 
 
 
