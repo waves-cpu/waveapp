@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useForm, useFieldArray } from 'react-hook-form';
@@ -67,7 +68,7 @@ export function BulkEditVariantsDialog({ open, onOpenChange, item }: BulkEditVar
             variants: item.variants || []
         });
     }
-  }, [item, form, open]);
+  }, [item, form]);
 
 
   const { fields } = useFieldArray({
