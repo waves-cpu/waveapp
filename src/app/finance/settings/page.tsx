@@ -22,12 +22,14 @@ import { Card, CardContent, CardFooter, CardHeader, CardDescription } from '@/co
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Trash2, ShoppingBag, Store, Search, PlusCircle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import type { InventoryItem } from '@/types';
+import type { InventoryItem, InventoryItemVariant } from '@/types';
 import { ProductSelectionDialog } from '@/app/components/product-selection-dialog';
 import Image from 'next/image';
 import { AppLayout } from '@/app/components/app-layout';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
+import { cn } from '@/lib/utils';
+
 
 const channelPriceSchema = z.object({
     channel: z.string(),
@@ -85,7 +87,7 @@ export default function PriceSettingsPage() {
             if (item.variants && item.variants.length > 0) {
                 return item.variants.some(v => !existingItemIds.has(v.id));
             }
-            return !existingItemIds.has(item.id);
+            return item.stock !== undefined && !existingItemIds.has(item.id);
         }).map(item => {
             if (item.variants) {
                 return {
@@ -104,8 +106,7 @@ export default function PriceSettingsPage() {
             if (existingItemIds.has(id)) return;
             
             for (const item of allInventoryItems) {
-                const processItem = (i: InventoryItem | any, type: 'product' | 'variant', parent?: InventoryItem) => {
-                    // Helper to get online price
+                const processItem = (i: InventoryItem | InventoryItemVariant, type: 'product' | 'variant', parent?: InventoryItem) => {
                     const getOnlinePrice = (channelPrices?: any[]) => {
                         const onlinePrice = channelPrices?.find(p => ['shopee', 'tiktok', 'lazada'].includes(p.channel))?.price;
                         return onlinePrice;
@@ -116,7 +117,7 @@ export default function PriceSettingsPage() {
                         type: type,
                         name: i.name,
                         sku: i.sku,
-                        imageUrl: parent?.imageUrl || i.imageUrl,
+                        imageUrl: parent?.imageUrl || (i as InventoryItem).imageUrl,
                         parentName: parent?.name,
                         costPrice: i.costPrice,
                         price: i.price,
@@ -134,13 +135,13 @@ export default function PriceSettingsPage() {
 
                 if(item.id === id && (!item.variants || item.variants.length === 0)) {
                     processItem(item, 'product');
-                    break;
+                    return;
                 }
                 if (item.variants) {
                     const variant = item.variants.find(v => v.id === id);
                     if (variant) {
                         processItem(variant, 'variant', item);
-                        break;
+                        return;
                     }
                 }
             }
@@ -148,20 +149,61 @@ export default function PriceSettingsPage() {
         append(newItems);
     };
 
-    const filteredFields = useMemo(() => {
-        return fields.map((field, index) => ({ field, index })).filter(({ field }) => {
-            const item = allInventoryItems.find(i => i.id === field.id || i.variants?.some(v => v.id === field.id));
-            const categoryMatch = !categoryFilter || (item && item.category === categoryFilter);
-            
-            const lowerSearchTerm = searchTerm.toLowerCase();
-            const searchMatch = !lowerSearchTerm ||
-                field.name.toLowerCase().includes(lowerSearchTerm) ||
-                (field.sku && field.sku.toLowerCase().includes(lowerSearchTerm)) ||
-                (field.parentName && field.parentName.toLowerCase().includes(lowerSearchTerm));
+    const groupedAndFilteredItems = useMemo(() => {
+        const filteredFields = fields
+            .map((field, index) => ({ ...field, originalIndex: index }))
+            .filter(field => {
+                const item = allInventoryItems.find(i => 
+                    i.id === (field.type === 'product' ? field.id : undefined) || 
+                    i.variants?.some(v => v.id === field.id)
+                );
+                const categoryMatch = !categoryFilter || (item && item.category === categoryFilter);
+                
+                const lowerSearchTerm = searchTerm.toLowerCase();
+                const searchMatch = !lowerSearchTerm ||
+                    field.name.toLowerCase().includes(lowerSearchTerm) ||
+                    (field.sku && field.sku.toLowerCase().includes(lowerSearchTerm)) ||
+                    (field.parentName && field.parentName.toLowerCase().includes(lowerSearchTerm));
 
-            return categoryMatch && searchMatch;
+                return categoryMatch && searchMatch;
+            });
+        
+        const groups = new Map<string, (PriceSettingItem & { originalIndex: number })[]>();
+        const simpleItems: (PriceSettingItem & { originalIndex: number })[] = [];
+
+        filteredFields.forEach(field => {
+            if (field.type === 'variant' && field.parentName) {
+                if (!groups.has(field.parentName)) {
+                    groups.set(field.parentName, []);
+                }
+                groups.get(field.parentName)!.push(field);
+            } else {
+                simpleItems.push(field);
+            }
         });
+
+        // If a parent's variants are all filtered out, the parent should not appear.
+        const activeGroups = new Map<string, (PriceSettingItem & { originalIndex: number })[]>();
+        for (const [key, value] of groups.entries()) {
+            if (value.length > 0) {
+                // Find a representative for the parent to get SKU/Image
+                const parentInfo = allInventoryItems.find(item => item.name === key);
+                activeGroups.set(key, [{
+                    id: parentInfo?.id || key,
+                    name: key,
+                    parentName: key,
+                    imageUrl: parentInfo?.imageUrl,
+                    sku: parentInfo?.sku,
+                    type: 'product', // This is just a placeholder for the header row
+                    originalIndex: -1, // Indicates this is not a real form field
+                }, ...value]);
+            }
+        }
+        
+        return { groups: Array.from(activeGroups.values()), simpleItems };
+
     }, [fields, searchTerm, categoryFilter, allInventoryItems]);
+    
     
     const onSubmit = async (values: z.infer<typeof formSchema>) => {
         setIsSubmitting(true);
@@ -240,7 +282,7 @@ export default function PriceSettingsPage() {
                                                 <TableHead>{TPrice.defaultPrice}</TableHead>
                                                 <TableHead>Harga POS</TableHead>
                                                 <TableHead>Harga Reseller</TableHead>
-                                                <TableHead>Harga Online</TableHead>
+                                                <TableHead>{TPrice.onlinePrice}</TableHead>
                                                 <TableHead className="w-[50px]"></TableHead>
                                             </TableRow>
                                         </TableHeader>
@@ -258,72 +300,59 @@ export default function PriceSettingsPage() {
                                                     </TableCell>
                                                 </TableRow>
                                             ) : (
-                                               filteredFields.map(({ field, index }) => (
-                                                    <TableRow key={field.id}>
-                                                        <TableCell>
-                                                            <div className="flex items-center gap-4">
-                                                                {field.imageUrl ? (
-                                                                    <Image src={field.imageUrl} alt={field.name} width={40} height={40} className="rounded-sm" data-ai-hint="product image" />
-                                                                ) : (
-                                                                    <div className="flex h-10 w-10 items-center justify-center rounded-sm bg-muted shrink-0">
-                                                                        <Store className="h-5 w-5 text-gray-400" />
+                                                <>
+                                                    {groupedAndFilteredItems.simpleItems.map((field) => (
+                                                        <TableRow key={field.id}>
+                                                             <TableCell>
+                                                                <div className="flex items-center gap-4">
+                                                                    <Image src={field.imageUrl || 'https://placehold.co/40x40.png'} alt={field.name} width={40} height={40} className="rounded-sm" data-ai-hint="product image" />
+                                                                    <div>
+                                                                        <span className="font-medium text-sm">{field.name}</span>
+                                                                        <div className="text-xs text-muted-foreground">SKU: {field.sku}</div>
                                                                     </div>
-                                                                )}
-                                                                <div>
-                                                                    <span className="font-medium text-sm">{field.parentName || field.name}</span>
-                                                                    {field.type === 'variant' && <div className="text-xs text-muted-foreground">{field.name}</div>}
-                                                                    <div className="text-xs text-muted-foreground">SKU: {field.sku}</div>
                                                                 </div>
-                                                            </div>
-                                                        </TableCell>
-                                                        <TableCell>
-                                                             <FormField
-                                                                control={form.control}
-                                                                name={`items.${index}.costPrice`}
-                                                                render={({ field: formField }) => (
-                                                                    <FormItem><FormControl><Input type="number" placeholder="0" {...formField} value={formField.value ?? ''} /></FormControl><FormMessage/></FormItem>
-                                                                )}
-                                                            />
-                                                        </TableCell>
-                                                         <TableCell>
-                                                             <FormField
-                                                                control={form.control}
-                                                                name={`items.${index}.price`}
-                                                                render={({ field: formField }) => (
-                                                                    <FormItem><FormControl><Input type="number" placeholder="0" {...formField} value={formField.value ?? ''} /></FormControl><FormMessage/></FormItem>
-                                                                )}
-                                                            />
-                                                        </TableCell>
-                                                        {CHANNELS.map(channel => {
-                                                            const channelIndex = field.channelPrices?.findIndex(cp => cp.channel === channel);
-                                                            if (channelIndex === -1) return null;
-                                                            
-                                                            const fieldName = `items.${index}.channelPrices.${channelIndex}.price`;
-
-                                                            return (
-                                                                <TableCell key={channel}>
-                                                                    <FormField
-                                                                        control={form.control}
-                                                                        name={fieldName as any}
-                                                                        render={({ field: formField }) => (
-                                                                            <FormItem>
-                                                                                <FormControl>
-                                                                                    <Input type="number" placeholder="0" {...formField} value={formField.value ?? ''} />
-                                                                                </FormControl>
-                                                                                <FormMessage/>
-                                                                            </FormItem>
-                                                                        )}
-                                                                    />
+                                                            </TableCell>
+                                                            <PriceRowFields control={form.control} index={field.originalIndex} onRemove={() => remove(field.originalIndex)} />
+                                                        </TableRow>
+                                                    ))}
+                                                     {groupedAndFilteredItems.groups.map((group) => (
+                                                        <React.Fragment key={group[0].id}>
+                                                             <TableRow className="bg-muted/20 hover:bg-muted/40">
+                                                                <TableCell>
+                                                                    <div className="flex items-center gap-4 font-semibold text-primary">
+                                                                        <Image src={group[0].imageUrl || 'https://placehold.co/40x40.png'} alt={group[0].name} width={40} height={40} className="rounded-sm" data-ai-hint="product image" />
+                                                                        <div>
+                                                                            <span className="text-sm">{group[0].name}</span>
+                                                                            <div className="text-xs text-muted-foreground font-normal">SKU: {group[0].sku}</div>
+                                                                        </div>
+                                                                    </div>
                                                                 </TableCell>
-                                                            )
-                                                        })}
-                                                        <TableCell>
-                                                            <Button type="button" variant="ghost" size="icon" className="text-destructive hover:text-destructive-foreground hover:bg-destructive" onClick={() => remove(index)}>
-                                                                <Trash2 className="h-4 w-4" />
-                                                            </Button>
-                                                        </TableCell>
-                                                    </TableRow>
-                                                ))
+                                                                <TableCell colSpan={5}></TableCell>
+                                                                <TableCell>
+                                                                    <Button type="button" variant="ghost" size="icon" className="text-destructive hover:text-destructive-foreground hover:bg-destructive" onClick={() => remove(group.slice(1).map(v => v.originalIndex))}>
+                                                                        <Trash2 className="h-4 w-4" />
+                                                                    </Button>
+                                                                </TableCell>
+                                                            </TableRow>
+                                                            {group.slice(1).map((field) => (
+                                                                <TableRow key={field.id} className="hover:bg-muted/50">
+                                                                     <TableCell>
+                                                                        <div className="flex items-center gap-4 pl-10">
+                                                                            <div className="flex h-10 w-10 items-center justify-center rounded-sm shrink-0">
+                                                                                <Store className="h-5 w-5 text-gray-400" />
+                                                                            </div>
+                                                                            <div>
+                                                                                <div className="font-medium text-sm">{field.name}</div>
+                                                                                <div className="text-xs text-muted-foreground">SKU: {field.sku}</div>
+                                                                            </div>
+                                                                        </div>
+                                                                    </TableCell>
+                                                                    <PriceRowFields control={form.control} index={field.originalIndex} onRemove={() => remove(field.originalIndex)} />
+                                                                </TableRow>
+                                                            ))}
+                                                        </React.Fragment>
+                                                     ))}
+                                                </>
                                             )}
                                         </TableBody>
                                     </Table>
@@ -349,4 +378,60 @@ export default function PriceSettingsPage() {
             </main>
         </AppLayout>
     );
+}
+
+const PriceRowFields = ({ control, index, onRemove }: { control: any, index: number, onRemove: () => void }) => {
+    return (
+        <>
+            <TableCell>
+                <FormField
+                    control={control}
+                    name={`items.${index}.costPrice`}
+                    render={({ field: formField }) => (
+                        <FormItem><FormControl><Input type="number" placeholder="0" {...formField} value={formField.value ?? ''} /></FormControl><FormMessage/></FormItem>
+                    )}
+                />
+            </TableCell>
+            <TableCell>
+                <FormField
+                    control={control}
+                    name={`items.${index}.price`}
+                    render={({ field: formField }) => (
+                        <FormItem><FormControl><Input type="number" placeholder="0" {...formField} value={formField.value ?? ''} /></FormControl><FormMessage/></FormItem>
+                    )}
+                />
+            </TableCell>
+            {CHANNELS.map(channel => {
+                const fieldName = `items.${index}.channelPrices` as const;
+                const channelPrices = control.getValues(fieldName);
+                const channelIndex = channelPrices?.findIndex((cp: any) => cp.channel === channel);
+
+                if (channelIndex === -1) return <TableCell key={channel}></TableCell>;
+                
+                const priceFieldName = `${fieldName}.${channelIndex}.price`;
+
+                return (
+                    <TableCell key={channel}>
+                        <FormField
+                            control={control}
+                            name={priceFieldName}
+                            render={({ field: formField }) => (
+                                <FormItem>
+                                    <FormControl>
+                                        <Input type="number" placeholder="0" {...formField} value={formField.value ?? ''} />
+                                    </FormControl>
+                                    <FormMessage/>
+                                </FormItem>
+                            )}
+                        />
+                    </TableCell>
+                )
+            })}
+            <TableCell className="p-1.5">
+                <Button type="button" variant="ghost" size="icon" className="text-destructive hover:text-destructive-foreground hover:bg-destructive" onClick={onRemove}>
+                    <Trash2 className="h-4 w-4" />
+                </Button>
+            </TableCell>
+        </>
+    )
 }
