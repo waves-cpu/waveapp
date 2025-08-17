@@ -9,16 +9,28 @@ import { useInventory } from "@/hooks/use-inventory";
 import React, { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { DollarSign, Package, TrendingUp, TrendingDown, Hourglass } from "lucide-react";
+import { DollarSign, Package, TrendingUp, TrendingDown, Hourglass, BarChart } from "lucide-react";
 import { Line, LineChart, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from "recharts";
 import { ChartConfig, ChartContainer, ChartTooltipContent } from "@/components/ui/chart";
 import { subDays, isAfter } from "date-fns";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import type { InventoryItem, InventoryItemVariant } from "@/types";
 
 const formatCurrency = (amount: number) => `Rp${Math.round(amount).toLocaleString('id-ID')}`;
 
 const ASSET_TURNOVER_DAYS = 30;
 const FAST_MOVING_THRESHOLD = 50;
 const SLOW_MOVING_THRESHOLD = 5;
+
+interface RankedAsset {
+    id: string;
+    name: string;
+    variantName?: string;
+    sku?: string;
+    salesCount: number;
+    stockValue: number;
+}
 
 
 function AssetReportSkeleton() {
@@ -42,66 +54,121 @@ function AssetReportSkeleton() {
     )
 }
 
+const ProductListTable = ({ products, title, icon: Icon }: { products: RankedAsset[], title: string, icon: React.ElementType }) => {
+    const { language } = useLanguage();
+    const t = translations[language].finance.assetReportPage;
+
+    return (
+        <Card className="flex flex-col">
+            <CardHeader className="flex flex-row items-center gap-2 space-y-0 pb-2">
+                <Icon className="h-5 w-5" />
+                <CardTitle className="text-sm font-medium">{title}</CardTitle>
+            </CardHeader>
+            <CardContent className="flex-grow p-0">
+                <ScrollArea className="h-72">
+                    <Table>
+                        <TableHeader className="sticky top-0 bg-card">
+                            <TableRow>
+                                <TableHead className="px-4 text-xs">{t.productColumn}</TableHead>
+                                <TableHead className="text-center px-2 text-xs">{t.unitsSoldColumn}</TableHead>
+                                <TableHead className="text-right px-4 text-xs">{t.stockValueColumn}</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {products.length > 0 ? products.map(product => (
+                                <TableRow key={product.id}>
+                                    <TableCell className="font-medium text-xs px-4 py-2">
+                                        <div className="truncate w-40">{product.name}</div>
+                                        {product.variantName && <div className="text-muted-foreground truncate w-40">{product.variantName}</div>}
+                                    </TableCell>
+                                    <TableCell className="text-center px-2 py-2 text-xs">{product.salesCount}</TableCell>
+                                    <TableCell className="text-right px-4 py-2 text-xs">{formatCurrency(product.stockValue)}</TableCell>
+                                </TableRow>
+                            )) : (
+                                <TableRow>
+                                    <TableCell colSpan={3} className="h-24 text-center text-muted-foreground text-xs">{t.noProductsInCategory}</TableCell>
+                                </TableRow>
+                            )}
+                        </TableBody>
+                    </Table>
+                </ScrollArea>
+            </CardContent>
+        </Card>
+    );
+};
+
+
 export default function AssetReportPage() {
     const { language } = useLanguage();
     const t = translations[language];
     const TAsset = t.finance.assetReportPage;
     const { items, allSales, loading } = useInventory();
 
-    const assetClassification = useMemo(() => {
+    const { assetClassification, fastMovingProducts, slowMovingProducts, nonMovingProducts } = useMemo(() => {
         const turnoverDateThreshold = subDays(new Date(), ASSET_TURNOVER_DAYS);
-
-        // 1. Aggregate sales quantity per item in the last 30 days
         const salesVolumeMap = new Map<string, number>();
+        
         allSales.forEach(sale => {
             if (isAfter(new Date(sale.saleDate), turnoverDateThreshold)) {
                 const soldId = sale.variantId || sale.productId;
                 if(soldId) {
-                    const currentQty = salesVolumeMap.get(soldId.toString()) || 0;
-                    salesVolumeMap.set(soldId.toString(), currentQty + sale.quantity);
+                    salesVolumeMap.set(soldId.toString(), (salesVolumeMap.get(soldId.toString()) || 0) + sale.quantity);
                 }
             }
         });
 
-        // 2. Classify assets based on sales volume
-        const fastMovingAssets: number[] = [];
-        const slowMovingAssets: number[] = [];
-        const nonMovingAssets: number[] = [];
-
+        const allRankedAssets: RankedAsset[] = [];
         items.forEach(item => {
-            const processAsset = (asset: { id: string, stock: number, costPrice?: number }) => {
-                if (asset.costPrice && asset.costPrice > 0 && asset.stock > 0) {
-                    const assetValue = asset.costPrice * asset.stock;
+            const processAsset = (asset: InventoryItem | InventoryItemVariant, parent?: InventoryItem) => {
+                if (asset.costPrice && asset.costPrice > 0 && asset.stock && asset.stock > 0) {
+                    const stockValue = asset.costPrice * asset.stock;
                     const salesCount = salesVolumeMap.get(asset.id.toString()) || 0;
-
-                    if (salesCount >= FAST_MOVING_THRESHOLD) {
-                        fastMovingAssets.push(assetValue);
-                    } else if (salesCount >= SLOW_MOVING_THRESHOLD) {
-                        slowMovingAssets.push(assetValue);
-                    } else {
-                        nonMovingAssets.push(assetValue);
-                    }
+                    allRankedAssets.push({
+                        id: asset.id.toString(),
+                        name: parent ? parent.name : (asset as InventoryItem).name,
+                        variantName: parent ? (asset as InventoryItemVariant).name : undefined,
+                        sku: asset.sku,
+                        salesCount: salesCount,
+                        stockValue: stockValue,
+                    });
                 }
             };
             
             if (item.variants && item.variants.length > 0) {
-                item.variants.forEach(variant => processAsset(variant));
+                item.variants.forEach(variant => processAsset(variant, item));
             } else {
-                 if (item.stock && item.costPrice) {
-                    processAsset({id: item.id, stock: item.stock, costPrice: item.costPrice});
-                 }
+                processAsset(item);
             }
         });
 
-        const totalFastMovingValue = fastMovingAssets.reduce((sum, value) => sum + value, 0);
-        const totalSlowMovingValue = slowMovingAssets.reduce((sum, value) => sum + value, 0);
-        const totalNonMovingValue = nonMovingAssets.reduce((sum, value) => sum + value, 0);
+        const fast: RankedAsset[] = [];
+        const slow: RankedAsset[] = [];
+        const non: RankedAsset[] = [];
+
+        allRankedAssets.forEach(asset => {
+            if (asset.salesCount >= FAST_MOVING_THRESHOLD) {
+                fast.push(asset);
+            } else if (asset.salesCount >= SLOW_MOVING_THRESHOLD) {
+                slow.push(asset);
+            } else {
+                non.push(asset);
+            }
+        });
         
+        const totalFastMovingValue = fast.reduce((sum, asset) => sum + asset.stockValue, 0);
+        const totalSlowMovingValue = slow.reduce((sum, asset) => sum + asset.stockValue, 0);
+        const totalNonMovingValue = non.reduce((sum, asset) => sum + asset.stockValue, 0);
+
         return {
-            totalFastMovingValue,
-            totalSlowMovingValue,
-            totalNonMovingValue,
-            totalAssetValue: totalFastMovingValue + totalSlowMovingValue + totalNonMovingValue,
+            assetClassification: {
+                totalFastMovingValue,
+                totalSlowMovingValue,
+                totalNonMovingValue,
+                totalAssetValue: totalFastMovingValue + totalSlowMovingValue + totalNonMovingValue,
+            },
+            fastMovingProducts: fast.sort((a,b) => b.salesCount - a.salesCount).slice(0, 10),
+            slowMovingProducts: slow.sort((a,b) => b.salesCount - a.salesCount).slice(0, 10),
+            nonMovingProducts: non.sort((a,b) => b.salesCount - a.salesCount).slice(0, 10),
         };
     }, [items, allSales]);
 
@@ -201,7 +268,7 @@ export default function AssetReportPage() {
                         <CardTitle className="text-xs">{TAsset.chartTitle}</CardTitle>
                     </CardHeader>
                     <CardContent className="flex-1">
-                       <ChartContainer config={chartConfig} className="w-full h-full">
+                       <ChartContainer config={chartConfig} className="w-full h-full min-h-20">
                             <LineChart accessibilityLayer data={chartData} margin={{ top: 20, left: 12, right: 12 }}>
                                 <CartesianGrid vertical={false} />
                                 <XAxis
@@ -241,7 +308,14 @@ export default function AssetReportPage() {
                         </ChartContainer>
                     </CardContent>
                 </Card>
+
+                <div className="grid md:grid-cols-1 lg:grid-cols-3 gap-4 mt-4">
+                    <ProductListTable products={fastMovingProducts} title={TAsset.topFastMoving} icon={TrendingUp} />
+                    <ProductListTable products={slowMovingProducts} title={TAsset.topSlowMoving} icon={Hourglass} />
+                    <ProductListTable products={nonMovingProducts} title={TAsset.topNonMoving} icon={TrendingDown} />
+                </div>
             </main>
         </AppLayout>
     );
 }
+

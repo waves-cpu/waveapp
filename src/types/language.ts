@@ -46,19 +46,18 @@ export const translations = {
             },
             assetReportPage: {
                 totalAssetValue: "Total Asset Value",
-                totalAssetValueDesc: "Total value of all stock",
-                fastMovingAssets: "Fast-Moving Assets",
-                fastMovingAssetsDesc: "Sold >= {count} units/{days} days",
-                slowMovingAssets: "Slow-Moving Assets",
-                slowMovingAssetsDesc: "Sold {min}-{max} units/{days} days",
-                nonMovingAssets: "Non-Moving Assets",
-                nonMovingAssetsDesc: "Sold < {count} units/{days} days",
-                chartTitle: "Asset Turnover Chart",
-                chartDescription: "Comparison of value between fast-moving, slow-moving, and non-moving assets.",
-                chartXAxisLabel: "Asset Classification",
                 fastLabel: "Fast-Moving",
                 slowLabel: "Slow-Moving",
-                nonMovingLabel: "Non-Moving"
+                nonMovingLabel: "Non-Moving",
+                chartTitle: "Asset Turnover Chart",
+                chartXAxisLabel: "Asset Classification",
+                topFastMoving: "Top 10 Fast-Moving Products",
+                topSlowMoving: "Top 10 Slow-Moving Products",
+                topNonMoving: "Top 10 Non-Moving Products",
+                productColumn: "Product",
+                unitsSoldColumn: "Units Sold",
+                stockValueColumn: "Stock Value",
+                noProductsInCategory: "No products in this category."
             }
         },
         inventoryTable: {
@@ -330,19 +329,18 @@ export const translations = {
             },
             assetReportPage: {
                 totalAssetValue: "Total Nilai Aset",
-                totalAssetValueDesc: "Nilai total dari semua stok",
-                fastMovingAssets: "Aset Lancar",
-                fastMovingAssetsDesc: "Terjual >= {count} unit/{days} hari",
-                slowMovingAssets: "Aset Lambat",
-                slowMovingAssetsDesc: "Terjual {min}-{max} unit/{days} hari",
-                nonMovingAssets: "Aset Tidak Lancar",
-                nonMovingAssetsDesc: "Terjual < {count} unit/{days} hari",
-                chartTitle: "Grafik Perputaran Aset",
-                chartDescription: "Perbandingan nilai antara aset yang perputarannya cepat, lambat, dan tidak lancar.",
-                chartXAxisLabel: "Klasifikasi Aset",
                 fastLabel: "Lancar",
                 slowLabel: "Lambat",
-                nonMovingLabel: "Tidak Lancar"
+                nonMovingLabel: "Tidak Lancar",
+                chartTitle: "Grafik Perputaran Aset",
+                chartXAxisLabel: "Klasifikasi Aset",
+                topFastMoving: "10 Produk Terlaris",
+                topSlowMoving: "10 Produk Lambat",
+                topNonMoving: "10 Produk Tidak Lancar",
+                productColumn: "Produk",
+                unitsSoldColumn: "Terjual",
+                stockValueColumn: "Nilai Stok",
+                noProductsInCategory: "Tidak ada produk di kategori ini."
             }
         },
         inventoryTable: {
