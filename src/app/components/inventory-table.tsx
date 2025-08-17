@@ -121,8 +121,56 @@ const LOW_STOCK_THRESHOLD = 10;
 const formatCurrency = (amount: number) => `Rp${Math.round(amount).toLocaleString('id-ID')}`;
 
 const PriceWithDetails = ({ item }: { item: InventoryItem | InventoryItemVariant }) => {
-    const priceDisplay = item.price ? formatCurrency(item.price) : '-';
-    return <span>{priceDisplay}</span>;
+    const { language } = useLanguage();
+    const t = translations[language];
+    const TPrice = t.finance.priceSettingsPage;
+
+    const priceDisplay = item.price != null ? formatCurrency(item.price) : '-';
+
+    const onlinePrice = item.channelPrices?.find(p => ['shopee', 'tiktok', 'lazada'].includes(p.channel) && p.price != null)?.price;
+    
+    const channelPrices = [
+        { channel: 'pos', price: item.channelPrices?.find(p => p.channel === 'pos')?.price },
+        { channel: 'reseller', price: item.channelPrices?.find(p => p.channel === 'reseller')?.price },
+        { channel: 'online', price: onlinePrice },
+    ].filter(p => p.price != null && p.price > 0);
+
+    const getChannelTranslation = (channel: string) => {
+        switch(channel) {
+            case 'pos': return t.sales.pos;
+            case 'reseller': return t.sales.reseller;
+            case 'online': return TPrice.onlinePrice;
+            default: return channel;
+        }
+    }
+
+    return (
+        <div className="flex flex-col items-start">
+            <span>{priceDisplay}</span>
+            {channelPrices.length > 0 && (
+                <Popover>
+                    <PopoverTrigger asChild>
+                         <button className="text-xs text-primary hover:underline mt-1">
+                            {channelPrices.length} Harga Jual
+                         </button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-60">
+                        <div className="space-y-2">
+                            <h4 className="font-medium leading-none">{TPrice.channelPriceDetails}</h4>
+                            <div className="grid gap-2 text-sm">
+                                {channelPrices.map(({ channel, price }) => (
+                                     <div key={channel} className="grid grid-cols-2 items-center gap-4">
+                                        <span className="text-muted-foreground">{getChannelTranslation(channel)}</span>
+                                        <span className="font-semibold text-right">{formatCurrency(price!)}</span>
+                                     </div>
+                                ))}
+                            </div>
+                        </div>
+                    </PopoverContent>
+                </Popover>
+            )}
+        </div>
+    );
 };
 
 
@@ -308,12 +356,10 @@ export function InventoryTable({ onUpdateStock }: InventoryTableProps) {
                 const totalStock = item.variants?.reduce((sum, v) => sum + v.stock, 0) ?? item.stock ?? 0;
 
                 if (item.variants && item.variants.length > 0) {
-                    const prices = item.variants.map(v => v.price);
-                    const minPrice = Math.min(...prices);
-                    const maxPrice = Math.max(...prices);
-                    const priceDisplay = minPrice === maxPrice 
-                        ? formatCurrency(minPrice)
-                        : `${formatCurrency(minPrice)} - ${formatCurrency(maxPrice)}`;
+                    const prices = item.variants.map(v => v.price).filter(p => p != null) as number[];
+                    const priceDisplay = prices.length > 0 ? (
+                        prices.length === 1 ? formatCurrency(prices[0]) : `${formatCurrency(Math.min(...prices))} - ${formatCurrency(Math.max(...prices))}`
+                    ) : '-';
                     const totalStock = item.variants.reduce((sum, v) => sum + v.stock, 0);
 
                     return (
@@ -517,6 +563,8 @@ export function InventoryTable({ onUpdateStock }: InventoryTableProps) {
 
 
 
+
+    
 
     
 
