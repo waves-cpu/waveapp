@@ -2,7 +2,7 @@
 'use server';
 
 import { db } from './db';
-import type { InventoryItem, AdjustmentHistory, InventoryItemVariant, Sale, Reseller, ChannelPrice } from '@/types';
+import type { InventoryItem, AdjustmentHistory, InventoryItemVariant, Sale, Reseller } from '@/types';
 
 // Settings Functions
 export async function saveSetting(key: string, value: any) {
@@ -23,16 +23,6 @@ export async function fetchInventoryData() {
     const fetchedItems = db.prepare('SELECT * FROM products').all();
     const fetchedVariants = db.prepare('SELECT * FROM variants').all();
     const fetchedHistory = db.prepare('SELECT * FROM history ORDER BY date DESC').all();
-    const fetchedChannelPrices = db.prepare('SELECT * FROM channel_prices').all();
-
-    const channelPriceMap = new Map<string, ChannelPrice[]>();
-    for (const entry of fetchedChannelPrices as any[]) {
-        const key = entry.variantId ? `variant-${entry.variantId}` : `product-${entry.productId}`;
-        if (!channelPriceMap.has(key)) {
-            channelPriceMap.set(key, []);
-        }
-        channelPriceMap.get(key)!.push({ channel: entry.channel, price: entry.price });
-    }
 
     const historyMap = new Map<string, AdjustmentHistory[]>();
     for (const entry of fetchedHistory as any[]) {
@@ -58,7 +48,6 @@ export async function fetchInventoryData() {
             ...variant,
             id: variantIdStr,
             history: historyMap.get(variantIdStr) || [],
-            channelPrices: channelPriceMap.get(`variant-${variant.id}`) || [],
         });
     }
 
@@ -77,7 +66,6 @@ export async function fetchInventoryData() {
             id: itemIdStr,
             history: historyMap.get(itemIdStr) || [],
             imageUrl: item.imageUrl,
-            channelPrices: channelPriceMap.get(`product-${item.id}`) || [],
         };
     });
 
@@ -362,7 +350,6 @@ export async function performSale(
 ) {
     const getProductStmt = db.prepare('SELECT * FROM products WHERE sku = ? AND hasVariants = 0');
     const getVariantStmt = db.prepare('SELECT * FROM variants WHERE sku = ?');
-    const getChannelPriceStmt = db.prepare('SELECT price FROM channel_prices WHERE (productId = @productId OR variantId = @variantId) AND channel = @channel');
     
     db.transaction(() => {
         const saleDate = options?.saleDate || new Date();
@@ -373,8 +360,7 @@ export async function performSale(
             if (variant.stock < quantity) {
                 throw new Error('Insufficient stock for variant.');
             }
-            const channelPriceResult = getChannelPriceStmt.get({ productId: variant.productId, variantId: variant.id, channel }) as { price: number } | undefined;
-            const priceAtSale = channelPriceResult?.price ?? variant.price;
+            const priceAtSale = variant.price;
 
             adjustStock(variant.id.toString(), -quantity, saleReason);
             db.prepare('INSERT INTO sales (transactionId, paymentMethod, resellerName, productId, variantId, channel, quantity, priceAtSale, saleDate) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)')
@@ -385,8 +371,7 @@ export async function performSale(
                  if (product.stock! < quantity) {
                     throw new Error('Insufficient stock for product.');
                 }
-                const channelPriceResult = getChannelPriceStmt.get({ productId: product.id, variantId: null, channel }) as { price: number } | undefined;
-                const priceAtSale = channelPriceResult?.price ?? product.price!;
+                const priceAtSale = product.price!;
                 
                 adjustStock(product.id.toString(), -quantity, saleReason);
                 db.prepare('INSERT INTO sales (transactionId, paymentMethod, resellerName, productId, variantId, channel, quantity, priceAtSale, saleDate) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)')
@@ -492,64 +477,12 @@ export async function revertSaleByTransaction(id: string) {
     }
 }
 
-// Pricing Functions
-export async function updatePrices(updates: {
-    id: string;
-    type: 'product' | 'variant';
-    costPrice?: number;
-    defaultPrice?: number;
-    channelPrices?: { channel: string; price: number }[];
-}[]) {
-    const updateProductStmt = db.prepare('UPDATE products SET costPrice = @costPrice, price = @defaultPrice WHERE id = @id');
-    const updateVariantStmt = db.prepare('UPDATE variants SET costPrice = @costPrice, price = @defaultPrice WHERE id = @id');
-    const upsertChannelPriceStmt = db.prepare(`
-        INSERT INTO channel_prices (productId, variantId, channel, price)
-        VALUES (@productId, @variantId, @channel, @price)
-        ON CONFLICT(productId, variantId, channel) DO UPDATE SET price = excluded.price
-    `);
-    const getVariantProductIdStmt = db.prepare('SELECT productId FROM variants WHERE id = ?');
-
-     db.transaction(() => {
-        for (const update of updates) {
-            if (update.type === 'product') {
-                updateProductStmt.run({
-                    id: update.id,
-                    costPrice: update.costPrice,
-                    defaultPrice: update.defaultPrice
-                });
-            } else if (update.type === 'variant') {
-                updateVariantStmt.run({
-                    id: update.id,
-                    costPrice: update.costPrice,
-                    defaultPrice: update.defaultPrice
-                });
-            }
-            
-            if (update.channelPrices) {
-                for (const cp of update.channelPrices) {
-                     let productId: number | string | undefined;
-                     let variantId: number | string | undefined;
-
-                     if (update.type === 'variant') {
-                         variantId = update.id;
-                         const result = getVariantProductIdStmt.get(variantId) as { productId: number };
-                         productId = result.productId;
-                     } else {
-                         productId = update.id;
-                         variantId = null;
-                     }
-
-                    upsertChannelPriceStmt.run({
-                        productId,
-                        variantId,
-                        channel: cp.channel,
-                        price: cp.price
-                    });
-                }
-            }
-        }
-    })();
+// This is a placeholder for the removed functionality.
+export async function updatePrices(updates: any[]) {
+    // This function is intentionally left blank.
+    console.log('updatePrices function called but is not implemented.', updates);
 }
+
 
 // Reseller functions
 export async function getResellers(): Promise<Reseller[]> {

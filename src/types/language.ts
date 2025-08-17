@@ -26,7 +26,6 @@ export const translations = {
             financialStatements: "Financial Statements",
             assetReport: "Asset Report",
             profitLossReport: "Profit & Loss Report",
-            priceSettings: "Price Settings",
         },
         inventoryTable: {
             searchPlaceholder: "Search items...",
@@ -198,25 +197,6 @@ export const translations = {
                 none: "No resellers yet. Add one above."
             }
         },
-        priceSettings: {
-            title: "Price Settings",
-            description: "Here you can set the cost price and selling price for each sales channel.",
-            save: "Save All Changes",
-            product: "Product",
-            costPrice: "Cost Price",
-            defaultPrice: "Default Price",
-            posPrice: "POS Price",
-            shopeePrice: "Shopee Price",
-            lazadaPrice: "Lazada Price",
-            tiktokPrice: "Tiktok Price",
-            resellerPrice: "Reseller Price",
-            placeholderCost: "Cost price",
-            placeholderSell: "Selling price",
-            toastSuccessTitle: "Prices Updated",
-            toastSuccessDesc: "All price changes have been saved successfully.",
-            toastErrorTitle: "Failed to Update Prices",
-            toastErrorDesc: "An error occurred while saving the changes.",
-        },
         receipt: {
             shopName: "WaveApp Store",
             thankYou: "Thank you for your purchase!",
@@ -295,7 +275,6 @@ export const translations = {
             financialStatements: "Laporan Keuangan",
             assetReport: "Laporan Aset",
             profitLossReport: "Laporan Laba Rugi",
-            priceSettings: "Pengaturan Harga",
         },
         inventoryTable: {
             searchPlaceholder: "Cari barang...",
@@ -466,25 +445,6 @@ export const translations = {
                 notFound: "Reseller tidak ditemukan.",
                 none: "Belum ada reseller. Tambahkan di atas."
             }
-        },
-        priceSettings: {
-            title: "Pengaturan Harga",
-            description: "Di sini Anda dapat mengatur harga modal dan harga jual untuk setiap channel penjualan.",
-            save: "Simpan Semua Perubahan",
-            product: "Produk",
-            costPrice: "Harga Modal",
-            defaultPrice: "Harga Jual Default",
-            posPrice: "Harga Jual POS",
-            shopeePrice: "Harga Jual Shopee",
-            lazadaPrice: "Harga Jual Lazada",
-            tiktokPrice: "Harga Jual Tiktok",
-            resellerPrice: "Harga Jual Reseller",
-            placeholderCost: "Harga modal",
-            placeholderSell: "Harga jual",
-            toastSuccessTitle: "Harga Diperbarui",
-            toastSuccessDesc: "Semua perubahan harga telah berhasil disimpan.",
-            toastErrorTitle: "Gagal Memperbarui Harga",
-            toastErrorDesc: "Terjadi kesalahan saat menyimpan perubahan.",
         },
         receipt: {
             shopName: "WaveApp Store",

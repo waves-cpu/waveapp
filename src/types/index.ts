@@ -6,19 +6,12 @@ export interface AdjustmentHistory {
   newStockLevel: number;
 }
 
-export interface ChannelPrice {
-    channel: string;
-    price: number;
-}
-
 export interface InventoryItemVariant {
   id: string;
   name: string;
   sku?: string;
   stock: number;
   price: number; // Default selling price
-  costPrice?: number; // Cost of goods sold
-  channelPrices?: ChannelPrice[];
   history: AdjustmentHistory[];
   parentName?: string; // Optional: To hold the parent product's name
   parentImageUrl?: string;
@@ -34,8 +27,6 @@ export interface InventoryItem {
   // These are for non-variant items
   stock?: number;
   price?: number; // Default selling price
-  costPrice?: number; // Cost of goods sold
-  channelPrices?: ChannelPrice[];
   size?: string;
   history?: AdjustmentHistory[];
 }

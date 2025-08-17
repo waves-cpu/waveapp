@@ -36,28 +36,31 @@ export function PosOrderSummary({ cart, onSaleComplete, clearCart }: PosOrderSum
     const { language } = useLanguage();
     const t = translations[language];
     const [discount, setDiscount] = useState(0);
-    const [tax, setTax] = useState(0);
     const [cashReceived, setCashReceived] = useState(0);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [saleCompleted, setSaleCompleted] = useState(false);
     const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('Cash');
 
     const subtotal = useMemo(() => cart.reduce((acc, item) => acc + item.price * item.quantity, 0), [cart]);
-    const taxAmount = useMemo(() => subtotal * (tax / 100), [subtotal, tax]);
-    const total = useMemo(() => subtotal - discount + taxAmount, [subtotal, discount, taxAmount]);
+    const total = useMemo(() => subtotal - discount, [subtotal, discount]);
     const change = useMemo(() => cashReceived - total, [cashReceived, total]);
 
     const handleSale = async () => {
         setIsSubmitting(true);
-        await onSaleComplete(paymentMethod);
-        setIsSubmitting(false);
-        setSaleCompleted(true);
+        try {
+            await onSaleComplete(paymentMethod);
+            setIsSubmitting(false);
+            setSaleCompleted(true);
+        } catch(e) {
+            // sale failed, do not complete
+            setIsSubmitting(false);
+            setSaleCompleted(false);
+        }
     };
 
     const handleNewSale = () => {
         setSaleCompleted(false);
         setDiscount(0);
-        setTax(0);
         setCashReceived(0);
         setPaymentMethod('Cash');
         clearCart();
@@ -90,10 +93,6 @@ export function PosOrderSummary({ cart, onSaleComplete, clearCart }: PosOrderSum
                     <div className="flex justify-between items-center">
                         <Label htmlFor="discount">{t.pos.discount}</Label>
                         <Input id="discount" type="number" value={discount} onChange={(e) => setDiscount(Number(e.target.value))} className="w-32 h-8 text-sm"/>
-                    </div>
-                     <div className="flex justify-between items-center">
-                        <Label htmlFor="tax">{t.pos.tax}</Label>
-                        <Input id="tax" type="number" value={tax} onChange={(e) => setTax(Number(e.target.value))} className="w-32 h-8 text-sm"/>
                     </div>
                 </div>
                 <Separator />
