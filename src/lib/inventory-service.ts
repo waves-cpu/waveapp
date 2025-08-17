@@ -503,6 +503,7 @@ export async function updatePrices(updates: { id: string, type: 'product' | 'var
     `);
     const deleteChannelPriceStmt = db.prepare('DELETE FROM channel_prices WHERE product_id = ? AND variant_id = ? AND channel = ?');
     const getVariantProductIdStmt = db.prepare('SELECT productId FROM variants WHERE id = ?');
+    const ONLINE_CHANNELS = ['shopee', 'tiktok', 'lazada'];
 
     db.transaction(() => {
         updates.forEach(update => {
@@ -514,16 +515,20 @@ export async function updatePrices(updates: { id: string, type: 'product' | 'var
                 });
 
                 update.channelPrices?.forEach(cp => {
-                    if (cp.price !== undefined && cp.price !== null) {
-                        upsertChannelPriceStmt.run({
-                            product_id: update.id,
-                            variant_id: null,
-                            channel: cp.channel,
-                            price: cp.price
-                        });
-                    } else {
-                        deleteChannelPriceStmt.run(update.id, null, cp.channel);
-                    }
+                    const channelsToUpdate = cp.channel === 'online' ? ONLINE_CHANNELS : [cp.channel];
+                    
+                    channelsToUpdate.forEach(channel => {
+                        if (cp.price !== undefined && cp.price !== null && cp.price >= 0) {
+                             upsertChannelPriceStmt.run({
+                                product_id: update.id,
+                                variant_id: null,
+                                channel: channel,
+                                price: cp.price
+                            });
+                        } else {
+                            deleteChannelPriceStmt.run(update.id, null, channel);
+                        }
+                    });
                 });
 
             } else { // variant
@@ -536,16 +541,20 @@ export async function updatePrices(updates: { id: string, type: 'product' | 'var
                 const variantInfo = getVariantProductIdStmt.get(update.id) as { productId: number };
                 if (variantInfo) {
                      update.channelPrices?.forEach(cp => {
-                        if (cp.price !== undefined && cp.price !== null) {
-                            upsertChannelPriceStmt.run({
-                                product_id: variantInfo.productId,
-                                variant_id: update.id,
-                                channel: cp.channel,
-                                price: cp.price
-                            });
-                        } else {
-                            deleteChannelPriceStmt.run(variantInfo.productId, update.id, cp.channel);
-                        }
+                        const channelsToUpdate = cp.channel === 'online' ? ONLINE_CHANNELS : [cp.channel];
+
+                        channelsToUpdate.forEach(channel => {
+                             if (cp.price !== undefined && cp.price !== null && cp.price >= 0) {
+                                upsertChannelPriceStmt.run({
+                                    product_id: variantInfo.productId,
+                                    variant_id: update.id,
+                                    channel: channel,
+                                    price: cp.price
+                                });
+                            } else {
+                                deleteChannelPriceStmt.run(variantInfo.productId, update.id, channel);
+                            }
+                        });
                     });
                 }
             }

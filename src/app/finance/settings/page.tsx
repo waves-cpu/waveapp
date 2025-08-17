@@ -22,7 +22,7 @@ import { Card, CardContent, CardFooter, CardHeader, CardDescription } from '@/co
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Trash2, ShoppingBag, Store, Search, PlusCircle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import type { InventoryItem, InventoryItemVariant } from '@/types';
+import type { InventoryItem } from '@/types';
 import { ProductSelectionDialog } from '@/app/components/product-selection-dialog';
 import Image from 'next/image';
 import { AppLayout } from '@/app/components/app-layout';
@@ -52,7 +52,7 @@ const formSchema = z.object({
   items: z.array(priceSettingItemSchema),
 });
 
-const CHANNELS = ['pos', 'reseller'];
+const CHANNELS = ['pos', 'reseller', 'online'];
 
 export default function PriceSettingsPage() {
     const { language } = useLanguage();
@@ -60,7 +60,6 @@ export default function PriceSettingsPage() {
     const TPrice = t.finance.priceSettingsPage;
     const { items: allInventoryItems, categories, updatePrices, loading } = useInventory();
     const { toast } = useToast();
-    const router = useRouter();
     
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isProductSelectionOpen, setProductSelectionOpen] = useState(false);
@@ -105,39 +104,42 @@ export default function PriceSettingsPage() {
             if (existingItemIds.has(id)) return;
             
             for (const item of allInventoryItems) {
-                if(item.id === id && (!item.variants || item.variants.length === 0)) {
+                const processItem = (i: InventoryItem | any, type: 'product' | 'variant', parent?: InventoryItem) => {
+                    // Helper to get online price
+                    const getOnlinePrice = (channelPrices?: any[]) => {
+                        const onlinePrice = channelPrices?.find(p => ['shopee', 'tiktok', 'lazada'].includes(p.channel))?.price;
+                        return onlinePrice;
+                    }
+
                     newItems.push({
-                        id: item.id,
-                        type: 'product',
-                        name: item.name,
-                        sku: item.sku,
-                        imageUrl: item.imageUrl,
-                        costPrice: item.costPrice,
-                        price: item.price,
-                        channelPrices: CHANNELS.map(channel => ({
-                            channel,
-                            price: item.channelPrices?.find(p => p.channel === channel)?.price
-                        }))
+                        id: i.id,
+                        type: type,
+                        name: i.name,
+                        sku: i.sku,
+                        imageUrl: parent?.imageUrl || i.imageUrl,
+                        parentName: parent?.name,
+                        costPrice: i.costPrice,
+                        price: i.price,
+                        channelPrices: CHANNELS.map(channel => {
+                            let price;
+                            if (channel === 'online') {
+                                price = getOnlinePrice(i.channelPrices);
+                            } else {
+                                price = i.channelPrices?.find(p => p.channel === channel)?.price;
+                            }
+                            return { channel, price };
+                        })
                     });
+                };
+
+                if(item.id === id && (!item.variants || item.variants.length === 0)) {
+                    processItem(item, 'product');
                     break;
                 }
                 if (item.variants) {
                     const variant = item.variants.find(v => v.id === id);
                     if (variant) {
-                        newItems.push({
-                            id: variant.id,
-                            type: 'variant',
-                            name: variant.name,
-                            sku: variant.sku,
-                            imageUrl: item.imageUrl,
-                            parentName: item.name,
-                            costPrice: variant.costPrice,
-                            price: variant.price,
-                            channelPrices: CHANNELS.map(channel => ({
-                                channel,
-                                price: variant.channelPrices?.find(p => p.channel === channel)?.price
-                            }))
-                        });
+                        processItem(variant, 'variant', item);
                         break;
                     }
                 }
@@ -169,7 +171,7 @@ export default function PriceSettingsPage() {
                 title: TPrice.successToast,
                 description: TPrice.successToastDesc,
             });
-            replace([]); // Clear the table after saving
+            replace([]);
         } catch (error) {
             console.error("Failed to update prices:", error);
             toast({
@@ -238,13 +240,14 @@ export default function PriceSettingsPage() {
                                                 <TableHead>{TPrice.defaultPrice}</TableHead>
                                                 <TableHead>Harga POS</TableHead>
                                                 <TableHead>Harga Reseller</TableHead>
+                                                <TableHead>Harga Online</TableHead>
                                                 <TableHead className="w-[50px]"></TableHead>
                                             </TableRow>
                                         </TableHeader>
                                         <TableBody>
                                             {fields.length === 0 ? (
                                                 <TableRow>
-                                                    <TableCell colSpan={6} className="text-center h-48">
+                                                    <TableCell colSpan={7} className="text-center h-48">
                                                         <div className="flex flex-col items-center justify-center gap-4 text-muted-foreground">
                                                             <ShoppingBag className="h-16 w-16" />
                                                             <div className="text-center">
@@ -273,13 +276,32 @@ export default function PriceSettingsPage() {
                                                                 </div>
                                                             </div>
                                                         </TableCell>
-                                                        {[ 'costPrice', 'price', ...CHANNELS ].map(priceType => {
-                                                            const fieldName = priceType === 'costPrice' || priceType === 'price'
-                                                                ? `items.${index}.${priceType}`
-                                                                : `items.${index}.channelPrices.${CHANNELS.indexOf(priceType)}.price`
+                                                        <TableCell>
+                                                             <FormField
+                                                                control={form.control}
+                                                                name={`items.${index}.costPrice`}
+                                                                render={({ field: formField }) => (
+                                                                    <FormItem><FormControl><Input type="number" placeholder="0" {...formField} value={formField.value ?? ''} /></FormControl><FormMessage/></FormItem>
+                                                                )}
+                                                            />
+                                                        </TableCell>
+                                                         <TableCell>
+                                                             <FormField
+                                                                control={form.control}
+                                                                name={`items.${index}.price`}
+                                                                render={({ field: formField }) => (
+                                                                    <FormItem><FormControl><Input type="number" placeholder="0" {...formField} value={formField.value ?? ''} /></FormControl><FormMessage/></FormItem>
+                                                                )}
+                                                            />
+                                                        </TableCell>
+                                                        {CHANNELS.map(channel => {
+                                                            const channelIndex = field.channelPrices?.findIndex(cp => cp.channel === channel);
+                                                            if (channelIndex === -1) return null;
+                                                            
+                                                            const fieldName = `items.${index}.channelPrices.${channelIndex}.price`;
 
                                                             return (
-                                                                <TableCell key={priceType}>
+                                                                <TableCell key={channel}>
                                                                     <FormField
                                                                         control={form.control}
                                                                         name={fieldName as any}
