@@ -27,6 +27,12 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
   FileDown,
   Search,
   Pencil,
@@ -36,7 +42,7 @@ import {
   ShoppingBag,
   Edit,
 } from 'lucide-react';
-import type { InventoryItem } from '@/types';
+import type { InventoryItem, InventoryItemVariant } from '@/types';
 import { useLanguage } from '@/hooks/use-language';
 import { translations } from '@/types/language';
 import Image from 'next/image';
@@ -116,6 +122,53 @@ function StockBar({ stock, onUpdateClick }: { stock: number; onUpdateClick: () =
 }
 
 const LOW_STOCK_THRESHOLD = 10;
+
+const formatCurrency = (amount: number) => `Rp${Math.round(amount).toLocaleString('id-ID')}`;
+
+const PriceWithTooltip = ({ item }: { item: InventoryItem | InventoryItemVariant }) => {
+    const priceDisplay = item.price ? formatCurrency(item.price) : '-';
+    
+    // Aggregate channel prices. For online, take the first one found.
+    const aggregatedPrices = useMemo(() => {
+        const prices: { channel: string, price: number }[] = [];
+        if (!item.channelPrices) return [];
+
+        const posPrice = item.channelPrices.find(p => p.channel === 'pos');
+        const resellerPrice = item.channelPrices.find(p => p.channel === 'reseller');
+        const onlinePrice = item.channelPrices.find(p => ['shopee', 'tiktok', 'lazada'].includes(p.channel));
+
+        if (posPrice) prices.push({ channel: 'POS', price: posPrice.price });
+        if (resellerPrice) prices.push({ channel: 'Reseller', price: resellerPrice.price });
+        if (onlinePrice) prices.push({ channel: 'Online', price: onlinePrice.price });
+
+        return prices;
+    }, [item.channelPrices]);
+
+    if (aggregatedPrices.length === 0) {
+        return <span>{priceDisplay}</span>;
+    }
+
+    return (
+        <TooltipProvider>
+            <Tooltip>
+                <TooltipTrigger asChild>
+                    <span className="underline decoration-dashed cursor-help">{priceDisplay}</span>
+                </TooltipTrigger>
+                <TooltipContent>
+                    <div className="space-y-1">
+                        {aggregatedPrices.map(p => (
+                             <div key={p.channel} className="flex justify-between gap-4">
+                                <span className="font-semibold">{p.channel}:</span>
+                                <span>{formatCurrency(p.price)}</span>
+                             </div>
+                        ))}
+                    </div>
+                </TooltipContent>
+            </Tooltip>
+        </TooltipProvider>
+    );
+};
+
 
 export function InventoryTable({ onUpdateStock }: InventoryTableProps) {
   const { items, categories, loading } = useInventory();
@@ -303,8 +356,8 @@ export function InventoryTable({ onUpdateStock }: InventoryTableProps) {
                     const minPrice = Math.min(...prices);
                     const maxPrice = Math.max(...prices);
                     const priceDisplay = minPrice === maxPrice 
-                        ? `Rp${Math.round(minPrice).toLocaleString('id-ID')}`
-                        : `Rp${Math.round(minPrice).toLocaleString('id-ID')} - Rp${Math.round(maxPrice).toLocaleString('id-ID')}`;
+                        ? formatCurrency(minPrice)
+                        : `${formatCurrency(minPrice)} - ${formatCurrency(maxPrice)}`;
                     const totalStock = item.variants.reduce((sum, v) => sum + v.stock, 0);
 
                     return (
@@ -370,7 +423,9 @@ export function InventoryTable({ onUpdateStock }: InventoryTableProps) {
                                             </div>
                                         </div>
                                     </TableCell>
-                                    <TableCell>{`Rp${Math.round(variant.price).toLocaleString('id-ID')}`}</TableCell>
+                                    <TableCell>
+                                        <PriceWithTooltip item={variant} />
+                                    </TableCell>
                                     <TableCell>
                                         <StockBar stock={variant.stock} onUpdateClick={() => onUpdateStock(variant.id)} />
                                     </TableCell>
@@ -398,7 +453,9 @@ export function InventoryTable({ onUpdateStock }: InventoryTableProps) {
                                     </div>
                                 </div>
                             </TableCell>
-                             <TableCell>{item.price ? `Rp${Math.round(item.price).toLocaleString('id-ID')}` : '-'}</TableCell>
+                             <TableCell>
+                                <PriceWithTooltip item={item} />
+                             </TableCell>
                             <TableCell>
                                <StockBar stock={item.stock ?? 0} onUpdateClick={() => onUpdateStock(item.id)} />
                             </TableCell>
@@ -496,3 +553,4 @@ export function InventoryTable({ onUpdateStock }: InventoryTableProps) {
     
 
     
+
