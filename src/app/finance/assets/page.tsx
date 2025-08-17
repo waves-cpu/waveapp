@@ -1,3 +1,4 @@
+
 'use client';
 
 import { AppLayout } from "@/app/components/app-layout";
@@ -137,7 +138,7 @@ export default function AssetReportPage() {
                 <main className="flex-1 p-4 md:p-10">
                     <div className="flex items-center gap-4 mb-6">
                         <SidebarTrigger className="md:hidden" />
-                        <h1 className="text-lg font-bold">{t.finance.assetReport}</h1>
+                        <h1 className="text-base font-bold">{t.finance.assetReport}</h1>
                     </div>
                     <AssetReportSkeleton />
                 </main>
@@ -150,44 +151,44 @@ export default function AssetReportPage() {
             <main className="flex-1 p-4 md:p-10 pb-8">
                 <div className="flex items-center gap-4 mb-6">
                     <SidebarTrigger className="md:hidden" />
-                    <h1 className="text-lg font-bold">{t.finance.assetReport}</h1>
+                    <h1 className="text-base font-bold">{t.finance.assetReport}</h1>
                 </div>
 
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
                     <Card>
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">{TAsset.totalAssetValue}</CardTitle>
+                            <CardTitle className="text-xs font-medium">{TAsset.totalAssetValue}</CardTitle>
                             <DollarSign className="h-4 w-4 text-muted-foreground" />
                         </CardHeader>
                         <CardContent>
-                            <div className="text-2xl font-bold">{formatCurrency(assetClassification.totalAssetValue)}</div>
+                            <div className="text-xl font-bold">{formatCurrency(assetClassification.totalAssetValue)}</div>
                         </CardContent>
                     </Card>
                      <Card>
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">{TAsset.fastLabel}</CardTitle>
+                            <CardTitle className="text-xs font-medium">{TAsset.fastLabel}</CardTitle>
                             <TrendingUp className="h-4 w-4 text-green-500" />
                         </CardHeader>
                         <CardContent>
-                            <div className="text-2xl font-bold">{formatCurrency(assetClassification.totalFastMovingValue)}</div>
+                            <div className="text-xl font-bold">{formatCurrency(assetClassification.totalFastMovingValue)}</div>
                         </CardContent>
                     </Card>
                     <Card>
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">{TAsset.slowLabel}</CardTitle>
+                            <CardTitle className="text-xs font-medium">{TAsset.slowLabel}</CardTitle>
                             <Hourglass className="h-4 w-4 text-yellow-500" />
                         </CardHeader>
                         <CardContent>
-                            <div className="text-2xl font-bold">{formatCurrency(assetClassification.totalSlowMovingValue)}</div>
+                            <div className="text-xl font-bold">{formatCurrency(assetClassification.totalSlowMovingValue)}</div>
                         </CardContent>
                     </Card>
                      <Card>
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">{TAsset.nonMovingLabel}</CardTitle>
+                            <CardTitle className="text-xs font-medium">{TAsset.nonMovingLabel}</CardTitle>
                             <TrendingDown className="h-4 w-4 text-red-500" />
                         </CardHeader>
                         <CardContent>
-                            <div className="text-2xl font-bold">
+                            <div className="text-xl font-bold">
                                 {formatCurrency(assetClassification.totalNonMovingValue)}
                             </div>
                         </CardContent>
@@ -197,7 +198,7 @@ export default function AssetReportPage() {
 
                 <Card>
                     <CardHeader>
-                        <CardTitle>{TAsset.chartTitle}</CardTitle>
+                        <CardTitle className="text-xs">{TAsset.chartTitle}</CardTitle>
                     </CardHeader>
                     <CardContent>
                        <ChartContainer config={chartConfig} className="min-h-56 w-full">
