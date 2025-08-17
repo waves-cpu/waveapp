@@ -18,11 +18,12 @@ import { useForm, useFieldArray, Controller } from "react-hook-form";
 import type { InventoryItem, InventoryItemVariant } from "@/types";
 import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
-import { Store } from "lucide-react";
+import { Store, PlusCircle } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from "@/hooks/use-language";
 import { translations } from "@/types/language";
+import Link from "next/link";
 
 type FormValues = {
   items: {
@@ -155,9 +156,17 @@ export default function FinanceSettingsPage() {
                             <SidebarTrigger className="md:hidden" />
                             <h1 className="text-lg font-bold">{t.finance.priceSettings}</h1>
                         </div>
-                        <Button type="submit" disabled={isSubmitting}>
-                            {isSubmitting ? t.common.saveChanges + '...' : t.priceSettings.save}
-                        </Button>
+                        <div className="flex items-center gap-2">
+                             <Button asChild variant="outline">
+                                <Link href="/add-product">
+                                    <PlusCircle />
+                                    {t.dashboard.addItem}
+                                </Link>
+                            </Button>
+                            <Button type="submit" disabled={isSubmitting}>
+                                {isSubmitting ? t.common.saveChanges + '...' : t.priceSettings.save}
+                            </Button>
+                        </div>
                     </div>
                      <div className="border rounded-md">
                         <Table>
