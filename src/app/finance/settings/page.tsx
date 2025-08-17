@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { useForm, useFieldArray, useWatch, Control } from 'react-hook-form';
+import { useForm, useFieldArray, useWatch, Control, UseFormReturn } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Button } from '@/components/ui/button';
@@ -27,7 +27,6 @@ import Image from 'next/image';
 import { AppLayout } from '@/app/components/app-layout';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
-import { cn } from '@/lib/utils';
 
 
 const channelPriceSchema = z.object({
@@ -215,7 +214,6 @@ export default function PriceSettingsPage() {
                 title: TPrice.successToast,
                 description: TPrice.successToastDesc,
             });
-            replace([]);
         } catch (error) {
             console.error("Failed to update prices:", error);
             toast({
@@ -236,12 +234,6 @@ export default function PriceSettingsPage() {
                         <SidebarTrigger className="md:hidden" />
                         <h1 className="text-lg font-bold">{t.finance.priceSettings}</h1>
                     </div>
-                    <div className="flex items-center gap-2">
-                        <Button type="button" onClick={() => setProductSelectionOpen(true)}>
-                            <PlusCircle className="mr-2 h-4 w-4" />
-                            {TPrice.selectProduct}
-                        </Button>
-                    </div>
                 </div>
                 
                 <Form {...form}>
@@ -249,8 +241,14 @@ export default function PriceSettingsPage() {
                         <Card>
                             <CardHeader>
                                 <CardDescription>{TPrice.description}</CardDescription>
-                                <div className="flex items-center gap-4 pt-2">
-                                    <div className="relative flex-grow">
+                                <div className="flex flex-col sm:flex-row items-center gap-4 pt-2">
+                                     <div className="w-full sm:w-auto">
+                                        <Button type="button" onClick={() => setProductSelectionOpen(true)} className="w-full">
+                                            <PlusCircle className="mr-2 h-4 w-4" />
+                                            {TPrice.selectProduct}
+                                        </Button>
+                                    </div>
+                                    <div className="relative flex-grow w-full">
                                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                                         <Input
                                             placeholder={TPrice.searchPlaceholder}
@@ -260,7 +258,7 @@ export default function PriceSettingsPage() {
                                         />
                                     </div>
                                     <Select onValueChange={(value) => setCategoryFilter(value === 'all' ? null : value)} defaultValue="all">
-                                        <SelectTrigger className="w-[200px]">
+                                        <SelectTrigger className="w-full sm:w-[200px]">
                                             <SelectValue placeholder={t.inventoryTable.selectCategoryPlaceholder} />
                                         </SelectTrigger>
                                         <SelectContent>
@@ -319,6 +317,7 @@ export default function PriceSettingsPage() {
                                                                 </div>
                                                             </TableCell>
                                                             <PriceRowFields 
+                                                                form={form}
                                                                 control={form.control}
                                                                 index={field.originalIndex}
                                                                 onRemove={() => remove(field.originalIndex)}
@@ -351,7 +350,7 @@ export default function PriceSettingsPage() {
                                                                 {variants.map((field) => (
                                                                     <TableRow key={field.id} className="hover:bg-muted/50">
                                                                         <TableCell>
-                                                                            <div className="flex items-center gap-4 pl-10">
+                                                                            <div className="flex items-center gap-4 pl-4">
                                                                                 <div className="flex h-10 w-10 items-center justify-center rounded-sm shrink-0">
                                                                                     <Store className="h-5 w-5 text-gray-400" />
                                                                                 </div>
@@ -362,6 +361,7 @@ export default function PriceSettingsPage() {
                                                                             </div>
                                                                         </TableCell>
                                                                          <PriceRowFields 
+                                                                            form={form}
                                                                             control={form.control} 
                                                                             index={field.originalIndex}
                                                                             onRemove={() => remove(field.originalIndex)}
@@ -400,7 +400,7 @@ export default function PriceSettingsPage() {
     );
 }
 
-const PriceRowFields = ({ control, index, onRemove, channelPrices }: { control: Control<any>, index: number, onRemove: () => void, channelPrices: {channel: string, price?: number}[] }) => {
+const PriceRowFields = ({ form, control, index, onRemove, channelPrices }: { form: UseFormReturn<any>, control: Control<any>, index: number, onRemove: () => void, channelPrices: {channel: string, price?: number}[] }) => {
     return (
         <>
             <TableCell>
@@ -423,9 +423,14 @@ const PriceRowFields = ({ control, index, onRemove, channelPrices }: { control: 
             </TableCell>
             {CHANNELS.map(channel => {
                 const fieldName = `items.${index}.channelPrices`;
-                const channelIndex = channelPrices?.findIndex((cp: any) => cp.channel === channel);
+                // use getValues from the main form object passed as a prop
+                const currentChannelPrices = form.getValues(fieldName);
+                const channelIndex = currentChannelPrices?.findIndex((cp: any) => cp.channel === channel);
 
-                if (channelIndex === -1) return <TableCell key={channel}></TableCell>;
+                if (channelIndex === -1) {
+                    console.warn(`Channel ${channel} not found in channelPrices for item ${index}`);
+                    return <TableCell key={channel}></TableCell>;
+                }
                 
                 const priceFieldName = `${fieldName}.${channelIndex}.price`;
 
