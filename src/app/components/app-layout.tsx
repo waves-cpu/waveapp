@@ -28,6 +28,12 @@ import {
   ShoppingBag,
   SquareTerminal,
   Users,
+  BookCopy,
+  BookText,
+  FileText,
+  Archive,
+  FileBarChart,
+  Settings2,
 } from 'lucide-react';
 import { Logo } from './logo';
 import { Separator } from '@/components/ui/separator';
@@ -42,6 +48,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     const pathname = usePathname();
     const [isInventoryOpen, setInventoryOpen] = useState(true);
     const [isSalesOpen, setSalesOpen] = useState(true);
+    const [isFinanceOpen, setFinanceOpen] = useState(true);
 
   return (
     <div className="flex h-full">
@@ -145,6 +152,60 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                                       <SidebarMenuButton variant="ghost" size="sm" isActive={pathname === '/sales/reseller'}>
                                           <Users />
                                           {t.sales.reseller}
+                                      </SidebarMenuButton>
+                                  </Link>
+                              </SidebarMenuItem>
+                          </SidebarMenu>
+                      </CollapsibleContent>
+                  </Collapsible>
+
+                   <Collapsible open={isFinanceOpen} onOpenChange={setFinanceOpen}>
+                      <CollapsibleTrigger asChild>
+                          <SidebarMenuButton>
+                              <BookCopy />
+                              <span>Keuangan</span>
+                              <ChevronDown className={cn("ml-auto transition-transform", isFinanceOpen && "rotate-180")} />
+                          </SidebarMenuButton>
+                      </CollapsibleTrigger>
+                      <CollapsibleContent>
+                          <SidebarMenu className="ml-4 mt-2 border-l border-muted-foreground/20 pl-4">
+                               <SidebarMenuItem>
+                                  <Link href="/finance/journal">
+                                      <SidebarMenuButton variant="ghost" size="sm" isActive={pathname === '/finance/journal'}>
+                                          <BookText />
+                                          Jurnal Umum
+                                      </SidebarMenuButton>
+                                  </Link>
+                              </SidebarMenuItem>
+                              <SidebarMenuItem>
+                                  <Link href="/finance/statements">
+                                      <SidebarMenuButton variant="ghost" size="sm" isActive={pathname === '/finance/statements'}>
+                                          <FileText />
+                                          Laporan Keuangan
+                                      </SidebarMenuButton>
+                                  </Link>
+                              </SidebarMenuItem>
+                              <SidebarMenuItem>
+                                  <Link href="/finance/assets">
+                                      <SidebarMenuButton variant="ghost" size="sm" isActive={pathname === '/finance/assets'}>
+                                          <Archive />
+                                          Laporan Aset
+                                      </SidebarMenuButton>
+                                  </Link>
+                              </SidebarMenuItem>
+                              <SidebarMenuItem>
+                                  <Link href="/finance/profit-loss">
+                                      <SidebarMenuButton variant="ghost" size="sm" isActive={pathname === '/finance/profit-loss'}>
+                                          <FileBarChart />
+                                          Laporan Laba Rugi
+                                      </SidebarMenuButton>
+                                  </Link>
+                              </SidebarMenuItem>
+                               <SidebarMenuItem>
+                                  <Link href="/finance/settings">
+                                      <SidebarMenuButton variant="ghost" size="sm" isActive={pathname === '/finance/settings'}>
+                                          <Settings2 />
+                                          Pengaturan
                                       </SidebarMenuButton>
                                   </Link>
                               </SidebarMenuItem>
