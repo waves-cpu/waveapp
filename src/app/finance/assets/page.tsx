@@ -148,7 +148,7 @@ export default function AssetReportPage() {
 
     return (
         <AppLayout>
-            <main className="flex-1 p-4 md:p-10 pb-8">
+            <main className="flex flex-col flex-1 p-4 md:p-10 pb-8">
                 <div className="flex items-center gap-4 mb-6">
                     <SidebarTrigger className="md:hidden" />
                     <h1 className="text-base font-bold">{t.finance.assetReport}</h1>
@@ -196,12 +196,12 @@ export default function AssetReportPage() {
                 </div>
 
 
-                <Card>
+                <Card className="flex-1 flex flex-col">
                     <CardHeader>
                         <CardTitle className="text-xs">{TAsset.chartTitle}</CardTitle>
                     </CardHeader>
-                    <CardContent>
-                       <ChartContainer config={chartConfig} className="min-h-20 w-full">
+                    <CardContent className="flex-1">
+                       <ChartContainer config={chartConfig} className="w-full h-full">
                             <LineChart accessibilityLayer data={chartData} margin={{ top: 20, left: 12, right: 12 }}>
                                 <CartesianGrid vertical={false} />
                                 <XAxis
