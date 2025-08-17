@@ -157,7 +157,7 @@ export default function PriceSettingsPage() {
         append(newItems);
     };
 
-    const groupedAndFilteredItems = useMemo(() => {
+     const groupedAndFilteredItems = useMemo(() => {
         const filteredFields = fields
             .map((field, index) => ({ ...field, originalIndex: index }))
             .filter(field => {
@@ -171,13 +171,8 @@ export default function PriceSettingsPage() {
 
                 if (!categoryFilter) return true;
                 
-                const inventoryItem = allInventoryItems.find(item => {
-                     // Check if it's a simple product
-                    if (item.id === field.id && (!item.variants || item.variants.length === 0)) {
-                        return true;
-                    }
-                    // Check if it's a variant
-                    if (item.variants && item.variants.some(v => v.id === field.id)) {
+                 const inventoryItem = allInventoryItems.find(item => {
+                    if (item.id === field.id || (item.variants && item.variants.some(v => v.id === field.id))) {
                         return true;
                     }
                     return false;
@@ -219,7 +214,6 @@ export default function PriceSettingsPage() {
         return { groups: Array.from(activeGroups.values()), simpleItems };
 
     }, [fields, searchTerm, categoryFilter, allInventoryItems]);
-
     
     const applyAllMasterPrices = (parentName: string) => {
         const masterPrices = form.getValues(`masterPrices.${parentName}`);
@@ -384,11 +378,11 @@ export default function PriceSettingsPage() {
                                                                 
                                                                 {bulkEditStates[header.name] ? (
                                                                     <>
-                                                                        <MasterPriceCell form={form} parentName={header.name} priceType="costPrice" />
-                                                                        <MasterPriceCell form={form} parentName={header.name} priceType="price" />
-                                                                        <MasterPriceCell form={form} parentName={header.name} priceType="pos" />
-                                                                        <MasterPriceCell form={form} parentName={header.name} priceType="reseller" />
-                                                                        <MasterPriceCell form={form} parentName={header.name} priceType="online" />
+                                                                        <MasterPriceCell form={form} parentName={header.name} priceType="costPrice" t={t} />
+                                                                        <MasterPriceCell form={form} parentName={header.name} priceType="price" t={t} />
+                                                                        <MasterPriceCell form={form} parentName={header.name} priceType="pos" t={t} />
+                                                                        <MasterPriceCell form={form} parentName={header.name} priceType="reseller" t={t} />
+                                                                        <MasterPriceCell form={form} parentName={header.name} priceType="online" t={t} />
                                                                         <TableCell className="p-1.5 align-middle">
                                                                             <div className="flex items-center gap-1">
                                                                                 <Button type="button" variant="outline" size="sm" className="h-8" onClick={() => applyAllMasterPrices(header.name)}>
@@ -402,7 +396,7 @@ export default function PriceSettingsPage() {
                                                                     </>
                                                                 ) : (
                                                                     <TableCell colSpan={6} className="text-center p-1.5">
-                                                                        <Button type="button" variant="secondary" size="sm" className="h-8" onClick={() => toggleBulkEdit(header.name, true)}>
+                                                                        <Button type="button" variant="secondary" size="sm" className="h-8 px-3" onClick={() => toggleBulkEdit(header.name, true)}>
                                                                             <Pencil className="mr-2 h-3 w-3" />
                                                                             Ubah Massal
                                                                         </Button>
@@ -468,7 +462,7 @@ const PriceRowFields = ({ form, index, onRemove }: { form: any, index: number, o
                     control={form.control}
                     name={`items.${index}.costPrice`}
                     render={({ field: formField }) => (
-                        <FormItem><FormControl><Input type="number" placeholder="0" {...formField} value={formField.value ?? ''} className="h-8" /></FormControl><FormMessage/></FormItem>
+                        <FormItem><FormControl><Input type="number" placeholder="0" {...formField} value={formField.value ?? ''} className="h-8 w-24" /></FormControl><FormMessage/></FormItem>
                     )}
                 />
             </TableCell>
@@ -477,7 +471,7 @@ const PriceRowFields = ({ form, index, onRemove }: { form: any, index: number, o
                     control={form.control}
                     name={`items.${index}.price`}
                     render={({ field: formField }) => (
-                        <FormItem><FormControl><Input type="number" placeholder="0" {...formField} value={formField.value ?? ''} className="h-8" /></FormControl><FormMessage/></FormItem>
+                        <FormItem><FormControl><Input type="number" placeholder="0" {...formField} value={formField.value ?? ''} className="h-8 w-24" /></FormControl><FormMessage/></FormItem>
                     )}
                 />
             </TableCell>
@@ -500,7 +494,7 @@ const PriceRowFields = ({ form, index, onRemove }: { form: any, index: number, o
                             render={({ field: formField }) => (
                                 <FormItem>
                                     <FormControl>
-                                        <Input type="number" placeholder="0" {...formField} value={formField.value ?? ''} className="h-8" />
+                                        <Input type="number" placeholder="0" {...formField} value={formField.value ?? ''} className="h-8 w-24" />
                                     </FormControl>
                                     <FormMessage/>
                                 </FormItem>
@@ -519,11 +513,25 @@ const PriceRowFields = ({ form, index, onRemove }: { form: any, index: number, o
 }
 
 
-const MasterPriceCell = ({ form, parentName, priceType }: {
+const MasterPriceCell = ({ form, parentName, priceType, t }: {
     form: any,
     parentName: string,
     priceType: 'costPrice' | 'price' | 'pos' | 'reseller' | 'online',
+    t: any
 }) => {
+    const TPrice = t.finance.priceSettingsPage;
+
+    const getPlaceholder = () => {
+        switch(priceType) {
+            case 'costPrice': return TPrice.costPrice;
+            case 'price': return TPrice.defaultPrice;
+            case 'pos': return t.sales.pos;
+            case 'reseller': return t.sales.reseller;
+            case 'online': return TPrice.onlinePrice;
+            default: return 'Harga';
+        }
+    }
+
     return (
         <TableCell className="p-1.5 align-middle">
              <FormField
@@ -534,10 +542,10 @@ const MasterPriceCell = ({ form, parentName, priceType }: {
                         <FormControl>
                             <Input
                                 type="number"
-                                placeholder={priceType === 'costPrice' ? 'Modal' : 'Harga'}
+                                placeholder={getPlaceholder()}
                                 {...field}
                                 value={field.value ?? ''}
-                                className="h-8"
+                                className="h-8 w-24"
                                 onKeyDown={(e) => {
                                     if (e.key === 'Enter') e.preventDefault();
                                 }}
@@ -549,3 +557,5 @@ const MasterPriceCell = ({ form, parentName, priceType }: {
         </TableCell>
     )
 }
+
+    
