@@ -142,31 +142,33 @@ const PriceWithDetails = ({ item }: { item: InventoryItem | InventoryItemVariant
         return prices;
     }, [item.channelPrices, t, TPrice]);
 
+    if (aggregatedPrices.length === 0) {
+        return <span>{priceDisplay}</span>;
+    }
+
     return (
         <div className="flex flex-col">
             <span>{priceDisplay}</span>
-            {aggregatedPrices.length > 0 && (
-                <Popover>
-                    <PopoverTrigger asChild>
-                         <Badge variant="secondary" className="mt-1 cursor-pointer w-auto inline-flex">
-                            {`${aggregatedPrices.length} Harga`}
-                        </Badge>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-60">
-                         <div className="space-y-2">
-                            <p className="font-semibold text-sm">{TPrice.channelPriceDetails}</p>
-                            <div className="space-y-1">
-                                {aggregatedPrices.map(p => (
-                                    <div key={p.channel} className="flex justify-between items-center gap-4 text-xs">
-                                        <span className="text-muted-foreground">{p.channel}:</span>
-                                        <span className="font-medium">{formatCurrency(p.price)}</span>
-                                    </div>
-                                ))}
-                            </div>
+            <Popover>
+                <PopoverTrigger asChild>
+                    <Badge variant="secondary" className="mt-1 cursor-pointer w-auto" asChild>
+                       <button>{`${aggregatedPrices.length} Harga Jual`}</button>
+                    </Badge>
+                </PopoverTrigger>
+                <PopoverContent className="w-60">
+                     <div className="space-y-2">
+                        <p className="font-semibold text-sm">{TPrice.channelPriceDetails}</p>
+                        <div className="space-y-1">
+                            {aggregatedPrices.map(p => (
+                                <div key={p.channel} className="flex justify-between items-center gap-4 text-xs">
+                                    <span className="text-muted-foreground">{p.channel}:</span>
+                                    <span className="font-medium">{formatCurrency(p.price)}</span>
+                                </div>
+                            ))}
                         </div>
-                    </PopoverContent>
-                </Popover>
-            )}
+                    </div>
+                </PopoverContent>
+            </Popover>
         </div>
     );
 };
