@@ -18,12 +18,13 @@ import { useForm, useFieldArray, Controller } from "react-hook-form";
 import type { InventoryItem, InventoryItemVariant } from "@/types";
 import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
-import { Store, PlusCircle } from "lucide-react";
+import { Store, PlusCircle, Trash2 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from "@/hooks/use-language";
 import { translations } from "@/types/language";
-import Link from "next/link";
+import { ProductSelectionDialog } from "@/app/components/product-selection-dialog";
+import { ShoppingBag } from "lucide-react";
 
 type FormValues = {
   items: {
@@ -42,39 +43,65 @@ type FormValues = {
 const CHANNELS = ['pos', 'shopee', 'lazada', 'tiktok', 'reseller'];
 
 export default function FinanceSettingsPage() {
-    const { items, loading, updatePrices, fetchItems } = useInventory();
+    const { items, loading, updatePrices, categories, fetchItems } = useInventory();
     const { toast } = useToast();
     const { language } = useLanguage();
     const t = translations[language];
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isSelectionOpen, setSelectionOpen] = useState(false);
 
-    const flattenedItems = useMemo(() => {
-        return items.flatMap(item => {
-            if (item.variants && item.variants.length > 0) {
-                return [
-                    { ...item, isParent: true },
-                    ...item.variants.map(v => ({ ...v, parentName: item.name, parentSku: item.sku, parentImageUrl: item.imageUrl, isParent: false }))
-                ];
-            }
-            return { ...item, isParent: false };
-        });
-    }, [items]);
-
-    const { control, handleSubmit, reset } = useForm<FormValues>({
+    const { control, handleSubmit, reset, getValues } = useForm<FormValues>({
         defaultValues: { items: [] }
     });
 
-    const { fields } = useFieldArray({
+    const { fields, append, remove } = useFieldArray({
         control,
         name: "items"
     });
 
-    useEffect(() => {
-        if (!loading && items.length > 0) {
-            const formItems = items.flatMap(item => {
-                const productEntry = !item.variants || item.variants.length === 0 ? [{
+    const existingItemIds = useMemo(() => new Set(fields.map(field => field.id)), [fields]);
+
+    const itemMap = useMemo(() => {
+        const map = new Map<string, InventoryItem | InventoryItemVariant & { parentName?: string, parentImageUrl?: string, parentSku?: string }>();
+        items.forEach(item => {
+            if (item.variants && item.variants.length > 0) {
+                 item.variants.forEach(v => map.set(v.id, { ...v, parentName: item.name, parentImageUrl: item.imageUrl, parentSku: item.sku }));
+            } else {
+                map.set(item.id, item);
+            }
+        });
+        return map;
+    }, [items]);
+    
+    const availableItemsForSelection = useMemo(() => {
+        return items.filter(item => {
+            if (item.variants && item.variants.length > 0) {
+                return item.variants.some(v => !existingItemIds.has(v.id));
+            }
+            return !existingItemIds.has(item.id);
+        }).map(item => {
+             if (item.variants) {
+                return {
+                    ...item,
+                    variants: item.variants.filter(v => !existingItemIds.has(v.id))
+                }
+            }
+            return item;
+        });
+    }, [items, existingItemIds]);
+
+    const handleProductsSelected = (selectedIds: string[]) => {
+        const newItems = selectedIds
+            .filter(id => !existingItemIds.has(id))
+            .map(id => {
+                const item = itemMap.get(id);
+                if (!item) return null;
+
+                const isVariant = 'parentName' in item;
+
+                return {
                     id: item.id,
-                    type: 'product' as const,
+                    type: isVariant ? 'variant' as const : 'product' as const,
                     costPrice: item.costPrice,
                     defaultPrice: item.price,
                     posPrice: item.channelPrices?.find(p => p.channel === 'pos')?.price,
@@ -82,37 +109,11 @@ export default function FinanceSettingsPage() {
                     lazadaPrice: item.channelPrices?.find(p => p.channel === 'lazada')?.price,
                     tiktokPrice: item.channelPrices?.find(p => p.channel === 'tiktok')?.price,
                     resellerPrice: item.channelPrices?.find(p => p.channel === 'reseller')?.price,
-                }] : [];
-
-                const variantEntries = item.variants?.map(v => ({
-                    id: v.id,
-                    type: 'variant' as const,
-                    costPrice: v.costPrice,
-                    defaultPrice: v.price,
-                    posPrice: v.channelPrices?.find(p => p.channel === 'pos')?.price,
-                    shopeePrice: v.channelPrices?.find(p => p.channel === 'shopee')?.price,
-                    lazadaPrice: v.channelPrices?.find(p => p.channel === 'lazada')?.price,
-                    tiktokPrice: v.channelPrices?.find(p => p.channel === 'tiktok')?.price,
-                    resellerPrice: v.channelPrices?.find(p => p.channel === 'reseller')?.price,
-                })) || [];
-
-                return [...productEntry, ...variantEntries];
-            });
-            reset({ items: formItems });
-        }
-    }, [items, loading, reset]);
-
-    const itemMap = useMemo(() => {
-        const map = new Map<string, InventoryItem | InventoryItemVariant & { parentName?: string, parentImageUrl?: string }>();
-        items.forEach(item => {
-            if (item.variants && item.variants.length > 0) {
-                 item.variants.forEach(v => map.set(v.id, { ...v, parentName: item.name, parentImageUrl: item.imageUrl }));
-            } else {
-                map.set(item.id, item);
-            }
-        });
-        return map;
-    }, [items]);
+                };
+            }).filter((item): item is NonNullable<typeof item> => item !== null);
+        
+        append(newItems);
+    }
 
     const onSubmit = async (data: FormValues) => {
         setIsSubmitting(true);
@@ -157,13 +158,11 @@ export default function FinanceSettingsPage() {
                             <h1 className="text-lg font-bold">{t.finance.priceSettings}</h1>
                         </div>
                         <div className="flex items-center gap-2">
-                             <Button asChild variant="outline">
-                                <Link href="/add-product">
-                                    <PlusCircle />
-                                    {t.dashboard.addItem}
-                                </Link>
+                             <Button type="button" variant="outline" onClick={() => setSelectionOpen(true)}>
+                                <PlusCircle className="mr-2 h-4 w-4" />
+                                {t.stockInForm.selectProducts}
                             </Button>
-                            <Button type="submit" disabled={isSubmitting}>
+                            <Button type="submit" disabled={isSubmitting || fields.length === 0}>
                                 {isSubmitting ? t.common.saveChanges + '...' : t.priceSettings.save}
                             </Button>
                         </div>
@@ -180,6 +179,7 @@ export default function FinanceSettingsPage() {
                                     <TableHead>{t.priceSettings.lazadaPrice}</TableHead>
                                     <TableHead>{t.priceSettings.tiktokPrice}</TableHead>
                                     <TableHead>{t.priceSettings.resellerPrice}</TableHead>
+                                    <TableHead className="w-[50px]"></TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -187,10 +187,10 @@ export default function FinanceSettingsPage() {
                                     [...Array(5)].map((_, i) => (
                                         <TableRow key={i}>
                                             <TableCell><Skeleton className="h-10 w-full" /></TableCell>
-                                            {[...Array(7)].map((_, j) => <TableCell key={j}><Skeleton className="h-9 w-full" /></TableCell>)}
+                                            {[...Array(8)].map((_, j) => <TableCell key={j}><Skeleton className="h-9 w-full" /></TableCell>)}
                                         </TableRow>
                                     ))
-                                ) : (
+                                ) : fields.length > 0 ? (
                                     fields.map((field, index) => {
                                         const item = itemMap.get(field.id);
                                         if (!item) return null;
@@ -268,15 +268,39 @@ export default function FinanceSettingsPage() {
                                                         render={({ field }) => <Input type="number" placeholder={t.priceSettings.resellerPrice} {...field} value={field.value ?? ''} className="h-9" />}
                                                     />
                                                 </TableCell>
+                                                 <TableCell>
+                                                    <Button type="button" variant="ghost" size="icon" className="text-destructive hover:text-destructive-foreground hover:bg-destructive" onClick={() => remove(index)}>
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </Button>
+                                                </TableCell>
                                             </TableRow>
                                         )
                                     })
+                                ) : (
+                                    <TableRow>
+                                        <TableCell colSpan={9} className="h-48 text-center">
+                                            <div className="flex flex-col items-center justify-center gap-4 text-muted-foreground">
+                                                <ShoppingBag className="h-16 w-16" />
+                                                <div className="text-center">
+                                                    <p className="font-semibold">{t.stockInForm.noProducts}</p>
+                                                    <p className="text-sm">{t.stockInForm.selectProducts} to begin.</p>
+                                                </div>
+                                            </div>
+                                        </TableCell>
+                                    </TableRow>
                                 )}
                             </TableBody>
                         </Table>
                     </div>
                 </form>
             </main>
+             <ProductSelectionDialog
+                open={isSelectionOpen}
+                onOpenChange={setSelectionOpen}
+                onSelect={handleProductsSelected}
+                availableItems={availableItemsForSelection}
+                categories={categories}
+            />
         </AppLayout>
     );
 }
