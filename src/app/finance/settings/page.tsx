@@ -152,11 +152,11 @@ export default function PriceSettingsPage() {
             .map((field, index) => ({ ...field, originalIndex: index }))
             .filter(field => {
                 let parentItem: InventoryItem | undefined;
-
-                if (field.type === 'product') {
-                    parentItem = allInventoryItems.find(i => i.id === field.id);
-                } else { // type is 'variant'
+                
+                if (field.type === 'variant') {
                     parentItem = allInventoryItems.find(i => i.variants?.some(v => v.id === field.id));
+                } else { // type is 'product'
+                    parentItem = allInventoryItems.find(i => i.id === field.id);
                 }
 
                 const categoryMatch = !categoryFilter || (parentItem && parentItem.category === categoryFilter);
