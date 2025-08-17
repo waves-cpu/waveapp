@@ -359,9 +359,13 @@ export function InventoryTable({ onUpdateStock }: InventoryTableProps) {
 
                 if (item.variants && item.variants.length > 0) {
                     const prices = item.variants.map(v => v.price).filter(p => p != null) as number[];
-                    const priceDisplay = prices.length > 0 ? (
-                        prices.length === 1 ? formatCurrency(prices[0]) : `${formatCurrency(Math.min(...prices))} - ${formatCurrency(Math.max(...prices))}`
-                    ) : '-';
+                    const minPrice = Math.min(...prices);
+                    const maxPrice = Math.max(...prices);
+                    const priceDisplay = prices.length > 0
+                        ? minPrice === maxPrice
+                            ? formatCurrency(minPrice)
+                            : `${formatCurrency(minPrice)} - ${formatCurrency(maxPrice)}`
+                        : '-';
                     const totalStock = item.variants.reduce((sum, v) => sum + v.stock, 0);
 
                     return (
@@ -538,36 +542,5 @@ export function InventoryTable({ onUpdateStock }: InventoryTableProps) {
     </>
   );
 }
-
-    
-
-    
-
-    
-
-    
-
-
-
-
-    
-
-    
-
-    
-
-    
-
-
-
-
-
-
-
-
-
-    
-
-    
 
     
