@@ -148,8 +148,9 @@ const PriceWithDetails = ({ item }: { item: InventoryItem | InventoryItemVariant
             {aggregatedPrices.length > 0 && (
                 <Popover>
                     <PopoverTrigger asChild>
-                         <Badge variant="secondary" className="mt-1 cursor-pointer inline-block w-auto">
-                            {aggregatedPrices.length} Harga Jual
+                        <Badge variant="secondary" className="mt-1 cursor-pointer inline-flex items-center">
+                            <Badge className="mr-1.5 h-4 w-4 shrink-0 justify-center p-0">{aggregatedPrices.length}</Badge>
+                            Harga Jual
                         </Badge>
                     </PopoverTrigger>
                     <PopoverContent className="w-60">
