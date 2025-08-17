@@ -200,7 +200,6 @@ export default function AssetReportPage() {
                 <Card>
                     <CardHeader>
                         <CardTitle>{TAsset.chartTitle}</CardTitle>
-                        <CardDescription>{TAsset.chartDescription}</CardDescription>
                     </CardHeader>
                     <CardContent>
                        <ChartContainer config={chartConfig} className="min-h-72 w-full">
@@ -245,7 +244,3 @@ export default function AssetReportPage() {
         </AppLayout>
     );
 }
-
-    
-
-    
