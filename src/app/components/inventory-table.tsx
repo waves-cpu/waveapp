@@ -148,8 +148,8 @@ const PriceWithDetails = ({ item }: { item: InventoryItem | InventoryItemVariant
             {aggregatedPrices.length > 0 && (
                 <Popover>
                     <PopoverTrigger asChild>
-                         <Badge variant="secondary" className="mt-1 cursor-pointer">
-                            ({aggregatedPrices.length} Harga Jual)
+                         <Badge variant="secondary" className="mt-1 cursor-pointer inline-block w-auto">
+                            {aggregatedPrices.length} Harga Jual
                         </Badge>
                     </PopoverTrigger>
                     <PopoverContent className="w-60">
@@ -562,3 +562,6 @@ export function InventoryTable({ onUpdateStock }: InventoryTableProps) {
 
 
 
+
+
+    
