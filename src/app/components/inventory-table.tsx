@@ -123,9 +123,10 @@ const formatCurrency = (amount: number) => `Rp${Math.round(amount).toLocaleStrin
 const PriceWithDetails = ({ item }: { item: InventoryItem | InventoryItemVariant }) => {
     const { language } = useLanguage();
     const t = translations[language];
+    const TPrice = t.finance.priceSettingsPage;
+    
     const priceDisplay = item.price ? formatCurrency(item.price) : '-';
     
-    // Aggregate channel prices. For online, take the first one found.
     const aggregatedPrices = useMemo(() => {
         const prices: { channel: string, price: number }[] = [];
         if (!item.channelPrices) return [];
@@ -136,10 +137,10 @@ const PriceWithDetails = ({ item }: { item: InventoryItem | InventoryItemVariant
 
         if (posPrice) prices.push({ channel: t.sales.pos, price: posPrice.price });
         if (resellerPrice) prices.push({ channel: t.sales.reseller, price: resellerPrice.price });
-        if (onlinePrice) prices.push({ channel: 'Online', price: onlinePrice.price });
+        if (onlinePrice) prices.push({ channel: TPrice.onlinePrice, price: onlinePrice.price });
 
         return prices;
-    }, [item.channelPrices, t]);
+    }, [item.channelPrices, t, TPrice]);
 
     return (
         <div>
@@ -153,7 +154,7 @@ const PriceWithDetails = ({ item }: { item: InventoryItem | InventoryItemVariant
                     </PopoverTrigger>
                     <PopoverContent className="w-60">
                          <div className="space-y-2">
-                            <p className="font-semibold text-sm">{t.finance.priceSettingsPage.channelPriceDetails}</p>
+                            <p className="font-semibold text-sm">{TPrice.channelPriceDetails}</p>
                             <div className="space-y-1">
                                 {aggregatedPrices.map(p => (
                                     <div key={p.channel} className="flex justify-between items-center gap-4 text-xs">
@@ -554,6 +555,7 @@ export function InventoryTable({ onUpdateStock }: InventoryTableProps) {
     
 
     
+
 
 
 
