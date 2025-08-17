@@ -88,10 +88,11 @@ export function BulkEditVariantsDialog({ open, onOpenChange, item }: BulkEditVar
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl">
         <DialogHeader>
-          <DialogTitle>{t.bulkEditDialog.title} {item.name}</DialogTitle>
-          <DialogDescription>
-            {t.bulkEditDialog.description}
-          </DialogDescription>
+          <DialogTitle>{t.bulkEditDialog.title}</DialogTitle>
+           <div className="-mt-2">
+              <h4 className="font-medium text-lg leading-tight">{item.name}</h4>
+              {item.sku && <p className="text-sm text-muted-foreground">SKU Induk: {item.sku}</p>}
+          </div>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
