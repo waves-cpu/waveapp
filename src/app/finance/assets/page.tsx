@@ -14,6 +14,8 @@ import { DollarSign, Archive, Package } from "lucide-react";
 import type { InventoryItem, InventoryItemVariant } from "@/types";
 import Image from "next/image";
 import { Store, ShoppingBag } from "lucide-react";
+import { Pagination } from "@/components/ui/pagination";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface AssetItem {
     id: string;
@@ -83,6 +85,8 @@ export default function AssetReportPage() {
     const { language } = useLanguage();
     const t = translations[language];
     const { items, loading } = useInventory();
+    const [currentPage, setCurrentPage] = useState(1);
+    const [itemsPerPage, setItemsPerPage] = useState(20);
 
     const assetItems = useMemo((): AssetItem[] => {
         const allAssetItems: AssetItem[] = [];
@@ -132,11 +136,18 @@ export default function AssetReportPage() {
         return { totalValue, totalSku, totalStock };
     }, [assetItems]);
     
+    const paginatedItems = useMemo(() => {
+        const startIndex = (currentPage - 1) * itemsPerPage;
+        return assetItems.slice(startIndex, startIndex + itemsPerPage);
+    }, [assetItems, currentPage, itemsPerPage]);
+
+    const totalPages = Math.ceil(assetItems.length / itemsPerPage);
+
     const groupedItems = useMemo(() => {
         const groups = new Map<string, AssetItem[]>();
         const simpleItems: AssetItem[] = [];
         
-        assetItems.forEach(item => {
+        paginatedItems.forEach(item => {
             if (item.type === 'variant' && item.parentName) {
                 if (!groups.has(item.parentName)) {
                     groups.set(item.parentName, []);
@@ -148,7 +159,7 @@ export default function AssetReportPage() {
         });
 
         return { groups: Array.from(groups.values()), simpleItems };
-      }, [assetItems]);
+      }, [paginatedItems]);
 
 
     if (loading) {
@@ -301,10 +312,36 @@ export default function AssetReportPage() {
                                 </TableRow>
                             </TableFooter>
                         </Table>
+                         <div className="flex items-center justify-end p-4 border-t">
+                            <div className="flex items-center gap-4">
+                                <Pagination
+                                    totalPages={totalPages}
+                                    currentPage={currentPage}
+                                    onPageChange={setCurrentPage}
+                                />
+                                <Select
+                                    value={`${itemsPerPage}`}
+                                    onValueChange={(value) => {
+                                        setItemsPerPage(Number(value))
+                                        setCurrentPage(1)
+                                    }}
+                                >
+                                    <SelectTrigger className="h-8 w-[200px]">
+                                        <SelectValue placeholder={itemsPerPage} />
+                                    </SelectTrigger>
+                                    <SelectContent side="top">
+                                        {[20, 50, 100].map((pageSize) => (
+                                        <SelectItem key={pageSize} value={`${pageSize}`}>
+                                            {`${pageSize} / ${t.productSelectionDialog.page}`}
+                                        </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        </div>
                     </CardContent>
                 </Card>
             </main>
         </AppLayout>
     );
 }
-
