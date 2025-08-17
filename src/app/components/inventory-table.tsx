@@ -144,6 +144,8 @@ const PriceWithDetails = ({ item }: { item: InventoryItem | InventoryItemVariant
         }
     }
 
+    const triggerText = `${channelPrices.length} ${TPrice.sellingPrices}`;
+
     return (
         <div className="flex flex-col items-start">
             <span>{priceDisplay}</span>
@@ -151,7 +153,7 @@ const PriceWithDetails = ({ item }: { item: InventoryItem | InventoryItemVariant
                 <Popover>
                     <PopoverTrigger asChild>
                          <button className="text-xs text-primary hover:underline mt-1">
-                            {channelPrices.length} Harga Jual
+                            {triggerText}
                          </button>
                     </PopoverTrigger>
                     <PopoverContent className="w-60">
