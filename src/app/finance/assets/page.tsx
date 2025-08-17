@@ -305,7 +305,7 @@ export default function AssetReportPage() {
                                     <YAxis tickLine={false} axisLine={false} tickFormatter={(value) => `Rp${(Number(value) / 1000000).toLocaleString()} Jt`} />
                                     <Tooltip cursor={false} content={<ChartTooltipContent formatter={(value) => formatCurrency(Number(value))} indicator="dot"/>} />
                                     <Legend content={({ payload }) => (
-                                        <div className="flex gap-4 justify-center">
+                                        <div className="flex gap-4 justify-center mt-4">
                                             {payload?.map((entry) => (
                                                 <div key={entry.value} className="flex items-center gap-2">
                                                     <div className="w-3 h-3 rounded-full" style={{ backgroundColor: entry.color }}></div>
