@@ -154,7 +154,7 @@ export default function AssetReportPage() {
                     <h1 className="text-base font-bold">{t.finance.assetReport}</h1>
                 </div>
 
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-4">
                     <Card>
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                             <CardTitle className="text-xs font-medium">{TAsset.totalAssetValue}</CardTitle>
