@@ -151,23 +151,28 @@ export default function PriceSettingsPage() {
         const filteredFields = fields
             .map((field, index) => ({ ...field, originalIndex: index }))
             .filter(field => {
-                let parentItem: InventoryItem | undefined;
-                
-                if (field.type === 'variant') {
-                    parentItem = allInventoryItems.find(i => i.variants?.some(v => v.id === field.id));
-                } else { // type is 'product'
-                    parentItem = allInventoryItems.find(i => i.id === field.id);
-                }
-
-                const categoryMatch = !categoryFilter || (parentItem && parentItem.category === categoryFilter);
-                
+                // Search filter logic (remains the same)
                 const lowerSearchTerm = searchTerm.toLowerCase();
                 const searchMatch = !lowerSearchTerm ||
                     field.name.toLowerCase().includes(lowerSearchTerm) ||
                     (field.sku && field.sku.toLowerCase().includes(lowerSearchTerm)) ||
                     (field.parentName && field.parentName.toLowerCase().includes(lowerSearchTerm));
 
-                return categoryMatch && searchMatch;
+                if (!searchMatch) return false;
+
+                // Category filter logic (CORRECTED)
+                if (!categoryFilter) return true;
+
+                let itemCategory: string | undefined;
+                if (field.type === 'product') {
+                    // It's a simple product, find its category directly
+                    itemCategory = allInventoryItems.find(i => i.id === field.id)?.category;
+                } else {
+                    // It's a variant, find its parent product to get the category
+                    itemCategory = allInventoryItems.find(i => i.name === field.parentName)?.category;
+                }
+                
+                return itemCategory === categoryFilter;
             });
         
         const groups = new Map<string, (PriceSettingItem & { originalIndex: number })[]>();
