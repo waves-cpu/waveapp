@@ -163,7 +163,6 @@ export default function AssetReportPage() {
                         </CardHeader>
                         <CardContent>
                             <div className="text-2xl font-bold">{formatCurrency(assetClassification.totalAssetValue)}</div>
-                            <p className="text-xs text-muted-foreground">{TAsset.totalAssetValueDesc}</p>
                         </CardContent>
                     </Card>
                      <Card>
@@ -173,7 +172,6 @@ export default function AssetReportPage() {
                         </CardHeader>
                         <CardContent>
                             <div className="text-2xl font-bold">{formatCurrency(assetClassification.totalFastMovingValue)}</div>
-                            <p className="text-xs text-muted-foreground">{TAsset.fastMovingAssetsDesc.replace('{days}', ASSET_TURNOVER_DAYS.toString()).replace('{count}', FAST_MOVING_THRESHOLD.toString())}</p>
                         </CardContent>
                     </Card>
                     <Card>
@@ -183,7 +181,6 @@ export default function AssetReportPage() {
                         </CardHeader>
                         <CardContent>
                             <div className="text-2xl font-bold">{formatCurrency(assetClassification.totalSlowMovingValue)}</div>
-                            <p className="text-xs text-muted-foreground">{TAsset.slowMovingAssetsDesc.replace('{days}', ASSET_TURNOVER_DAYS.toString()).replace('{min}', SLOW_MOVING_THRESHOLD.toString()).replace('{max}', (FAST_MOVING_THRESHOLD - 1).toString())}</p>
                         </CardContent>
                     </Card>
                      <Card>
@@ -195,7 +192,6 @@ export default function AssetReportPage() {
                             <div className="text-2xl font-bold">
                                 {formatCurrency(assetClassification.totalNonMovingValue)}
                             </div>
-                            <p className="text-xs text-muted-foreground">{TAsset.nonMovingAssetsDesc.replace('{days}', ASSET_TURNOVER_DAYS.toString()).replace('{count}', SLOW_MOVING_THRESHOLD.toString())}</p>
                         </CardContent>
                     </Card>
                 </div>
