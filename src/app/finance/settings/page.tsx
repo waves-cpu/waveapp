@@ -165,13 +165,18 @@ export default function PriceSettingsPage() {
                     field.name.toLowerCase().includes(lowerSearchTerm) ||
                     (field.sku && field.sku.toLowerCase().includes(lowerSearchTerm)) ||
                     (field.parentName && field.parentName.toLowerCase().includes(lowerSearchTerm));
-                if (!searchMatch) return false;
                 
+                if (!searchMatch) return false;
+
                 if (!categoryFilter) return true;
-                const parentForItem = allInventoryItems.find(i => 
-                    i.id === field.id || i.variants?.some(v => v.id === field.id)
+
+                // Find the parent item from the main inventory list to get its category
+                const parentItem = allInventoryItems.find(i => 
+                    i.id === (field.type === 'product' ? field.id : null) || 
+                    i.variants?.some(v => v.id === field.id)
                 );
-                return parentForItem?.category === categoryFilter;
+                
+                return parentItem?.category === categoryFilter;
             });
         
         const groups = new Map<string, (PriceSettingItem & { originalIndex: number })[]>();
@@ -188,22 +193,20 @@ export default function PriceSettingsPage() {
             }
         });
 
-        const activeGroups = new Map<string, (PriceSettingItem & { originalIndex: number; imageUrl?: string; sku?: string })[]>();
+        const activeGroups = new Map<string, { header: PriceSettingItem & { originalIndex: number }, variants: (PriceSettingItem & { originalIndex: number })[] }>();
         for (const [key, value] of groups.entries()) {
             if (value.length > 0) {
                 const parentInfo = allInventoryItems.find(item => item.name === key);
-                const headerItem: (PriceSettingItem & { originalIndex: number; imageUrl?: string; sku?: string }) = {
+                const headerItem = {
                     id: parentInfo?.id || key,
                     name: key,
                     parentName: key,
                     imageUrl: parentInfo?.imageUrl,
                     sku: parentInfo?.sku,
-                    type: 'product',
+                    type: 'product' as 'product',
                     originalIndex: -1,
                 };
-
-                const parentRow = [headerItem, ...value];
-                activeGroups.set(key, parentRow);
+                activeGroups.set(key, { header: headerItem, variants: value });
             }
         }
         
@@ -211,24 +214,31 @@ export default function PriceSettingsPage() {
 
     }, [fields, searchTerm, categoryFilter, allInventoryItems]);
     
-    const applyMasterPrice = (parentName: string, priceType: 'costPrice' | 'price' | 'pos' | 'reseller' | 'online') => {
-        const masterValue = form.getValues(`masterPrices.${parentName}.${priceType}`);
-        if (masterValue === undefined || masterValue === null) return;
-        
+    const applyAllMasterPrices = (parentName: string) => {
+        const masterPrices = form.getValues(`masterPrices.${parentName}`);
+        if (!masterPrices) return;
+
+        const priceTypes = ['costPrice', 'price', 'pos', 'reseller', 'online'];
+
         fields.forEach((field, index) => {
             if (field.parentName === parentName) {
-                if (priceType === 'costPrice' || priceType === 'price') {
-                    form.setValue(`items.${index}.${priceType}`, masterValue, { shouldDirty: true });
-                } else {
-                    const channelIndex = form.getValues(`items.${index}.channelPrices`)?.findIndex(cp => cp.channel === priceType);
-                    if (channelIndex !== -1 && channelIndex !== undefined) {
-                        form.setValue(`items.${index}.channelPrices.${channelIndex}.price`, masterValue, { shouldDirty: true });
+                priceTypes.forEach(priceType => {
+                    const masterValue = (masterPrices as any)[priceType];
+                    if (masterValue !== undefined && masterValue !== null) {
+                         if (priceType === 'costPrice' || priceType === 'price') {
+                            form.setValue(`items.${index}.${priceType}`, masterValue, { shouldDirty: true });
+                        } else {
+                            const channelIndex = form.getValues(`items.${index}.channelPrices`)?.findIndex(cp => cp.channel === priceType);
+                             if (channelIndex !== -1 && channelIndex !== undefined) {
+                                form.setValue(`items.${index}.channelPrices.${channelIndex}.price`, masterValue, { shouldDirty: true });
+                            }
+                        }
                     }
-                }
+                });
             }
         });
         form.trigger('items');
-        toast({ title: "Harga Diterapkan", description: `Harga ${priceType} untuk varian ${parentName} telah diatur.` });
+        toast({ title: "Harga Diterapkan", description: `Semua harga untuk varian ${parentName} telah diatur.` });
     };
     
     const onSubmit = async (values: z.infer<typeof formSchema>) => {
@@ -348,55 +358,56 @@ export default function PriceSettingsPage() {
                                                             />
                                                         </TableRow>
                                                     ))}
-                                                     {groupedAndFilteredItems.groups.map((group) => {
-                                                        const parentInfo = group[0];
-                                                        const variants = group.slice(1);
-                                                        return (
-                                                            <React.Fragment key={parentInfo.id}>
-                                                                <TableRow className="bg-muted/20 hover:bg-muted/40">
+                                                     {groupedAndFilteredItems.groups.map(({ header, variants }) => (
+                                                        <React.Fragment key={header.id}>
+                                                            <TableRow className="bg-muted/20 hover:bg-muted/40">
+                                                                <TableCell>
+                                                                    <div className="flex items-center gap-4 font-semibold text-primary">
+                                                                        <Image src={header.imageUrl || 'https://placehold.co/40x40.png'} alt={header.name} width={40} height={40} className="rounded-sm" data-ai-hint="product image" />
+                                                                        <div>
+                                                                            <span className="text-sm">{header.name}</span>
+                                                                            <div className="text-xs text-muted-foreground font-normal">SKU: {header.sku}</div>
+                                                                        </div>
+                                                                    </div>
+                                                                </TableCell>
+                                                                <MasterPriceCell form={form} parentName={header.name} priceType="costPrice" />
+                                                                <MasterPriceCell form={form} parentName={header.name} priceType="price" />
+                                                                <MasterPriceCell form={form} parentName={header.name} priceType="pos" />
+                                                                <MasterPriceCell form={form} parentName={header.name} priceType="reseller" />
+                                                                <MasterPriceCell form={form} parentName={header.name} priceType="online" />
+                                                                <TableCell className="p-1.5">
+                                                                    <div className="flex items-center gap-1">
+                                                                        <Button type="button" variant="outline" size="sm" className="h-8" onClick={() => applyAllMasterPrices(header.name)}>
+                                                                            {t.common.apply}
+                                                                        </Button>
+                                                                        <Button type="button" variant="ghost" size="icon" className="text-destructive hover:text-destructive-foreground hover:bg-destructive h-8 w-8" onClick={() => remove(variants.map(v => v.originalIndex))}>
+                                                                            <Trash2 className="h-4 w-4" />
+                                                                        </Button>
+                                                                    </div>
+                                                                </TableCell>
+                                                            </TableRow>
+                                                            {variants.map((field) => (
+                                                                <TableRow key={field.id} className="hover:bg-muted/50">
                                                                     <TableCell>
-                                                                        <div className="flex items-center gap-4 font-semibold text-primary">
-                                                                            <Image src={parentInfo.imageUrl || 'https://placehold.co/40x40.png'} alt={parentInfo.name} width={40} height={40} className="rounded-sm" data-ai-hint="product image" />
+                                                                        <div className="flex items-center gap-4 pl-4">
+                                                                            <div className="flex h-10 w-10 items-center justify-center rounded-sm shrink-0">
+                                                                                <Store className="h-5 w-5 text-gray-400" />
+                                                                            </div>
                                                                             <div>
-                                                                                <span className="text-sm">{parentInfo.name}</span>
-                                                                                <div className="text-xs text-muted-foreground font-normal">SKU: {parentInfo.sku}</div>
+                                                                                <div className="font-medium text-sm">{field.name}</div>
+                                                                                <div className="text-xs text-muted-foreground">SKU: {field.sku}</div>
                                                                             </div>
                                                                         </div>
                                                                     </TableCell>
-                                                                     <MasterPriceCell form={form} parentName={parentInfo.name} priceType="costPrice" onApply={applyMasterPrice} />
-                                                                     <MasterPriceCell form={form} parentName={parentInfo.name} priceType="price" onApply={applyMasterPrice} />
-                                                                     <MasterPriceCell form={form} parentName={parentInfo.name} priceType="pos" onApply={applyMasterPrice} />
-                                                                     <MasterPriceCell form={form} parentName={parentInfo.name} priceType="reseller" onApply={applyMasterPrice} />
-                                                                     <MasterPriceCell form={form} parentName={parentInfo.name} priceType="online" onApply={applyMasterPrice} />
-                                                                    <TableCell>
-                                                                        <Button type="button" variant="ghost" size="icon" className="text-destructive hover:text-destructive-foreground hover:bg-destructive" onClick={() => remove(variants.map(v => v.originalIndex))}>
-                                                                            <Trash2 className="h-4 w-4" />
-                                                                        </Button>
-                                                                    </TableCell>
+                                                                    <PriceRowFields 
+                                                                        form={form}
+                                                                        index={field.originalIndex}
+                                                                        onRemove={() => remove(field.originalIndex)}
+                                                                    />
                                                                 </TableRow>
-                                                                {variants.map((field) => (
-                                                                    <TableRow key={field.id} className="hover:bg-muted/50">
-                                                                        <TableCell>
-                                                                            <div className="flex items-center gap-4 pl-4">
-                                                                                <div className="flex h-10 w-10 items-center justify-center rounded-sm shrink-0">
-                                                                                    <Store className="h-5 w-5 text-gray-400" />
-                                                                                </div>
-                                                                                <div>
-                                                                                    <div className="font-medium text-sm">{field.name}</div>
-                                                                                    <div className="text-xs text-muted-foreground">SKU: {field.sku}</div>
-                                                                                </div>
-                                                                            </div>
-                                                                        </TableCell>
-                                                                         <PriceRowFields 
-                                                                            form={form}
-                                                                            index={field.originalIndex}
-                                                                            onRemove={() => remove(field.originalIndex)}
-                                                                         />
-                                                                    </TableRow>
-                                                                ))}
-                                                            </React.Fragment>
-                                                        )
-                                                     })}
+                                                            ))}
+                                                        </React.Fragment>
+                                                     ))}
                                                 </>
                                             )}
                                         </TableBody>
@@ -433,7 +444,7 @@ const PriceRowFields = ({ form, index, onRemove }: { form: any, index: number, o
                     control={form.control}
                     name={`items.${index}.costPrice`}
                     render={({ field: formField }) => (
-                        <FormItem><FormControl><Input type="number" placeholder="0" {...formField} value={formField.value ?? ''} /></FormControl><FormMessage/></FormItem>
+                        <FormItem><FormControl><Input type="number" placeholder="0" {...formField} value={formField.value ?? ''} className="h-8" /></FormControl><FormMessage/></FormItem>
                     )}
                 />
             </TableCell>
@@ -442,7 +453,7 @@ const PriceRowFields = ({ form, index, onRemove }: { form: any, index: number, o
                     control={form.control}
                     name={`items.${index}.price`}
                     render={({ field: formField }) => (
-                        <FormItem><FormControl><Input type="number" placeholder="0" {...formField} value={formField.value ?? ''} /></FormControl><FormMessage/></FormItem>
+                        <FormItem><FormControl><Input type="number" placeholder="0" {...formField} value={formField.value ?? ''} className="h-8" /></FormControl><FormMessage/></FormItem>
                     )}
                 />
             </TableCell>
@@ -465,7 +476,7 @@ const PriceRowFields = ({ form, index, onRemove }: { form: any, index: number, o
                             render={({ field: formField }) => (
                                 <FormItem>
                                     <FormControl>
-                                        <Input type="number" placeholder="0" {...formField} value={formField.value ?? ''} />
+                                        <Input type="number" placeholder="0" {...formField} value={formField.value ?? ''} className="h-8" />
                                     </FormControl>
                                     <FormMessage/>
                                 </FormItem>
@@ -475,7 +486,7 @@ const PriceRowFields = ({ form, index, onRemove }: { form: any, index: number, o
                 )
             })}
             <TableCell className="p-1.5">
-                <Button type="button" variant="ghost" size="icon" className="text-destructive hover:text-destructive-foreground hover:bg-destructive" onClick={onRemove}>
+                <Button type="button" variant="ghost" size="icon" className="text-destructive hover:text-destructive-foreground hover:bg-destructive h-8 w-8" onClick={onRemove}>
                     <Trash2 className="h-4 w-4" />
                 </Button>
             </TableCell>
@@ -484,44 +495,30 @@ const PriceRowFields = ({ form, index, onRemove }: { form: any, index: number, o
 }
 
 
-const MasterPriceCell = ({ form, parentName, priceType, onApply }: {
+const MasterPriceCell = ({ form, parentName, priceType }: {
     form: any,
     parentName: string,
     priceType: 'costPrice' | 'price' | 'pos' | 'reseller' | 'online',
-    onApply: (parentName: string, priceType: any) => void
 }) => {
-    const t = translations[useLanguage().language];
     return (
         <TableCell>
-            <div className="flex items-center gap-1">
-                <FormField
-                    control={form.control}
-                    name={`masterPrices.${parentName}.${priceType}`}
-                    render={({ field }) => (
-                        <FormItem className="flex-grow">
-                            <FormControl>
-                                <Input
-                                    type="number"
-                                    placeholder={priceType === 'costPrice' ? 'Modal' : 'Harga'}
-                                    {...field}
-                                    value={field.value ?? ''}
-                                    className="h-8"
-                                />
-                            </FormControl>
-                        </FormItem>
-                    )}
-                />
-                 <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="h-8 px-2"
-                    onClick={() => onApply(parentName, priceType)}
-                    aria-label={`Terapkan harga ${priceType} ke semua varian`}
-                 >
-                    {t.common.apply}
-                 </Button>
-            </div>
+             <FormField
+                control={form.control}
+                name={`masterPrices.${parentName}.${priceType}`}
+                render={({ field }) => (
+                    <FormItem>
+                        <FormControl>
+                            <Input
+                                type="number"
+                                placeholder={priceType === 'costPrice' ? 'Modal' : 'Harga'}
+                                {...field}
+                                value={field.value ?? ''}
+                                className="h-8"
+                            />
+                        </FormControl>
+                    </FormItem>
+                )}
+            />
         </TableCell>
     )
 }
