@@ -157,63 +157,66 @@ export default function PriceSettingsPage() {
         append(newItems);
     };
 
-     const groupedAndFilteredItems = useMemo(() => {
-        const filteredFields = fields
-            .map((field, index) => ({ ...field, originalIndex: index }))
-            .filter(field => {
-                const lowerSearchTerm = searchTerm.toLowerCase();
-                const searchMatch = !lowerSearchTerm ||
-                    field.name.toLowerCase().includes(lowerSearchTerm) ||
-                    (field.sku && field.sku.toLowerCase().includes(lowerSearchTerm)) ||
-                    (field.parentName && field.parentName.toLowerCase().includes(lowerSearchTerm));
-                
-                if (!searchMatch) return false;
+    const groupedAndFilteredItems = useMemo(() => {
+    const filteredFields = fields
+        .map((field, index) => ({ ...field, originalIndex: index }))
+        .filter(field => {
+            const lowerSearchTerm = searchTerm.toLowerCase();
+            const searchMatch = !lowerSearchTerm ||
+                field.name.toLowerCase().includes(lowerSearchTerm) ||
+                (field.sku && field.sku.toLowerCase().includes(lowerSearchTerm)) ||
+                (field.parentName && field.parentName.toLowerCase().includes(lowerSearchTerm));
 
-                if (!categoryFilter) return true;
-                
-                 const inventoryItem = allInventoryItems.find(item => {
-                    if (item.id === field.id || (item.variants && item.variants.some(v => v.id === field.id))) {
-                        return true;
-                    }
-                    return false;
-                });
-                return inventoryItem?.category === categoryFilter;
-            });
-        
-        const groups = new Map<string, (PriceSettingItem & { originalIndex: number })[]>();
-        const simpleItems: (PriceSettingItem & { originalIndex: number })[] = [];
+            if (!searchMatch) return false;
 
-        filteredFields.forEach(field => {
-            if (field.type === 'variant' && field.parentName) {
-                if (!groups.has(field.parentName)) {
-                    groups.set(field.parentName, []);
+            if (!categoryFilter) return true;
+
+            const inventoryItem = allInventoryItems.find(item => {
+                if (item.id === field.id && field.type === 'product') {
+                    return true;
                 }
-                groups.get(field.parentName)!.push(field);
-            } else {
-                simpleItems.push(field);
-            }
+                if (item.variants && item.variants.some(v => v.id === field.id)) {
+                    return true;
+                }
+                return false;
+            });
+            return inventoryItem?.category === categoryFilter;
         });
 
-        const activeGroups = new Map<string, { header: PriceSettingItem & { originalIndex: number }, variants: (PriceSettingItem & { originalIndex: number })[] }>();
-        for (const [key, value] of groups.entries()) {
-            if (value.length > 0) {
-                const parentInfo = allInventoryItems.find(item => item.name === key);
-                const headerItem = {
-                    id: parentInfo?.id || key,
-                    name: key,
-                    parentName: key,
-                    imageUrl: parentInfo?.imageUrl,
-                    sku: parentInfo?.sku,
-                    type: 'product' as 'product',
-                    originalIndex: -1,
-                };
-                activeGroups.set(key, { header: headerItem, variants: value });
-            }
-        }
-        
-        return { groups: Array.from(activeGroups.values()), simpleItems };
+    const groups = new Map<string, (PriceSettingItem & { originalIndex: number })[]>();
+    const simpleItems: (PriceSettingItem & { originalIndex: number })[] = [];
 
-    }, [fields, searchTerm, categoryFilter, allInventoryItems]);
+    filteredFields.forEach(field => {
+        if (field.type === 'variant' && field.parentName) {
+            if (!groups.has(field.parentName)) {
+                groups.set(field.parentName, []);
+            }
+            groups.get(field.parentName)!.push(field);
+        } else {
+            simpleItems.push(field);
+        }
+    });
+
+    const activeGroups = new Map<string, { header: PriceSettingItem & { originalIndex: number }, variants: (PriceSettingItem & { originalIndex: number })[] }>();
+    for (const [key, value] of groups.entries()) {
+        if (value.length > 0) {
+            const parentInfo = allInventoryItems.find(item => item.name === key);
+            const headerItem = {
+                id: parentInfo?.id || key,
+                name: key,
+                parentName: key,
+                imageUrl: parentInfo?.imageUrl,
+                sku: parentInfo?.sku,
+                type: 'product' as 'product',
+                originalIndex: -1,
+            };
+            activeGroups.set(key, { header: headerItem, variants: value });
+        }
+    }
+    
+    return { groups: Array.from(activeGroups.values()), simpleItems };
+
+}, [fields, searchTerm, categoryFilter, allInventoryItems]);
     
     const applyAllMasterPrices = (parentName: string) => {
         const masterPrices = form.getValues(`masterPrices.${parentName}`);
@@ -320,8 +323,8 @@ export default function PriceSettingsPage() {
                                                 <TableHead className="w-[30%]">{TPrice.product}</TableHead>
                                                 <TableHead>{TPrice.costPrice}</TableHead>
                                                 <TableHead>{TPrice.defaultPrice}</TableHead>
-                                                <TableHead>Harga POS</TableHead>
-                                                <TableHead>Harga Reseller</TableHead>
+                                                <TableHead>{t.sales.pos}</TableHead>
+                                                <TableHead>{t.sales.reseller}</TableHead>
                                                 <TableHead>{TPrice.onlinePrice}</TableHead>
                                                 <TableHead className="w-[50px]"></TableHead>
                                             </TableRow>
@@ -557,5 +560,3 @@ const MasterPriceCell = ({ form, parentName, priceType, t }: {
         </TableCell>
     )
 }
-
-    
