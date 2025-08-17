@@ -9,7 +9,7 @@ import { useInventory } from "@/hooks/use-inventory";
 import React, { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { DollarSign, Zap, Package, TrendingUp, TrendingDown } from "lucide-react";
+import { DollarSign, Package, TrendingUp, TrendingDown, Hourglass } from "lucide-react";
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from "recharts";
 import { ChartConfig, ChartContainer, ChartTooltipContent } from "@/components/ui/chart";
 import { subDays, isAfter } from "date-fns";
@@ -17,6 +17,9 @@ import { subDays, isAfter } from "date-fns";
 const formatCurrency = (amount: number) => `Rp${Math.round(amount).toLocaleString('id-ID')}`;
 
 const ASSET_TURNOVER_DAYS = 30;
+const FAST_MOVING_THRESHOLD = 50;
+const SLOW_MOVING_THRESHOLD = 5;
+
 
 function AssetReportSkeleton() {
     return (
@@ -46,28 +49,37 @@ export default function AssetReportPage() {
     const { items, allSales, loading } = useInventory();
 
     const assetClassification = useMemo(() => {
-        const fastMovingAssets: { id: string; value: number }[] = [];
-        const slowMovingAssets: { id: string; value: number }[] = [];
         const turnoverDateThreshold = subDays(new Date(), ASSET_TURNOVER_DAYS);
 
-        const soldItemIds = new Set<string>();
+        // 1. Aggregate sales quantity per item in the last 30 days
+        const salesVolumeMap = new Map<string, number>();
         allSales.forEach(sale => {
             if (isAfter(new Date(sale.saleDate), turnoverDateThreshold)) {
                 const soldId = sale.variantId || sale.productId;
-                if(soldId) soldItemIds.add(soldId.toString());
+                if(soldId) {
+                    const currentQty = salesVolumeMap.get(soldId.toString()) || 0;
+                    salesVolumeMap.set(soldId.toString(), currentQty + sale.quantity);
+                }
             }
         });
+
+        // 2. Classify assets based on sales volume
+        const fastMovingAssets: number[] = [];
+        const slowMovingAssets: number[] = [];
+        const nonMovingAssets: number[] = [];
 
         items.forEach(item => {
             const processAsset = (asset: { id: string, stock: number, costPrice?: number }) => {
                 if (asset.costPrice && asset.costPrice > 0 && asset.stock > 0) {
                     const assetValue = asset.costPrice * asset.stock;
-                    const assetInfo = { id: asset.id.toString(), value: assetValue };
+                    const salesCount = salesVolumeMap.get(asset.id.toString()) || 0;
 
-                    if (soldItemIds.has(asset.id.toString())) {
-                        fastMovingAssets.push(assetInfo);
+                    if (salesCount >= FAST_MOVING_THRESHOLD) {
+                        fastMovingAssets.push(assetValue);
+                    } else if (salesCount >= SLOW_MOVING_THRESHOLD) {
+                        slowMovingAssets.push(assetValue);
                     } else {
-                        slowMovingAssets.push(assetInfo);
+                        nonMovingAssets.push(assetValue);
                     }
                 }
             };
@@ -81,15 +93,15 @@ export default function AssetReportPage() {
             }
         });
 
-        const totalFastMovingValue = fastMovingAssets.reduce((sum, asset) => sum + asset.value, 0);
-        const totalSlowMovingValue = slowMovingAssets.reduce((sum, asset) => sum + asset.value, 0);
+        const totalFastMovingValue = fastMovingAssets.reduce((sum, value) => sum + value, 0);
+        const totalSlowMovingValue = slowMovingAssets.reduce((sum, value) => sum + value, 0);
+        const totalNonMovingValue = nonMovingAssets.reduce((sum, value) => sum + value, 0);
         
         return {
-            fastMovingAssets,
-            slowMovingAssets,
             totalFastMovingValue,
             totalSlowMovingValue,
-            totalAssetValue: totalFastMovingValue + totalSlowMovingValue,
+            totalNonMovingValue,
+            totalAssetValue: totalFastMovingValue + totalSlowMovingValue + totalNonMovingValue,
         };
     }, [items, allSales]);
 
@@ -97,7 +109,8 @@ export default function AssetReportPage() {
         {
             name: "Klasifikasi Aset",
             lancar: assetClassification.totalFastMovingValue,
-            tidakLancar: assetClassification.totalSlowMovingValue,
+            lambat: assetClassification.totalSlowMovingValue,
+            tidakLancar: assetClassification.totalNonMovingValue,
         }
     ];
 
@@ -106,6 +119,11 @@ export default function AssetReportPage() {
             label: "Aset Lancar",
             color: "hsl(var(--chart-2))",
             icon: TrendingUp,
+        },
+        lambat: {
+            label: "Aset Lambat",
+            color: "hsl(var(--chart-3))",
+            icon: Hourglass,
         },
         tidakLancar: {
             label: "Aset Tidak Lancar",
@@ -154,31 +172,29 @@ export default function AssetReportPage() {
                         </CardHeader>
                         <CardContent>
                             <div className="text-2xl font-bold">{formatCurrency(assetClassification.totalFastMovingValue)}</div>
-                            <p className="text-xs text-muted-foreground">Terjual dalam {ASSET_TURNOVER_DAYS} hari terakhir</p>
+                            <p className="text-xs text-muted-foreground">Terjual &ge;{FAST_MOVING_THRESHOLD} unit/30 hari</p>
                         </CardContent>
                     </Card>
                     <Card>
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-sm font-medium">Aset Lambat</CardTitle>
+                            <Hourglass className="h-4 w-4 text-yellow-500" />
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-2xl font-bold">{formatCurrency(assetClassification.totalSlowMovingValue)}</div>
+                            <p className="text-xs text-muted-foreground">Terjual {SLOW_MOVING_THRESHOLD}-{FAST_MOVING_THRESHOLD-1} unit/30 hari</p>
+                        </CardContent>
+                    </Card>
+                     <Card>
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                             <CardTitle className="text-sm font-medium">Aset Tidak Lancar</CardTitle>
                             <TrendingDown className="h-4 w-4 text-red-500" />
                         </CardHeader>
                         <CardContent>
-                            <div className="text-2xl font-bold">{formatCurrency(assetClassification.totalSlowMovingValue)}</div>
-                            <p className="text-xs text-muted-foreground">Tidak terjual >{ASSET_TURNOVER_DAYS} hari</p>
-                        </CardContent>
-                    </Card>
-                     <Card>
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">Rasio Aset Lancar</CardTitle>
-                            <Zap className="h-4 w-4 text-muted-foreground" />
-                        </CardHeader>
-                        <CardContent>
                             <div className="text-2xl font-bold">
-                                {assetClassification.totalAssetValue > 0 
-                                 ? `${Math.round((assetClassification.totalFastMovingValue / assetClassification.totalAssetValue) * 100)}%`
-                                 : '0%'}
+                                {formatCurrency(assetClassification.totalNonMovingValue)}
                             </div>
-                            <p className="text-xs text-muted-foreground">Persentase aset yang perputarannya cepat</p>
+                            <p className="text-xs text-muted-foreground">Terjual &lt;{SLOW_MOVING_THRESHOLD} unit/30 hari</p>
                         </CardContent>
                     </Card>
                 </div>
@@ -187,7 +203,7 @@ export default function AssetReportPage() {
                 <Card>
                     <CardHeader>
                         <CardTitle>Grafik Perputaran Aset</CardTitle>
-                        <CardDescription>Perbandingan nilai antara aset yang perputarannya cepat (lancar) dan lambat (tidak lancar).</CardDescription>
+                        <CardDescription>Perbandingan nilai antara aset yang perputarannya cepat, lambat, dan tidak lancar.</CardDescription>
                     </CardHeader>
                     <CardContent>
                        <ChartContainer config={chartConfig} className="min-h-72 w-full">
@@ -215,13 +231,14 @@ export default function AssetReportPage() {
                                         {payload?.map((entry) => (
                                             <div key={entry.value} className="flex items-center gap-2">
                                                 <div className="w-3 h-3 rounded-full" style={{ backgroundColor: entry.color }}></div>
-                                                <span className="text-sm text-muted-foreground">{entry.value === 'lancar' ? 'Aset Lancar' : 'Aset Tidak Lancar'}</span>
+                                                <span className="text-sm text-muted-foreground">{chartConfig[entry.value as keyof typeof chartConfig]?.label}</span>
                                             </div>
                                         ))}
                                         </div>
                                     )
                                 }} />
                                 <Bar dataKey="lancar" fill="var(--color-lancar)" radius={4} />
+                                <Bar dataKey="lambat" fill="var(--color-lambat)" radius={4} />
                                 <Bar dataKey="tidakLancar" fill="var(--color-tidakLancar)" radius={4} />
                             </BarChart>
                         </ChartContainer>
@@ -231,3 +248,5 @@ export default function AssetReportPage() {
         </AppLayout>
     );
 }
+
+    
