@@ -16,7 +16,7 @@ import { subDays, isAfter } from "date-fns";
 
 const formatCurrency = (amount: number) => `Rp${Math.round(amount).toLocaleString('id-ID')}`;
 
-const ASSET_TURNOVER_DAYS = 90;
+const ASSET_TURNOVER_DAYS = 30;
 
 function AssetReportSkeleton() {
     return (
