@@ -1,4 +1,3 @@
-
 'use client';
 
 import { AppLayout } from "@/app/components/app-layout";
@@ -18,12 +17,13 @@ import { useForm, useFieldArray, Controller } from "react-hook-form";
 import type { InventoryItem, InventoryItemVariant } from "@/types";
 import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
-import { Store, Trash2 } from "lucide-react";
+import { Store } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from "@/hooks/use-language";
 import { translations } from "@/types/language";
 import { ShoppingBag } from "lucide-react";
+import Link from 'next/link';
 
 type FormValues = {
   items: {
@@ -40,6 +40,36 @@ type FormValues = {
 };
 
 const CHANNELS = ['pos', 'shopee', 'lazada', 'tiktok', 'reseller'];
+
+function mapItemsToForm(items: InventoryItem[]): FormValues['items'] {
+    return items.flatMap(item => {
+        if (item.variants && item.variants.length > 0) {
+            return item.variants.map(variant => ({
+                id: variant.id,
+                type: 'variant' as const,
+                costPrice: variant.costPrice,
+                defaultPrice: variant.price,
+                posPrice: variant.channelPrices?.find(p => p.channel === 'pos')?.price,
+                shopeePrice: variant.channelPrices?.find(p => p.channel === 'shopee')?.price,
+                lazadaPrice: variant.channelPrices?.find(p => p.channel === 'lazada')?.price,
+                tiktokPrice: variant.channelPrices?.find(p => p.channel === 'tiktok')?.price,
+                resellerPrice: variant.channelPrices?.find(p => p.channel === 'reseller')?.price,
+            }));
+        }
+        if (item.stock === undefined) return []; // Don't include parent-only products
+        return {
+            id: item.id,
+            type: 'product' as const,
+            costPrice: item.costPrice,
+            defaultPrice: item.price,
+            posPrice: item.channelPrices?.find(p => p.channel === 'pos')?.price,
+            shopeePrice: item.channelPrices?.find(p => p.channel === 'shopee')?.price,
+            lazadaPrice: item.channelPrices?.find(p => p.channel === 'lazada')?.price,
+            tiktokPrice: item.channelPrices?.find(p => p.channel === 'tiktok')?.price,
+            resellerPrice: item.channelPrices?.find(p => p.channel === 'reseller')?.price,
+        };
+    }).filter(Boolean) as FormValues['items'];
+}
 
 export default function FinanceSettingsPage() {
     const { items, loading, updatePrices } = useInventory();
@@ -68,37 +98,11 @@ export default function FinanceSettingsPage() {
         });
         return map;
     }, [items]);
-
+    
     useEffect(() => {
         if (!loading && items.length > 0) {
-            const allItemsForForm = items.flatMap(item => {
-                if (item.variants && item.variants.length > 0) {
-                    return item.variants.map(variant => ({
-                        id: variant.id,
-                        type: 'variant' as const,
-                        costPrice: variant.costPrice,
-                        defaultPrice: variant.price,
-                        posPrice: variant.channelPrices?.find(p => p.channel === 'pos')?.price,
-                        shopeePrice: variant.channelPrices?.find(p => p.channel === 'shopee')?.price,
-                        lazadaPrice: variant.channelPrices?.find(p => p.channel === 'lazada')?.price,
-                        tiktokPrice: variant.channelPrices?.find(p => p.channel === 'tiktok')?.price,
-                        resellerPrice: variant.channelPrices?.find(p => p.channel === 'reseller')?.price,
-                    }));
-                }
-                if (item.stock === undefined) return []; // Don't include parent-only products
-                return {
-                    id: item.id,
-                    type: 'product' as const,
-                    costPrice: item.costPrice,
-                    defaultPrice: item.price,
-                    posPrice: item.channelPrices?.find(p => p.channel === 'pos')?.price,
-                    shopeePrice: item.channelPrices?.find(p => p.channel === 'shopee')?.price,
-                    lazadaPrice: item.channelPrices?.find(p => p.channel === 'lazada')?.price,
-                    tiktokPrice: item.channelPrices?.find(p => p.channel === 'tiktok')?.price,
-                    resellerPrice: item.channelPrices?.find(p => p.channel === 'reseller')?.price,
-                };
-            }).filter(Boolean);
-            reset({ items: allItemsForForm as FormValues['items'] });
+            const formItems = mapItemsToForm(items);
+            reset({ items: formItems });
         }
     }, [items, loading, reset]);
 
@@ -121,8 +125,7 @@ export default function FinanceSettingsPage() {
                 title: t.priceSettings.toastSuccessTitle,
                 description: t.priceSettings.toastSuccessDesc,
             });
-             // Form state is now in sync, so we can reset dirty state
-            reset(data);
+            reset(data); // Resets dirty state after successful save
         } catch (error) {
             console.error("Failed to update prices:", error);
             toast({
@@ -146,6 +149,9 @@ export default function FinanceSettingsPage() {
                             <h1 className="text-lg font-bold">{t.finance.priceSettings}</h1>
                         </div>
                         <div className="flex items-center gap-2">
+                             <Link href="/add-product">
+                                <Button type="button" variant="outline">{t.dashboard.addItem}</Button>
+                            </Link>
                             <Button type="submit" disabled={isSubmitting || !isDirty}>
                                 {isSubmitting ? t.common.saveChanges + '...' : t.priceSettings.save}
                             </Button>
