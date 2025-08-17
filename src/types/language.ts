@@ -20,6 +20,14 @@ export const translations = {
             pos: "POS",
             reseller: "Reseller",
         },
+        finance: {
+            title: "Finance",
+            generalJournal: "General Journal",
+            financialStatements: "Financial Statements",
+            assetReport: "Asset Report",
+            profitLossReport: "Profit & Loss Report",
+            priceSettings: "Price Settings",
+        },
         inventoryTable: {
             searchPlaceholder: "Search items...",
             selectCategoryPlaceholder: "Select a category",
@@ -202,6 +210,14 @@ export const translations = {
             lazada: "Lazada",
             pos: "POS",
             reseller: "Reseller",
+        },
+        finance: {
+            title: "Keuangan",
+            generalJournal: "Jurnal Umum",
+            financialStatements: "Laporan Keuangan",
+            assetReport: "Laporan Aset",
+            profitLossReport: "Laporan Laba Rugi",
+            priceSettings: "Pengaturan Harga",
         },
         inventoryTable: {
             searchPlaceholder: "Cari barang...",

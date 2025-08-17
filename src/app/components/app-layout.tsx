@@ -163,7 +163,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                       <CollapsibleTrigger asChild>
                           <SidebarMenuButton>
                               <BookCopy />
-                              <span>Keuangan</span>
+                              <span>{t.finance.title}</span>
                               <ChevronDown className={cn("ml-auto transition-transform", isFinanceOpen && "rotate-180")} />
                           </SidebarMenuButton>
                       </CollapsibleTrigger>
@@ -173,7 +173,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                                   <Link href="/finance/journal">
                                       <SidebarMenuButton variant="ghost" size="sm" isActive={pathname === '/finance/journal'}>
                                           <BookText />
-                                          Jurnal Umum
+                                          {t.finance.generalJournal}
                                       </SidebarMenuButton>
                                   </Link>
                               </SidebarMenuItem>
@@ -181,7 +181,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                                   <Link href="/finance/statements">
                                       <SidebarMenuButton variant="ghost" size="sm" isActive={pathname === '/finance/statements'}>
                                           <FileText />
-                                          Laporan Keuangan
+                                          {t.finance.financialStatements}
                                       </SidebarMenuButton>
                                   </Link>
                               </SidebarMenuItem>
@@ -189,7 +189,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                                   <Link href="/finance/assets">
                                       <SidebarMenuButton variant="ghost" size="sm" isActive={pathname === '/finance/assets'}>
                                           <Archive />
-                                          Laporan Aset
+                                          {t.finance.assetReport}
                                       </SidebarMenuButton>
                                   </Link>
                               </SidebarMenuItem>
@@ -197,7 +197,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                                   <Link href="/finance/profit-loss">
                                       <SidebarMenuButton variant="ghost" size="sm" isActive={pathname === '/finance/profit-loss'}>
                                           <FileBarChart />
-                                          Laporan Laba Rugi
+                                          {t.finance.profitLossReport}
                                       </SidebarMenuButton>
                                   </Link>
                               </SidebarMenuItem>
@@ -205,7 +205,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                                   <Link href="/finance/settings">
                                       <SidebarMenuButton variant="ghost" size="sm" isActive={pathname === '/finance/settings'}>
                                           <Settings2 />
-                                          Pengaturan Harga
+                                          {t.finance.priceSettings}
                                       </SidebarMenuButton>
                                   </Link>
                               </SidebarMenuItem>
