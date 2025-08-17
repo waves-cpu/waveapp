@@ -14,6 +14,18 @@ db.pragma('journal_mode = WAL');
 // Simple migration logic
 const runMigrations = () => {
   try {
+    const productsColumns = db.pragma('table_info(products)');
+    if (!productsColumns.some((col: any) => col.name === 'costPrice')) {
+      console.log('Adding costPrice column to products table...');
+      db.exec('ALTER TABLE products ADD COLUMN costPrice REAL');
+    }
+
+    const variantsColumns = db.pragma('table_info(variants)');
+     if (!variantsColumns.some((col: any) => col.name === 'costPrice')) {
+      console.log('Adding costPrice column to variants table...');
+      db.exec('ALTER TABLE variants ADD COLUMN costPrice REAL');
+    }
+
     const salesColumns = db.pragma('table_info(sales)');
     const hasTransactionId = salesColumns.some((col: any) => col.name === 'transactionId');
     const hasPaymentMethod = salesColumns.some((col: any) => col.name === 'paymentMethod');
@@ -70,6 +82,7 @@ const createSchema = () => {
       -- For non-variant items
       stock INTEGER,
       price REAL,
+      costPrice REAL,
       size TEXT
     );
 
@@ -79,6 +92,7 @@ const createSchema = () => {
       name TEXT NOT NULL,
       sku TEXT,
       price REAL NOT NULL,
+      costPrice REAL,
       stock INTEGER NOT NULL,
       FOREIGN KEY (productId) REFERENCES products(id) ON DELETE CASCADE
     );
@@ -120,6 +134,17 @@ const createSchema = () => {
     CREATE TABLE IF NOT EXISTS settings (
         key TEXT PRIMARY KEY,
         value TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS channel_prices (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        productId INTEGER,
+        variantId INTEGER,
+        channel TEXT NOT NULL,
+        price REAL NOT NULL,
+        FOREIGN KEY (productId) REFERENCES products(id) ON DELETE CASCADE,
+        FOREIGN KEY (variantId) REFERENCES variants(id) ON DELETE CASCADE,
+        UNIQUE(productId, variantId, channel)
     );
   `);
 };

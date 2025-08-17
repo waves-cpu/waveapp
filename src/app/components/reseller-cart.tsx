@@ -84,10 +84,18 @@ export function ResellerCart({ reseller }: ResellerCartProps) {
         }
     }, [receiptToPrint]);
 
+    const getPriceForChannel = (item: InventoryItem | InventoryItemVariant, channel: string): number => {
+        const channelPrice = item.channelPrices?.find(p => p.channel === channel)?.price;
+        return channelPrice ?? item.price!;
+    };
+
     const addToCart = (item: InventoryItem, variant?: InventoryItemVariant) => {
+        const itemToAddRaw = variant || item;
+        const price = getPriceForChannel(itemToAddRaw, 'reseller');
+
         const itemToAdd = variant ? 
-            { ...variant, productId: item.id, productName: item.name, parentImageUrl: item.imageUrl } : 
-            { ...item, id: item.id, productId: item.id, productName: item.name, price: item.price!, stock: item.stock!, parentImageUrl: item.imageUrl };
+            { ...variant, price, productId: item.id, productName: item.name, parentImageUrl: item.imageUrl } : 
+            { ...item, price, id: item.id, productId: item.id, productName: item.name, stock: item.stock!, parentImageUrl: item.imageUrl };
 
         const existingCartItem = cart.find(ci => ci.id === itemToAdd.id);
         const quantityInCart = existingCartItem?.quantity || 0;

@@ -19,6 +19,7 @@ import {
   addReseller as addResellerDb,
   editReseller as editResellerDb,
   deleteReseller as deleteResellerDb,
+  updatePrices as updatePricesDb
 } from '@/lib/inventory-service';
 
 
@@ -44,6 +45,7 @@ interface InventoryContextType {
   editReseller: (id: number, data: Omit<Reseller, 'id'>) => Promise<void>;
   deleteReseller: (id: number) => Promise<void>;
   fetchResellers: () => Promise<void>;
+  updatePrices: (updates: any[]) => Promise<void>;
 }
 
 const InventoryContext = createContext<InventoryContextType | undefined>(undefined);
@@ -168,6 +170,12 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
     return await findProductBySku(sku);
   };
 
+  const updatePrices = async (updates: any[]) => {
+    await updatePricesDb(updates);
+    // No need to fetch all data here, as the component will re-fetch if needed.
+    // However, if other components rely on this instantly, a fetch might be necessary.
+  };
+
   return (
     <InventoryContext.Provider value={{ 
         items, 
@@ -190,7 +198,8 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
         addReseller,
         editReseller,
         deleteReseller,
-        fetchResellers
+        fetchResellers,
+        updatePrices
       }}>
       {children}
     </InventoryContext.Provider>
