@@ -10,7 +10,7 @@ import React, { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DollarSign, Package, TrendingUp, TrendingDown, Hourglass, BarChart } from "lucide-react";
-import { Line, LineChart, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from "recharts";
+import { Bar, BarChart as RechartsBarChart, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from "recharts";
 import { ChartConfig, ChartContainer, ChartTooltipContent } from "@/components/ui/chart";
 import { subDays, isAfter } from "date-fns";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -278,7 +278,7 @@ export default function AssetReportPage() {
                     </CardHeader>
                     <CardContent>
                        <ChartContainer config={chartConfig} className="w-full h-40">
-                            <LineChart accessibilityLayer data={chartData} margin={{ top: 20, left: 12, right: 12 }}>
+                            <RechartsBarChart accessibilityLayer data={chartData} margin={{ top: 20, left: 12, right: 12 }}>
                                 <CartesianGrid vertical={false} />
                                 <XAxis
                                     dataKey="name"
@@ -304,16 +304,16 @@ export default function AssetReportPage() {
                                         {payload?.map((entry) => (
                                             <div key={entry.value} className="flex items-center gap-2">
                                                 <div className="w-3 h-3 rounded-full" style={{ backgroundColor: entry.color }}></div>
-                                                <span className="text-sm text-muted-foreground">{chartConfig[entry.value as keyof typeof chartConfig]?.label}</span>
+                                                <span className="text-sm text-muted-foreground">{chartConfig[entry.dataKey as keyof typeof chartConfig]?.label}</span>
                                             </div>
                                         ))}
                                         </div>
                                     )
                                 }} />
-                                <Line dataKey="fast" type="monotone" stroke="var(--color-fast)" strokeWidth={2} dot={true} />
-                                <Line dataKey="slow" type="monotone" stroke="var(--color-slow)" strokeWidth={2} dot={true} />
-                                <Line dataKey="nonMoving" type="monotone" stroke="var(--color-nonMoving)" strokeWidth={2} dot={true} />
-                            </LineChart>
+                                <Bar dataKey="fast" fill="var(--color-fast)" radius={4} />
+                                <Bar dataKey="slow" fill="var(--color-slow)" radius={4} />
+                                <Bar dataKey="nonMoving" fill="var(--color-nonMoving)" radius={4} />
+                            </RechartsBarChart>
                         </ChartContainer>
                     </CardContent>
                 </Card>
