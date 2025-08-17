@@ -26,7 +26,7 @@ import { translations } from "@/types/language";
 import { ProductSelectionDialog } from "@/app/components/product-selection-dialog";
 
 type PriceFormItem = {
-  id: string; // This will be the product or variant ID
+  id: string; 
   type: 'product' | 'variant';
   costPrice?: number | string;
   defaultPrice?: number | string;
@@ -55,7 +55,7 @@ export default function FinanceSettingsPage() {
         defaultValues: { items: [] }
     });
 
-    const { fields, append, remove, replace } = useFieldArray({
+    const { fields, append, remove } = useFieldArray({
         control,
         name: "items"
     });
