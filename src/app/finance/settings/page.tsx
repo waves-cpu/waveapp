@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { useForm, useFieldArray, useWatch, Control, UseFormReturn } from 'react-hook-form';
+import { useForm, useFieldArray, Control, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Button } from '@/components/ui/button';
@@ -180,11 +180,9 @@ export default function PriceSettingsPage() {
             }
         });
 
-        // If a parent's variants are all filtered out, the parent should not appear.
         const activeGroups = new Map<string, (PriceSettingItem & { originalIndex: number; imageUrl?: string; sku?: string })[]>();
         for (const [key, value] of groups.entries()) {
             if (value.length > 0) {
-                // Find a representative for the parent to get SKU/Image
                 const parentInfo = allInventoryItems.find(item => item.name === key);
                 const headerItem: (PriceSettingItem & { originalIndex: number; imageUrl?: string; sku?: string }) = {
                     id: parentInfo?.id || key,
@@ -192,8 +190,8 @@ export default function PriceSettingsPage() {
                     parentName: key,
                     imageUrl: parentInfo?.imageUrl,
                     sku: parentInfo?.sku,
-                    type: 'product', // This is just a placeholder for the header row
-                    originalIndex: -1, // Indicates this is not a real form field
+                    type: 'product',
+                    originalIndex: -1,
                 };
 
                 const parentRow = [headerItem, ...value];
@@ -242,13 +240,7 @@ export default function PriceSettingsPage() {
                             <CardHeader>
                                 <CardDescription>{TPrice.description}</CardDescription>
                                 <div className="flex flex-col sm:flex-row items-center gap-4 pt-2">
-                                     <div className="w-full sm:w-auto">
-                                        <Button type="button" onClick={() => setProductSelectionOpen(true)} className="w-full">
-                                            <PlusCircle className="mr-2 h-4 w-4" />
-                                            {TPrice.selectProduct}
-                                        </Button>
-                                    </div>
-                                    <div className="relative flex-grow w-full">
+                                     <div className="relative flex-grow w-full">
                                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                                         <Input
                                             placeholder={TPrice.searchPlaceholder}
@@ -256,6 +248,12 @@ export default function PriceSettingsPage() {
                                             onChange={(e) => setSearchTerm(e.target.value)}
                                             className="pl-10 w-full"
                                         />
+                                    </div>
+                                    <div className="w-full sm:w-auto">
+                                        <Button type="button" onClick={() => setProductSelectionOpen(true)} className="w-full">
+                                            <PlusCircle className="mr-2 h-4 w-4" />
+                                            {TPrice.selectProduct}
+                                        </Button>
                                     </div>
                                     <Select onValueChange={(value) => setCategoryFilter(value === 'all' ? null : value)} defaultValue="all">
                                         <SelectTrigger className="w-full sm:w-[200px]">
@@ -318,7 +316,6 @@ export default function PriceSettingsPage() {
                                                             </TableCell>
                                                             <PriceRowFields 
                                                                 form={form}
-                                                                control={form.control}
                                                                 index={field.originalIndex}
                                                                 onRemove={() => remove(field.originalIndex)}
                                                                 channelPrices={field.channelPrices || []}
@@ -362,7 +359,6 @@ export default function PriceSettingsPage() {
                                                                         </TableCell>
                                                                          <PriceRowFields 
                                                                             form={form}
-                                                                            control={form.control} 
                                                                             index={field.originalIndex}
                                                                             onRemove={() => remove(field.originalIndex)}
                                                                             channelPrices={field.channelPrices || []}
@@ -400,12 +396,12 @@ export default function PriceSettingsPage() {
     );
 }
 
-const PriceRowFields = ({ form, control, index, onRemove, channelPrices }: { form: UseFormReturn<any>, control: Control<any>, index: number, onRemove: () => void, channelPrices: {channel: string, price?: number}[] }) => {
+const PriceRowFields = ({ form, index, onRemove, channelPrices }: { form: any, index: number, onRemove: () => void, channelPrices: {channel: string, price?: number}[] }) => {
     return (
         <>
             <TableCell>
                 <FormField
-                    control={control}
+                    control={form.control}
                     name={`items.${index}.costPrice`}
                     render={({ field: formField }) => (
                         <FormItem><FormControl><Input type="number" placeholder="0" {...formField} value={formField.value ?? ''} /></FormControl><FormMessage/></FormItem>
@@ -414,7 +410,7 @@ const PriceRowFields = ({ form, control, index, onRemove, channelPrices }: { for
             </TableCell>
             <TableCell>
                 <FormField
-                    control={control}
+                    control={form.control}
                     name={`items.${index}.price`}
                     render={({ field: formField }) => (
                         <FormItem><FormControl><Input type="number" placeholder="0" {...formField} value={formField.value ?? ''} /></FormControl><FormMessage/></FormItem>
@@ -423,12 +419,10 @@ const PriceRowFields = ({ form, control, index, onRemove, channelPrices }: { for
             </TableCell>
             {CHANNELS.map(channel => {
                 const fieldName = `items.${index}.channelPrices`;
-                // use getValues from the main form object passed as a prop
                 const currentChannelPrices = form.getValues(fieldName);
                 const channelIndex = currentChannelPrices?.findIndex((cp: any) => cp.channel === channel);
 
                 if (channelIndex === -1) {
-                    console.warn(`Channel ${channel} not found in channelPrices for item ${index}`);
                     return <TableCell key={channel}></TableCell>;
                 }
                 
@@ -437,7 +431,7 @@ const PriceRowFields = ({ form, control, index, onRemove, channelPrices }: { for
                 return (
                     <TableCell key={channel}>
                         <FormField
-                            control={control}
+                            control={form.control}
                             name={priceFieldName}
                             render={({ field: formField }) => (
                                 <FormItem>
