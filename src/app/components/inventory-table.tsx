@@ -152,16 +152,19 @@ const PriceWithTooltip = ({ item }: { item: InventoryItem | InventoryItemVariant
         <TooltipProvider>
             <Tooltip>
                 <TooltipTrigger asChild>
-                    <span className="underline decoration-dashed cursor-help">{priceDisplay}</span>
+                    <span className="cursor-help">{priceDisplay}</span>
                 </TooltipTrigger>
                 <TooltipContent>
-                    <div className="space-y-1">
-                        {aggregatedPrices.map(p => (
-                             <div key={p.channel} className="flex justify-between gap-4">
-                                <span className="font-semibold">{p.channel}:</span>
-                                <span>{formatCurrency(p.price)}</span>
-                             </div>
-                        ))}
+                    <div className="space-y-2">
+                        <p className="font-semibold text-sm">Rincian Harga Kanal</p>
+                        <div className="space-y-1">
+                            {aggregatedPrices.map(p => (
+                                 <div key={p.channel} className="flex justify-between items-center gap-4 text-xs">
+                                    <span className="text-muted-foreground">{p.channel}:</span>
+                                    <span className="font-medium">{formatCurrency(p.price)}</span>
+                                 </div>
+                            ))}
+                        </div>
                     </div>
                 </TooltipContent>
             </Tooltip>
@@ -553,4 +556,5 @@ export function InventoryTable({ onUpdateStock }: InventoryTableProps) {
     
 
     
+
 
