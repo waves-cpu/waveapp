@@ -201,7 +201,7 @@ export default function AssetReportPage() {
                         <CardTitle className="text-xs">{TAsset.chartTitle}</CardTitle>
                     </CardHeader>
                     <CardContent>
-                       <ChartContainer config={chartConfig} className="min-h-40 w-full">
+                       <ChartContainer config={chartConfig} className="min-h-20 w-full">
                             <LineChart accessibilityLayer data={chartData} margin={{ top: 20, left: 12, right: 12 }}>
                                 <CartesianGrid vertical={false} />
                                 <XAxis
