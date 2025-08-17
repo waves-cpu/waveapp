@@ -146,7 +146,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                                            {t.sales.pos}
                                        </SidebarMenuButton>
                                    </Link>
-                               </SidebarMenuItem>
+                                </SidebarMenuItem>
                                <SidebarMenuItem>
                                   <Link href="/sales/reseller">
                                       <SidebarMenuButton variant="ghost" size="sm" isActive={pathname === '/sales/reseller'}>
@@ -205,7 +205,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                                   <Link href="/finance/settings">
                                       <SidebarMenuButton variant="ghost" size="sm" isActive={pathname === '/finance/settings'}>
                                           <Settings2 />
-                                          Pengaturan
+                                          Pengaturan Harga
                                       </SidebarMenuButton>
                                   </Link>
                               </SidebarMenuItem>
