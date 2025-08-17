@@ -18,13 +18,12 @@ import { useForm, useFieldArray, Controller } from "react-hook-form";
 import type { InventoryItem, InventoryItemVariant } from "@/types";
 import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
-import { Store, PlusCircle, Trash2 } from "lucide-react";
+import { Store, Trash2 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from "@/hooks/use-language";
 import { translations } from "@/types/language";
 import { ShoppingBag } from "lucide-react";
-import Link from "next/link";
 
 type FormValues = {
   items: {
@@ -49,7 +48,7 @@ export default function FinanceSettingsPage() {
     const t = translations[language];
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    const { control, handleSubmit, reset } = useForm<FormValues>({
+    const { control, handleSubmit, reset, formState: { isDirty } } = useForm<FormValues>({
         defaultValues: { items: [] }
     });
 
@@ -86,6 +85,7 @@ export default function FinanceSettingsPage() {
                         resellerPrice: variant.channelPrices?.find(p => p.channel === 'reseller')?.price,
                     }));
                 }
+                if (item.stock === undefined) return []; // Don't include parent-only products
                 return {
                     id: item.id,
                     type: 'product' as const,
@@ -97,8 +97,8 @@ export default function FinanceSettingsPage() {
                     tiktokPrice: item.channelPrices?.find(p => p.channel === 'tiktok')?.price,
                     resellerPrice: item.channelPrices?.find(p => p.channel === 'reseller')?.price,
                 };
-            });
-            reset({ items: allItemsForForm });
+            }).filter(Boolean); // remove any empty results
+            reset({ items: allItemsForForm as FormValues['items'] });
         }
     }, [items, loading, reset]);
     
@@ -146,13 +146,7 @@ export default function FinanceSettingsPage() {
                             <h1 className="text-lg font-bold">{t.finance.priceSettings}</h1>
                         </div>
                         <div className="flex items-center gap-2">
-                             <Button asChild type="button" variant="outline">
-                                <Link href="/add-product">
-                                    <PlusCircle className="mr-2 h-4 w-4" />
-                                    {t.dashboard.addItem}
-                                </Link>
-                            </Button>
-                            <Button type="submit" disabled={isSubmitting || fields.length === 0}>
+                            <Button type="submit" disabled={isSubmitting || !isDirty}>
                                 {isSubmitting ? t.common.saveChanges + '...' : t.priceSettings.save}
                             </Button>
                         </div>
@@ -169,7 +163,6 @@ export default function FinanceSettingsPage() {
                                     <TableHead>{t.priceSettings.lazadaPrice}</TableHead>
                                     <TableHead>{t.priceSettings.tiktokPrice}</TableHead>
                                     <TableHead>{t.priceSettings.resellerPrice}</TableHead>
-                                    <TableHead className="w-[50px]"></TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -177,7 +170,7 @@ export default function FinanceSettingsPage() {
                                     [...Array(5)].map((_, i) => (
                                         <TableRow key={i}>
                                             <TableCell><Skeleton className="h-10 w-full" /></TableCell>
-                                            {[...Array(8)].map((_, j) => <TableCell key={j}><Skeleton className="h-9 w-full" /></TableCell>)}
+                                            {[...Array(7)].map((_, j) => <TableCell key={j}><Skeleton className="h-9 w-full" /></TableCell>)}
                                         </TableRow>
                                     ))
                                 ) : fields.length > 0 ? (
@@ -258,17 +251,12 @@ export default function FinanceSettingsPage() {
                                                         render={({ field }) => <Input type="number" placeholder={t.priceSettings.resellerPrice} {...field} value={field.value ?? ''} className="h-9" />}
                                                     />
                                                 </TableCell>
-                                                 <TableCell>
-                                                    <Button type="button" variant="ghost" size="icon" className="text-destructive hover:text-destructive-foreground hover:bg-destructive" onClick={() => remove(index)}>
-                                                        <Trash2 className="h-4 w-4" />
-                                                    </Button>
-                                                </TableCell>
                                             </TableRow>
                                         )
                                     })
                                 ) : (
                                     <TableRow>
-                                        <TableCell colSpan={9} className="h-48 text-center">
+                                        <TableCell colSpan={8} className="h-48 text-center">
                                             <div className="flex flex-col items-center justify-center gap-4 text-muted-foreground">
                                                 <ShoppingBag className="h-16 w-16" />
                                                 <div className="text-center">
@@ -286,4 +274,5 @@ export default function FinanceSettingsPage() {
             </main>
         </AppLayout>
     );
-}
+
+    
