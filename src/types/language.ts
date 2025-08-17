@@ -26,6 +26,21 @@ export const translations = {
             financialStatements: "Financial Statements",
             assetReport: "Asset Report",
             profitLossReport: "Profit & Loss Report",
+            priceSettings: "Price Settings",
+            priceSettingsPage: {
+                description: "Select products to set their cost price, default selling price, and channel-specific prices.",
+                selectProduct: "Select Product",
+                searchPlaceholder: "Search products in the table...",
+                product: "Product",
+                costPrice: "Cost Price",
+                defaultPrice: "Default Price",
+                noProducts: "No products selected.",
+                selectProductsCta: "Select products to start setting prices.",
+                saveAll: "Save All Changes",
+                successToast: "Prices Updated",
+                successToastDesc: "All price changes have been saved successfully.",
+                errorToast: "Update Failed",
+            }
         },
         inventoryTable: {
             searchPlaceholder: "Search items...",
@@ -96,7 +111,7 @@ export const translations = {
         },
         productSelectionDialog: {
             title: "Select Products",
-            description: "Choose products to add to the stock in list. You can search, filter, and select multiple items.",
+            description: "Choose products to add to the list. You can search, filter, and select multiple items.",
             searchPlaceholder: "Search by product or SKU...",
             categoryPlaceholder: "Filter by category...",
             addItems: "Add {count} Items",
@@ -247,6 +262,7 @@ export const translations = {
             cancel: "Cancel",
             saveChanges: "Save Changes",
             apply: "Apply",
+            saving: "Saving...",
         }
     },
     id: {
@@ -275,6 +291,21 @@ export const translations = {
             financialStatements: "Laporan Keuangan",
             assetReport: "Laporan Aset",
             profitLossReport: "Laporan Laba Rugi",
+            priceSettings: "Pengaturan Harga",
+            priceSettingsPage: {
+                description: "Pilih produk untuk mengatur harga modal, harga jual default, dan harga spesifik per kanal penjualan.",
+                selectProduct: "Pilih Produk",
+                searchPlaceholder: "Cari produk di dalam tabel...",
+                product: "Produk",
+                costPrice: "Harga Modal",
+                defaultPrice: "Harga Default",
+                noProducts: "Belum ada produk dipilih.",
+                selectProductsCta: "Pilih produk untuk mulai mengatur harga.",
+                saveAll: "Simpan Semua Perubahan",
+                successToast: "Harga Diperbarui",
+                successToastDesc: "Semua perubahan harga telah berhasil disimpan.",
+                errorToast: "Pembaruan Gagal",
+            }
         },
         inventoryTable: {
             searchPlaceholder: "Cari barang...",
@@ -345,7 +376,7 @@ export const translations = {
         },
         productSelectionDialog: {
             title: "Pilih Produk",
-            description: "Pilih produk untuk ditambahkan ke daftar stok masuk. Anda dapat mencari, memfilter, dan memilih beberapa item.",
+            description: "Pilih produk untuk ditambahkan ke daftar. Anda dapat mencari, memfilter, dan memilih beberapa item.",
             searchPlaceholder: "Cari berdasarkan produk atau SKU...",
             categoryPlaceholder: "Filter berdasarkan kategori...",
             addItems: "Tambah {count} Barang",
@@ -496,6 +527,7 @@ export const translations = {
             cancel: "Batal",
             saveChanges: "Simpan Perubahan",
             apply: "Terapkan",
+            saving: 'Menyimpan...',
         }
     }
 }

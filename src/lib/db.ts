@@ -47,6 +47,19 @@ const runMigrations = () => {
         db.exec('ALTER TABLE resellers ADD COLUMN address TEXT');
     }
 
+    // Add costPrice to products and variants
+    const productColumns = db.pragma('table_info(products)');
+    if (!productColumns.some((col: any) => col.name === 'costPrice')) {
+        console.log('Adding costPrice column to products table...');
+        db.exec('ALTER TABLE products ADD COLUMN costPrice REAL');
+    }
+
+    const variantColumns = db.pragma('table_info(variants)');
+    if (!variantColumns.some((col: any) => col.name === 'costPrice')) {
+        console.log('Adding costPrice column to variants table...');
+        db.exec('ALTER TABLE variants ADD COLUMN costPrice REAL');
+    }
+
   } catch (error) {
     if (error instanceof Error && error.message.includes('no such table:')) {
         // ignore if tables don't exist yet
@@ -70,6 +83,7 @@ const createSchema = () => {
       -- For non-variant items
       stock INTEGER,
       price REAL,
+      costPrice REAL,
       size TEXT
     );
 
@@ -79,8 +93,20 @@ const createSchema = () => {
       name TEXT NOT NULL,
       sku TEXT,
       price REAL NOT NULL,
+      costPrice REAL,
       stock INTEGER NOT NULL,
       FOREIGN KEY (productId) REFERENCES products(id) ON DELETE CASCADE
+    );
+
+     CREATE TABLE IF NOT EXISTS channel_prices (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        product_id INTEGER,
+        variant_id INTEGER,
+        channel TEXT NOT NULL,
+        price REAL NOT NULL,
+        FOREIGN KEY (product_id) REFERENCES products (id) ON DELETE CASCADE,
+        FOREIGN KEY (variant_id) REFERENCES variants (id) ON DELETE CASCADE,
+        UNIQUE (product_id, variant_id, channel)
     );
 
     CREATE TABLE IF NOT EXISTS history (

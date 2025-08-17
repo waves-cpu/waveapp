@@ -2,7 +2,7 @@
 'use server';
 
 import { db } from './db';
-import type { InventoryItem, AdjustmentHistory, InventoryItemVariant, Sale, Reseller } from '@/types';
+import type { InventoryItem, AdjustmentHistory, InventoryItemVariant, Sale, Reseller, ChannelPrice } from '@/types';
 
 // Settings Functions
 export async function saveSetting(key: string, value: any) {
@@ -23,6 +23,7 @@ export async function fetchInventoryData() {
     const fetchedItems = db.prepare('SELECT * FROM products').all();
     const fetchedVariants = db.prepare('SELECT * FROM variants').all();
     const fetchedHistory = db.prepare('SELECT * FROM history ORDER BY date DESC').all();
+    const fetchedChannelPrices = db.prepare('SELECT * FROM channel_prices').all() as any[];
 
     const historyMap = new Map<string, AdjustmentHistory[]>();
     for (const entry of fetchedHistory as any[]) {
@@ -37,6 +38,19 @@ export async function fetchInventoryData() {
         });
     }
 
+    const channelPriceMap = new Map<string, ChannelPrice[]>();
+    for (const cp of fetchedChannelPrices) {
+        const key = cp.variant_id ? cp.variant_id.toString() : cp.product_id.toString();
+        if (!channelPriceMap.has(key)) {
+            channelPriceMap.set(key, []);
+        }
+        channelPriceMap.get(key)!.push({
+            id: cp.id.toString(),
+            channel: cp.channel,
+            price: cp.price
+        });
+    }
+
     const variantMap = new Map<string, InventoryItemVariant[]>();
     for (const variant of fetchedVariants as any[]) {
         const productIdStr = variant.productId.toString();
@@ -48,6 +62,7 @@ export async function fetchInventoryData() {
             ...variant,
             id: variantIdStr,
             history: historyMap.get(variantIdStr) || [],
+            channelPrices: channelPriceMap.get(variantIdStr) || [],
         });
     }
 
@@ -65,6 +80,7 @@ export async function fetchInventoryData() {
             ...item,
             id: itemIdStr,
             history: historyMap.get(itemIdStr) || [],
+            channelPrices: channelPriceMap.get(itemIdStr) || [],
             imageUrl: item.imageUrl,
         };
     });
@@ -477,12 +493,65 @@ export async function revertSaleByTransaction(id: string) {
     }
 }
 
-// This is a placeholder for the removed functionality.
-export async function updatePrices(updates: any[]) {
-    // This function is intentionally left blank.
-    console.log('updatePrices function called but is not implemented.', updates);
-}
+export async function updatePrices(updates: { id: string, type: 'product' | 'variant', costPrice?: number, price?: number, channelPrices?: { channel: string, price?: number }[] }[]) {
+    const updateProductStmt = db.prepare('UPDATE products SET costPrice = @costPrice, price = @price WHERE id = @id');
+    const updateVariantStmt = db.prepare('UPDATE variants SET costPrice = @costPrice, price = @price WHERE id = @id');
+    const upsertChannelPriceStmt = db.prepare(`
+        INSERT INTO channel_prices (product_id, variant_id, channel, price)
+        VALUES (@product_id, @variant_id, @channel, @price)
+        ON CONFLICT(product_id, variant_id, channel) DO UPDATE SET price = excluded.price
+    `);
+    const deleteChannelPriceStmt = db.prepare('DELETE FROM channel_prices WHERE product_id = ? AND variant_id = ? AND channel = ?');
+    const getVariantProductIdStmt = db.prepare('SELECT productId FROM variants WHERE id = ?');
 
+    db.transaction(() => {
+        updates.forEach(update => {
+            if (update.type === 'product') {
+                updateProductStmt.run({
+                    id: update.id,
+                    costPrice: update.costPrice,
+                    price: update.price
+                });
+
+                update.channelPrices?.forEach(cp => {
+                    if (cp.price !== undefined && cp.price !== null) {
+                        upsertChannelPriceStmt.run({
+                            product_id: update.id,
+                            variant_id: null,
+                            channel: cp.channel,
+                            price: cp.price
+                        });
+                    } else {
+                        deleteChannelPriceStmt.run(update.id, null, cp.channel);
+                    }
+                });
+
+            } else { // variant
+                updateVariantStmt.run({
+                    id: update.id,
+                    costPrice: update.costPrice,
+                    price: update.price
+                });
+                
+                const variantInfo = getVariantProductIdStmt.get(update.id) as { productId: number };
+                if (variantInfo) {
+                     update.channelPrices?.forEach(cp => {
+                        if (cp.price !== undefined && cp.price !== null) {
+                            upsertChannelPriceStmt.run({
+                                product_id: variantInfo.productId,
+                                variant_id: update.id,
+                                channel: cp.channel,
+                                price: cp.price
+                            });
+                        } else {
+                            deleteChannelPriceStmt.run(variantInfo.productId, update.id, cp.channel);
+                        }
+                    });
+                }
+            }
+        });
+    })();
+}
 
 // Reseller functions
 export async function getResellers(): Promise<Reseller[]> {
