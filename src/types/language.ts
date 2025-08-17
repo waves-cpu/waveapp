@@ -41,6 +41,7 @@ export const translations = {
                 successToast: "Prices Updated",
                 successToastDesc: "All price changes have been saved successfully.",
                 errorToast: "Update Failed",
+                channelPriceDetails: "Channel Price Details",
             }
         },
         inventoryTable: {
@@ -307,6 +308,7 @@ export const translations = {
                 successToast: "Harga Diperbarui",
                 successToastDesc: "Semua perubahan harga telah berhasil disimpan.",
                 errorToast: "Pembaruan Gagal",
+                channelPriceDetails: "Rincian Harga Kanal",
             }
         },
         inventoryTable: {

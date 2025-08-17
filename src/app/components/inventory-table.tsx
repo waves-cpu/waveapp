@@ -126,6 +126,8 @@ const LOW_STOCK_THRESHOLD = 10;
 const formatCurrency = (amount: number) => `Rp${Math.round(amount).toLocaleString('id-ID')}`;
 
 const PriceWithTooltip = ({ item }: { item: InventoryItem | InventoryItemVariant }) => {
+    const { language } = useLanguage();
+    const t = translations[language];
     const priceDisplay = item.price ? formatCurrency(item.price) : '-';
     
     // Aggregate channel prices. For online, take the first one found.
@@ -137,12 +139,12 @@ const PriceWithTooltip = ({ item }: { item: InventoryItem | InventoryItemVariant
         const resellerPrice = item.channelPrices.find(p => p.channel === 'reseller');
         const onlinePrice = item.channelPrices.find(p => ['shopee', 'tiktok', 'lazada'].includes(p.channel));
 
-        if (posPrice) prices.push({ channel: 'POS', price: posPrice.price });
-        if (resellerPrice) prices.push({ channel: 'Reseller', price: resellerPrice.price });
+        if (posPrice) prices.push({ channel: t.sales.pos, price: posPrice.price });
+        if (resellerPrice) prices.push({ channel: t.sales.reseller, price: resellerPrice.price });
         if (onlinePrice) prices.push({ channel: 'Online', price: onlinePrice.price });
 
         return prices;
-    }, [item.channelPrices]);
+    }, [item.channelPrices, t]);
 
     if (aggregatedPrices.length === 0) {
         return <span>{priceDisplay}</span>;
@@ -156,7 +158,7 @@ const PriceWithTooltip = ({ item }: { item: InventoryItem | InventoryItemVariant
                 </TooltipTrigger>
                 <TooltipContent>
                     <div className="space-y-2">
-                        <p className="font-semibold text-sm">Rincian Harga Kanal</p>
+                        <p className="font-semibold text-sm">{t.finance.priceSettingsPage.channelPriceDetails}</p>
                         <div className="space-y-1">
                             {aggregatedPrices.map(p => (
                                  <div key={p.channel} className="flex justify-between items-center gap-4 text-xs">
@@ -556,5 +558,6 @@ export function InventoryTable({ onUpdateStock }: InventoryTableProps) {
     
 
     
+
 
 
