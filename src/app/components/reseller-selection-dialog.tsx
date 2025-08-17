@@ -44,6 +44,8 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { useInventory } from '@/hooks/use-inventory';
 import { MoreVertical, UserPlus, Trash2, Pencil, Search } from 'lucide-react';
+import { useLanguage } from '@/hooks/use-language';
+import { translations } from '@/types/language';
 
 interface ResellerFormDialogProps {
   onSave: (resellerData: Omit<Reseller, 'id'>) => Promise<void>;
@@ -52,6 +54,10 @@ interface ResellerFormDialogProps {
 }
 
 function ResellerFormDialog({ onSave, reseller, children }: ResellerFormDialogProps) {
+  const { language } = useLanguage();
+  const t = translations[language].reseller.dialog.form;
+  const tCommon = translations[language].common;
+
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [address, setAddress] = useState('');
@@ -89,17 +95,17 @@ function ResellerFormDialog({ onSave, reseller, children }: ResellerFormDialogPr
         </DialogTrigger>
         <DialogContent>
              <DialogHeader>
-                <DialogTitle>{isEditMode ? 'Ubah Reseller' : 'Tambah Reseller Baru'}</DialogTitle>
+                <DialogTitle>{isEditMode ? t.editTitle : t.addTitle}</DialogTitle>
                 <DialogDescription>
-                   {isEditMode ? 'Ubah detail reseller di bawah ini.' : 'Masukkan detail reseller baru di bawah ini.'}
+                   {isEditMode ? t.editDescription : t.addDescription}
                 </DialogDescription>
             </DialogHeader>
              <form onSubmit={handleSubmit} className="space-y-4 pt-4">
                 <div className="space-y-2">
-                    <Label htmlFor="reseller-name">Nama Reseller</Label>
+                    <Label htmlFor="reseller-name">{t.nameLabel}</Label>
                     <Input
                     id="reseller-name"
-                    placeholder="Nama..."
+                    placeholder={t.namePlaceholder}
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     disabled={isSaving}
@@ -108,20 +114,20 @@ function ResellerFormDialog({ onSave, reseller, children }: ResellerFormDialogPr
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                        <Label htmlFor="reseller-phone">No. Telepon</Label>
+                        <Label htmlFor="reseller-phone">{t.phoneLabel}</Label>
                         <Input
                         id="reseller-phone"
-                        placeholder="0812..."
+                        placeholder={t.phonePlaceholder}
                         value={phone}
                         onChange={(e) => setPhone(e.target.value)}
                         disabled={isSaving}
                         />
                     </div>
                      <div className="space-y-2">
-                        <Label htmlFor="reseller-address">Alamat</Label>
+                        <Label htmlFor="reseller-address">{t.addressLabel}</Label>
                         <Input
                         id="reseller-address"
-                        placeholder="Alamat singkat..."
+                        placeholder={t.addressPlaceholder}
                         value={address}
                         onChange={(e) => setAddress(e.target.value)}
                         disabled={isSaving}
@@ -130,10 +136,10 @@ function ResellerFormDialog({ onSave, reseller, children }: ResellerFormDialogPr
                 </div>
                 <DialogFooter>
                     <DialogClose asChild>
-                        <Button type="button" variant="ghost" disabled={isSaving}>Batal</Button>
+                        <Button type="button" variant="ghost" disabled={isSaving}>{tCommon.cancel}</Button>
                     </DialogClose>
                     <Button type="submit" disabled={isSaving || !name.trim()}>
-                        {isSaving ? 'Menyimpan...' : 'Simpan Reseller'}
+                        {isSaving ? tCommon.saveChanges + '...' : t.save}
                     </Button>
                 </DialogFooter>
             </form>
@@ -153,6 +159,9 @@ export function ResellerSelectionDialog({
 }) {
     const { addReseller, editReseller, deleteReseller } = useInventory();
     const { toast } = useToast();
+    const { language } = useLanguage();
+    const t = translations[language];
+    const TResellerDialog = t.reseller.dialog;
     const [resellerToEdit, setResellerToEdit] = useState<Reseller | null>(null);
     const [resellerToDelete, setResellerToDelete] = useState<Reseller | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
@@ -171,16 +180,15 @@ export function ResellerSelectionDialog({
         try {
             await addReseller(resellerData.name, resellerData.phone, resellerData.address);
             toast({
-                title: 'Reseller Ditambahkan',
-                description: `Reseller "${resellerData.name}" berhasil ditambahkan.`,
+                title: TResellerDialog.addedToast,
+                description: TResellerDialog.addedToastDesc.replace('{name}', resellerData.name),
             });
         } catch (error) {
             toast({
                 variant: 'destructive',
-                title: 'Gagal Menambahkan',
-                description: error instanceof Error ? error.message : 'Terjadi kesalahan.',
+                title: TResellerDialog.addErrorToast,
+                description: error instanceof Error ? error.message : 'An error occurred.',
             });
-            // Re-throw to keep the dialog open on failure
             throw error;
         }
     };
@@ -190,14 +198,14 @@ export function ResellerSelectionDialog({
         try {
             await editReseller(resellerToEdit.id, resellerData);
             toast({
-                title: 'Reseller Diperbarui',
-                description: `Data untuk "${resellerData.name}" telah diperbarui.`,
+                title: TResellerDialog.updatedToast,
+                description: TResellerDialog.updatedToastDesc.replace('{name}', resellerData.name),
             });
         } catch (error) {
              toast({
                 variant: 'destructive',
-                title: 'Gagal Memperbarui',
-                description: error instanceof Error ? error.message : 'Terjadi kesalahan.',
+                title: TResellerDialog.updateErrorToast,
+                description: error instanceof Error ? error.message : 'An error occurred.',
             });
             throw error;
         }
@@ -208,15 +216,15 @@ export function ResellerSelectionDialog({
         try {
             await deleteReseller(resellerToDelete.id);
             toast({
-                title: 'Reseller Dihapus',
-                description: `Reseller "${resellerToDelete.name}" telah dihapus.`,
+                title: TResellerDialog.deletedToast,
+                description: TResellerDialog.deletedToastDesc.replace('{name}', resellerToDelete.name),
             });
             setResellerToDelete(null);
         } catch (error) {
              toast({
                 variant: 'destructive',
-                title: 'Gagal Menghapus',
-                description: error instanceof Error ? error.message : 'Terjadi kesalahan.',
+                title: TResellerDialog.deleteErrorToast,
+                description: error instanceof Error ? error.message : 'An error occurred.',
             });
         }
     }
@@ -226,9 +234,9 @@ export function ResellerSelectionDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl">
         <DialogHeader>
-          <DialogTitle>Pilih Reseller</DialogTitle>
+          <DialogTitle>{TResellerDialog.title}</DialogTitle>
           <DialogDescription>
-            Pilih reseller dari daftar di bawah, atau tambahkan reseller baru.
+            {TResellerDialog.description}
           </DialogDescription>
         </DialogHeader>
         
@@ -236,13 +244,13 @@ export function ResellerSelectionDialog({
            <ResellerFormDialog onSave={handleAddReseller}>
              <Button variant="outline" className="w-full md:w-auto">
                 <UserPlus className="mr-2 h-4 w-4" />
-                Tambah Reseller Baru
+                {TResellerDialog.addNew}
             </Button>
            </ResellerFormDialog>
            <div className="relative flex-grow">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input 
-                placeholder="Cari reseller..."
+                placeholder={TResellerDialog.searchPlaceholder}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10 w-full"
@@ -254,10 +262,10 @@ export function ResellerSelectionDialog({
           <Table>
             <TableHeader>
                 <TableRow>
-                    <TableHead>Nama</TableHead>
-                    <TableHead>No. Telepon</TableHead>
-                    <TableHead>Alamat</TableHead>
-                    <TableHead className="w-[50px] text-center">Aksi</TableHead>
+                    <TableHead>{TResellerDialog.table.name}</TableHead>
+                    <TableHead>{TResellerDialog.table.phone}</TableHead>
+                    <TableHead>{TResellerDialog.table.address}</TableHead>
+                    <TableHead className="w-[50px] text-center">{TResellerDialog.table.actions}</TableHead>
                 </TableRow>
             </TableHeader>
             <TableBody>
@@ -282,11 +290,11 @@ export function ResellerSelectionDialog({
                                 <DropdownMenuContent align="end">
                                     <DropdownMenuItem onClick={() => setResellerToEdit(reseller)}>
                                         <Pencil className="mr-2 h-4 w-4" />
-                                        Ubah
+                                        {t.inventoryTable.editProduct}
                                     </DropdownMenuItem>
                                     <DropdownMenuItem onClick={() => setResellerToDelete(reseller)} className="text-destructive">
                                         <Trash2 className="mr-2 h-4 w-4" />
-                                        Hapus
+                                        Delete
                                     </DropdownMenuItem>
                                 </DropdownMenuContent>
                             </DropdownMenu>
@@ -297,7 +305,7 @@ export function ResellerSelectionDialog({
               ) : (
                 <TableRow>
                   <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
-                    {searchTerm ? 'Reseller tidak ditemukan.' : 'Belum ada reseller. Tambahkan di atas.'}
+                    {searchTerm ? TResellerDialog.notFound : TResellerDialog.none}
                   </TableCell>
                 </TableRow>
               )}
@@ -308,15 +316,15 @@ export function ResellerSelectionDialog({
         <AlertDialog open={!!resellerToDelete} onOpenChange={(isOpen) => !isOpen && setResellerToDelete(null)}>
             <AlertDialogContent>
                 <AlertDialogHeader>
-                    <AlertDialogTitle>Anda yakin ingin menghapus reseller ini?</AlertDialogTitle>
+                    <AlertDialogTitle>{TResellerDialog.deleteDialog.title}</AlertDialogTitle>
                     <AlertDialogDescription>
-                        Tindakan ini tidak dapat diurungkan. Ini akan menghapus reseller "{resellerToDelete?.name}" secara permanen.
+                        {TResellerDialog.deleteDialog.description.replace('{name}', resellerToDelete?.name || '')}
                     </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
-                    <AlertDialogCancel>Batal</AlertDialogCancel>
+                    <AlertDialogCancel>{t.common.cancel}</AlertDialogCancel>
                     <AlertDialogAction onClick={handleDeleteReseller} className="bg-destructive hover:bg-destructive/90">
-                        Ya, Hapus
+                        {TResellerDialog.deleteDialog.confirm}
                     </AlertDialogAction>
                 </AlertDialogFooter>
             </AlertDialogContent>

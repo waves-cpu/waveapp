@@ -11,7 +11,7 @@ import { SidebarTrigger } from '@/components/ui/sidebar';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { format } from 'date-fns';
-import { id as aing } from 'date-fns/locale';
+import { id as localeId, enUS as localeEn } from 'date-fns/locale';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -49,6 +49,7 @@ export default function ResellerHistoryPage() {
     const { language } = useLanguage();
     const { toast } = useToast();
     const t = translations[language];
+    const TReseller = t.reseller;
 
     const [date, setDate] = useState<Date | undefined>(new Date());
     const [selectedSaleItems, setSelectedSaleItems] = useState<Sale[]>([]);
@@ -107,11 +108,11 @@ export default function ResellerHistoryPage() {
             console.error("Error cancelling transaction:", error);
             toast({
                 variant: 'destructive',
-                title: "Gagal Membatalkan",
+                title: TReseller.dialog.deleteErrorToast,
                 description: "Terjadi kesalahan saat membatalkan transaksi.",
             });
         }
-    }, [cancelSaleTransaction, t.pos.transactionCancelled, toast]);
+    }, [cancelSaleTransaction, t.pos.transactionCancelled, toast, TReseller.dialog.deleteErrorToast]);
     
     const handleViewDetails = (items: Sale[]) => {
         setSelectedSaleItems(items);
@@ -155,7 +156,7 @@ export default function ResellerHistoryPage() {
             <main className="flex-1 p-4 md:p-10 no-print">
                 <div className="flex items-center gap-4 mb-6">
                     <SidebarTrigger className="md:hidden" />
-                    <h1 className="text-lg font-bold">Riwayat Transaksi Reseller</h1>
+                    <h1 className="text-lg font-bold">{TReseller.historyTitle}</h1>
                     <div className="ml-auto flex items-center gap-2">
                         <Link href="/sales/reseller">
                              <Button variant="outline">{t.sales.reseller}</Button>
@@ -168,7 +169,7 @@ export default function ResellerHistoryPage() {
                                 className="w-[240px] justify-start text-left font-normal"
                             >
                                 <CalendarIcon className="mr-2 h-4 w-4" />
-                                {date ? format(date, 'PPP', { locale: language === 'id' ? aing : undefined }) : <span>Pilih tanggal</span>}
+                                {date ? format(date, 'PPP', { locale: language === 'id' ? localeId : localeEn }) : <span>{t.stockHistory.dateRange}</span>}
                             </Button>
                             </PopoverTrigger>
                             <PopoverContent className="w-auto p-0" align="end">
@@ -185,25 +186,25 @@ export default function ResellerHistoryPage() {
 
                 <Card>
                     <CardHeader>
-                        <CardTitle className="text-base">Transaksi pada {date ? format(date, 'PPPP', { locale: language === 'id' ? aing : undefined }) : ''}</CardTitle>
-                        <CardDescription className="text-xs">Menampilkan semua transaksi dari channel Reseller.</CardDescription>
+                        <CardTitle className="text-base">{TReseller.transactionsOnDate.replace('{date}', date ? format(date, 'PPPP', { locale: language === 'id' ? localeId : localeEn }) : '')}</CardTitle>
+                        <CardDescription className="text-xs">{TReseller.transactionsDescription}</CardDescription>
                     </CardHeader>
                     <CardContent>
                        <Table>
                             <TableHeader>
                                 <TableRow>
-                                    <TableHead className="text-xs">Waktu</TableHead>
-                                    <TableHead className="text-xs">Reseller</TableHead>
-                                    <TableHead className="text-xs">Detail Transaksi</TableHead>
-                                    <TableHead className="text-xs">Metode Bayar</TableHead>
-                                    <TableHead className="text-right text-xs">Total</TableHead>
-                                    <TableHead className="text-center text-xs">Aksi</TableHead>
+                                    <TableHead className="text-xs">{TReseller.history.time}</TableHead>
+                                    <TableHead className="text-xs">{TReseller.history.reseller}</TableHead>
+                                    <TableHead className="text-xs">{TReseller.history.transactionDetails}</TableHead>
+                                    <TableHead className="text-xs">{TReseller.history.paymentMethod}</TableHead>
+                                    <TableHead className="text-right text-xs">{TReseller.history.total}</TableHead>
+                                    <TableHead className="text-center text-xs">{TReseller.history.actions}</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
                                 {loading ? (
                                     <TableRow>
-                                        <TableCell colSpan={6} className="h-24 text-center text-sm">Memuat riwayat...</TableCell>
+                                        <TableCell colSpan={6} className="h-24 text-center text-sm">Loading history...</TableCell>
                                     </TableRow>
                                 ) : groupedSales.length > 0 ? (
                                     groupedSales.map(group => (
@@ -218,7 +219,7 @@ export default function ResellerHistoryPage() {
                                                 </div>
                                             </TableCell>
                                             <TableCell onClick={() => handleViewDetails(group.items)}>
-                                                <div className="font-medium text-sm">{group.items.length} jenis produk ({group.totalItems} item)</div>
+                                                <div className="font-medium text-sm">{group.items.length} product types ({group.totalItems} items)</div>
                                                 <div className="text-xs text-muted-foreground max-w-xs truncate">
                                                     {group.items.map(i => i.productName).join(', ')}
                                                 </div>
@@ -241,15 +242,15 @@ export default function ResellerHistoryPage() {
                                                     </AlertDialogTrigger>
                                                     <AlertDialogContent>
                                                         <AlertDialogHeader>
-                                                            <AlertDialogTitle>Anda yakin ingin membatalkan transaksi ini?</AlertDialogTitle>
+                                                            <AlertDialogTitle>{TReseller.dialog.deleteDialog.title}</AlertDialogTitle>
                                                             <AlertDialogDescription>
-                                                                Tindakan ini akan mengembalikan stok untuk semua item dalam transaksi ini. Aksi ini tidak dapat diurungkan.
+                                                                {TReseller.dialog.deleteDialog.description.replace('{name}', group.transactionId)}
                                                             </AlertDialogDescription>
                                                         </AlertDialogHeader>
                                                         <AlertDialogFooter>
-                                                            <AlertDialogCancel>Batal</AlertDialogCancel>
+                                                            <AlertDialogCancel>{t.common.cancel}</AlertDialogCancel>
                                                             <AlertDialogAction onClick={() => handleCancelTransaction(group.transactionId)}>
-                                                                Ya, Batalkan
+                                                                {TReseller.dialog.deleteDialog.confirm}
                                                             </AlertDialogAction>
                                                         </AlertDialogFooter>
                                                     </AlertDialogContent>
@@ -262,8 +263,8 @@ export default function ResellerHistoryPage() {
                                         <TableCell colSpan={6} className="h-48 text-center">
                                             <div className="flex flex-col items-center justify-center gap-4 text-muted-foreground">
                                                 <HistoryIcon className="h-12 w-12" />
-                                                <p className="font-semibold text-sm">Tidak Ada Transaksi</p>
-                                                <p className="text-xs">Tidak ada transaksi yang tercatat pada tanggal yang dipilih.</p>
+                                                <p className="font-semibold text-sm">{TReseller.noTransactions}</p>
+                                                <p className="text-xs">{TReseller.noTransactionsDesc}</p>
                                             </div>
                                         </TableCell>
                                     </TableRow>

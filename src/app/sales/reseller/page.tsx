@@ -59,11 +59,11 @@ export default function ResellerPage() {
         ) : (
             <div className="flex flex-col items-center justify-center h-full gap-4 text-center">
                 <Users className="h-24 w-24 text-muted-foreground" />
-                <h2 className="text-xl font-semibold">Pilih Reseller</h2>
-                <p className="text-muted-foreground">Pilih reseller untuk memulai transaksi.</p>
+                <h2 className="text-xl font-semibold">{t.reseller.selectTitle}</h2>
+                <p className="text-muted-foreground">{t.reseller.selectDescription}</p>
                 <Button onClick={() => setResellerDialogOpen(true)}>
                     <UserPlus className="mr-2 h-4 w-4" />
-                    Pilih atau Tambah Reseller
+                    {t.reseller.selectOrCreate}
                 </Button>
             </div>
         )}

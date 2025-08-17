@@ -21,6 +21,8 @@ import Image from "next/image";
 import { Store } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
+import { useLanguage } from "@/hooks/use-language";
+import { translations } from "@/types/language";
 
 type FormValues = {
   items: {
@@ -41,6 +43,8 @@ const CHANNELS = ['pos', 'shopee', 'lazada', 'tiktok', 'reseller'];
 export default function FinanceSettingsPage() {
     const { items, loading, updatePrices, fetchItems } = useInventory();
     const { toast } = useToast();
+    const { language } = useLanguage();
+    const t = translations[language];
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     const flattenedItems = useMemo(() => {
@@ -126,14 +130,14 @@ export default function FinanceSettingsPage() {
             await updatePrices(priceUpdates);
             await fetchItems(); // Re-fetch to confirm changes
             toast({
-                title: "Harga Diperbarui",
-                description: "Semua perubahan harga telah berhasil disimpan.",
+                title: t.priceSettings.toastSuccessTitle,
+                description: t.priceSettings.toastSuccessDesc,
             });
         } catch (error) {
             console.error("Failed to update prices:", error);
             toast({
-                title: "Gagal Memperbarui Harga",
-                description: "Terjadi kesalahan saat menyimpan perubahan.",
+                title: t.priceSettings.toastErrorTitle,
+                description: t.priceSettings.toastErrorDesc,
                 variant: "destructive",
             });
         } finally {
@@ -149,24 +153,24 @@ export default function FinanceSettingsPage() {
                     <div className="flex items-center justify-between gap-4 mb-6">
                         <div className="flex items-center gap-4">
                             <SidebarTrigger className="md:hidden" />
-                            <h1 className="text-lg font-bold">Pengaturan Harga</h1>
+                            <h1 className="text-lg font-bold">{t.finance.priceSettings}</h1>
                         </div>
                         <Button type="submit" disabled={isSubmitting}>
-                            {isSubmitting ? 'Menyimpan...' : 'Simpan Semua Perubahan'}
+                            {isSubmitting ? t.common.saveChanges + '...' : t.priceSettings.save}
                         </Button>
                     </div>
                      <div className="border rounded-md">
                         <Table>
                             <TableHeader>
                                 <TableRow>
-                                    <TableHead className="w-[25%]">Produk</TableHead>
-                                    <TableHead>Harga Modal</TableHead>
-                                    <TableHead>Harga Jual Default</TableHead>
-                                    <TableHead>Harga Jual POS</TableHead>
-                                    <TableHead>Harga Jual Shopee</TableHead>
-                                    <TableHead>Harga Jual Lazada</TableHead>
-                                    <TableHead>Harga Jual Tiktok</TableHead>
-                                    <TableHead>Harga Jual Reseller</TableHead>
+                                    <TableHead className="w-[25%]">{t.priceSettings.product}</TableHead>
+                                    <TableHead>{t.priceSettings.costPrice}</TableHead>
+                                    <TableHead>{t.priceSettings.defaultPrice}</TableHead>
+                                    <TableHead>{t.priceSettings.posPrice}</TableHead>
+                                    <TableHead>{t.priceSettings.shopeePrice}</TableHead>
+                                    <TableHead>{t.priceSettings.lazadaPrice}</TableHead>
+                                    <TableHead>{t.priceSettings.tiktokPrice}</TableHead>
+                                    <TableHead>{t.priceSettings.resellerPrice}</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -210,49 +214,49 @@ export default function FinanceSettingsPage() {
                                                      <Controller
                                                         name={`items.${index}.costPrice`}
                                                         control={control}
-                                                        render={({ field }) => <Input type="number" placeholder="Harga modal" {...field} value={field.value ?? ''} className="h-9" />}
+                                                        render={({ field }) => <Input type="number" placeholder={t.priceSettings.placeholderCost} {...field} value={field.value ?? ''} className="h-9" />}
                                                     />
                                                 </TableCell>
                                                 <TableCell>
                                                      <Controller
                                                         name={`items.${index}.defaultPrice`}
                                                         control={control}
-                                                        render={({ field }) => <Input type="number" placeholder="Harga jual" {...field} value={field.value ?? ''} className="h-9" />}
+                                                        render={({ field }) => <Input type="number" placeholder={t.priceSettings.placeholderSell} {...field} value={field.value ?? ''} className="h-9" />}
                                                     />
                                                 </TableCell>
                                                 <TableCell>
                                                      <Controller
                                                         name={`items.${index}.posPrice`}
                                                         control={control}
-                                                        render={({ field }) => <Input type="number" placeholder="Harga POS" {...field} value={field.value ?? ''} className="h-9" />}
+                                                        render={({ field }) => <Input type="number" placeholder={t.priceSettings.posPrice} {...field} value={field.value ?? ''} className="h-9" />}
                                                     />
                                                 </TableCell>
                                                 <TableCell>
                                                      <Controller
                                                         name={`items.${index}.shopeePrice`}
                                                         control={control}
-                                                        render={({ field }) => <Input type="number" placeholder="Harga Shopee" {...field} value={field.value ?? ''} className="h-9" />}
+                                                        render={({ field }) => <Input type="number" placeholder={t.priceSettings.shopeePrice} {...field} value={field.value ?? ''} className="h-9" />}
                                                     />
                                                 </TableCell>
                                                 <TableCell>
                                                      <Controller
                                                         name={`items.${index}.lazadaPrice`}
                                                         control={control}
-                                                        render={({ field }) => <Input type="number" placeholder="Harga Lazada" {...field} value={field.value ?? ''} className="h-9" />}
+                                                        render={({ field }) => <Input type="number" placeholder={t.priceSettings.lazadaPrice} {...field} value={field.value ?? ''} className="h-9" />}
                                                     />
                                                 </TableCell>
                                                 <TableCell>
                                                      <Controller
                                                         name={`items.${index}.tiktokPrice`}
                                                         control={control}
-                                                        render={({ field }) => <Input type="number" placeholder="Harga Tiktok" {...field} value={field.value ?? ''} className="h-9" />}
+                                                        render={({ field }) => <Input type="number" placeholder={t.priceSettings.tiktokPrice} {...field} value={field.value ?? ''} className="h-9" />}
                                                     />
                                                 </TableCell>
                                                 <TableCell>
                                                      <Controller
                                                         name={`items.${index}.resellerPrice`}
                                                         control={control}
-                                                        render={({ field }) => <Input type="number" placeholder="Harga Reseller" {...field} value={field.value ?? ''} className="h-9" />}
+                                                        render={({ field }) => <Input type="number" placeholder={t.priceSettings.resellerPrice} {...field} value={field.value ?? ''} className="h-9" />}
                                                     />
                                                 </TableCell>
                                             </TableRow>
