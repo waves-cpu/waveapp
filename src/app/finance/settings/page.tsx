@@ -27,6 +27,7 @@ import Image from 'next/image';
 import { AppLayout } from '@/app/components/app-layout';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
+import { cn } from '@/lib/utils';
 
 
 const channelPriceSchema = z.object({
@@ -50,6 +51,13 @@ type PriceSettingItem = z.infer<typeof priceSettingItemSchema>;
 
 const formSchema = z.object({
   items: z.array(priceSettingItemSchema),
+  masterPrices: z.record(z.object({
+      costPrice: z.coerce.number().optional(),
+      price: z.coerce.number().optional(),
+      pos: z.coerce.number().optional(),
+      reseller: z.coerce.number().optional(),
+      online: z.coerce.number().optional(),
+  })).optional()
 });
 
 const CHANNELS = ['pos', 'reseller', 'online'];
@@ -70,6 +78,7 @@ export default function PriceSettingsPage() {
         resolver: zodResolver(formSchema),
         defaultValues: {
             items: [],
+            masterPrices: {}
         },
     });
 
@@ -151,28 +160,18 @@ export default function PriceSettingsPage() {
         const filteredFields = fields
             .map((field, index) => ({ ...field, originalIndex: index }))
             .filter(field => {
-                // Search filter logic (remains the same)
                 const lowerSearchTerm = searchTerm.toLowerCase();
                 const searchMatch = !lowerSearchTerm ||
                     field.name.toLowerCase().includes(lowerSearchTerm) ||
                     (field.sku && field.sku.toLowerCase().includes(lowerSearchTerm)) ||
                     (field.parentName && field.parentName.toLowerCase().includes(lowerSearchTerm));
-
                 if (!searchMatch) return false;
-
-                // Category filter logic (CORRECTED)
-                if (!categoryFilter) return true;
-
-                let itemCategory: string | undefined;
-                if (field.type === 'product') {
-                    // It's a simple product, find its category directly
-                    itemCategory = allInventoryItems.find(i => i.id === field.id)?.category;
-                } else {
-                    // It's a variant, find its parent product to get the category
-                    itemCategory = allInventoryItems.find(i => i.name === field.parentName)?.category;
-                }
                 
-                return itemCategory === categoryFilter;
+                if (!categoryFilter) return true;
+                const parentForItem = allInventoryItems.find(i => 
+                    i.id === field.id || i.variants?.some(v => v.id === field.id)
+                );
+                return parentForItem?.category === categoryFilter;
             });
         
         const groups = new Map<string, (PriceSettingItem & { originalIndex: number })[]>();
@@ -212,6 +211,25 @@ export default function PriceSettingsPage() {
 
     }, [fields, searchTerm, categoryFilter, allInventoryItems]);
     
+    const applyMasterPrice = (parentName: string, priceType: 'costPrice' | 'price' | 'pos' | 'reseller' | 'online') => {
+        const masterValue = form.getValues(`masterPrices.${parentName}.${priceType}`);
+        if (masterValue === undefined || masterValue === null) return;
+        
+        fields.forEach((field, index) => {
+            if (field.parentName === parentName) {
+                if (priceType === 'costPrice' || priceType === 'price') {
+                    form.setValue(`items.${index}.${priceType}`, masterValue, { shouldDirty: true });
+                } else {
+                    const channelIndex = form.getValues(`items.${index}.channelPrices`)?.findIndex(cp => cp.channel === priceType);
+                    if (channelIndex !== -1 && channelIndex !== undefined) {
+                        form.setValue(`items.${index}.channelPrices.${channelIndex}.price`, masterValue, { shouldDirty: true });
+                    }
+                }
+            }
+        });
+        form.trigger('items');
+        toast({ title: "Harga Diterapkan", description: `Harga ${priceType} untuk varian ${parentName} telah diatur.` });
+    };
     
     const onSubmit = async (values: z.infer<typeof formSchema>) => {
         setIsSubmitting(true);
@@ -327,7 +345,6 @@ export default function PriceSettingsPage() {
                                                                 form={form}
                                                                 index={field.originalIndex}
                                                                 onRemove={() => remove(field.originalIndex)}
-                                                                channelPrices={field.channelPrices || []}
                                                             />
                                                         </TableRow>
                                                     ))}
@@ -346,7 +363,11 @@ export default function PriceSettingsPage() {
                                                                             </div>
                                                                         </div>
                                                                     </TableCell>
-                                                                    <TableCell colSpan={5}></TableCell>
+                                                                     <MasterPriceCell form={form} parentName={parentInfo.name} priceType="costPrice" onApply={applyMasterPrice} />
+                                                                     <MasterPriceCell form={form} parentName={parentInfo.name} priceType="price" onApply={applyMasterPrice} />
+                                                                     <MasterPriceCell form={form} parentName={parentInfo.name} priceType="pos" onApply={applyMasterPrice} />
+                                                                     <MasterPriceCell form={form} parentName={parentInfo.name} priceType="reseller" onApply={applyMasterPrice} />
+                                                                     <MasterPriceCell form={form} parentName={parentInfo.name} priceType="online" onApply={applyMasterPrice} />
                                                                     <TableCell>
                                                                         <Button type="button" variant="ghost" size="icon" className="text-destructive hover:text-destructive-foreground hover:bg-destructive" onClick={() => remove(variants.map(v => v.originalIndex))}>
                                                                             <Trash2 className="h-4 w-4" />
@@ -370,7 +391,6 @@ export default function PriceSettingsPage() {
                                                                             form={form}
                                                                             index={field.originalIndex}
                                                                             onRemove={() => remove(field.originalIndex)}
-                                                                            channelPrices={field.channelPrices || []}
                                                                          />
                                                                     </TableRow>
                                                                 ))}
@@ -405,7 +425,7 @@ export default function PriceSettingsPage() {
     );
 }
 
-const PriceRowFields = ({ form, index, onRemove, channelPrices }: { form: any, index: number, onRemove: () => void, channelPrices: {channel: string, price?: number}[] }) => {
+const PriceRowFields = ({ form, index, onRemove }: { form: any, index: number, onRemove: () => void }) => {
     return (
         <>
             <TableCell>
@@ -431,7 +451,7 @@ const PriceRowFields = ({ form, index, onRemove, channelPrices }: { form: any, i
                 const currentChannelPrices = form.getValues(fieldName);
                 const channelIndex = currentChannelPrices?.findIndex((cp: any) => cp.channel === channel);
 
-                if (channelIndex === -1) {
+                if (channelIndex === -1 || channelIndex === undefined) {
                     return <TableCell key={channel}></TableCell>;
                 }
                 
@@ -460,5 +480,48 @@ const PriceRowFields = ({ form, index, onRemove, channelPrices }: { form: any, i
                 </Button>
             </TableCell>
         </>
+    )
+}
+
+
+const MasterPriceCell = ({ form, parentName, priceType, onApply }: {
+    form: any,
+    parentName: string,
+    priceType: 'costPrice' | 'price' | 'pos' | 'reseller' | 'online',
+    onApply: (parentName: string, priceType: any) => void
+}) => {
+    const t = translations[useLanguage().language];
+    return (
+        <TableCell>
+            <div className="flex items-center gap-1">
+                <FormField
+                    control={form.control}
+                    name={`masterPrices.${parentName}.${priceType}`}
+                    render={({ field }) => (
+                        <FormItem className="flex-grow">
+                            <FormControl>
+                                <Input
+                                    type="number"
+                                    placeholder={priceType === 'costPrice' ? 'Modal' : 'Harga'}
+                                    {...field}
+                                    value={field.value ?? ''}
+                                    className="h-8"
+                                />
+                            </FormControl>
+                        </FormItem>
+                    )}
+                />
+                 <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-8 px-2"
+                    onClick={() => onApply(parentName, priceType)}
+                    aria-label={`Terapkan harga ${priceType} ke semua varian`}
+                 >
+                    {t.common.apply}
+                 </Button>
+            </div>
+        </TableCell>
     )
 }
