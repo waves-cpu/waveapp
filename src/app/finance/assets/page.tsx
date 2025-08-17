@@ -9,8 +9,8 @@ import { useInventory } from "@/hooks/use-inventory";
 import React, { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { DollarSign, Package, TrendingUp, TrendingDown, Hourglass, BarChart } from "lucide-react";
-import { Bar, BarChart as RechartsBarChart, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from "recharts";
+import { DollarSign, Package, TrendingUp, TrendingDown, Hourglass, BarChart, PieChart } from "lucide-react";
+import { Bar, BarChart as RechartsBarChart, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, Pie, PieChart as RechartsPieChart, Cell } from "recharts";
 import { ChartConfig, ChartContainer, ChartTooltipContent } from "@/components/ui/chart";
 import { subDays, isAfter } from "date-fns";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -22,6 +22,8 @@ const formatCurrency = (amount: number) => `Rp${Math.round(amount).toLocaleStrin
 const ASSET_TURNOVER_DAYS = 30;
 const FAST_MOVING_THRESHOLD = 50;
 const SLOW_MOVING_THRESHOLD = 5;
+const POPULAR_VARIANTS = ['M', 'L', 'XL', 'All Size'];
+
 
 interface RankedAsset {
     id: string;
@@ -41,14 +43,21 @@ function AssetReportSkeleton() {
                 <Card><CardHeader><Skeleton className="h-24 w-full" /></CardHeader></Card>
                 <Card><CardHeader><Skeleton className="h-24 w-full" /></CardHeader></Card>
             </div>
-            <Card>
-                <CardHeader>
-                    <Skeleton className="h-8 w-1/3" />
-                </CardHeader>
-                <CardContent>
-                    <Skeleton className="h-72 w-full" />
-                </CardContent>
-            </Card>
+             <div className="grid md:grid-cols-2 gap-4">
+                <Card>
+                    <CardHeader><Skeleton className="h-8 w-1/2" /></CardHeader>
+                    <CardContent><Skeleton className="h-40 w-full" /></CardContent>
+                </Card>
+                 <Card>
+                    <CardHeader><Skeleton className="h-8 w-1/2" /></CardHeader>
+                    <CardContent><Skeleton className="h-40 w-full" /></CardContent>
+                </Card>
+            </div>
+            <div className="grid md:grid-cols-1 lg:grid-cols-3 gap-4">
+                <Card><CardHeader><Skeleton className="h-72 w-full" /></CardHeader></Card>
+                <Card><CardHeader><Skeleton className="h-72 w-full" /></CardHeader></Card>
+                <Card><CardHeader><Skeleton className="h-72 w-full" /></CardHeader></Card>
+            </div>
         </div>
     )
 }
@@ -102,15 +111,22 @@ export default function AssetReportPage() {
     const TAsset = t.finance.assetReportPage;
     const { items, allSales, loading } = useInventory();
 
-    const { assetClassification, fastMovingProducts, slowMovingProducts, nonMovingProducts } = useMemo(() => {
+    const { assetClassification, fastMovingProducts, slowMovingProducts, nonMovingProducts, popularVariantsData } = useMemo(() => {
         const turnoverDateThreshold = subDays(new Date(), ASSET_TURNOVER_DAYS);
         const salesVolumeMap = new Map<string, number>();
+        const variantSalesVolumeMap = new Map<string, number>();
         
         allSales.forEach(sale => {
             if (isAfter(new Date(sale.saleDate), turnoverDateThreshold)) {
                 const soldId = sale.variantId || sale.productId;
                 if(soldId) {
                     salesVolumeMap.set(soldId.toString(), (salesVolumeMap.get(soldId.toString()) || 0) + sale.quantity);
+                }
+                if (sale.variantName) {
+                    const normalizedVariantName = sale.variantName.toUpperCase();
+                    if (POPULAR_VARIANTS.map(v => v.toUpperCase()).includes(normalizedVariantName)) {
+                         variantSalesVolumeMap.set(sale.variantName, (variantSalesVolumeMap.get(sale.variantName) || 0) + sale.quantity);
+                    }
                 }
             }
         });
@@ -168,6 +184,9 @@ export default function AssetReportPage() {
         const totalSlowMovingValue = slow.reduce((sum, asset) => sum + asset.stockValue, 0);
         const totalNonMovingValue = non.reduce((sum, asset) => sum + asset.stockValue, 0);
 
+        const popularVariantsData = Array.from(variantSalesVolumeMap.entries()).map(([name, sales]) => ({ name, sales }));
+
+
         return {
             assetClassification: {
                 totalFastMovingValue,
@@ -178,6 +197,7 @@ export default function AssetReportPage() {
             fastMovingProducts: fast.sort((a,b) => b.salesCount - a.salesCount).slice(0, 10),
             slowMovingProducts: slow.sort((a,b) => b.salesCount - a.salesCount).slice(0, 10),
             nonMovingProducts: non.sort((a,b) => b.stockValue - a.stockValue).slice(0, 10),
+            popularVariantsData,
         };
     }, [items, allSales]);
 
@@ -191,22 +211,22 @@ export default function AssetReportPage() {
     ];
 
     const chartConfig: ChartConfig = {
-        fast: {
-            label: TAsset.fastLabel,
-            color: "hsl(var(--chart-2))",
-            icon: TrendingUp,
-        },
-        slow: {
-            label: TAsset.slowLabel,
-            color: "hsl(var(--chart-3))",
-            icon: Hourglass,
-        },
-        nonMoving: {
-            label: TAsset.nonMovingLabel,
-            color: "hsl(var(--chart-5))",
-            icon: TrendingDown,
-        },
+        fast: { label: TAsset.fastLabel, color: "hsl(var(--chart-2))", icon: TrendingUp },
+        slow: { label: TAsset.slowLabel, color: "hsl(var(--chart-3))", icon: Hourglass },
+        nonMoving: { label: TAsset.nonMovingLabel, color: "hsl(var(--chart-5))", icon: TrendingDown },
     };
+
+    const variantChartConfig = useMemo(() => {
+        const config: ChartConfig = {};
+        POPULAR_VARIANTS.forEach((variant, index) => {
+            config[variant] = {
+                label: variant,
+                color: `hsl(var(--chart-${(index % 5) + 1}))`
+            }
+        });
+        return config
+    }, []);
+    
 
     if (loading) {
         return (
@@ -224,7 +244,7 @@ export default function AssetReportPage() {
 
     return (
         <AppLayout>
-            <main className="flex flex-col flex-1 p-4 md:p-10 pb-8">
+            <main className="flex-1 p-4 md:p-10 pb-8">
                 <div className="flex items-center gap-4 mb-6">
                     <SidebarTrigger className="md:hidden" />
                     <h1 className="text-base font-bold">{t.finance.assetReport}</h1>
@@ -271,54 +291,57 @@ export default function AssetReportPage() {
                     </Card>
                 </div>
 
-
-                <Card>
-                    <CardHeader>
-                        <CardTitle className="text-xs">{TAsset.chartTitle}</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                       <ChartContainer config={chartConfig} className="w-full h-40">
-                            <RechartsBarChart accessibilityLayer data={chartData} margin={{ top: 20, left: 12, right: 12 }}>
-                                <CartesianGrid vertical={false} />
-                                <XAxis
-                                    dataKey="name"
-                                    tickLine={false}
-                                    tickMargin={10}
-                                    axisLine={false}
-                                />
-                                <YAxis 
-                                    tickLine={false}
-                                    axisLine={false}
-                                    tickFormatter={(value) => `Rp${(Number(value) / 1000000).toLocaleString()} Jt`}
-                                />
-                                <Tooltip 
-                                    cursor={false}
-                                    content={<ChartTooltipContent 
-                                        formatter={(value) => formatCurrency(Number(value))}
-                                        indicator="dot"
-                                    />} 
-                                />
-                                <Legend content={({ payload }) => {
-                                    return (
+                <div className="grid md:grid-cols-2 gap-4 mb-4">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="text-xs">{TAsset.chartTitle}</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                        <ChartContainer config={chartConfig} className="w-full h-40">
+                                <RechartsBarChart accessibilityLayer data={chartData} margin={{ top: 20, left: 12, right: 12 }}>
+                                    <CartesianGrid vertical={false} />
+                                    <XAxis dataKey="name" tickLine={false} tickMargin={10} axisLine={false} />
+                                    <YAxis tickLine={false} axisLine={false} tickFormatter={(value) => `Rp${(Number(value) / 1000000).toLocaleString()} Jt`} />
+                                    <Tooltip cursor={false} content={<ChartTooltipContent formatter={(value) => formatCurrency(Number(value))} indicator="dot"/>} />
+                                    <Legend content={({ payload }) => (
                                         <div className="flex gap-4 justify-center">
-                                        {payload?.map((entry) => (
-                                            <div key={entry.value} className="flex items-center gap-2">
-                                                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: entry.color }}></div>
-                                                <span className="text-sm text-muted-foreground">{chartConfig[entry.dataKey as keyof typeof chartConfig]?.label}</span>
-                                            </div>
-                                        ))}
+                                            {payload?.map((entry) => (
+                                                <div key={entry.value} className="flex items-center gap-2">
+                                                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: entry.color }}></div>
+                                                    <span className="text-sm text-muted-foreground">{chartConfig[entry.dataKey as keyof typeof chartConfig]?.label}</span>
+                                                </div>
+                                            ))}
                                         </div>
-                                    )
-                                }} />
-                                <Bar dataKey="fast" fill="var(--color-fast)" radius={4} />
-                                <Bar dataKey="slow" fill="var(--color-slow)" radius={4} />
-                                <Bar dataKey="nonMoving" fill="var(--color-nonMoving)" radius={4} />
-                            </RechartsBarChart>
-                        </ChartContainer>
-                    </CardContent>
-                </Card>
+                                    )} />
+                                    <Bar dataKey="fast" fill="var(--color-fast)" radius={4} />
+                                    <Bar dataKey="slow" fill="var(--color-slow)" radius={4} />
+                                    <Bar dataKey="nonMoving" fill="var(--color-nonMoving)" radius={4} />
+                                </RechartsBarChart>
+                            </ChartContainer>
+                        </CardContent>
+                    </Card>
+                    <Card>
+                        <CardHeader>
+                             <CardTitle className="text-xs">Variant Sales Performance (30d)</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                             <ChartContainer config={variantChartConfig} className="w-full h-40">
+                                <RechartsPieChart>
+                                    <Tooltip cursor={false} content={<ChartTooltipContent hideLabel />} />
+                                    <Pie data={popularVariantsData} dataKey="sales" nameKey="name" innerRadius={40} outerRadius={60}>
+                                         {popularVariantsData.map((entry) => (
+                                            <Cell key={`cell-${entry.name}`} fill={`var(--color-${entry.name})`} />
+                                        ))}
+                                    </Pie>
+                                    <Legend />
+                                </RechartsPieChart>
+                            </ChartContainer>
+                        </CardContent>
+                    </Card>
+                </div>
 
-                <div className="grid md:grid-cols-1 lg:grid-cols-3 gap-4 mt-4">
+
+                <div className="grid md:grid-cols-1 lg:grid-cols-3 gap-4">
                     <ProductListTable products={fastMovingProducts} title={TAsset.topFastMoving} icon={TrendingUp} />
                     <ProductListTable products={slowMovingProducts} title={TAsset.topSlowMoving} icon={Hourglass} />
                     <ProductListTable products={nonMovingProducts} title={TAsset.topNonMoving} icon={TrendingDown} />
@@ -327,5 +350,3 @@ export default function AssetReportPage() {
         </AppLayout>
     );
 }
-
-    
