@@ -121,56 +121,8 @@ const LOW_STOCK_THRESHOLD = 10;
 const formatCurrency = (amount: number) => `Rp${Math.round(amount).toLocaleString('id-ID')}`;
 
 const PriceWithDetails = ({ item }: { item: InventoryItem | InventoryItemVariant }) => {
-    const { language } = useLanguage();
-    const t = translations[language];
-    const TPrice = t.finance.priceSettingsPage;
-    
     const priceDisplay = item.price ? formatCurrency(item.price) : '-';
-    
-    const aggregatedPrices = useMemo(() => {
-        const prices: { channel: string, price: number }[] = [];
-        if (!item.channelPrices) return [];
-
-        const posPrice = item.channelPrices.find(p => p.channel === 'pos');
-        const resellerPrice = item.channelPrices.find(p => p.channel === 'reseller');
-        const onlinePrice = item.channelPrices.find(p => ['shopee', 'tiktok', 'lazada'].includes(p.channel));
-
-        if (posPrice) prices.push({ channel: t.sales.pos, price: posPrice.price });
-        if (resellerPrice) prices.push({ channel: t.sales.reseller, price: resellerPrice.price });
-        if (onlinePrice) prices.push({ channel: TPrice.onlinePrice, price: onlinePrice.price });
-
-        return prices;
-    }, [item.channelPrices, t, TPrice]);
-
-    if (aggregatedPrices.length === 0) {
-        return <span>{priceDisplay}</span>;
-    }
-
-    return (
-        <div className="flex flex-col">
-            <span>{priceDisplay}</span>
-            <Popover>
-                <PopoverTrigger asChild>
-                    <Badge variant="secondary" className="mt-1 cursor-pointer w-auto" asChild>
-                       <button>{`${aggregatedPrices.length} Harga Jual`}</button>
-                    </Badge>
-                </PopoverTrigger>
-                <PopoverContent className="w-60">
-                     <div className="space-y-2">
-                        <p className="font-semibold text-sm">{TPrice.channelPriceDetails}</p>
-                        <div className="space-y-1">
-                            {aggregatedPrices.map(p => (
-                                <div key={p.channel} className="flex justify-between items-center gap-4 text-xs">
-                                    <span className="text-muted-foreground">{p.channel}:</span>
-                                    <span className="font-medium">{formatCurrency(p.price)}</span>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                </PopoverContent>
-            </Popover>
-        </div>
-    );
+    return <span>{priceDisplay}</span>;
 };
 
 
