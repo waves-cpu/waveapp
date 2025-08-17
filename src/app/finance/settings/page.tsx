@@ -55,7 +55,7 @@ export default function FinanceSettingsPage() {
         defaultValues: { items: [] }
     });
 
-    const { fields, append, remove } = useFieldArray({
+    const { fields, append, remove, replace } = useFieldArray({
         control,
         name: "items"
     });
@@ -92,7 +92,7 @@ export default function FinanceSettingsPage() {
               defaultPrice: item.price ?? '',
               ...channelPrices
           };
-        }).filter(Boolean) as PriceFormItem[];
+        }).filter((item): item is PriceFormItem => item !== null);
       
       append(newItemsToAppend);
     };
@@ -102,8 +102,8 @@ export default function FinanceSettingsPage() {
         const priceUpdates = data.items.map(item => ({
             id: item.id,
             type: item.type,
-            costPrice: item.costPrice !== '' ? Number(item.costPrice) : undefined,
-            defaultPrice: item.defaultPrice !== '' ? Number(item.defaultPrice) : undefined,
+            costPrice: item.costPrice !== '' && item.costPrice !== undefined ? Number(item.costPrice) : undefined,
+            defaultPrice: item.defaultPrice !== '' && item.defaultPrice !== undefined ? Number(item.defaultPrice) : undefined,
             channelPrices: CHANNELS.map(channel => ({
                 channel,
                 price: (item as any)[`${channel}Price`]
@@ -292,5 +292,3 @@ export default function FinanceSettingsPage() {
         </>
     );
 }
-
-    
