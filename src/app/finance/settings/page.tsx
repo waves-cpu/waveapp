@@ -51,13 +51,6 @@ type PriceSettingItem = z.infer<typeof priceSettingItemSchema>;
 
 const formSchema = z.object({
   items: z.array(priceSettingItemSchema),
-  masterPrices: z.record(z.object({
-      costPrice: z.coerce.number().optional(),
-      price: z.coerce.number().optional(),
-      pos: z.coerce.number().optional(),
-      reseller: z.coerce.number().optional(),
-      online: z.coerce.number().optional(),
-  })).optional()
 });
 
 const CHANNELS = ['pos', 'reseller', 'online'];
@@ -66,6 +59,7 @@ export default function PriceSettingsPage() {
     const { language } = useLanguage();
     const t = translations[language];
     const TPrice = t.finance.priceSettingsPage;
+    const TSales = t.sales;
     const { items: allInventoryItems, categories, updatePrices, loading } = useInventory();
     const { toast } = useToast();
     
@@ -73,13 +67,11 @@ export default function PriceSettingsPage() {
     const [isProductSelectionOpen, setProductSelectionOpen] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
     const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
-    const [bulkEditStates, setBulkEditStates] = useState<Record<string, boolean>>({});
 
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
         defaultValues: {
             items: [],
-            masterPrices: {}
         },
     });
 
@@ -158,96 +150,70 @@ export default function PriceSettingsPage() {
     };
 
     const groupedAndFilteredItems = useMemo(() => {
-    const filteredFields = fields
-        .map((field, index) => ({ ...field, originalIndex: index }))
-        .filter(field => {
-            const lowerSearchTerm = searchTerm.toLowerCase();
-            const searchMatch = !lowerSearchTerm ||
-                field.name.toLowerCase().includes(lowerSearchTerm) ||
-                (field.sku && field.sku.toLowerCase().includes(lowerSearchTerm)) ||
-                (field.parentName && field.parentName.toLowerCase().includes(lowerSearchTerm));
+        const filteredFields = fields
+            .map((field, index) => ({ ...field, originalIndex: index }))
+            .filter(field => {
+                const lowerSearchTerm = searchTerm.toLowerCase();
+                const searchMatch = !lowerSearchTerm ||
+                    field.name.toLowerCase().includes(lowerSearchTerm) ||
+                    (field.sku && field.sku.toLowerCase().includes(lowerSearchTerm)) ||
+                    (field.parentName && field.parentName.toLowerCase().includes(lowerSearchTerm));
 
-            if (!searchMatch) return false;
+                if (!searchMatch) return false;
 
-            if (!categoryFilter) return true;
-
-            const inventoryItem = allInventoryItems.find(item => {
-                if (item.id === field.id && field.type === 'product') {
-                    return true;
-                }
-                if (item.variants && item.variants.some(v => v.id === field.id)) {
-                    return true;
-                }
-                return false;
-            });
-            return inventoryItem?.category === categoryFilter;
-        });
-
-    const groups = new Map<string, (PriceSettingItem & { originalIndex: number })[]>();
-    const simpleItems: (PriceSettingItem & { originalIndex: number })[] = [];
-
-    filteredFields.forEach(field => {
-        if (field.type === 'variant' && field.parentName) {
-            if (!groups.has(field.parentName)) {
-                groups.set(field.parentName, []);
-            }
-            groups.get(field.parentName)!.push(field);
-        } else {
-            simpleItems.push(field);
-        }
-    });
-
-    const activeGroups = new Map<string, { header: PriceSettingItem & { originalIndex: number }, variants: (PriceSettingItem & { originalIndex: number })[] }>();
-    for (const [key, value] of groups.entries()) {
-        if (value.length > 0) {
-            const parentInfo = allInventoryItems.find(item => item.name === key);
-            const headerItem = {
-                id: parentInfo?.id || key,
-                name: key,
-                parentName: key,
-                imageUrl: parentInfo?.imageUrl,
-                sku: parentInfo?.sku,
-                type: 'product' as 'product',
-                originalIndex: -1,
-            };
-            activeGroups.set(key, { header: headerItem, variants: value });
-        }
-    }
-    
-    return { groups: Array.from(activeGroups.values()), simpleItems };
-
-}, [fields, searchTerm, categoryFilter, allInventoryItems]);
-    
-    const applyAllMasterPrices = (parentName: string) => {
-        const masterPrices = form.getValues(`masterPrices.${parentName}`);
-        if (!masterPrices) return;
-
-        const priceTypes = ['costPrice', 'price', 'pos', 'reseller', 'online'];
-
-        fields.forEach((field, index) => {
-            if (field.parentName === parentName) {
-                priceTypes.forEach(priceType => {
-                    const masterValue = (masterPrices as any)[priceType];
-                    if (masterValue !== undefined && masterValue !== null && masterValue !== '') {
-                         if (priceType === 'costPrice' || priceType === 'price') {
-                            form.setValue(`items.${index}.${priceType}`, masterValue, { shouldDirty: true });
-                        } else {
-                            const channelIndex = form.getValues(`items.${index}.channelPrices`)?.findIndex(cp => cp.channel === priceType);
-                             if (channelIndex !== -1 && channelIndex !== undefined) {
-                                form.setValue(`items.${index}.channelPrices.${channelIndex}.price`, masterValue, { shouldDirty: true });
-                            }
-                        }
+                if (!categoryFilter) return true;
+                
+                const inventoryItem = allInventoryItems.find(item => {
+                    if (field.type === 'product') {
+                        return item.id === field.id;
                     }
+                    if (field.type === 'variant') {
+                        return item.variants?.some(v => v.id === field.id);
+                    }
+                    return false;
                 });
+                
+                return inventoryItem?.category === categoryFilter;
+            });
+
+        const groups = new Map<string, (PriceSettingItem & { originalIndex: number })[]>();
+        const simpleItems: (PriceSettingItem & { originalIndex: number })[] = [];
+
+        filteredFields.forEach(field => {
+            if (field.type === 'variant' && field.parentName) {
+                if (!groups.has(field.parentName)) {
+                    groups.set(field.parentName, []);
+                }
+                groups.get(field.parentName)!.push(field);
+            } else {
+                simpleItems.push(field);
             }
         });
-        form.trigger('items');
-        toast({ title: "Harga Diterapkan", description: `Semua harga untuk varian ${parentName} telah diatur.` });
-    };
 
-    const toggleBulkEdit = (parentName: string, state?: boolean) => {
-        setBulkEditStates(prev => ({ ...prev, [parentName]: state ?? !prev[parentName] }));
-    };
+        const activeGroups = new Map<string, { header: PriceSettingItem & { originalIndex: number }, variants: (PriceSettingItem & { originalIndex: number })[] }>();
+        for (const [key, value] of groups.entries()) {
+            if (value.length > 0) {
+                const parentInfo = allInventoryItems.find(item => item.name === key);
+                const headerItem = {
+                    id: parentInfo?.id || key,
+                    name: key,
+                    parentName: key,
+                    imageUrl: parentInfo?.imageUrl,
+                    sku: parentInfo?.sku,
+                    type: 'product' as 'product',
+                    originalIndex: -1, // Not a real item in the form array
+                    costPrice: undefined,
+                    price: undefined,
+                    channelPrices: [],
+                };
+                activeGroups.set(key, { header: headerItem, variants: value });
+            }
+        }
+        
+        return { groups: Array.from(activeGroups.values()), simpleItems };
+
+    }, [fields, searchTerm, categoryFilter, allInventoryItems]);
+    
     
     const onSubmit = async (values: z.infer<typeof formSchema>) => {
         setIsSubmitting(true);
@@ -323,8 +289,8 @@ export default function PriceSettingsPage() {
                                                 <TableHead className="w-[30%]">{TPrice.product}</TableHead>
                                                 <TableHead>{TPrice.costPrice}</TableHead>
                                                 <TableHead>{TPrice.defaultPrice}</TableHead>
-                                                <TableHead>{t.sales.pos}</TableHead>
-                                                <TableHead>{t.sales.reseller}</TableHead>
+                                                <TableHead>{TSales.pos}</TableHead>
+                                                <TableHead>{TSales.reseller}</TableHead>
                                                 <TableHead>{TPrice.onlinePrice}</TableHead>
                                                 <TableHead className="w-[50px]"></TableHead>
                                             </TableRow>
@@ -360,7 +326,7 @@ export default function PriceSettingsPage() {
                                                                 </div>
                                                             </TableCell>
                                                             <PriceRowFields 
-                                                                form={form}
+                                                                control={form.control}
                                                                 index={field.originalIndex}
                                                                 onRemove={() => remove(field.originalIndex)}
                                                             />
@@ -378,34 +344,7 @@ export default function PriceSettingsPage() {
                                                                         </div>
                                                                     </div>
                                                                 </TableCell>
-                                                                
-                                                                {bulkEditStates[header.name] ? (
-                                                                    <>
-                                                                        <MasterPriceCell form={form} parentName={header.name} priceType="costPrice" t={t} />
-                                                                        <MasterPriceCell form={form} parentName={header.name} priceType="price" t={t} />
-                                                                        <MasterPriceCell form={form} parentName={header.name} priceType="pos" t={t} />
-                                                                        <MasterPriceCell form={form} parentName={header.name} priceType="reseller" t={t} />
-                                                                        <MasterPriceCell form={form} parentName={header.name} priceType="online" t={t} />
-                                                                        <TableCell className="p-1.5 align-middle">
-                                                                            <div className="flex items-center gap-1">
-                                                                                <Button type="button" variant="outline" size="sm" className="h-8" onClick={() => applyAllMasterPrices(header.name)}>
-                                                                                    {t.common.apply}
-                                                                                </Button>
-                                                                                <Button type="button" variant="ghost" size="icon" className="h-8 w-8" onClick={() => toggleBulkEdit(header.name, false)}>
-                                                                                    <X className="h-4 w-4" />
-                                                                                </Button>
-                                                                            </div>
-                                                                        </TableCell>
-                                                                    </>
-                                                                ) : (
-                                                                    <TableCell colSpan={6} className="text-center p-1.5">
-                                                                        <Button type="button" variant="secondary" size="sm" className="h-8 px-3" onClick={() => toggleBulkEdit(header.name, true)}>
-                                                                            <Pencil className="mr-2 h-3 w-3" />
-                                                                            Ubah Massal
-                                                                        </Button>
-                                                                    </TableCell>
-                                                                )}
-
+                                                                <TableCell colSpan={6} />
                                                             </TableRow>
                                                             {variants.map((field) => (
                                                                 <TableRow key={field.id} className="hover:bg-muted/50">
@@ -421,7 +360,7 @@ export default function PriceSettingsPage() {
                                                                         </div>
                                                                     </TableCell>
                                                                     <PriceRowFields 
-                                                                        form={form}
+                                                                        control={form.control}
                                                                         index={field.originalIndex}
                                                                         onRemove={() => remove(field.originalIndex)}
                                                                     />
@@ -457,30 +396,32 @@ export default function PriceSettingsPage() {
     );
 }
 
-const PriceRowFields = ({ form, index, onRemove }: { form: any, index: number, onRemove: () => void }) => {
+const PriceRowFields = ({ control, index, onRemove }: { control: Control<z.infer<typeof formSchema>>, index: number, onRemove: () => void }) => {
+    const { language } = useLanguage();
+    const TPrice = translations[language].finance.priceSettingsPage;
     return (
         <>
             <TableCell>
                 <FormField
-                    control={form.control}
+                    control={control}
                     name={`items.${index}.costPrice`}
                     render={({ field: formField }) => (
-                        <FormItem><FormControl><Input type="number" placeholder="0" {...formField} value={formField.value ?? ''} className="h-8 w-24" /></FormControl><FormMessage/></FormItem>
+                        <FormItem><FormControl><Input type="number" placeholder={TPrice.costPrice} {...formField} value={formField.value ?? ''} className="h-8 w-24" /></FormControl><FormMessage/></FormItem>
                     )}
                 />
             </TableCell>
             <TableCell>
                 <FormField
-                    control={form.control}
+                    control={control}
                     name={`items.${index}.price`}
                     render={({ field: formField }) => (
-                        <FormItem><FormControl><Input type="number" placeholder="0" {...formField} value={formField.value ?? ''} className="h-8 w-24" /></FormControl><FormMessage/></FormItem>
+                        <FormItem><FormControl><Input type="number" placeholder={TPrice.defaultPrice} {...formField} value={formField.value ?? ''} className="h-8 w-24" /></FormControl><FormMessage/></FormItem>
                     )}
                 />
             </TableCell>
             {CHANNELS.map(channel => {
                 const fieldName = `items.${index}.channelPrices`;
-                const currentChannelPrices = form.getValues(fieldName);
+                const currentChannelPrices = useWatch({ control, name: fieldName })
                 const channelIndex = currentChannelPrices?.findIndex((cp: any) => cp.channel === channel);
 
                 if (channelIndex === -1 || channelIndex === undefined) {
@@ -492,8 +433,8 @@ const PriceRowFields = ({ form, index, onRemove }: { form: any, index: number, o
                 return (
                     <TableCell key={channel}>
                         <FormField
-                            control={form.control}
-                            name={priceFieldName}
+                            control={control}
+                            name={priceFieldName as any}
                             render={({ field: formField }) => (
                                 <FormItem>
                                     <FormControl>
@@ -512,51 +453,5 @@ const PriceRowFields = ({ form, index, onRemove }: { form: any, index: number, o
                 </Button>
             </TableCell>
         </>
-    )
-}
-
-
-const MasterPriceCell = ({ form, parentName, priceType, t }: {
-    form: any,
-    parentName: string,
-    priceType: 'costPrice' | 'price' | 'pos' | 'reseller' | 'online',
-    t: any
-}) => {
-    const TPrice = t.finance.priceSettingsPage;
-
-    const getPlaceholder = () => {
-        switch(priceType) {
-            case 'costPrice': return TPrice.costPrice;
-            case 'price': return TPrice.defaultPrice;
-            case 'pos': return t.sales.pos;
-            case 'reseller': return t.sales.reseller;
-            case 'online': return TPrice.onlinePrice;
-            default: return 'Harga';
-        }
-    }
-
-    return (
-        <TableCell className="p-1.5 align-middle">
-             <FormField
-                control={form.control}
-                name={`masterPrices.${parentName}.${priceType}`}
-                render={({ field }) => (
-                    <FormItem>
-                        <FormControl>
-                            <Input
-                                type="number"
-                                placeholder={getPlaceholder()}
-                                {...field}
-                                value={field.value ?? ''}
-                                className="h-8 w-24"
-                                onKeyDown={(e) => {
-                                    if (e.key === 'Enter') e.preventDefault();
-                                }}
-                            />
-                        </FormControl>
-                    </FormItem>
-                )}
-            />
-        </TableCell>
     )
 }
