@@ -7,7 +7,7 @@ import { useLanguage } from "@/hooks/use-language";
 import { translations } from "@/types/language";
 import { useInventory } from "@/hooks/use-inventory";
 import React, { useMemo } from "react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DollarSign, Package, TrendingUp, TrendingDown, Hourglass, BarChart } from "lucide-react";
 import { Line, LineChart, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from "recharts";
@@ -26,7 +26,6 @@ const SLOW_MOVING_THRESHOLD = 5;
 interface RankedAsset {
     id: string;
     name: string;
-    variantName?: string;
     sku?: string;
     salesCount: number;
     stockValue: number;
@@ -79,7 +78,6 @@ const ProductListTable = ({ products, title, icon: Icon }: { products: RankedAss
                                 <TableRow key={product.id}>
                                     <TableCell className="font-medium text-xs px-4 py-2">
                                         <div className="truncate w-40">{product.name}</div>
-                                        {product.variantName && <div className="text-muted-foreground truncate w-40">{product.variantName}</div>}
                                     </TableCell>
                                     <TableCell className="text-center px-2 py-2 text-xs">{product.salesCount}</TableCell>
                                     <TableCell className="text-right px-4 py-2 text-xs">{formatCurrency(product.stockValue)}</TableCell>
@@ -119,25 +117,36 @@ export default function AssetReportPage() {
 
         const allRankedAssets: RankedAsset[] = [];
         items.forEach(item => {
-            const processAsset = (asset: InventoryItem | InventoryItemVariant, parent?: InventoryItem) => {
-                if (asset.costPrice && asset.costPrice > 0 && asset.stock && asset.stock > 0) {
-                    const stockValue = asset.costPrice * asset.stock;
-                    const salesCount = salesVolumeMap.get(asset.id.toString()) || 0;
+            if (item.variants && item.variants.length > 0) {
+                let totalSalesCount = 0;
+                let totalStockValue = 0;
+                item.variants.forEach(variant => {
+                    const salesCount = salesVolumeMap.get(variant.id.toString()) || 0;
+                    const stockValue = (variant.costPrice && variant.costPrice > 0 && variant.stock && variant.stock > 0) ? variant.costPrice * variant.stock : 0;
+                    totalSalesCount += salesCount;
+                    totalStockValue += stockValue;
+                });
+                if (totalStockValue > 0) {
+                     allRankedAssets.push({
+                        id: item.id.toString(),
+                        name: item.name,
+                        sku: item.sku,
+                        salesCount: totalSalesCount,
+                        stockValue: totalStockValue,
+                    });
+                }
+            } else {
+                 if (item.costPrice && item.costPrice > 0 && item.stock && item.stock > 0) {
+                    const stockValue = item.costPrice * item.stock;
+                    const salesCount = salesVolumeMap.get(item.id.toString()) || 0;
                     allRankedAssets.push({
-                        id: asset.id.toString(),
-                        name: parent ? parent.name : (asset as InventoryItem).name,
-                        variantName: parent ? (asset as InventoryItemVariant).name : undefined,
-                        sku: asset.sku,
+                        id: item.id.toString(),
+                        name: item.name,
+                        sku: item.sku,
                         salesCount: salesCount,
                         stockValue: stockValue,
                     });
                 }
-            };
-            
-            if (item.variants && item.variants.length > 0) {
-                item.variants.forEach(variant => processAsset(variant, item));
-            } else {
-                processAsset(item);
             }
         });
 
@@ -148,10 +157,10 @@ export default function AssetReportPage() {
         allRankedAssets.forEach(asset => {
             if (asset.salesCount >= FAST_MOVING_THRESHOLD) {
                 fast.push(asset);
-            } else if (asset.salesCount >= SLOW_MOVING_THRESHOLD) {
-                slow.push(asset);
-            } else {
+            } else if (asset.salesCount < SLOW_MOVING_THRESHOLD) {
                 non.push(asset);
+            } else {
+                slow.push(asset);
             }
         });
         
@@ -168,7 +177,7 @@ export default function AssetReportPage() {
             },
             fastMovingProducts: fast.sort((a,b) => b.salesCount - a.salesCount).slice(0, 10),
             slowMovingProducts: slow.sort((a,b) => b.salesCount - a.salesCount).slice(0, 10),
-            nonMovingProducts: non.sort((a,b) => b.salesCount - a.salesCount).slice(0, 10),
+            nonMovingProducts: non.sort((a,b) => b.stockValue - a.stockValue).slice(0, 10),
         };
     }, [items, allSales]);
 
@@ -263,11 +272,11 @@ export default function AssetReportPage() {
                 </div>
 
 
-                <Card className="flex-1 flex flex-col">
+                <Card>
                     <CardHeader>
                         <CardTitle className="text-xs">{TAsset.chartTitle}</CardTitle>
                     </CardHeader>
-                    <CardContent className="flex-1">
+                    <CardContent>
                        <ChartContainer config={chartConfig} className="w-full h-full min-h-20">
                             <LineChart accessibilityLayer data={chartData} margin={{ top: 20, left: 12, right: 12 }}>
                                 <CartesianGrid vertical={false} />
