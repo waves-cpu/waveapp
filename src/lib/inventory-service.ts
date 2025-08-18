@@ -1,4 +1,5 @@
 
+
 'use server';
 
 import { db } from './db';
@@ -567,11 +568,13 @@ export async function updatePrices(updates: { id: string, type: 'product' | 'var
             // 1. Fetch current state and details for journaling
             if (update.type === 'product') {
                 itemBefore = getProductStmt.get(update.id);
+                if (!itemBefore) return; // Skip if item not found
                 currentStock = itemBefore?.stock || 0;
                 productIdForJournal = itemBefore.id;
                 itemNameForJournal = itemBefore.name;
             } else { // variant
                 itemBefore = getVariantStmt.get(update.id);
+                if (!itemBefore) return; // Skip if item not found
                 currentStock = itemBefore?.stock || 0;
                 productIdForJournal = itemBefore.productId;
                 variantIdForJournal = itemBefore.id;
@@ -586,14 +589,12 @@ export async function updatePrices(updates: { id: string, type: 'product' | 'var
 
             if (oldCostPrice <= 0 && newCostPrice > 0 && currentStock > 0) {
                 const totalAssetValue = currentStock * newCostPrice;
-                // Use a negative change to signify it's a value adjustment, not a stock quantity change
-                // This is a bit of a workaround to fit it into the existing history table.
                 addJournalEntryStmt.run({
                     productId: productIdForJournal,
                     variantId: variantIdForJournal,
-                    change: 0, // No change in quantity
+                    change: 0, 
                     reason: `Penyesuaian Modal (HPP): Rp${newCostPrice.toLocaleString('id-ID')} x ${currentStock} stok`,
-                    newStockLevel: totalAssetValue, // Store the asset value here
+                    newStockLevel: totalAssetValue, 
                     date: new Date().toISOString()
                 });
             }
@@ -610,8 +611,8 @@ export async function updatePrices(updates: { id: string, type: 'product' | 'var
                 const channelsToUpdate = cp.channel === 'online' ? ONLINE_CHANNELS : [cp.channel];
                 channelsToUpdate.forEach(channel => {
                     const params = {
-                        product_id: update.type === 'product' ? update.id : productIdForJournal,
-                        variant_id: update.type === 'variant' ? update.id : null,
+                        product_id: update.type === 'product' ? productIdForJournal : null,
+                        variant_id: update.type === 'variant' ? variantIdForJournal : null,
                         channel: channel
                     };
                     if (cp.price !== undefined && cp.price !== null && cp.price >= 0) {
