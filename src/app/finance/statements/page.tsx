@@ -301,9 +301,9 @@ export default function FinancialStatementsPage() {
                                         <TableRow>
                                             <TableHead className="text-xs">Produk</TableHead>
                                             <TableHead className="text-center text-xs">Terjual</TableHead>
-                                            <TableHead className="text-right text-xs">Omzet</TableHead>
-                                            <TableHead className="text-right text-xs">HPP</TableHead>
-                                            <TableHead className="text-right text-xs">Laba Kotor</TableHead>
+                                            <TableHead className="text-left text-xs">Omzet</TableHead>
+                                            <TableHead className="text-left text-xs">HPP</TableHead>
+                                            <TableHead className="text-left text-xs">Laba Kotor</TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
@@ -314,9 +314,9 @@ export default function FinancialStatementsPage() {
                                                     <div className="text-muted-foreground">SKU: {p.sku || '-'}</div>
                                                 </TableCell>
                                                 <TableCell className="text-center text-xs py-2">{p.unitsSold}</TableCell>
-                                                <TableCell className="text-right text-xs py-2">{formatCurrency(p.totalRevenue)}</TableCell>
-                                                <TableCell className="text-right text-xs py-2">{formatCurrency(p.totalCogs)}</TableCell>
-                                                <TableCell className="text-right font-semibold text-xs py-2">{formatCurrency(p.grossProfit)}</TableCell>
+                                                <TableCell className="text-left text-xs py-2">{formatCurrency(p.totalRevenue)}</TableCell>
+                                                <TableCell className="text-left text-xs py-2">{formatCurrency(p.totalCogs)}</TableCell>
+                                                <TableCell className="text-left font-semibold text-xs py-2">{formatCurrency(p.grossProfit)}</TableCell>
                                             </TableRow>
                                         )) : (
                                             <TableRow>
@@ -335,5 +335,3 @@ export default function FinancialStatementsPage() {
         </AppLayout>
     );
 }
-
-    
