@@ -117,22 +117,20 @@ export default function GeneralJournalPage() {
 
         // Stock adjustments and capital adjustments
         allProducts.forEach(product => {
-            const processHistories = (histories: any[], name: string, costPrice?: number) => {
+            const processHistories = (histories: any[] | undefined, name: string, costPrice?: number) => {
                  if(!histories) return;
                  histories.forEach(h => {
                     const adjustmentDate = new Date(h.date);
                     
-                    // Filter for capital adjustments (where change is 0 but reason indicates capital)
                     if (h.change === 0 && h.reason.startsWith('Penyesuaian Modal (HPP)')) {
-                        const value = h.newStockLevel; // In this case, newStockLevel stores the asset value
+                        const value = h.newStockLevel; 
                         const description = `Penyesuaian Modal Persediaan: ${name}`;
                         entries.push({ date: adjustmentDate, description, account: 'Persediaan Barang', debit: value, type: 'capital_adjustment' });
                         entries.push({ date: adjustmentDate, description, account: 'Penyesuaian Modal (Persediaan)', credit: value, type: 'capital_adjustment' });
 
-                    // Filter for positive stock changes (stock in)
                     } else if (h.change > 0 && h.reason.toLowerCase().includes('stock in')) {
                          const value = h.change * (costPrice || 0);
-                         if (value > 0) {
+                         if (value >= 0) {
                             const description = `Stok Masuk: ${name} (${h.change}x)`;
                             entries.push({ date: adjustmentDate, description, account: 'Persediaan Barang', debit: value, type: 'stock_in'});
                             entries.push({ date: adjustmentDate, description, account: 'Kas / Utang Usaha', credit: value, type: 'stock_in'});
@@ -144,9 +142,7 @@ export default function GeneralJournalPage() {
             if (product.variants && product.variants.length > 0) {
                 product.variants.forEach(v => processHistories(v.history, `${product.name} - ${v.name}`, v.costPrice))
             } else {
-                 if (product.history) {
-                    processHistories(product.history, product.name, product.costPrice)
-                 }
+                 processHistories(product.history, product.name, product.costPrice)
             }
         });
         
