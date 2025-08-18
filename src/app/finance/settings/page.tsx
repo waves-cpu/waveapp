@@ -146,13 +146,13 @@ export default function PriceSettingsPage() {
                 parentName: parent?.name,
                 costPrice: item.costPrice,
                 price: item.price,
-                channelPrices: [
-                    { channel: 'pos', price: item.channelPrices?.find(p => p.channel === 'pos')?.price },
-                    { channel: 'reseller', price: item.channelPrices?.find(p => p.channel === 'reseller')?.price },
-                    { channel: 'shopee', price: onlinePrice },
-                    { channel: 'tiktok', price: onlinePrice },
-                    { channel: 'lazada', price: onlinePrice },
-                ]
+                channelPrices: CHANNELS.map(ch => {
+                    if (ONLINE_CHANNELS.includes(ch)) {
+                        return { channel: ch, price: onlinePrice };
+                    }
+                    const channelPrice = item.channelPrices?.find(p => p.channel === ch);
+                    return { channel: ch, price: channelPrice?.price };
+                })
             });
         });
         append(newItems);
@@ -212,7 +212,6 @@ export default function PriceSettingsPage() {
         setSelectedItemsForBulkUpdate(new Set());
     }, [searchTerm, categoryFilter]);
 
-
     const handleBulkUpdate = () => {
         if (selectedItemsForBulkUpdate.size === 0 || bulkUpdateValue === '') return;
     
@@ -221,29 +220,30 @@ export default function PriceSettingsPage() {
     
         const updatedItems = allItems.map(item => {
             if (selectedItemsForBulkUpdate.has(item.id)) {
-                const updatedItem = { ...item };
+                // Create a deep copy to ensure React Hook Form detects the change
+                const updatedItem = JSON.parse(JSON.stringify(item));
                 
                 if (!updatedItem.channelPrices) {
-                    updatedItem.channelPrices = CHANNELS.map(ch => ({ channel: ch, price: undefined }));
-                } else {
-                    const existingChannels = new Set(updatedItem.channelPrices.map(p => p.channel));
-                    CHANNELS.forEach(ch => {
-                        if (!existingChannels.has(ch)) {
-                            updatedItem.channelPrices?.push({ channel: ch, price: undefined });
-                        }
-                    });
+                    updatedItem.channelPrices = [];
                 }
     
+                const existingChannels = new Set(updatedItem.channelPrices.map((p: any) => p.channel));
+                CHANNELS.forEach(ch => {
+                    if (!existingChannels.has(ch)) {
+                        updatedItem.channelPrices.push({ channel: ch, price: undefined });
+                    }
+                });
+
                 if (bulkUpdateChannel === 'costPrice') {
                     updatedItem.costPrice = numericValue;
                 } else if (bulkUpdateChannel === 'price') {
                     updatedItem.price = numericValue;
                 } else if (bulkUpdateChannel === 'online') {
-                    updatedItem.channelPrices = updatedItem.channelPrices.map(cp => 
+                    updatedItem.channelPrices = updatedItem.channelPrices.map((cp: any) => 
                         ONLINE_CHANNELS.includes(cp.channel) ? { ...cp, price: numericValue } : cp
                     );
                 } else {
-                    updatedItem.channelPrices = updatedItem.channelPrices.map(cp => 
+                     updatedItem.channelPrices = updatedItem.channelPrices.map((cp: any) => 
                         cp.channel === bulkUpdateChannel ? { ...cp, price: numericValue } : cp
                     );
                 }
@@ -538,13 +538,13 @@ const PriceRowFields = ({ control, index, onRemove }: { control: Control<z.infer
     const getChannelPriceComponent = (channel: string) => {
         const channelIndex = channelPrices?.findIndex(p => p.channel === channel) ?? -1;
 
-        if (channelIndex === -1 && channel !== 'shopee' && channel !== 'tiktok' && channel !== 'lazada') {
+        if (channelIndex === -1 && !ONLINE_CHANNELS.includes(channel)) {
             return <TableCell key={channel}></TableCell>;
         }
 
         const onlinePriceIndex = channelPrices?.findIndex(p => p.channel === 'shopee') ?? -1;
 
-        const priceFieldName = `items.${index}.channelPrices.${['shopee', 'tiktok', 'lazada'].includes(channel) ? onlinePriceIndex : channelIndex}.price`;
+        const priceFieldName = `items.${index}.channelPrices.${ONLINE_CHANNELS.includes(channel) ? onlinePriceIndex : channelIndex}.price`;
 
         return (
             <TableCell key={channel}>
@@ -595,3 +595,4 @@ const PriceRowFields = ({ control, index, onRemove }: { control: Control<z.infer
         </>
     )
 }
+
