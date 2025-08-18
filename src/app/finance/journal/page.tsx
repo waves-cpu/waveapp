@@ -82,7 +82,7 @@ export default function GeneralJournalPage() {
       to: new Date(),
     });
     const [transactionType, setTransactionType] = useState('all');
-    const [itemsPerPage, setItemsPerPage] = useState(20);
+    const [itemsPerPage, setItemsPerPage] = useState(15);
     const [currentPage, setCurrentPage] = useState(1);
 
 
@@ -316,7 +316,7 @@ export default function GeneralJournalPage() {
                                             <SelectValue placeholder={itemsPerPage} />
                                         </SelectTrigger>
                                         <SelectContent side="top">
-                                            {[20, 50, 100].map((pageSize) => (
+                                            {[15, 20, 50, 100].map((pageSize) => (
                                             <SelectItem key={pageSize} value={`${pageSize}`}>
                                                 {`${pageSize} / ${t.productSelectionDialog.page}`}
                                             </SelectItem>
