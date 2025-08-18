@@ -8,7 +8,7 @@ import { useLanguage } from "@/hooks/use-language";
 import { translations } from "@/types/language";
 import { useInventory } from "@/hooks/use-inventory";
 import React, { useMemo, useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -22,6 +22,7 @@ import { id as localeId } from 'date-fns/locale';
 import { Skeleton } from "@/components/ui/skeleton";
 import type { ManualJournalEntry } from "@/types";
 import { AddManualJournalDialog } from "@/app/components/add-manual-journal-dialog";
+import { Pagination } from "@/components/ui/pagination";
 
 type JournalEntry = {
     date: Date;
@@ -81,6 +82,9 @@ export default function GeneralJournalPage() {
       to: new Date(),
     });
     const [transactionType, setTransactionType] = useState('all');
+    const [itemsPerPage, setItemsPerPage] = useState(20);
+    const [currentPage, setCurrentPage] = useState(1);
+
 
     const journalEntries = useMemo((): JournalEntry[] => {
         const entries: JournalEntry[] = [];
@@ -148,14 +152,23 @@ export default function GeneralJournalPage() {
     }, [allSales, allProducts, manualJournalEntries]);
 
     const filteredEntries = useMemo(() => {
-        return journalEntries.filter(entry => {
+        const filtered = journalEntries.filter(entry => {
             const entryDate = new Date(entry.date);
             const isInDateRange = dateRange?.from ? isWithinInterval(entryDate, { start: startOfDay(dateRange.from), end: endOfDay(dateRange.to || dateRange.from) }) : true;
             const isTypeMatch = transactionType === 'all' || entry.type === transactionType;
             return isInDateRange && isTypeMatch;
         });
+        setCurrentPage(1);
+        return filtered;
     }, [journalEntries, dateRange, transactionType]);
     
+    const totalPages = Math.ceil(filteredEntries.length / itemsPerPage);
+
+    const paginatedEntries = useMemo(() => {
+        const startIndex = (currentPage - 1) * itemsPerPage;
+        return filteredEntries.slice(startIndex, startIndex + itemsPerPage);
+    }, [filteredEntries, currentPage, itemsPerPage]);
+
     const formatCurrency = (amount?: number) => {
         if (amount === undefined || amount === null) return '-';
         if (amount === 0) return '-';
@@ -260,8 +273,8 @@ export default function GeneralJournalPage() {
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {filteredEntries.length > 0 ? (
-                                        filteredEntries.map((entry, index) => (
+                                    {paginatedEntries.length > 0 ? (
+                                        paginatedEntries.map((entry, index) => (
                                             <TableRow key={index} className={cn(entry.credit && "text-muted-foreground")}>
                                                 <TableCell className="text-xs">{format(entry.date, 'd MMM yyyy')}</TableCell>
                                                 <TableCell className="text-xs">{entry.description}</TableCell>
@@ -285,6 +298,37 @@ export default function GeneralJournalPage() {
                             </Table>
                         </div>
                     </CardContent>
+                    {totalPages > 1 && (
+                        <CardFooter>
+                            <div className="flex w-full items-center justify-end p-4 border-t">
+                                <div className="flex items-center gap-4">
+                                    <Pagination
+                                        totalPages={totalPages}
+                                        currentPage={currentPage}
+                                        onPageChange={setCurrentPage}
+                                    />
+                                    <Select
+                                        value={`${itemsPerPage}`}
+                                        onValueChange={(value) => {
+                                            setItemsPerPage(Number(value))
+                                            setCurrentPage(1)
+                                        }}
+                                        >
+                                        <SelectTrigger className="h-8 w-[200px]">
+                                            <SelectValue placeholder={itemsPerPage} />
+                                        </SelectTrigger>
+                                        <SelectContent side="top">
+                                            {[20, 50, 100].map((pageSize) => (
+                                            <SelectItem key={pageSize} value={`${pageSize}`}>
+                                                {`${pageSize} / ${t.productSelectionDialog.page}`}
+                                            </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            </div>
+                        </CardFooter>
+                    )}
                 </Card>
             </main>
             <AddManualJournalDialog open={isAddEntryDialogOpen} onOpenChange={setAddEntryDialogOpen} />
