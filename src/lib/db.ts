@@ -18,12 +18,12 @@ const runMigrations = () => {
     if (tables) {
         const channelPricesColumns = db.pragma('table_info(channel_prices)');
         const hasProductId = channelPricesColumns.some((col: any) => col.name === 'product_id');
+        const hasVariantId = channelPricesColumns.some((col: any) => col.name === 'variant_id');
         
-        // If the correct column doesn't exist, we assume the table is malformed and recreate it.
         // This is a simple migration strategy for this specific problem.
-        if (!hasProductId) {
+        if (!hasProductId || !hasVariantId) {
             console.log('Incorrect schema detected for channel_prices. Recreating table...');
-            db.exec('DROP TABLE channel_prices');
+            db.exec('DROP TABLE IF EXISTS channel_prices');
             db.exec(`
                  CREATE TABLE channel_prices (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -206,5 +206,3 @@ const seedData = () => {
 };
 
 seedData();
-
-    

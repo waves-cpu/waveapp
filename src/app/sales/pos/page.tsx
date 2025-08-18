@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React from 'react';
@@ -17,7 +18,7 @@ export default function PosPage() {
   return (
     <AppLayout>
       <div className="h-screen flex flex-col">
-         <header className="flex items-center justify-between p-4 border-b shrink-0">
+         <header className="flex items-center justify-between p-4 border-b shrink-0 no-print">
             <div className="flex items-center gap-4">
                 <SidebarTrigger className="md:hidden" />
                 <h1 className="text-lg font-bold">{t.pos.title}</h1>

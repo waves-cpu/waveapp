@@ -406,10 +406,11 @@ export async function performSale(
             }
             
             const isOnlineChannel = ONLINE_CHANNELS.includes(channel);
-            const channelToCheck = isOnlineChannel ? 'online' : channel;
             
-            const channelPriceResult = getChannelPriceStmt.get({ productId: null, variantId: variant.id, channel: channelToCheck }) as { price: number } | undefined;
-            priceAtSale = channelPriceResult?.price ?? variant.price;
+            const onlinePriceResult = getChannelPriceStmt.get({ productId: null, variantId: variant.id, channel: 'shopee' }) as { price: number } | undefined;
+            const specificChannelPriceResult = isOnlineChannel ? onlinePriceResult : getChannelPriceStmt.get({ productId: null, variantId: variant.id, channel: channel }) as { price: number } | undefined;
+
+            priceAtSale = specificChannelPriceResult?.price ?? variant.price;
             cogsAtSale = variant.costPrice || 0;
 
             adjustStock(variant.id.toString(), -quantity, saleReason);
@@ -423,10 +424,11 @@ export async function performSale(
                 }
                 
                 const isOnlineChannel = ONLINE_CHANNELS.includes(channel);
-                const channelToCheck = isOnlineChannel ? 'online' : channel;
 
-                const channelPriceResult = getChannelPriceStmt.get({ productId: product.id, variantId: null, channel: channelToCheck }) as { price: number } | undefined;
-                priceAtSale = channelPriceResult?.price ?? product.price!;
+                const onlinePriceResult = getChannelPriceStmt.get({ productId: product.id, variantId: null, channel: 'shopee' }) as { price: number } | undefined;
+                const specificChannelPriceResult = isOnlineChannel ? onlinePriceResult : getChannelPriceStmt.get({ productId: product.id, variantId: null, channel: channel }) as { price: number } | undefined;
+                
+                priceAtSale = specificChannelPriceResult?.price ?? product.price!;
                 cogsAtSale = product.costPrice || 0;
                 
                 adjustStock(product.id.toString(), -quantity, saleReason);
@@ -534,27 +536,20 @@ export async function revertSaleByTransaction(id: string) {
 }
 
 export async function updatePrices(updates: { id: string, type: 'product' | 'variant', costPrice?: number, price?: number, channelPrices?: { channel: string, price?: number }[] }[]) {
-    // --- Statements to get current state ---
     const getProductStmt = db.prepare('SELECT * FROM products WHERE id = ?');
     const getVariantStmt = db.prepare('SELECT * FROM variants WHERE id = ?');
-
-    // --- Statements to update data ---
     const updateProductStmt = db.prepare('UPDATE products SET costPrice = @costPrice, price = @price WHERE id = @id');
     const updateVariantStmt = db.prepare('UPDATE variants SET costPrice = @costPrice, price = @price WHERE id = @id');
-    
-    // --- Statements for journal entries ---
-     const addJournalEntryStmt = db.prepare(`
+    const addJournalEntryStmt = db.prepare(`
         INSERT INTO history (productId, variantId, change, reason, newStockLevel, date)
         VALUES (@productId, @variantId, @change, @reason, @newStockLevel, @date)
     `);
-
-    // --- Statements for channel prices ---
     const upsertChannelPriceStmt = db.prepare(`
         INSERT INTO channel_prices (product_id, variant_id, channel, price)
         VALUES (@product_id, @variant_id, @channel, @price)
         ON CONFLICT(product_id, variant_id, channel) DO UPDATE SET price = excluded.price
     `);
-    const deleteChannelPriceStmt = db.prepare('DELETE FROM channel_prices WHERE product_id = @product_id AND variant_id = @variant_id AND channel = @channel');
+    const deleteChannelPriceStmt = db.prepare('DELETE FROM channel_prices WHERE (product_id = @product_id OR variant_id = @variant_id) AND channel = @channel');
     const ONLINE_CHANNELS = ['shopee', 'tiktok', 'lazada'];
 
     db.transaction(() => {
@@ -565,25 +560,22 @@ export async function updatePrices(updates: { id: string, type: 'product' | 'var
             let variantIdForJournal: number | null = null;
             let itemNameForJournal: string = '';
 
-            // 1. Fetch current state and details for journaling
             if (update.type === 'product') {
                 itemBefore = getProductStmt.get(update.id);
-                if (!itemBefore) return; // Skip if item not found
+                if (!itemBefore) return;
                 currentStock = itemBefore?.stock || 0;
                 productIdForJournal = itemBefore.id;
                 itemNameForJournal = itemBefore.name;
-            } else { // variant
+            } else {
                 itemBefore = getVariantStmt.get(update.id);
-                if (!itemBefore) return; // Skip if item not found
+                if (!itemBefore) return;
                 currentStock = itemBefore?.stock || 0;
                 productIdForJournal = itemBefore.productId;
                 variantIdForJournal = itemBefore.id;
-                
                 const parent = getProductStmt.get(itemBefore.productId);
                 itemNameForJournal = `${parent.name} - ${itemBefore.name}`;
             }
 
-            // 2. Check for initial cost price setting and create journal entry
             const oldCostPrice = itemBefore?.costPrice ?? 0;
             const newCostPrice = update.costPrice ?? 0;
 
@@ -592,28 +584,29 @@ export async function updatePrices(updates: { id: string, type: 'product' | 'var
                 addJournalEntryStmt.run({
                     productId: productIdForJournal,
                     variantId: variantIdForJournal,
-                    change: 0, 
+                    change: 0,
                     reason: `Penyesuaian Modal (HPP): Rp${newCostPrice.toLocaleString('id-ID')} x ${currentStock} stok`,
-                    newStockLevel: totalAssetValue, 
+                    newStockLevel: totalAssetValue,
                     date: new Date().toISOString()
                 });
             }
 
-            // 3. Update the product/variant prices
             if (update.type === 'product') {
                 updateProductStmt.run({ id: update.id, costPrice: update.costPrice, price: update.price });
             } else {
                 updateVariantStmt.run({ id: update.id, costPrice: update.costPrice, price: update.price });
             }
 
-            // 4. Update channel prices
+            const productIdParam = update.type === 'product' ? update.id : null;
+            const variantIdParam = update.type === 'variant' ? update.id : null;
+
             update.channelPrices?.forEach(cp => {
                 const channelsToUpdate = cp.channel === 'online' ? ONLINE_CHANNELS : [cp.channel];
                 channelsToUpdate.forEach(channel => {
                     const params = {
-                        product_id: update.type === 'product' ? productIdForJournal : null,
-                        variant_id: update.type === 'variant' ? variantIdForJournal : null,
-                        channel: channel
+                        product_id: productIdParam,
+                        variant_id: variantIdParam,
+                        channel: channel,
                     };
                     if (cp.price !== undefined && cp.price !== null && cp.price >= 0) {
                         upsertChannelPriceStmt.run({ ...params, price: cp.price });
@@ -625,6 +618,7 @@ export async function updatePrices(updates: { id: string, type: 'product' | 'var
         });
     })();
 }
+
 
 
 // Reseller functions
