@@ -335,7 +335,7 @@ export default function AssetReportPage() {
                                             <Cell key={`cell-${entry.name}`} fill={entry.fill} />
                                         ))}
                                     </Pie>
-                                    <Legend />
+                                    <Legend wrapperStyle={{marginTop: '1rem'}} />
                                 </RechartsPieChart>
                             </ChartContainer>
                         </CardContent>
@@ -352,3 +352,5 @@ export default function AssetReportPage() {
         </AppLayout>
     );
 }
+
+    
