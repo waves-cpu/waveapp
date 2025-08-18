@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { AppLayout } from "@/app/components/app-layout";
@@ -26,7 +27,7 @@ type JournalEntry = {
     account: string;
     debit?: number;
     credit?: number;
-    type: 'sale' | 'stock_in' | 'adjustment';
+    type: 'sale' | 'stock_in' | 'adjustment' | 'capital_adjustment';
 };
 
 function GeneralJournalSkeleton() {
@@ -99,20 +100,26 @@ export default function GeneralJournalPage() {
             }
         });
 
-        // Stock adjustments (only stock-in for now)
+        // Stock adjustments and capital adjustments
         allProducts.forEach(product => {
             const processHistories = (histories: any[], name: string, costPrice?: number) => {
-                 if(!costPrice) return;
+                 if(!histories) return;
                  histories.forEach(h => {
-                    // Filter for positive stock changes (stock in) that have a cost
-                    if (h.change > 0 && h.reason.toLowerCase().includes('stock in')) {
-                         const adjustmentDate = new Date(h.date);
+                    const adjustmentDate = new Date(h.date);
+                    
+                    // Filter for capital adjustments (where change is 0 but reason indicates capital)
+                    if (h.change === 0 && h.reason.startsWith('Penyesuaian Modal (HPP)')) {
+                        const value = h.newStockLevel; // In this case, newStockLevel stores the asset value
+                        const description = `Penyesuaian Modal Persediaan: ${name}`;
+                        entries.push({ date: adjustmentDate, description, account: 'Persediaan Barang', debit: value, type: 'capital_adjustment' });
+                        entries.push({ date: adjustmentDate, description, account: 'Penyesuaian Modal (Persediaan)', credit: value, type: 'capital_adjustment' });
+
+                    // Filter for positive stock changes (stock in)
+                    } else if (h.change > 0 && h.reason.toLowerCase().includes('stock in')) {
                          const value = h.change * (costPrice || 0);
-                         if (value > 0) {
-                            const description = `Stok Masuk: ${name} (${h.change}x)`;
-                            entries.push({ date: adjustmentDate, description, account: 'Persediaan Barang', debit: value, type: 'stock_in'});
-                            entries.push({ date: adjustmentDate, description, account: 'Kas / Utang Usaha', credit: value, type: 'stock_in'});
-                         }
+                         const description = `Stok Masuk: ${name} (${h.change}x)`;
+                         entries.push({ date: adjustmentDate, description, account: 'Persediaan Barang', debit: value, type: 'stock_in'});
+                         entries.push({ date: adjustmentDate, description, account: 'Kas / Utang Usaha', credit: value, type: 'stock_in'});
                     }
                 });
             }
@@ -139,7 +146,8 @@ export default function GeneralJournalPage() {
     }, [journalEntries, dateRange, transactionType]);
     
     const formatCurrency = (amount?: number) => {
-        if (amount === undefined) return '-';
+        if (amount === undefined || amount === null) return '-';
+        if (amount === 0) return '-';
         return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(amount);
     }
 
@@ -181,6 +189,7 @@ export default function GeneralJournalPage() {
                                         <SelectItem value="all">Semua Transaksi</SelectItem>
                                         <SelectItem value="sale">Penjualan</SelectItem>
                                         <SelectItem value="stock_in">Stok Masuk</SelectItem>
+                                        <SelectItem value="capital_adjustment">Penyesuaian Modal</SelectItem>
                                     </SelectContent>
                                 </Select>
                                  <Popover>
@@ -263,3 +272,4 @@ export default function GeneralJournalPage() {
         </AppLayout>
     );
 }
+

@@ -508,73 +508,98 @@ export async function revertSaleByTransaction(id: string) {
 }
 
 export async function updatePrices(updates: { id: string, type: 'product' | 'variant', costPrice?: number, price?: number, channelPrices?: { channel: string, price?: number }[] }[]) {
+    // --- Statements to get current state ---
+    const getProductStmt = db.prepare('SELECT * FROM products WHERE id = ?');
+    const getVariantStmt = db.prepare('SELECT * FROM variants WHERE id = ?');
+
+    // --- Statements to update data ---
     const updateProductStmt = db.prepare('UPDATE products SET costPrice = @costPrice, price = @price WHERE id = @id');
     const updateVariantStmt = db.prepare('UPDATE variants SET costPrice = @costPrice, price = @price WHERE id = @id');
+    
+    // --- Statements for journal entries ---
+     const addJournalEntryStmt = db.prepare(`
+        INSERT INTO history (productId, variantId, change, reason, newStockLevel, date)
+        VALUES (@productId, @variantId, @change, @reason, @newStockLevel, @date)
+    `);
+
+    // --- Statements for channel prices ---
     const upsertChannelPriceStmt = db.prepare(`
         INSERT INTO channel_prices (product_id, variant_id, channel, price)
         VALUES (@product_id, @variant_id, @channel, @price)
         ON CONFLICT(product_id, variant_id, channel) DO UPDATE SET price = excluded.price
     `);
     const deleteChannelPriceStmt = db.prepare('DELETE FROM channel_prices WHERE product_id = @product_id AND variant_id = @variant_id AND channel = @channel');
-    const getVariantProductIdStmt = db.prepare('SELECT productId FROM variants WHERE id = ?');
     const ONLINE_CHANNELS = ['shopee', 'tiktok', 'lazada'];
 
     db.transaction(() => {
         updates.forEach(update => {
+            let itemBefore: any;
+            let currentStock = 0;
+            let productIdForJournal: number;
+            let variantIdForJournal: number | null = null;
+            let itemNameForJournal: string = '';
+
+            // 1. Fetch current state and details for journaling
             if (update.type === 'product') {
-                updateProductStmt.run({
-                    id: update.id,
-                    costPrice: update.costPrice,
-                    price: update.price
-                });
-
-                update.channelPrices?.forEach(cp => {
-                    const channelsToUpdate = cp.channel === 'online' ? ONLINE_CHANNELS : [cp.channel];
-                    
-                    channelsToUpdate.forEach(channel => {
-                        if (cp.price !== undefined && cp.price !== null && cp.price >= 0) {
-                             upsertChannelPriceStmt.run({
-                                product_id: update.id,
-                                variant_id: null,
-                                channel: channel,
-                                price: cp.price
-                            });
-                        } else {
-                            deleteChannelPriceStmt.run(update.id, null, channel);
-                        }
-                    });
-                });
-
+                itemBefore = getProductStmt.get(update.id);
+                currentStock = itemBefore?.stock || 0;
+                productIdForJournal = itemBefore.id;
+                itemNameForJournal = itemBefore.name;
             } else { // variant
-                updateVariantStmt.run({
-                    id: update.id,
-                    costPrice: update.costPrice,
-                    price: update.price
-                });
+                itemBefore = getVariantStmt.get(update.id);
+                currentStock = itemBefore?.stock || 0;
+                productIdForJournal = itemBefore.productId;
+                variantIdForJournal = itemBefore.id;
                 
-                const variantInfo = getVariantProductIdStmt.get(update.id) as { productId: number };
-                if (variantInfo) {
-                     update.channelPrices?.forEach(cp => {
-                        const channelsToUpdate = cp.channel === 'online' ? ONLINE_CHANNELS : [cp.channel];
-
-                        channelsToUpdate.forEach(channel => {
-                             if (cp.price !== undefined && cp.price !== null && cp.price >= 0) {
-                                upsertChannelPriceStmt.run({
-                                    product_id: variantInfo.productId,
-                                    variant_id: update.id,
-                                    channel: channel,
-                                    price: cp.price
-                                });
-                            } else {
-                                deleteChannelPriceStmt.run(variantInfo.productId, update.id, channel);
-                            }
-                        });
-                    });
-                }
+                const parent = getProductStmt.get(itemBefore.productId);
+                itemNameForJournal = `${parent.name} - ${itemBefore.name}`;
             }
+
+            // 2. Check for initial cost price setting and create journal entry
+            const oldCostPrice = itemBefore?.costPrice ?? 0;
+            const newCostPrice = update.costPrice ?? 0;
+
+            if (oldCostPrice <= 0 && newCostPrice > 0 && currentStock > 0) {
+                const totalAssetValue = currentStock * newCostPrice;
+                // Use a negative change to signify it's a value adjustment, not a stock quantity change
+                // This is a bit of a workaround to fit it into the existing history table.
+                addJournalEntryStmt.run({
+                    productId: productIdForJournal,
+                    variantId: variantIdForJournal,
+                    change: 0, // No change in quantity
+                    reason: `Penyesuaian Modal (HPP): Rp${newCostPrice.toLocaleString('id-ID')} x ${currentStock} stok`,
+                    newStockLevel: totalAssetValue, // Store the asset value here
+                    date: new Date().toISOString()
+                });
+            }
+
+            // 3. Update the product/variant prices
+            if (update.type === 'product') {
+                updateProductStmt.run({ id: update.id, costPrice: update.costPrice, price: update.price });
+            } else {
+                updateVariantStmt.run({ id: update.id, costPrice: update.costPrice, price: update.price });
+            }
+
+            // 4. Update channel prices
+            update.channelPrices?.forEach(cp => {
+                const channelsToUpdate = cp.channel === 'online' ? ONLINE_CHANNELS : [cp.channel];
+                channelsToUpdate.forEach(channel => {
+                    const params = {
+                        product_id: update.type === 'product' ? update.id : productIdForJournal,
+                        variant_id: update.type === 'variant' ? update.id : null,
+                        channel: channel
+                    };
+                    if (cp.price !== undefined && cp.price !== null && cp.price >= 0) {
+                        upsertChannelPriceStmt.run({ ...params, price: cp.price });
+                    } else {
+                        deleteChannelPriceStmt.run(params);
+                    }
+                });
+            });
         });
     })();
 }
+
 
 // Reseller functions
 export async function getResellers(): Promise<Reseller[]> {
