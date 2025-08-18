@@ -516,10 +516,10 @@ const PriceRowFields = ({ control, index, onRemove }: { control: Control<z.infer
     const { language } = useLanguage();
     const TPrice = translations[language].finance.priceSettingsPage;
     
-    const getChannelIndex = (channel: string) => {
-        const prices = control.getValues(`items.${index}.channelPrices`);
-        return prices?.findIndex(p => p.channel === channel) ?? -1;
-    }
+    const channelPrices = useWatch({
+        control,
+        name: `items.${index}.channelPrices`,
+    });
 
     return (
         <>
@@ -542,7 +542,7 @@ const PriceRowFields = ({ control, index, onRemove }: { control: Control<z.infer
                 />
             </TableCell>
             {[ 'pos', 'reseller', 'shopee'].map(channel => {
-                const channelIndex = getChannelIndex(channel);
+                const channelIndex = channelPrices?.findIndex(p => p.channel === channel) ?? -1;
 
                 if (channelIndex === -1) {
                     return <TableCell key={channel}></TableCell>;
@@ -575,5 +575,3 @@ const PriceRowFields = ({ control, index, onRemove }: { control: Control<z.infer
         </>
     )
 }
-
-
