@@ -539,12 +539,21 @@ const PriceRowFields = ({ control, index, onRemove }: { control: Control<z.infer
         const channelIndex = channelPrices?.findIndex(p => p.channel === channel) ?? -1;
 
         if (channelIndex === -1 && !ONLINE_CHANNELS.includes(channel)) {
+            // This can happen if a new item is added and channelPrices is empty.
+            // Returning a placeholder prevents a crash.
             return <TableCell key={channel}></TableCell>;
         }
 
-        const onlinePriceIndex = channelPrices?.findIndex(p => p.channel === 'shopee') ?? -1;
+        // For online channels, they all share one input, so we point to the first one (e.g., shopee)
+        const effectiveChannelIndex = ONLINE_CHANNELS.includes(channel) 
+            ? channelPrices?.findIndex(p => p.channel === ONLINE_CHANNELS[0]) ?? -1
+            : channelIndex;
+        
+        if (effectiveChannelIndex === -1) {
+             return <TableCell key={channel}></TableCell>;
+        }
 
-        const priceFieldName = `items.${index}.channelPrices.${ONLINE_CHANNELS.includes(channel) ? onlinePriceIndex : channelIndex}.price`;
+        const priceFieldName = `items.${index}.channelPrices.${effectiveChannelIndex}.price`;
 
         return (
             <TableCell key={channel}>
@@ -595,4 +604,3 @@ const PriceRowFields = ({ control, index, onRemove }: { control: Control<z.infer
         </>
     )
 }
-
