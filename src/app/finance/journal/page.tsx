@@ -20,8 +20,8 @@ import { format, isWithinInterval, startOfDay, endOfDay } from "date-fns";
 import { DateRange } from "react-day-picker";
 import { id as localeId } from 'date-fns/locale';
 import { Skeleton } from "@/components/ui/skeleton";
-import Link from "next/link";
 import type { ManualJournalEntry } from "@/types";
+import { AddManualJournalDialog } from "@/app/components/add-manual-journal-dialog";
 
 type JournalEntry = {
     date: Date;
@@ -74,6 +74,7 @@ export default function GeneralJournalPage() {
     const { language } = useLanguage();
     const t = translations[language];
     const { allSales, items: allProducts, manualJournalEntries, loading } = useInventory();
+    const [isAddEntryDialogOpen, setAddEntryDialogOpen] = useState(false);
 
     const [dateRange, setDateRange] = useState<DateRange | undefined>({
       from: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
@@ -183,12 +184,10 @@ export default function GeneralJournalPage() {
                         <SidebarTrigger className="md:hidden" />
                         <h1 className="text-lg font-bold">{t.finance.generalJournal}</h1>
                     </div>
-                    <Link href="/finance/journal/add">
-                        <Button variant="outline">
-                            <PlusCircle className="mr-2 h-4 w-4" />
-                            Tambah Entri
-                        </Button>
-                    </Link>
+                    <Button variant="outline" onClick={() => setAddEntryDialogOpen(true)}>
+                        <PlusCircle className="mr-2 h-4 w-4" />
+                        Tambah Entri
+                    </Button>
                 </div>
 
                 <Card>
@@ -288,6 +287,7 @@ export default function GeneralJournalPage() {
                     </CardContent>
                 </Card>
             </main>
+            <AddManualJournalDialog open={isAddEntryDialogOpen} onOpenChange={setAddEntryDialogOpen} />
         </AppLayout>
     );
 }
