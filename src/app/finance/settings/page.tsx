@@ -211,50 +211,48 @@ export default function PriceSettingsPage() {
         // Reset selections when filters change
         setSelectedItemsForBulkUpdate(new Set());
     }, [searchTerm, categoryFilter]);
-
+    
     const handleBulkUpdate = () => {
         if (selectedItemsForBulkUpdate.size === 0 || bulkUpdateValue === '') return;
-    
-        const allItems = form.getValues('items');
+
+        const currentValues = form.getValues('items');
         const numericValue = parseFloat(bulkUpdateValue);
-    
-        const updatedItems = allItems.map(item => {
+
+        const updatedItems = currentValues.map(item => {
             if (selectedItemsForBulkUpdate.has(item.id)) {
-                // Create a deep copy to ensure React Hook Form detects the change
-                const updatedItem = JSON.parse(JSON.stringify(item));
-                
-                if (!updatedItem.channelPrices) {
-                    updatedItem.channelPrices = [];
-                }
-    
-                const existingChannels = new Set(updatedItem.channelPrices.map((p: any) => p.channel));
-                CHANNELS.forEach(ch => {
-                    if (!existingChannels.has(ch)) {
-                        updatedItem.channelPrices.push({ channel: ch, price: undefined });
-                    }
-                });
+                let updatedItem = { ...item }; // Shallow copy is enough for top-level properties
 
                 if (bulkUpdateChannel === 'costPrice') {
                     updatedItem.costPrice = numericValue;
                 } else if (bulkUpdateChannel === 'price') {
                     updatedItem.price = numericValue;
-                } else if (bulkUpdateChannel === 'online') {
-                    updatedItem.channelPrices = updatedItem.channelPrices.map((cp: any) => 
-                        ONLINE_CHANNELS.includes(cp.channel) ? { ...cp, price: numericValue } : cp
-                    );
                 } else {
-                     updatedItem.channelPrices = updatedItem.channelPrices.map((cp: any) => 
-                        cp.channel === bulkUpdateChannel ? { ...cp, price: numericValue } : cp
-                    );
+                    // For channel prices, we need to create a new array to ensure change detection
+                    let newChannelPrices = [...(item.channelPrices || CHANNELS.map(ch => ({ channel: ch, price: undefined })))];
+
+                    if (bulkUpdateChannel === 'online') {
+                        newChannelPrices = newChannelPrices.map(cp => 
+                            ONLINE_CHANNELS.includes(cp.channel) ? { ...cp, price: numericValue } : cp
+                        );
+                    } else { // 'pos' or 'reseller'
+                        const channelIndex = newChannelPrices.findIndex(cp => cp.channel === bulkUpdateChannel);
+                        if (channelIndex > -1) {
+                            newChannelPrices[channelIndex] = { ...newChannelPrices[channelIndex], price: numericValue };
+                        } else {
+                            newChannelPrices.push({ channel: bulkUpdateChannel, price: numericValue });
+                        }
+                    }
+                    updatedItem.channelPrices = newChannelPrices;
                 }
                 return updatedItem;
             }
             return item;
         });
-    
+
         replace(updatedItems);
         toast({ title: "Update Massal Diterapkan", description: `Harga untuk ${selectedItemsForBulkUpdate.size} item telah diperbarui di formulir.` });
     };
+
 
     const toggleAllForBulkUpdate = (checked: boolean) => {
         const allVisibleIds = new Set([
@@ -536,17 +534,13 @@ const PriceRowFields = ({ control, index, onRemove }: { control: Control<z.infer
     });
 
     const getChannelPriceComponent = (channel: string) => {
-        const channelIndex = channelPrices?.findIndex(p => p.channel === channel) ?? -1;
-
-        if (channelIndex === -1 && !ONLINE_CHANNELS.includes(channel)) {
-            // This can happen if a new item is added and channelPrices is empty.
-            // Returning a placeholder prevents a crash.
-            return <TableCell key={channel}></TableCell>;
-        }
+        // Ensure channelPrices is an array before finding index
+        const cPrices = Array.isArray(channelPrices) ? channelPrices : [];
+        const channelIndex = cPrices.findIndex(p => p.channel === channel);
 
         // For online channels, they all share one input, so we point to the first one (e.g., shopee)
         const effectiveChannelIndex = ONLINE_CHANNELS.includes(channel) 
-            ? channelPrices?.findIndex(p => p.channel === ONLINE_CHANNELS[0]) ?? -1
+            ? cPrices.findIndex(p => p.channel === ONLINE_CHANNELS[0])
             : channelIndex;
         
         if (effectiveChannelIndex === -1) {
@@ -604,3 +598,4 @@ const PriceRowFields = ({ control, index, onRemove }: { control: Control<z.infer
         </>
     )
 }
+
