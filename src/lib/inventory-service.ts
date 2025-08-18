@@ -366,28 +366,34 @@ export async function performSale(
 ) {
     const getProductStmt = db.prepare('SELECT * FROM products WHERE sku = ? AND hasVariants = 0');
     const getVariantStmt = db.prepare('SELECT * FROM variants WHERE sku = ?');
+    const getChannelPriceStmt = db.prepare('SELECT price FROM channel_prices WHERE (product_id = @productId OR variant_id = @variantId) AND channel = @channel');
     
     db.transaction(() => {
         const saleDate = options?.saleDate || new Date();
         const saleReason = `Sale (${channel})` + (options?.resellerName ? ` - ${options.resellerName}` : '');
 
-        const variant = getVariantStmt.get(sku) as (InventoryItemVariant & { productId: number }) | undefined;
+        let priceAtSale;
+        const variant = getVariantStmt.get(sku) as (InventoryItemVariant & { id: number, productId: number }) | undefined;
         if (variant) {
             if (variant.stock < quantity) {
                 throw new Error('Insufficient stock for variant.');
             }
-            const priceAtSale = variant.price;
+            
+            const channelPriceResult = getChannelPriceStmt.get({ productId: null, variantId: variant.id, channel: channel }) as { price: number } | undefined;
+            priceAtSale = channelPriceResult?.price ?? variant.price;
 
             adjustStock(variant.id.toString(), -quantity, saleReason);
             db.prepare('INSERT INTO sales (transactionId, paymentMethod, resellerName, productId, variantId, channel, quantity, priceAtSale, saleDate) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)')
               .run(options?.transactionId, options?.paymentMethod, options?.resellerName, variant.productId, variant.id, channel, quantity, priceAtSale, saleDate.toISOString());
         } else {
-            const product = getProductStmt.get(sku) as InventoryItem | undefined;
+            const product = getProductStmt.get(sku) as (InventoryItem & { id: number }) | undefined;
             if (product) {
                  if (product.stock! < quantity) {
                     throw new Error('Insufficient stock for product.');
                 }
-                const priceAtSale = product.price!;
+                
+                const channelPriceResult = getChannelPriceStmt.get({ productId: product.id, variantId: null, channel: channel }) as { price: number } | undefined;
+                priceAtSale = channelPriceResult?.price ?? product.price!;
                 
                 adjustStock(product.id.toString(), -quantity, saleReason);
                 db.prepare('INSERT INTO sales (transactionId, paymentMethod, resellerName, productId, variantId, channel, quantity, priceAtSale, saleDate) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)')
