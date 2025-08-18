@@ -38,7 +38,6 @@ const variantSchema = z.object({
     id: z.string().optional(),
     name: z.string().min(1, "Variant name is required."),
     sku: z.string().optional(),
-    costPrice: z.coerce.number().optional(),
     price: z.coerce.number().min(0, "Price must be non-negative."),
     stock: z.coerce.number().int().min(0, "Stock must be a non-negative integer."),
 });
@@ -51,7 +50,6 @@ const formSchema = z.object({
   imageUrl: z.string().url({ message: "Please enter a valid URL." }).optional().or(z.literal('')),
   hasVariants: z.boolean().default(false),
   // Fields for items without variants
-  costPrice: z.coerce.number().optional(),
   price: z.coerce.number().optional(),
   stock: z.coerce.number().int().optional(),
   size: z.string().optional(),
@@ -115,7 +113,6 @@ export function AddProductForm({ existingItem }: AddProductFormProps) {
             imageUrl: '',
             hasVariants: false,
             variants: [],
-            costPrice: undefined,
             price: undefined,
             stock: undefined,
             size: '',
@@ -129,7 +126,6 @@ export function AddProductForm({ existingItem }: AddProductFormProps) {
         sku: existingItem.sku || '',
         imageUrl: existingItem.imageUrl || '',
         hasVariants: hasVariants,
-        costPrice: hasVariants ? undefined : (existingItem.costPrice ?? ''),
         price: hasVariants ? undefined : (existingItem.price ?? ''),
         stock: hasVariants ? undefined : (existingItem.stock ?? ''),
         size: hasVariants ? undefined : (existingItem.size || ''),
@@ -280,9 +276,8 @@ export function AddProductForm({ existingItem }: AddProductFormProps) {
                              <Table className="table-fixed border">
                                 <TableHeader>
                                     <TableRow>
-                                        <TableHead className="w-[30%] border-r">{t.inventoryTable.name}</TableHead>
-                                        <TableHead className="w-[25%] border-r">SKU</TableHead>
-                                        <TableHead className="w-[20%] border-r">{t.finance.priceSettingsPage.costPrice}</TableHead>
+                                        <TableHead className="w-[35%] border-r">{t.inventoryTable.name}</TableHead>
+                                        <TableHead className="w-[30%] border-r">SKU</TableHead>
                                         <TableHead className="w-[20%] border-r">{t.inventoryTable.price}</TableHead>
                                         <TableHead className="w-[15%] border-r">{t.inventoryTable.currentStock}</TableHead>
                                         <TableHead className="w-[50px]"></TableHead>
@@ -310,18 +305,6 @@ export function AddProductForm({ existingItem }: AddProductFormProps) {
                                                     render={({ field }) => (
                                                         <FormItem>
                                                             <FormControl><Input placeholder="e.g., VAR-LG" {...field} className="border-none focus-visible:ring-1" /></FormControl>
-                                                            <FormMessage className="px-2 py-1"/>
-                                                        </FormItem>
-                                                    )}
-                                                />
-                                            </TableCell>
-                                             <TableCell className="p-1 border-r">
-                                                <FormField
-                                                    control={form.control}
-                                                    name={`variants.${index}.costPrice`}
-                                                    render={({ field }) => (
-                                                        <FormItem>
-                                                            <FormControl><Input type="number" placeholder="30000" {...field} value={field.value ?? ''} className="border-none focus-visible:ring-1" /></FormControl>
                                                             <FormMessage className="px-2 py-1"/>
                                                         </FormItem>
                                                     )}
@@ -360,7 +343,7 @@ export function AddProductForm({ existingItem }: AddProductFormProps) {
                                     ))}
                                 </TableBody>
                              </Table>
-                             <Button type="button" size="sm" variant="outline" className="mt-4" onClick={() => append({ name: '', sku: '', price: 0, stock: 0, costPrice: 0 })}>
+                             <Button type="button" size="sm" variant="outline" className="mt-4" onClick={() => append({ name: '', sku: '', price: 0, stock: 0 })}>
                                 <PlusCircle className="mr-2 h-4 w-4" />
                                 {t.bulkStockInDialog.addVariant}
                             </Button>
@@ -368,7 +351,7 @@ export function AddProductForm({ existingItem }: AddProductFormProps) {
                         </CardContent>
                     </Card>
                 ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                         <FormField
                         control={form.control}
                         name="size"
@@ -377,19 +360,6 @@ export function AddProductForm({ existingItem }: AddProductFormProps) {
                             <FormLabel>{t.inventoryTable.size}</FormLabel>
                             <FormControl>
                                 <Input placeholder="e.g., 250g, 1L" {...field} value={field.value ?? ''}/>
-                            </FormControl>
-                            <FormMessage />
-                            </FormItem>
-                        )}
-                        />
-                        <FormField
-                        control={form.control}
-                        name="costPrice"
-                        render={({ field }) => (
-                            <FormItem>
-                            <FormLabel>{t.finance.priceSettingsPage.costPrice}</FormLabel>
-                            <FormControl>
-                                <Input type="number" placeholder="30000" {...field} value={field.value ?? ''} />
                             </FormControl>
                             <FormMessage />
                             </FormItem>
