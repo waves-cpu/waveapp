@@ -114,12 +114,11 @@ export default function AssetReportPage() {
         assetClassification, 
         fastMovingProducts, 
         slowMovingProducts, 
-        nonMovingProducts, 
-        topSellingVariants
+        nonMovingProducts,
+        variantAssetClassification
     } = useMemo(() => {
         const turnoverDateThreshold = subDays(new Date(), ASSET_TURNOVER_DAYS);
         const salesVolumeMap = new Map<string, number>();
-        const variantSalesVolumeMap = new Map<string, number>();
         
         allSales.forEach(sale => {
             if (isAfter(new Date(sale.saleDate), turnoverDateThreshold)) {
@@ -127,14 +126,16 @@ export default function AssetReportPage() {
                 if(soldId) {
                     salesVolumeMap.set(soldId.toString(), (salesVolumeMap.get(soldId.toString()) || 0) + sale.quantity);
                 }
-                if (sale.variantName) {
-                    variantSalesVolumeMap.set(sale.variantName, (variantSalesVolumeMap.get(sale.variantName) || 0) + sale.quantity);
-                }
             }
         });
 
+        // Product-level classification
         const allRankedAssets: RankedAsset[] = [];
-        
+        // Variant-level classification
+        let variantFastValue = 0;
+        let variantSlowValue = 0;
+        let variantNonMovingValue = 0;
+
         items.forEach(item => {
             if (item.variants && item.variants.length > 0) {
                 let totalSalesCount = 0;
@@ -143,8 +144,21 @@ export default function AssetReportPage() {
                 item.variants.forEach(variant => {
                     const salesCount = salesVolumeMap.get(variant.id.toString()) || 0;
                     const stockValue = (variant.costPrice && variant.costPrice > 0 && variant.stock && variant.stock > 0) ? variant.costPrice * variant.stock : 0;
+                    
+                    // Accumulate for parent product
                     totalSalesCount += salesCount;
                     totalStockValue += stockValue;
+                    
+                    // Classify individual variant
+                    if (stockValue > 0) {
+                        if (salesCount >= FAST_MOVING_THRESHOLD) {
+                            variantFastValue += stockValue;
+                        } else if (salesCount >= SLOW_MOVING_THRESHOLD) {
+                            variantSlowValue += stockValue;
+                        } else {
+                            variantNonMovingValue += stockValue;
+                        }
+                    }
                 });
                 
                 if (totalStockValue > 0) {
@@ -156,7 +170,7 @@ export default function AssetReportPage() {
                         stockValue: totalStockValue,
                     });
                 }
-            } else {
+            } else { // Simple product
                  if (item.costPrice && item.costPrice > 0 && item.stock && item.stock > 0) {
                     const stockValue = item.costPrice * item.stock;
                     const salesCount = salesVolumeMap.get(item.id.toString()) || 0;
@@ -188,11 +202,6 @@ export default function AssetReportPage() {
         const totalFastMovingValue = fast.reduce((sum, asset) => sum + asset.stockValue, 0);
         const totalSlowMovingValue = slow.reduce((sum, asset) => sum + asset.stockValue, 0);
         const totalNonMovingValue = non.reduce((sum, asset) => sum + asset.stockValue, 0);
-        
-        const sortedVariantSales = Array.from(variantSalesVolumeMap.entries())
-            .map(([name, value]) => ({ name, value }))
-            .sort((a,b) => b.value - a.value)
-            .slice(0, 5);
 
         return {
             assetClassification: {
@@ -201,12 +210,16 @@ export default function AssetReportPage() {
                 totalNonMovingValue,
                 totalAssetValue: totalFastMovingValue + totalSlowMovingValue + totalNonMovingValue,
             },
+            variantAssetClassification: [
+                { name: TAsset.fastLabel, value: variantFastValue, fill: 'var(--color-fast)' },
+                { name: TAsset.slowLabel, value: variantSlowValue, fill: 'var(--color-slow)' },
+                { name: TAsset.nonMovingLabel, value: variantNonMovingValue, fill: 'var(--color-nonMoving)' }
+            ].filter(d => d.value > 0),
             fastMovingProducts: fast.sort((a,b) => b.salesCount - a.salesCount).slice(0, 10),
             slowMovingProducts: slow.sort((a,b) => b.salesCount - a.salesCount).slice(0, 10),
             nonMovingProducts: non.sort((a,b) => b.stockValue - a.stockValue).slice(0, 10),
-            topSellingVariants: sortedVariantSales,
         };
-    }, [items, allSales]);
+    }, [items, allSales, TAsset.fastLabel, TAsset.slowLabel, TAsset.nonMovingLabel]);
 
     const chartData = [
         {
@@ -217,16 +230,11 @@ export default function AssetReportPage() {
         }
     ];
     
-    const pieChartConfig = useMemo(() => {
-        const config: ChartConfig = {};
-        topSellingVariants.forEach((variant, index) => {
-            config[variant.name] = {
-                label: variant.name,
-                color: `hsl(var(--chart-${(index % 5) + 1}))`
-            }
-        });
-        return config;
-    }, [topSellingVariants]);
+    const pieChartConfig: ChartConfig = {
+        fast: { label: TAsset.fastLabel, color: "hsl(var(--chart-2))" },
+        slow: { label: TAsset.slowLabel, color: "hsl(var(--chart-3))" },
+        nonMoving: { label: TAsset.nonMovingLabel, color: "hsl(var(--chart-5))" },
+    };
 
     const chartConfig: ChartConfig = {
         fast: { label: TAsset.fastLabel, color: "hsl(var(--chart-2))", icon: TrendingUp },
@@ -304,7 +312,7 @@ export default function AssetReportPage() {
                             <CardDescription className="text-xs">Berdasarkan Produk Induk</CardDescription>
                         </CardHeader>
                         <CardContent>
-                        <ChartContainer config={chartConfig} className="w-full h-40">
+                            <ChartContainer config={chartConfig} className="w-full h-40">
                                 <RechartsBarChart accessibilityLayer data={chartData} margin={{ top: 20, left: 12, right: 12 }}>
                                     <CartesianGrid vertical={false} />
                                     <YAxis tickLine={false} axisLine={false} tickFormatter={(value) => `Rp${(Number(value) / 1000000).toLocaleString()} Jt`} />
@@ -328,16 +336,16 @@ export default function AssetReportPage() {
                     </Card>
                     <Card>
                         <CardHeader>
-                             <CardTitle className="text-xs">Top 5 Varian Terlaris</CardTitle>
-                             <CardDescription className="text-xs">Berdasarkan Unit Terjual (30 Hari Terakhir)</CardDescription>
+                             <CardTitle className="text-xs">Klasifikasi Aset Varian</CardTitle>
+                             <CardDescription className="text-xs">Berdasarkan Nilai Stok Varian (30 Hari Terakhir)</CardDescription>
                         </CardHeader>
                         <CardContent>
-                             <ChartContainer config={pieChartConfig} className="w-full h-40">
+                            <ChartContainer config={pieChartConfig} className="w-full h-40">
                                 <RechartsPieChart>
-                                    <Tooltip cursor={false} content={<ChartTooltipContent formatter={(value) => `${value} unit`} hideLabel />} />
-                                    <Pie data={topSellingVariants} dataKey="value" nameKey="name" innerRadius={40} outerRadius={60}>
-                                        {topSellingVariants.map((entry) => (
-                                            <Cell key={`cell-${entry.name}`} fill={pieChartConfig[entry.name]?.color} />
+                                    <Tooltip cursor={false} content={<ChartTooltipContent formatter={(value) => formatCurrency(Number(value))} hideLabel />} />
+                                    <Pie data={variantAssetClassification} dataKey="value" nameKey="name" innerRadius={40} outerRadius={60} strokeWidth={2}>
+                                         {variantAssetClassification.map((entry, index) => (
+                                            <Cell key={`cell-${index}`} fill={entry.fill} />
                                         ))}
                                     </Pie>
                                     <div className="mt-4">
