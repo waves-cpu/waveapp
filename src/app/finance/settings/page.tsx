@@ -216,31 +216,39 @@ export default function PriceSettingsPage() {
     const handleBulkUpdate = () => {
         if (selectedItemsForBulkUpdate.size === 0 || bulkUpdateValue === '') return;
     
-        // Get all items from the form, not just the filtered `fields`
         const allItems = form.getValues('items');
         const numericValue = parseFloat(bulkUpdateValue);
     
         const updatedItems = allItems.map(item => {
-            // Check if the current item's ID is in the selection set
             if (selectedItemsForBulkUpdate.has(item.id)) {
                 const updatedItem = { ...item };
                 
+                if (!updatedItem.channelPrices) {
+                    updatedItem.channelPrices = CHANNELS.map(ch => ({ channel: ch, price: undefined }));
+                } else {
+                    const existingChannels = new Set(updatedItem.channelPrices.map(p => p.channel));
+                    CHANNELS.forEach(ch => {
+                        if (!existingChannels.has(ch)) {
+                            updatedItem.channelPrices?.push({ channel: ch, price: undefined });
+                        }
+                    });
+                }
+    
                 if (bulkUpdateChannel === 'costPrice') {
                     updatedItem.costPrice = numericValue;
                 } else if (bulkUpdateChannel === 'price') {
                     updatedItem.price = numericValue;
                 } else if (bulkUpdateChannel === 'online') {
-                    updatedItem.channelPrices = updatedItem.channelPrices?.map(cp => 
+                    updatedItem.channelPrices = updatedItem.channelPrices.map(cp => 
                         ONLINE_CHANNELS.includes(cp.channel) ? { ...cp, price: numericValue } : cp
                     );
                 } else {
-                    updatedItem.channelPrices = updatedItem.channelPrices?.map(cp => 
+                    updatedItem.channelPrices = updatedItem.channelPrices.map(cp => 
                         cp.channel === bulkUpdateChannel ? { ...cp, price: numericValue } : cp
                     );
                 }
                 return updatedItem;
             }
-            // If not selected, return the item as is
             return item;
         });
     
@@ -527,6 +535,35 @@ const PriceRowFields = ({ control, index, onRemove }: { control: Control<z.infer
         name: `items.${index}.channelPrices`,
     });
 
+    const getChannelPriceComponent = (channel: string) => {
+        const channelIndex = channelPrices?.findIndex(p => p.channel === channel) ?? -1;
+
+        if (channelIndex === -1 && channel !== 'shopee' && channel !== 'tiktok' && channel !== 'lazada') {
+            return <TableCell key={channel}></TableCell>;
+        }
+
+        const onlinePriceIndex = channelPrices?.findIndex(p => p.channel === 'shopee') ?? -1;
+
+        const priceFieldName = `items.${index}.channelPrices.${['shopee', 'tiktok', 'lazada'].includes(channel) ? onlinePriceIndex : channelIndex}.price`;
+
+        return (
+            <TableCell key={channel}>
+                <FormField
+                    control={control}
+                    name={priceFieldName as any}
+                    render={({ field: formField }) => (
+                        <FormItem>
+                            <FormControl>
+                                <Input type="number" placeholder="0" {...formField} value={formField.value ?? ''} className="h-8 w-24 text-center" />
+                            </FormControl>
+                            <FormMessage/>
+                        </FormItem>
+                    )}
+                />
+            </TableCell>
+        );
+    };
+
     return (
         <>
             <TableCell>
@@ -547,32 +584,9 @@ const PriceRowFields = ({ control, index, onRemove }: { control: Control<z.infer
                     )}
                 />
             </TableCell>
-            {[ 'pos', 'reseller', 'shopee'].map(channel => {
-                const channelIndex = channelPrices?.findIndex(p => p.channel === channel) ?? -1;
-
-                if (channelIndex === -1) {
-                    return <TableCell key={channel}></TableCell>;
-                }
-                
-                const priceFieldName = `items.${index}.channelPrices.${channelIndex}.price`;
-
-                return (
-                    <TableCell key={channel}>
-                        <FormField
-                            control={control}
-                            name={priceFieldName as any}
-                            render={({ field: formField }) => (
-                                <FormItem>
-                                    <FormControl>
-                                        <Input type="number" placeholder="0" {...formField} value={formField.value ?? ''} className="h-8 w-24 text-center" />
-                                    </FormControl>
-                                    <FormMessage/>
-                                </FormItem>
-                            )}
-                        />
-                    </TableCell>
-                )
-            })}
+            {getChannelPriceComponent('pos')}
+            {getChannelPriceComponent('reseller')}
+            {getChannelPriceComponent('shopee')}
             <TableCell className="p-1.5">
                 <Button type="button" variant="ghost" size="icon" className="text-destructive hover:text-destructive-foreground hover:bg-destructive h-8 w-8" onClick={onRemove}>
                     <Trash2 className="h-4 w-4" />
