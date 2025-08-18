@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import { AppLayout } from "@/app/components/app-layout";
@@ -9,7 +8,7 @@ import { translations } from "@/types/language";
 import { useInventory } from "@/hooks/use-inventory";
 import React, { useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
@@ -130,7 +129,7 @@ export default function GeneralJournalPage() {
 
                     } else if (h.change > 0 && h.reason.toLowerCase().includes('stock in')) {
                          const value = h.change * (costPrice || 0);
-                         if (value >= 0) {
+                         if (value > 0) {
                             const description = `Stok Masuk: ${name} (${h.change}x)`;
                             entries.push({ date: adjustmentDate, description, account: 'Persediaan Barang', debit: value, type: 'stock_in'});
                             entries.push({ date: adjustmentDate, description, account: 'Kas / Utang Usaha', credit: value, type: 'stock_in'});
@@ -166,6 +165,14 @@ export default function GeneralJournalPage() {
         const startIndex = (currentPage - 1) * itemsPerPage;
         return filteredEntries.slice(startIndex, startIndex + itemsPerPage);
     }, [filteredEntries, currentPage, itemsPerPage]);
+
+    const pageTotals = useMemo(() => {
+        return paginatedEntries.reduce((acc, entry) => {
+            acc.debit += entry.debit || 0;
+            acc.credit += entry.credit || 0;
+            return acc;
+        }, { debit: 0, credit: 0 });
+    }, [paginatedEntries]);
 
     const formatCurrency = (amount?: number) => {
         if (amount === undefined || amount === null) return '-';
@@ -293,12 +300,19 @@ export default function GeneralJournalPage() {
                                         </TableRow>
                                     )}
                                 </TableBody>
+                                <TableFooter>
+                                    <TableRow className="bg-muted hover:bg-muted">
+                                        <TableCell colSpan={3} className="text-right font-semibold text-xs">Total Halaman Ini</TableCell>
+                                        <TableCell className="text-right font-semibold text-xs font-mono">{formatCurrency(pageTotals.debit)}</TableCell>
+                                        <TableCell className="text-right font-semibold text-xs font-mono">{formatCurrency(pageTotals.credit)}</TableCell>
+                                    </TableRow>
+                                </TableFooter>
                             </Table>
                         </div>
                     </CardContent>
                     {totalPages > 1 && (
                         <CardFooter>
-                            <div className="flex w-full items-center justify-end p-4 border-t">
+                            <div className="flex w-full items-center justify-end pt-4 border-t">
                                 <div className="flex items-center gap-4">
                                     <Pagination
                                         totalPages={totalPages}
@@ -332,4 +346,5 @@ export default function GeneralJournalPage() {
             <AddManualJournalDialog open={isAddEntryDialogOpen} onOpenChange={setAddEntryDialogOpen} />
         </AppLayout>
     );
-}
+
+    
