@@ -1,5 +1,4 @@
 
-
 'use server';
 
 import { db } from './db';
@@ -546,35 +545,27 @@ export async function updatePrices(updates: { id: string, type: 'product' | 'var
     `);
     const upsertChannelPriceStmt = db.prepare(`
         INSERT INTO channel_prices (product_id, variant_id, channel, price)
-        VALUES (@product_id, @variant_id, @channel, @price)
+        VALUES (?, ?, ?, ?)
         ON CONFLICT(product_id, variant_id, channel) DO UPDATE SET price = excluded.price
     `);
-    const deleteChannelPriceStmt = db.prepare('DELETE FROM channel_prices WHERE (product_id = @product_id OR variant_id = @variant_id) AND channel = @channel');
+    const deleteChannelPriceStmtProduct = db.prepare('DELETE FROM channel_prices WHERE product_id = ? AND channel = ?');
+    const deleteChannelPriceStmtVariant = db.prepare('DELETE FROM channel_prices WHERE variant_id = ? AND channel = ?');
     const ONLINE_CHANNELS = ['shopee', 'tiktok', 'lazada'];
 
     db.transaction(() => {
         updates.forEach(update => {
             let itemBefore: any;
-            let currentStock = 0;
-            let productIdForJournal: number;
-            let variantIdForJournal: number | null = null;
-            let itemNameForJournal: string = '';
-
             if (update.type === 'product') {
                 itemBefore = getProductStmt.get(update.id);
-                if (!itemBefore) return;
-                currentStock = itemBefore?.stock || 0;
-                productIdForJournal = itemBefore.id;
-                itemNameForJournal = itemBefore.name;
             } else {
                 itemBefore = getVariantStmt.get(update.id);
-                if (!itemBefore) return;
-                currentStock = itemBefore?.stock || 0;
-                productIdForJournal = itemBefore.productId;
-                variantIdForJournal = itemBefore.id;
-                const parent = getProductStmt.get(itemBefore.productId);
-                itemNameForJournal = `${parent.name} - ${itemBefore.name}`;
             }
+            
+            if (!itemBefore) return;
+
+            const currentStock = itemBefore.stock || 0;
+            const productIdForJournal = update.type === 'product' ? itemBefore.id : itemBefore.productId;
+            const variantIdForJournal = update.type === 'variant' ? itemBefore.id : null;
 
             const oldCostPrice = itemBefore?.costPrice ?? 0;
             const newCostPrice = update.costPrice ?? 0;
@@ -596,22 +587,24 @@ export async function updatePrices(updates: { id: string, type: 'product' | 'var
             } else {
                 updateVariantStmt.run({ id: update.id, costPrice: update.costPrice, price: update.price });
             }
-
+            
             const productIdParam = update.type === 'product' ? update.id : null;
             const variantIdParam = update.type === 'variant' ? update.id : null;
 
             update.channelPrices?.forEach(cp => {
                 const channelsToUpdate = cp.channel === 'online' ? ONLINE_CHANNELS : [cp.channel];
+                
                 channelsToUpdate.forEach(channel => {
-                    const params = {
-                        product_id: productIdParam,
-                        variant_id: variantIdParam,
-                        channel: channel,
-                    };
-                    if (cp.price !== undefined && cp.price !== null && cp.price >= 0) {
-                        upsertChannelPriceStmt.run({ ...params, price: cp.price });
+                    const priceIsValid = cp.price !== undefined && cp.price !== null && cp.price >= 0;
+
+                    if (priceIsValid) {
+                         upsertChannelPriceStmt.run(productIdParam, variantIdParam, channel, cp.price);
                     } else {
-                        deleteChannelPriceStmt.run(params);
+                        if (update.type === 'product') {
+                            deleteChannelPriceStmtProduct.run(update.id, channel);
+                        } else {
+                            deleteChannelPriceStmtVariant.run(update.id, channel);
+                        }
                     }
                 });
             });
@@ -660,5 +653,3 @@ export async function editReseller(id: number, data: Omit<Reseller, 'id'>) {
 export async function deleteReseller(id: number) {
     db.prepare('DELETE FROM resellers WHERE id = ?').run(id);
 }
-
-    
