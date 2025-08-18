@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useMemo, useEffect } from 'react';
@@ -53,7 +54,13 @@ const formSchema = z.object({
   items: z.array(priceSettingItemSchema),
 });
 
-const CHANNELS = ['pos', 'reseller', 'online'];
+const CHANNELS = ['pos', 'reseller', 'shopee', 'tiktok', 'lazada'];
+const ONLINE_CHANNELS = ['shopee', 'tiktok', 'lazada'];
+
+const getOnlinePrice = (item: InventoryItem | InventoryItemVariant) => {
+    return item.channelPrices?.find(p => ONLINE_CHANNELS.includes(p.channel))?.price;
+}
+
 
 export default function PriceSettingsPage() {
     const { language } = useLanguage();
@@ -67,6 +74,12 @@ export default function PriceSettingsPage() {
     const [isProductSelectionOpen, setProductSelectionOpen] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
     const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
+
+    // Bulk update state
+    const [bulkUpdateChannel, setBulkUpdateChannel] = useState<'costPrice' | 'price' | 'pos' | 'reseller' | 'online'>('price');
+    const [bulkUpdateValue, setBulkUpdateValue] = useState<string>('');
+    const [selectedItemsForBulkUpdate, setSelectedItemsForBulkUpdate] = useState<Set<string>>(new Set());
+
 
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
@@ -99,52 +112,47 @@ export default function PriceSettingsPage() {
         });
     }, [allInventoryItems, existingItemIds]);
 
+    const allItemsMap = useMemo(() => {
+        const map = new Map<string, {item: InventoryItem | InventoryItemVariant, type: 'product' | 'variant', parent?: InventoryItem}>();
+        allInventoryItems.forEach(item => {
+            if (item.variants && item.variants.length > 0) {
+                item.variants.forEach(variant => {
+                    map.set(variant.id, { item: variant, type: 'variant', parent: item });
+                });
+            } else {
+                map.set(item.id, { item, type: 'product' });
+            }
+        });
+        return map;
+    }, [allInventoryItems]);
+
     const handleProductsSelected = (selectedIds: string[]) => {
         const newItems: PriceSettingItem[] = [];
 
         selectedIds.forEach(id => {
-            if (existingItemIds.has(id)) return;
+            if (existingItemIds.has(id) || !allItemsMap.has(id)) return;
+
+            const { item, type, parent } = allItemsMap.get(id)!;
             
-            for (const item of allInventoryItems) {
-                const processItem = (i: InventoryItem | InventoryItemVariant, type: 'product' | 'variant', parent?: InventoryItem) => {
-                    const getOnlinePrice = (channelPrices?: any[]) => {
-                        const onlinePrice = channelPrices?.find(p => ['shopee', 'tiktok', 'lazada'].includes(p.channel))?.price;
-                        return onlinePrice;
-                    }
+            const onlinePrice = getOnlinePrice(item);
 
-                    newItems.push({
-                        id: i.id,
-                        type: type,
-                        name: i.name,
-                        sku: i.sku,
-                        imageUrl: parent?.imageUrl || (i as InventoryItem).imageUrl,
-                        parentName: parent?.name,
-                        costPrice: i.costPrice,
-                        price: i.price,
-                        channelPrices: CHANNELS.map(channel => {
-                            let price;
-                            if (channel === 'online') {
-                                price = getOnlinePrice(i.channelPrices);
-                            } else {
-                                price = i.channelPrices?.find(p => p.channel === channel)?.price;
-                            }
-                            return { channel, price };
-                        })
-                    });
-                };
-
-                if(item.id === id && (!item.variants || item.variants.length === 0)) {
-                    processItem(item, 'product');
-                    return;
-                }
-                if (item.variants) {
-                    const variant = item.variants.find(v => v.id === id);
-                    if (variant) {
-                        processItem(variant, 'variant', item);
-                        return;
-                    }
-                }
-            }
+            newItems.push({
+                id: item.id,
+                type: type,
+                name: item.name,
+                sku: item.sku,
+                imageUrl: parent?.imageUrl || (item as InventoryItem).imageUrl,
+                parentName: parent?.name,
+                costPrice: item.costPrice,
+                price: item.price,
+                channelPrices: [
+                    { channel: 'pos', price: item.channelPrices?.find(p => p.channel === 'pos')?.price },
+                    { channel: 'reseller', price: item.channelPrices?.find(p => p.channel === 'reseller')?.price },
+                    { channel: 'shopee', price: onlinePrice },
+                    { channel: 'tiktok', price: onlinePrice },
+                    { channel: 'lazada', price: onlinePrice },
+                ]
+            });
         });
         append(newItems);
     };
@@ -163,58 +171,108 @@ export default function PriceSettingsPage() {
 
                 if (!categoryFilter) return true;
                 
-                const inventoryItem = allInventoryItems.find(item => {
-                    if (field.type === 'product') {
-                        return item.id === field.id;
-                    }
-                    if (field.type === 'variant') {
-                        return item.variants?.some(v => v.id === field.id);
-                    }
-                    return false;
-                });
-                
-                return inventoryItem?.category === categoryFilter;
+                const inventoryItemData = allItemsMap.get(field.id);
+                const itemForCategory = inventoryItemData?.parent || inventoryItemData?.item;
+
+                return (itemForCategory as InventoryItem)?.category === categoryFilter;
             });
 
-        const groups = new Map<string, (PriceSettingItem & { originalIndex: number })[]>();
+        const groups = new Map<string, { header: PriceSettingItem & { originalIndex: number }, variants: (PriceSettingItem & { originalIndex: number })[] }>();
         const simpleItems: (PriceSettingItem & { originalIndex: number })[] = [];
 
         filteredFields.forEach(field => {
             if (field.type === 'variant' && field.parentName) {
-                if (!groups.has(field.parentName)) {
-                    groups.set(field.parentName, []);
+                 if (!groups.has(field.parentName)) {
+                    const parentInfo = allInventoryItems.find(item => item.name === field.parentName);
+                    const headerItem = {
+                        id: parentInfo?.id || field.parentName,
+                        name: field.parentName,
+                        parentName: field.parentName,
+                        imageUrl: parentInfo?.imageUrl,
+                        sku: parentInfo?.sku,
+                        type: 'product' as 'product',
+                        originalIndex: -1, // Not a real item in the form array
+                        costPrice: undefined, price: undefined, channelPrices: [],
+                    };
+                    groups.set(field.parentName, { header: headerItem, variants: [] });
                 }
-                groups.get(field.parentName)!.push(field);
+                groups.get(field.parentName)!.variants.push(field);
             } else {
                 simpleItems.push(field);
             }
         });
-
-        const activeGroups = new Map<string, { header: PriceSettingItem & { originalIndex: number }, variants: (PriceSettingItem & { originalIndex: number })[] }>();
-        for (const [key, value] of groups.entries()) {
-            if (value.length > 0) {
-                const parentInfo = allInventoryItems.find(item => item.name === key);
-                const headerItem = {
-                    id: parentInfo?.id || key,
-                    name: key,
-                    parentName: key,
-                    imageUrl: parentInfo?.imageUrl,
-                    sku: parentInfo?.sku,
-                    type: 'product' as 'product',
-                    originalIndex: -1, // Not a real item in the form array
-                    costPrice: undefined,
-                    price: undefined,
-                    channelPrices: [],
-                };
-                activeGroups.set(key, { header: headerItem, variants: value });
-            }
-        }
         
-        return { groups: Array.from(activeGroups.values()), simpleItems };
+        return { groups: Array.from(groups.values()), simpleItems };
 
-    }, [fields, searchTerm, categoryFilter, allInventoryItems]);
+    }, [fields, searchTerm, categoryFilter, allInventoryItems, allItemsMap]);
     
+    useEffect(() => {
+        // Reset selections when filters change
+        setSelectedItemsForBulkUpdate(new Set());
+    }, [searchTerm, categoryFilter]);
+
+
+    const handleBulkUpdate = () => {
+        if(selectedItemsForBulkUpdate.size === 0 || bulkUpdateValue === '') return;
+
+        const updatedItems = [...fields]; // Create a mutable copy
+        const numericValue = parseFloat(bulkUpdateValue);
+
+        selectedItemsForBulkUpdate.forEach(itemId => {
+            const itemIndex = updatedItems.findIndex(item => item.id === itemId);
+            if (itemIndex > -1) {
+                if(bulkUpdateChannel === 'costPrice') {
+                    updatedItems[itemIndex].costPrice = numericValue;
+                } else if (bulkUpdateChannel === 'price') {
+                    updatedItems[itemIndex].price = numericValue;
+                } else if (bulkUpdateChannel === 'online') {
+                    updatedItems[itemIndex].channelPrices = updatedItems[itemIndex].channelPrices?.map(cp => 
+                        ONLINE_CHANNELS.includes(cp.channel) ? { ...cp, price: numericValue } : cp
+                    );
+                } else {
+                     updatedItems[itemIndex].channelPrices = updatedItems[itemIndex].channelPrices?.map(cp => 
+                        cp.channel === bulkUpdateChannel ? { ...cp, price: numericValue } : cp
+                    );
+                }
+            }
+        });
+
+        replace(updatedItems);
+        toast({ title: "Update Massal Diterapkan", description: `Harga untuk ${selectedItemsForBulkUpdate.size} item telah diperbarui di formulir.`});
+    };
+
+    const toggleAllForBulkUpdate = (checked: boolean) => {
+        const allVisibleIds = new Set([
+            ...groupedAndFilteredItems.simpleItems.map(i => i.id),
+            ...groupedAndFilteredItems.groups.flatMap(g => g.variants.map(v => v.id))
+        ]);
+        if(checked) {
+            setSelectedItemsForBulkUpdate(allVisibleIds);
+        } else {
+            setSelectedItemsForBulkUpdate(new Set());
+        }
+    }
     
+    const toggleItemForBulkUpdate = (id: string) => {
+        const newSet = new Set(selectedItemsForBulkUpdate);
+        if (newSet.has(id)) {
+            newSet.delete(id);
+        } else {
+            newSet.add(id);
+        }
+        setSelectedItemsForBulkUpdate(newSet);
+    }
+    
+    const isAllVisibleSelected = useMemo(() => {
+         const allVisibleIds = new Set([
+            ...groupedAndFilteredItems.simpleItems.map(i => i.id),
+            ...groupedAndFilteredItems.groups.flatMap(g => g.variants.map(v => v.id))
+        ]);
+        if (allVisibleIds.size === 0) return false;
+        return Array.from(allVisibleIds).every(id => selectedItemsForBulkUpdate.has(id));
+    }, [groupedAndFilteredItems, selectedItemsForBulkUpdate]);
+
+
     const onSubmit = async (values: z.infer<typeof formSchema>) => {
         setIsSubmitting(true);
         try {
@@ -250,35 +308,60 @@ export default function PriceSettingsPage() {
                         <Card>
                             <CardHeader>
                                 <CardDescription>{TPrice.description}</CardDescription>
-                                <div className="flex flex-col sm:flex-row items-center gap-4 pt-2">
-                                     <div className="relative flex-grow w-full">
-                                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                        <Input
-                                            placeholder={TPrice.searchPlaceholder}
-                                            value={searchTerm}
-                                            onChange={(e) => setSearchTerm(e.target.value)}
-                                            className="pl-10 w-full"
-                                        />
-                                    </div>
-                                    <div className="w-full sm:w-auto">
-                                        <Button type="button" onClick={() => setProductSelectionOpen(true)} className="w-full">
+                                <div className="flex flex-col gap-4 pt-2">
+                                    <div className="flex flex-col sm:flex-row items-center gap-4">
+                                        <div className="relative flex-grow w-full">
+                                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                            <Input
+                                                placeholder={TPrice.searchPlaceholder}
+                                                value={searchTerm}
+                                                onChange={(e) => setSearchTerm(e.target.value)}
+                                                className="pl-10 w-full"
+                                            />
+                                        </div>
+                                        <Button type="button" onClick={() => setProductSelectionOpen(true)} className="w-full sm:w-auto">
                                             <PlusCircle className="mr-2 h-4 w-4" />
                                             {TPrice.selectProduct}
                                         </Button>
+                                        <Select onValueChange={(value) => setCategoryFilter(value === 'all' ? null : value)} defaultValue="all">
+                                            <SelectTrigger className="w-full sm:w-[200px]">
+                                                <SelectValue placeholder={t.inventoryTable.selectCategoryPlaceholder} />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="all">{t.inventoryTable.allCategories}</SelectItem>
+                                                {categories.map((category) => (
+                                                    <SelectItem key={category} value={category}>
+                                                        {category}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
                                     </div>
-                                    <Select onValueChange={(value) => setCategoryFilter(value === 'all' ? null : value)} defaultValue="all">
-                                        <SelectTrigger className="w-full sm:w-[200px]">
-                                            <SelectValue placeholder={t.inventoryTable.selectCategoryPlaceholder} />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="all">{t.inventoryTable.allCategories}</SelectItem>
-                                            {categories.map((category) => (
-                                                <SelectItem key={category} value={category}>
-                                                    {category}
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
+                                    <div className="p-2 border-t border-dashed flex flex-col md:flex-row items-center gap-2">
+                                        <p className="text-sm font-medium mr-2 whitespace-nowrap">Ubah Masal:</p>
+                                        <Select value={bulkUpdateChannel} onValueChange={(v) => setBulkUpdateChannel(v as any)}>
+                                            <SelectTrigger className="w-full md:w-[160px]">
+                                                <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="costPrice">{TPrice.costPrice}</SelectItem>
+                                                <SelectItem value="price">{TPrice.defaultPrice}</SelectItem>
+                                                <SelectItem value="pos">{TSales.pos}</SelectItem>
+                                                <SelectItem value="reseller">{TSales.reseller}</SelectItem>
+                                                <SelectItem value="online">{TPrice.onlinePrice}</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                        <Input
+                                            type="number"
+                                            placeholder="Masukkan harga"
+                                            value={bulkUpdateValue}
+                                            onChange={(e) => setBulkUpdateValue(e.target.value)}
+                                            className="w-full md:w-[160px]"
+                                        />
+                                        <Button type="button" variant="outline" onClick={handleBulkUpdate} disabled={selectedItemsForBulkUpdate.size === 0 || !bulkUpdateValue}>
+                                            Terapkan ke {selectedItemsForBulkUpdate.size} item
+                                        </Button>
+                                    </div>
                                 </div>
                             </CardHeader>
                             <CardContent className="p-0">
@@ -286,23 +369,29 @@ export default function PriceSettingsPage() {
                                     <Table>
                                         <TableHeader>
                                             <TableRow>
-                                                <TableHead className="w-[30%]">{TPrice.product}</TableHead>
-                                                <TableHead>{TPrice.costPrice}</TableHead>
-                                                <TableHead>{TPrice.defaultPrice}</TableHead>
-                                                <TableHead>{TSales.pos}</TableHead>
-                                                <TableHead>{TSales.reseller}</TableHead>
-                                                <TableHead>{TPrice.onlinePrice}</TableHead>
+                                                <TableHead className="w-[50px]">
+                                                    <Checkbox
+                                                        checked={isAllVisibleSelected}
+                                                        onCheckedChange={toggleAllForBulkUpdate}
+                                                    />
+                                                </TableHead>
+                                                <TableHead className="w-[35%]">{TPrice.product}</TableHead>
+                                                <TableHead className="text-center">{TPrice.costPrice}</TableHead>
+                                                <TableHead className="text-center">{TPrice.defaultPrice}</TableHead>
+                                                <TableHead className="text-center">{TSales.pos}</TableHead>
+                                                <TableHead className="text-center">{TSales.reseller}</TableHead>
+                                                <TableHead className="text-center">{TPrice.onlinePrice}</TableHead>
                                                 <TableHead className="w-[50px]"></TableHead>
                                             </TableRow>
                                         </TableHeader>
                                         <TableBody>
                                             {loading ? (
                                                  <TableRow>
-                                                    <TableCell colSpan={7} className="text-center h-24">Memuat...</TableCell>
+                                                    <TableCell colSpan={8} className="text-center h-24">Memuat...</TableCell>
                                                  </TableRow>
                                             ) : fields.length === 0 ? (
                                                 <TableRow>
-                                                    <TableCell colSpan={7} className="text-center h-48">
+                                                    <TableCell colSpan={8} className="text-center h-48">
                                                         <div className="flex flex-col items-center justify-center gap-4 text-muted-foreground">
                                                             <ShoppingBag className="h-16 w-16" />
                                                             <div className="text-center">
@@ -316,6 +405,12 @@ export default function PriceSettingsPage() {
                                                 <>
                                                     {groupedAndFilteredItems.simpleItems.map((field) => (
                                                         <TableRow key={field.id}>
+                                                            <TableCell>
+                                                                <Checkbox
+                                                                    checked={selectedItemsForBulkUpdate.has(field.id)}
+                                                                    onCheckedChange={() => toggleItemForBulkUpdate(field.id)}
+                                                                />
+                                                            </TableCell>
                                                              <TableCell>
                                                                 <div className="flex items-center gap-4">
                                                                     <Image src={field.imageUrl || 'https://placehold.co/40x40.png'} alt={field.name} width={40} height={40} className="rounded-sm" data-ai-hint="product image" />
@@ -335,8 +430,22 @@ export default function PriceSettingsPage() {
                                                      {groupedAndFilteredItems.groups.map(({ header, variants }) => (
                                                         <React.Fragment key={header.id}>
                                                             <TableRow className="bg-muted/20 hover:bg-muted/40">
-                                                                <TableCell>
-                                                                    <div className="flex items-center gap-4 font-semibold text-primary">
+                                                                 <TableCell>
+                                                                    <Checkbox
+                                                                        checked={variants.every(v => selectedItemsForBulkUpdate.has(v.id))}
+                                                                        onCheckedChange={(checked) => {
+                                                                            const newSet = new Set(selectedItemsForBulkUpdate);
+                                                                            if (checked) {
+                                                                                variants.forEach(v => newSet.add(v.id));
+                                                                            } else {
+                                                                                variants.forEach(v => newSet.delete(v.id));
+                                                                            }
+                                                                            setSelectedItemsForBulkUpdate(newSet);
+                                                                        }}
+                                                                    />
+                                                                 </TableCell>
+                                                                <TableCell className="font-semibold text-primary">
+                                                                    <div className="flex items-center gap-4">
                                                                         <Image src={header.imageUrl || 'https://placehold.co/40x40.png'} alt={header.name} width={40} height={40} className="rounded-sm" data-ai-hint="product image" />
                                                                         <div>
                                                                             <span className="text-sm">{header.name}</span>
@@ -348,6 +457,12 @@ export default function PriceSettingsPage() {
                                                             </TableRow>
                                                             {variants.map((field) => (
                                                                 <TableRow key={field.id} className="hover:bg-muted/50">
+                                                                    <TableCell>
+                                                                        <Checkbox
+                                                                            checked={selectedItemsForBulkUpdate.has(field.id)}
+                                                                            onCheckedChange={() => toggleItemForBulkUpdate(field.id)}
+                                                                        />
+                                                                    </TableCell>
                                                                     <TableCell>
                                                                         <div className="flex items-center gap-4 pl-4">
                                                                             <div className="flex h-10 w-10 items-center justify-center rounded-sm shrink-0">
@@ -399,6 +514,12 @@ export default function PriceSettingsPage() {
 const PriceRowFields = ({ control, index, onRemove }: { control: Control<z.infer<typeof formSchema>>, index: number, onRemove: () => void }) => {
     const { language } = useLanguage();
     const TPrice = translations[language].finance.priceSettingsPage;
+    
+    const getChannelIndex = (channel: string) => {
+        const prices = control.getValues(`items.${index}.channelPrices`);
+        return prices?.findIndex(p => p.channel === channel) ?? -1;
+    }
+
     return (
         <>
             <TableCell>
@@ -406,7 +527,7 @@ const PriceRowFields = ({ control, index, onRemove }: { control: Control<z.infer
                     control={control}
                     name={`items.${index}.costPrice`}
                     render={({ field: formField }) => (
-                        <FormItem><FormControl><Input type="number" placeholder={TPrice.costPrice} {...formField} value={formField.value ?? ''} className="h-8 w-24" /></FormControl><FormMessage/></FormItem>
+                        <FormItem><FormControl><Input type="number" placeholder={TPrice.costPrice} {...formField} value={formField.value ?? ''} className="h-8 w-24 text-center" /></FormControl><FormMessage/></FormItem>
                     )}
                 />
             </TableCell>
@@ -415,20 +536,18 @@ const PriceRowFields = ({ control, index, onRemove }: { control: Control<z.infer
                     control={control}
                     name={`items.${index}.price`}
                     render={({ field: formField }) => (
-                        <FormItem><FormControl><Input type="number" placeholder={TPrice.defaultPrice} {...formField} value={formField.value ?? ''} className="h-8 w-24" /></FormControl><FormMessage/></FormItem>
+                        <FormItem><FormControl><Input type="number" placeholder={TPrice.defaultPrice} {...formField} value={formField.value ?? ''} className="h-8 w-24 text-center" /></FormControl><FormMessage/></FormItem>
                     )}
                 />
             </TableCell>
-            {CHANNELS.map(channel => {
-                const fieldName = `items.${index}.channelPrices`;
-                const currentChannelPrices = useWatch({ control, name: fieldName })
-                const channelIndex = currentChannelPrices?.findIndex((cp: any) => cp.channel === channel);
+            {[ 'pos', 'reseller', 'shopee'].map(channel => {
+                const channelIndex = getChannelIndex(channel);
 
-                if (channelIndex === -1 || channelIndex === undefined) {
+                if (channelIndex === -1) {
                     return <TableCell key={channel}></TableCell>;
                 }
                 
-                const priceFieldName = `${fieldName}.${channelIndex}.price`;
+                const priceFieldName = `items.${index}.channelPrices.${channelIndex}.price`;
 
                 return (
                     <TableCell key={channel}>
@@ -438,7 +557,7 @@ const PriceRowFields = ({ control, index, onRemove }: { control: Control<z.infer
                             render={({ field: formField }) => (
                                 <FormItem>
                                     <FormControl>
-                                        <Input type="number" placeholder="0" {...formField} value={formField.value ?? ''} className="h-8 w-24" />
+                                        <Input type="number" placeholder="0" {...formField} value={formField.value ?? ''} className="h-8 w-24 text-center" />
                                     </FormControl>
                                     <FormMessage/>
                                 </FormItem>
@@ -455,3 +574,4 @@ const PriceRowFields = ({ control, index, onRemove }: { control: Control<z.infer
         </>
     )
 }
+

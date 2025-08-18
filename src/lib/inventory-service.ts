@@ -1,4 +1,5 @@
 
+
 'use server';
 
 import { db } from './db';
@@ -92,13 +93,13 @@ export async function fetchInventoryData() {
 
 export async function addProduct(itemData: any) {
     const addProductStmt = db.prepare(`
-        INSERT INTO products (name, category, sku, imageUrl, hasVariants, stock, price, costPrice, size)
-        VALUES (@name, @category, @sku, @imageUrl, @hasVariants, @stock, @price, @costPrice, @size)
+        INSERT INTO products (name, category, sku, imageUrl, hasVariants, stock, price, size)
+        VALUES (@name, @category, @sku, @imageUrl, @hasVariants, @stock, @price, @size)
     `);
     
     const addVariantStmt = db.prepare(`
-        INSERT INTO variants (productId, name, sku, price, costPrice, stock)
-        VALUES (@productId, @name, @sku, @price, @costPrice, @stock)
+        INSERT INTO variants (productId, name, sku, price, stock)
+        VALUES (@productId, @name, @sku, @price, @stock)
     `);
 
     const addHistoryStmt = db.prepare(`
@@ -117,7 +118,6 @@ export async function addProduct(itemData: any) {
             hasVariants: hasVariants ? 1 : 0,
             stock: hasVariants ? null : itemData.stock,
             price: hasVariants ? null : itemData.price,
-            costPrice: hasVariants ? null : itemData.costPrice,
             size: hasVariants ? null : itemData.size,
         });
         
@@ -130,7 +130,6 @@ export async function addProduct(itemData: any) {
                     name: variant.name,
                     sku: variant.sku || null,
                     price: variant.price,
-                    costPrice: variant.costPrice,
                     stock: variant.stock,
                 });
                 const variantId = variantResult.lastInsertRowid;
@@ -162,7 +161,7 @@ export async function addProduct(itemData: any) {
 
 export async function editProduct(itemId: string, itemData: any) {
     const updateProductStmt = db.prepare(`
-        UPDATE products SET name = @name, category = @category, sku = @sku, imageUrl = @imageUrl, hasVariants = @hasVariants, stock = @stock, price = @price, costPrice = @costPrice, size = @size
+        UPDATE products SET name = @name, category = @category, sku = @sku, imageUrl = @imageUrl, hasVariants = @hasVariants, stock = @stock, price = @price, size = @size
         WHERE id = @id
     `);
 
@@ -178,15 +177,14 @@ export async function editProduct(itemId: string, itemData: any) {
             hasVariants: hasVariants ? 1 : 0,
             stock: hasVariants ? null : itemData.stock,
             price: hasVariants ? null : itemData.price,
-            costPrice: hasVariants ? null : itemData.costPrice,
             size: hasVariants ? null : itemData.size,
         });
 
         if (hasVariants) {
             const upsertVariantStmt = db.prepare(`
-                INSERT INTO variants (id, productId, name, sku, price, costPrice, stock)
-                VALUES (@id, @productId, @name, @sku, @price, @costPrice, @stock)
-                ON CONFLICT(id) DO UPDATE SET name = excluded.name, sku = excluded.sku, price = excluded.price, costPrice = excluded.costPrice, stock = excluded.stock
+                INSERT INTO variants (id, productId, name, sku, price, stock)
+                VALUES (@id, @productId, @name, @sku, @price, @stock)
+                ON CONFLICT(id) DO UPDATE SET name = excluded.name, sku = excluded.sku, price = excluded.price, stock = excluded.stock
             `);
              const addHistoryStmt = db.prepare(`
                 INSERT INTO history (productId, variantId, change, reason, newStockLevel, date)
@@ -212,7 +210,6 @@ export async function editProduct(itemId: string, itemData: any) {
                     name: variant.name,
                     sku: variant.sku || null,
                     price: variant.price,
-                    costPrice: variant.costPrice,
                     stock: variant.stock
                 });
                 
@@ -386,7 +383,7 @@ export async function performSale(
                 throw new Error('Insufficient stock for variant.');
             }
             
-            let channelToCheck = isOnlineChannel ? 'online' : channel;
+            const channelToCheck = isOnlineChannel ? 'online' : channel;
             const channelPriceResult = getChannelPriceStmt.get({ productId: null, variantId: variant.id, channel: channelToCheck }) as { price: number } | undefined;
             priceAtSale = channelPriceResult?.price ?? variant.price;
             cogsAtSale = variant.costPrice || 0;
@@ -401,7 +398,7 @@ export async function performSale(
                     throw new Error('Insufficient stock for product.');
                 }
                 
-                let channelToCheck = isOnlineChannel ? 'online' : channel;
+                const channelToCheck = isOnlineChannel ? 'online' : channel;
                 const channelPriceResult = getChannelPriceStmt.get({ productId: product.id, variantId: null, channel: channelToCheck }) as { price: number } | undefined;
                 priceAtSale = channelPriceResult?.price ?? product.price!;
                 cogsAtSale = product.costPrice || 0;
@@ -518,7 +515,7 @@ export async function updatePrices(updates: { id: string, type: 'product' | 'var
         VALUES (@product_id, @variant_id, @channel, @price)
         ON CONFLICT(product_id, variant_id, channel) DO UPDATE SET price = excluded.price
     `);
-    const deleteChannelPriceStmt = db.prepare('DELETE FROM channel_prices WHERE product_id = ? AND variant_id = ? AND channel = ?');
+    const deleteChannelPriceStmt = db.prepare('DELETE FROM channel_prices WHERE product_id = @product_id AND variant_id = @variant_id AND channel = @channel');
     const getVariantProductIdStmt = db.prepare('SELECT productId FROM variants WHERE id = ?');
     const ONLINE_CHANNELS = ['shopee', 'tiktok', 'lazada'];
 
