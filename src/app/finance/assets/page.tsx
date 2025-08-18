@@ -317,16 +317,18 @@ export default function AssetReportPage() {
                                     <CartesianGrid vertical={false} />
                                     <YAxis tickLine={false} axisLine={false} tickFormatter={(value) => `Rp${(Number(value) / 1000000).toLocaleString()} Jt`} />
                                     <Tooltip cursor={false} content={<ChartTooltipContent formatter={(value) => formatCurrency(Number(value))} indicator="dot"/>} />
-                                    <Legend content={({ payload }) => (
-                                        <div className="flex gap-4 justify-center mt-4">
-                                            {payload?.map((entry) => (
-                                                <div key={entry.value} className="flex items-center gap-2">
-                                                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: entry.color }}></div>
-                                                    <span className="text-sm text-muted-foreground">{chartConfig[entry.dataKey as keyof typeof chartConfig]?.label}</span>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )} />
+                                    <div className="mt-4">
+                                        <Legend content={({ payload }) => (
+                                            <div className="flex gap-4 justify-center mt-4">
+                                                {payload?.map((entry) => (
+                                                    <div key={entry.value} className="flex items-center gap-2">
+                                                        <div className="w-3 h-3 rounded-full" style={{ backgroundColor: entry.color }}></div>
+                                                        <span className="text-sm text-muted-foreground">{chartConfig[entry.dataKey as keyof typeof chartConfig]?.label}</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )} />
+                                    </div>
                                     <Bar dataKey="fast" fill="var(--color-fast)" radius={4} />
                                     <Bar dataKey="slow" fill="var(--color-slow)" radius={4} />
                                     <Bar dataKey="nonMoving" fill="var(--color-nonMoving)" radius={4} />
@@ -335,11 +337,7 @@ export default function AssetReportPage() {
                         </CardContent>
                     </Card>
                     <Card>
-                        <CardHeader>
-                             <CardTitle className="text-xs">Klasifikasi Aset Varian</CardTitle>
-                             <CardDescription className="text-xs">Berdasarkan Nilai Stok Varian (30 Hari Terakhir)</CardDescription>
-                        </CardHeader>
-                        <CardContent>
+                        <CardContent className="pt-6">
                             <ChartContainer config={pieChartConfig} className="w-full h-40">
                                 <RechartsPieChart>
                                     <Tooltip cursor={false} content={<ChartTooltipContent formatter={(value) => formatCurrency(Number(value))} hideLabel />} />
