@@ -132,9 +132,11 @@ export default function GeneralJournalPage() {
                     // Filter for positive stock changes (stock in)
                     } else if (h.change > 0 && h.reason.toLowerCase().includes('stock in')) {
                          const value = h.change * (costPrice || 0);
-                         const description = `Stok Masuk: ${name} (${h.change}x)`;
-                         entries.push({ date: adjustmentDate, description, account: 'Persediaan Barang', debit: value, type: 'stock_in'});
-                         entries.push({ date: adjustmentDate, description, account: 'Kas / Utang Usaha', credit: value, type: 'stock_in'});
+                         if (value > 0) {
+                            const description = `Stok Masuk: ${name} (${h.change}x)`;
+                            entries.push({ date: adjustmentDate, description, account: 'Persediaan Barang', debit: value, type: 'stock_in'});
+                            entries.push({ date: adjustmentDate, description, account: 'Kas / Utang Usaha', credit: value, type: 'stock_in'});
+                         }
                     }
                 });
             }
