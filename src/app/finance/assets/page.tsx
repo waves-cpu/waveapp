@@ -307,11 +307,7 @@ export default function AssetReportPage() {
 
                 <div className="grid md:grid-cols-2 gap-4 mb-4">
                     <Card>
-                        <CardHeader>
-                            <CardTitle className="text-xs">{TAsset.chartTitle}</CardTitle>
-                            <CardDescription className="text-xs">Berdasarkan Produk Induk</CardDescription>
-                        </CardHeader>
-                        <CardContent>
+                        <CardContent className="pt-6">
                             <ChartContainer config={chartConfig} className="w-full h-40">
                                 <RechartsBarChart accessibilityLayer data={chartData} margin={{ top: 20, left: 12, right: 12 }}>
                                     <CartesianGrid vertical={false} />
