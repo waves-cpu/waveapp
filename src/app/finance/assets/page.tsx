@@ -66,7 +66,7 @@ const ProductListTable = ({ products, title, icon: Icon }: { products: RankedAss
     const t = translations[language].finance.assetReportPage;
 
     return (
-        <Card className="flex flex-col">
+        <Card className="flex flex-col flex-1 min-w-[300px]">
             <CardHeader className="flex flex-row items-center gap-2 space-y-0 pb-2">
                 <Icon className="h-5 w-5" />
                 <CardTitle className="text-sm font-medium">{title}</CardTitle>
@@ -206,7 +206,7 @@ export default function AssetReportPage() {
             nonMovingProducts: non.sort((a,b) => b.stockValue - a.stockValue).slice(0, 10),
             topSellingVariants: sortedVariantSales,
         };
-    }, [items, allSales, TAsset]);
+    }, [items, allSales]);
 
     const chartData = [
         {
@@ -350,7 +350,7 @@ export default function AssetReportPage() {
                 </div>
 
 
-                <div className="grid md:grid-cols-1 lg:grid-cols-3 gap-4">
+                <div className="flex flex-wrap gap-4">
                     <ProductListTable products={fastMovingProducts} title={TAsset.topFastMoving} icon={TrendingUp} />
                     <ProductListTable products={slowMovingProducts} title={TAsset.topSlowMoving} icon={Hourglass} />
                     <ProductListTable products={nonMovingProducts} title={TAsset.topNonMoving} icon={TrendingDown} />
@@ -359,5 +359,3 @@ export default function AssetReportPage() {
         </AppLayout>
     );
 }
-
-    
