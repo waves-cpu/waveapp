@@ -214,42 +214,49 @@ export default function PriceSettingsPage() {
     
     const handleBulkUpdate = () => {
         if (selectedItemsForBulkUpdate.size === 0 || bulkUpdateValue === '') return;
-
-        const currentValues = form.getValues('items');
+    
         const numericValue = parseFloat(bulkUpdateValue);
-
-        const updatedItems = currentValues.map(item => {
-            if (selectedItemsForBulkUpdate.has(item.id)) {
-                let updatedItem = { ...item }; // Shallow copy is enough for top-level properties
-
+    
+        if (isNaN(numericValue)) {
+            toast({ title: "Nilai tidak valid", description: "Harap masukkan angka yang valid.", variant: 'destructive' });
+            return;
+        }
+    
+        fields.forEach((field, index) => {
+            if (selectedItemsForBulkUpdate.has(field.id)) {
                 if (bulkUpdateChannel === 'costPrice') {
-                    updatedItem.costPrice = numericValue;
+                    form.setValue(`items.${index}.costPrice`, numericValue, { shouldDirty: true });
                 } else if (bulkUpdateChannel === 'price') {
-                    updatedItem.price = numericValue;
+                    form.setValue(`items.${index}.price`, numericValue, { shouldDirty: true });
                 } else {
-                    // For channel prices, we need to create a new array to ensure change detection
-                    let newChannelPrices = [...(item.channelPrices || CHANNELS.map(ch => ({ channel: ch, price: undefined })))];
+                    const currentChannelPrices = form.getValues(`items.${index}.channelPrices`) || [];
+                    
+                    let newChannelPrices = Array.isArray(currentChannelPrices) 
+                        ? [...currentChannelPrices] 
+                        : CHANNELS.map(ch => ({ channel: ch, price: undefined }));
 
                     if (bulkUpdateChannel === 'online') {
-                        newChannelPrices = newChannelPrices.map(cp => 
-                            ONLINE_CHANNELS.includes(cp.channel) ? { ...cp, price: numericValue } : cp
-                        );
-                    } else { // 'pos' or 'reseller'
-                        const channelIndex = newChannelPrices.findIndex(cp => cp.channel === bulkUpdateChannel);
-                        if (channelIndex > -1) {
-                            newChannelPrices[channelIndex] = { ...newChannelPrices[channelIndex], price: numericValue };
+                        ONLINE_CHANNELS.forEach(onlineCh => {
+                            const idx = newChannelPrices.findIndex(cp => cp.channel === onlineCh);
+                            if (idx > -1) {
+                                newChannelPrices[idx] = { ...newChannelPrices[idx], price: numericValue };
+                            } else {
+                                newChannelPrices.push({ channel: onlineCh, price: numericValue });
+                            }
+                        });
+                    } else { // pos or reseller
+                        const idx = newChannelPrices.findIndex(cp => cp.channel === bulkUpdateChannel);
+                        if (idx > -1) {
+                            newChannelPrices[idx] = { ...newChannelPrices[idx], price: numericValue };
                         } else {
                             newChannelPrices.push({ channel: bulkUpdateChannel, price: numericValue });
                         }
                     }
-                    updatedItem.channelPrices = newChannelPrices;
+                    form.setValue(`items.${index}.channelPrices`, newChannelPrices, { shouldDirty: true });
                 }
-                return updatedItem;
             }
-            return item;
         });
-
-        replace(updatedItems);
+    
         toast({ title: "Update Massal Diterapkan", description: `Harga untuk ${selectedItemsForBulkUpdate.size} item telah diperbarui di formulir.` });
     };
 
@@ -544,6 +551,8 @@ const PriceRowFields = ({ control, index, onRemove }: { control: Control<z.infer
             : channelIndex;
         
         if (effectiveChannelIndex === -1) {
+             // If channel doesn't exist in the array, render an empty cell.
+             // This can happen if an item is added before the channel price structure is fully initialized.
              return <TableCell key={channel}></TableCell>;
         }
 
@@ -598,4 +607,3 @@ const PriceRowFields = ({ control, index, onRemove }: { control: Control<z.infer
         </>
     )
 }
-
