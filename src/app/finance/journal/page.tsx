@@ -178,9 +178,17 @@ export default function GeneralJournalPage() {
     return (
         <AppLayout>
             <main className="flex-1 p-4 md:p-10">
-                <div className="flex items-center gap-4 mb-6">
-                    <SidebarTrigger className="md:hidden" />
-                    <h1 className="text-lg font-bold">{t.finance.generalJournal}</h1>
+                <div className="flex items-center justify-between gap-4 mb-6">
+                    <div className="flex items-center gap-4">
+                        <SidebarTrigger className="md:hidden" />
+                        <h1 className="text-lg font-bold">{t.finance.generalJournal}</h1>
+                    </div>
+                    <Link href="/finance/journal/add">
+                        <Button variant="outline">
+                            <PlusCircle className="mr-2 h-4 w-4" />
+                            Tambah Entri
+                        </Button>
+                    </Link>
                 </div>
 
                 <Card>
@@ -191,12 +199,6 @@ export default function GeneralJournalPage() {
                                 <CardDescription className="text-xs">Catatan kronologis semua transaksi keuangan.</CardDescription>
                             </div>
                             <div className="flex flex-col md:flex-row gap-2">
-                                 <Link href="/finance/journal/add">
-                                    <Button variant="outline">
-                                        <PlusCircle className="mr-2 h-4 w-4" />
-                                        Tambah Entri
-                                    </Button>
-                                </Link>
                                 <Select value={transactionType} onValueChange={setTransactionType}>
                                     <SelectTrigger className="w-full md:w-[180px]">
                                         <SelectValue placeholder="Jenis Transaksi" />
