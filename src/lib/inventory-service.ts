@@ -1,9 +1,8 @@
 
-
 'use server';
 
 import { db } from './db';
-import type { InventoryItem, AdjustmentHistory, InventoryItemVariant, Sale, Reseller, ChannelPrice } from '@/types';
+import type { InventoryItem, AdjustmentHistory, InventoryItemVariant, Sale, Reseller, ChannelPrice, ManualJournalEntry } from '@/types';
 
 // Settings Functions
 export async function saveSetting(key: string, value: any) {
@@ -17,6 +16,28 @@ export async function getSetting<T>(key: string): Promise<T | null> {
         return JSON.parse(row.value) as T;
     }
     return null;
+}
+
+// Manual Journal Entry Functions
+export async function addManualJournalEntry(entry: Omit<ManualJournalEntry, 'id' | 'type'>) {
+    db.prepare(`
+        INSERT INTO manual_journal_entries (date, description, debitAccount, creditAccount, amount)
+        VALUES (@date, @description, @debitAccount, @creditAccount, @amount)
+    `).run({
+        date: entry.date,
+        description: entry.description,
+        debitAccount: entry.debitAccount,
+        creditAccount: entry.creditAccount,
+        amount: entry.amount
+    });
+}
+
+export async function fetchManualJournalEntries(): Promise<ManualJournalEntry[]> {
+    const entries = db.prepare('SELECT * FROM manual_journal_entries ORDER BY date DESC').all() as any[];
+    return entries.map(e => ({
+        ...e,
+        id: e.id.toString(),
+    }));
 }
 
 
@@ -289,7 +310,7 @@ export async function adjustStock(itemId: string, change: number, reason: string
     if (change === 0) return;
 
     db.transaction(() => {
-        const variant = db.prepare('SELECT * FROM variants WHERE id = ?').get(itemId) as (InventoryItemVariant & {productId: number}) | undefined;
+        const variant = db.prepare('SELECT * FROM variants WHERE id = ?').get(itemId) as (InventoryItemVariant & {id: number, productId: number}) | undefined;
 
         if (variant) {
             const newStockLevel = variant.stock + change;
@@ -368,11 +389,11 @@ export async function performSale(
     const getProductStmt = db.prepare('SELECT * FROM products WHERE sku = ? AND hasVariants = 0');
     const getVariantStmt = db.prepare('SELECT * FROM variants WHERE sku = ?');
     const getChannelPriceStmt = db.prepare('SELECT price FROM channel_prices WHERE (product_id = @productId OR variant_id = @variantId) AND channel = @channel');
+    const ONLINE_CHANNELS = ['shopee', 'tiktok', 'lazada'];
     
     db.transaction(() => {
         const saleDate = options?.saleDate || new Date();
         const saleReason = `Sale (${channel})` + (options?.resellerName ? ` - ${options.resellerName}` : '');
-        const isOnlineChannel = ['shopee', 'tiktok', 'lazada'].includes(channel);
 
         let priceAtSale;
         let cogsAtSale;
@@ -383,7 +404,9 @@ export async function performSale(
                 throw new Error('Insufficient stock for variant.');
             }
             
+            const isOnlineChannel = ONLINE_CHANNELS.includes(channel);
             const channelToCheck = isOnlineChannel ? 'online' : channel;
+            
             const channelPriceResult = getChannelPriceStmt.get({ productId: null, variantId: variant.id, channel: channelToCheck }) as { price: number } | undefined;
             priceAtSale = channelPriceResult?.price ?? variant.price;
             cogsAtSale = variant.costPrice || 0;
@@ -398,7 +421,9 @@ export async function performSale(
                     throw new Error('Insufficient stock for product.');
                 }
                 
+                const isOnlineChannel = ONLINE_CHANNELS.includes(channel);
                 const channelToCheck = isOnlineChannel ? 'online' : channel;
+
                 const channelPriceResult = getChannelPriceStmt.get({ productId: product.id, variantId: null, channel: channelToCheck }) as { price: number } | undefined;
                 priceAtSale = channelPriceResult?.price ?? product.price!;
                 cogsAtSale = product.costPrice || 0;

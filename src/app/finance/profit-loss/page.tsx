@@ -76,7 +76,7 @@ function ProfitLossSkeleton() {
 export default function ProfitLossPage() {
     const { language } = useLanguage();
     const t = translations[language];
-    const { allSales, loading } = useInventory();
+    const { allSales, manualJournalEntries, loading } = useInventory();
     
     const [dateRange, setDateRange] = useState<DateRange | undefined>({
       from: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
@@ -84,30 +84,40 @@ export default function ProfitLossPage() {
     });
 
     const financialData = useMemo(() => {
-        const salesInDateRange = allSales.filter(sale => {
+        const isInDateRange = (date: Date) => {
             if (!dateRange || !dateRange.from) return true;
-            const saleDate = new Date(sale.saleDate);
             const toDate = dateRange.to || dateRange.from;
-            return isWithinInterval(saleDate, { start: startOfDay(dateRange.from), end: endOfDay(toDate) });
-        });
-        
+            return isWithinInterval(date, { start: startOfDay(dateRange.from), end: endOfDay(toDate) });
+        };
+
+        const salesInDateRange = allSales.filter(sale => isInDateRange(new Date(sale.saleDate)));
+        const manualEntriesInDateRange = manualJournalEntries.filter(entry => isInDateRange(new Date(entry.date)));
+
         const totalRevenue = salesInDateRange.reduce((sum, sale) => sum + (sale.priceAtSale * sale.quantity), 0);
         const totalCogs = salesInDateRange.reduce((sum, sale) => sum + ((sale.cogsAtSale || 0) * sale.quantity), 0);
         const grossProfit = totalRevenue - totalCogs;
 
-        // Placeholder for operational expenses
-        const operationalExpenses = 0; 
-        const netProfit = grossProfit - operationalExpenses;
+        const operationalExpenses = manualEntriesInDateRange
+            .filter(entry => entry.debitAccount.toLowerCase().includes('biaya') || entry.debitAccount.toLowerCase().includes('beban'))
+            .reduce((sum, entry) => sum + entry.amount, 0);
+
+        const otherIncome = manualEntriesInDateRange
+            .filter(entry => entry.creditAccount.toLowerCase().includes('pendapatan'))
+            .reduce((sum, entry) => sum + entry.amount, 0);
+
+
+        const netProfit = grossProfit + otherIncome - operationalExpenses;
 
         return {
             totalRevenue,
             totalCogs,
             grossProfit,
             operationalExpenses,
-            netProfit
+            netProfit,
+            otherIncome
         };
 
-    }, [allSales, dateRange]);
+    }, [allSales, manualJournalEntries, dateRange]);
 
 
     if (loading) {
@@ -194,7 +204,7 @@ export default function ProfitLossPage() {
                         </CardHeader>
                         <CardContent>
                             <div className="text-2xl font-bold">{formatCurrency(financialData.operationalExpenses)}</div>
-                             <p className="text-xs text-muted-foreground">Fitur input beban segera hadir</p>
+                             <p className="text-xs text-muted-foreground">Dari entri jurnal manual</p>
                         </CardContent>
                     </Card>
                      <Card>
@@ -239,9 +249,13 @@ export default function ProfitLossPage() {
                                         <TableCell className="pl-8">Total Pendapatan Penjualan</TableCell>
                                         <TableCell className="text-right font-mono">{formatCurrency(financialData.totalRevenue)}</TableCell>
                                     </TableRow>
+                                    <TableRow>
+                                        <TableCell className="pl-8">Pendapatan Lain-lain</TableCell>
+                                        <TableCell className="text-right font-mono">{formatCurrency(financialData.otherIncome)}</TableCell>
+                                    </TableRow>
                                     <TableRow className="font-semibold bg-muted/50">
                                         <TableCell>Total Pendapatan</TableCell>
-                                        <TableCell className="text-right font-mono">{formatCurrency(financialData.totalRevenue)}</TableCell>
+                                        <TableCell className="text-right font-mono">{formatCurrency(financialData.totalRevenue + financialData.otherIncome)}</TableCell>
                                     </TableRow>
                                     
                                     <TableRow className="font-semibold">
@@ -282,3 +296,4 @@ export default function ProfitLossPage() {
         </AppLayout>
     );
 }
+

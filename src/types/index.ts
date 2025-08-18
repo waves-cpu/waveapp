@@ -64,4 +64,14 @@ export interface Reseller {
     address?: string;
 }
 
+export interface ManualJournalEntry {
+    id: string;
+    date: string; // ISO string
+    description: string;
+    debitAccount: string;
+    creditAccount: string;
+    amount: number;
+    type: 'manual';
+}
+
     

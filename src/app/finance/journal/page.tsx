@@ -14,12 +14,14 @@ import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Calendar as CalendarIcon, FileText } from 'lucide-react';
+import { Calendar as CalendarIcon, FileText, PlusCircle } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import { format, isWithinInterval, startOfDay, endOfDay } from "date-fns";
 import { DateRange } from "react-day-picker";
 import { id as localeId } from 'date-fns/locale';
 import { Skeleton } from "@/components/ui/skeleton";
+import Link from "next/link";
+import type { ManualJournalEntry } from "@/types";
 
 type JournalEntry = {
     date: Date;
@@ -27,7 +29,7 @@ type JournalEntry = {
     account: string;
     debit?: number;
     credit?: number;
-    type: 'sale' | 'stock_in' | 'adjustment' | 'capital_adjustment';
+    type: 'sale' | 'stock_in' | 'adjustment' | 'capital_adjustment' | 'manual';
 };
 
 function GeneralJournalSkeleton() {
@@ -71,7 +73,7 @@ function GeneralJournalSkeleton() {
 export default function GeneralJournalPage() {
     const { language } = useLanguage();
     const t = translations[language];
-    const { allSales, items: allProducts, loading } = useInventory();
+    const { allSales, items: allProducts, manualJournalEntries, loading } = useInventory();
 
     const [dateRange, setDateRange] = useState<DateRange | undefined>({
       from: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
@@ -81,6 +83,14 @@ export default function GeneralJournalPage() {
 
     const journalEntries = useMemo((): JournalEntry[] => {
         const entries: JournalEntry[] = [];
+
+        // Manual entries
+        manualJournalEntries.forEach(entry => {
+            const entryDate = new Date(entry.date);
+            entries.push({ date: entryDate, description: entry.description, account: entry.debitAccount, debit: entry.amount, type: 'manual'});
+            entries.push({ date: entryDate, description: entry.description, account: entry.creditAccount, credit: entry.amount, type: 'manual'});
+        });
+
 
         // Sales entries
         allSales.forEach(sale => {
@@ -134,7 +144,7 @@ export default function GeneralJournalPage() {
         });
         
         return entries.sort((a,b) => b.date.getTime() - a.date.getTime());
-    }, [allSales, allProducts]);
+    }, [allSales, allProducts, manualJournalEntries]);
 
     const filteredEntries = useMemo(() => {
         return journalEntries.filter(entry => {
@@ -181,6 +191,12 @@ export default function GeneralJournalPage() {
                                 <CardDescription className="text-xs">Catatan kronologis semua transaksi keuangan.</CardDescription>
                             </div>
                             <div className="flex flex-col md:flex-row gap-2">
+                                 <Link href="/finance/journal/add">
+                                    <Button variant="outline">
+                                        <PlusCircle className="mr-2 h-4 w-4" />
+                                        Tambah Entri
+                                    </Button>
+                                </Link>
                                 <Select value={transactionType} onValueChange={setTransactionType}>
                                     <SelectTrigger className="w-full md:w-[180px]">
                                         <SelectValue placeholder="Jenis Transaksi" />
@@ -190,6 +206,7 @@ export default function GeneralJournalPage() {
                                         <SelectItem value="sale">Penjualan</SelectItem>
                                         <SelectItem value="stock_in">Stok Masuk</SelectItem>
                                         <SelectItem value="capital_adjustment">Penyesuaian Modal</SelectItem>
+                                        <SelectItem value="manual">Manual</SelectItem>
                                     </SelectContent>
                                 </Select>
                                  <Popover>
@@ -272,4 +289,3 @@ export default function GeneralJournalPage() {
         </AppLayout>
     );
 }
-

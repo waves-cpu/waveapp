@@ -181,6 +181,16 @@ const createSchema = () => {
         key TEXT PRIMARY KEY,
         value TEXT NOT NULL
     );
+
+    CREATE TABLE IF NOT EXISTS manual_journal_entries (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        date TEXT NOT NULL,
+        description TEXT NOT NULL,
+        debitAccount TEXT NOT NULL,
+        creditAccount TEXT NOT NULL,
+        amount REAL NOT NULL,
+        type TEXT NOT NULL DEFAULT 'manual'
+    );
   `);
 };
 
