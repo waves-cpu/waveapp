@@ -214,32 +214,38 @@ export default function PriceSettingsPage() {
 
 
     const handleBulkUpdate = () => {
-        if(selectedItemsForBulkUpdate.size === 0 || bulkUpdateValue === '') return;
-
-        const updatedItems = [...fields]; // Create a mutable copy
+        if (selectedItemsForBulkUpdate.size === 0 || bulkUpdateValue === '') return;
+    
+        // Get all items from the form, not just the filtered `fields`
+        const allItems = form.getValues('items');
         const numericValue = parseFloat(bulkUpdateValue);
-
-        selectedItemsForBulkUpdate.forEach(itemId => {
-            const itemIndex = updatedItems.findIndex(item => item.id === itemId);
-            if (itemIndex > -1) {
-                if(bulkUpdateChannel === 'costPrice') {
-                    updatedItems[itemIndex].costPrice = numericValue;
+    
+        const updatedItems = allItems.map(item => {
+            // Check if the current item's ID is in the selection set
+            if (selectedItemsForBulkUpdate.has(item.id)) {
+                const updatedItem = { ...item };
+                
+                if (bulkUpdateChannel === 'costPrice') {
+                    updatedItem.costPrice = numericValue;
                 } else if (bulkUpdateChannel === 'price') {
-                    updatedItems[itemIndex].price = numericValue;
+                    updatedItem.price = numericValue;
                 } else if (bulkUpdateChannel === 'online') {
-                    updatedItems[itemIndex].channelPrices = updatedItems[itemIndex].channelPrices?.map(cp => 
+                    updatedItem.channelPrices = updatedItem.channelPrices?.map(cp => 
                         ONLINE_CHANNELS.includes(cp.channel) ? { ...cp, price: numericValue } : cp
                     );
                 } else {
-                     updatedItems[itemIndex].channelPrices = updatedItems[itemIndex].channelPrices?.map(cp => 
+                    updatedItem.channelPrices = updatedItem.channelPrices?.map(cp => 
                         cp.channel === bulkUpdateChannel ? { ...cp, price: numericValue } : cp
                     );
                 }
+                return updatedItem;
             }
+            // If not selected, return the item as is
+            return item;
         });
-
+    
         replace(updatedItems);
-        toast({ title: "Update Massal Diterapkan", description: `Harga untuk ${selectedItemsForBulkUpdate.size} item telah diperbarui di formulir.`});
+        toast({ title: "Update Massal Diterapkan", description: `Harga untuk ${selectedItemsForBulkUpdate.size} item telah diperbarui di formulir.` });
     };
 
     const toggleAllForBulkUpdate = (checked: boolean) => {
