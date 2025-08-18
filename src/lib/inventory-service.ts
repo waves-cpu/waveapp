@@ -378,7 +378,9 @@ export async function performSale(
         const isOnlineChannel = ['shopee', 'tiktok', 'lazada'].includes(channel);
 
         let priceAtSale;
-        const variant = getVariantStmt.get(sku) as (InventoryItemVariant & { id: number, productId: number }) | undefined;
+        let cogsAtSale;
+        const variant = getVariantStmt.get(sku) as (InventoryItemVariant & { id: number, productId: number, costPrice?: number }) | undefined;
+        
         if (variant) {
             if (variant.stock < quantity) {
                 throw new Error('Insufficient stock for variant.');
@@ -387,12 +389,13 @@ export async function performSale(
             let channelToCheck = isOnlineChannel ? 'online' : channel;
             const channelPriceResult = getChannelPriceStmt.get({ productId: null, variantId: variant.id, channel: channelToCheck }) as { price: number } | undefined;
             priceAtSale = channelPriceResult?.price ?? variant.price;
+            cogsAtSale = variant.costPrice || 0;
 
             adjustStock(variant.id.toString(), -quantity, saleReason);
-            db.prepare('INSERT INTO sales (transactionId, paymentMethod, resellerName, productId, variantId, channel, quantity, priceAtSale, saleDate) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)')
-              .run(options?.transactionId, options?.paymentMethod, options?.resellerName, variant.productId, variant.id, channel, quantity, priceAtSale, saleDate.toISOString());
+            db.prepare('INSERT INTO sales (transactionId, paymentMethod, resellerName, productId, variantId, channel, quantity, priceAtSale, cogsAtSale, saleDate) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
+              .run(options?.transactionId, options?.paymentMethod, options?.resellerName, variant.productId, variant.id, channel, quantity, priceAtSale, cogsAtSale, saleDate.toISOString());
         } else {
-            const product = getProductStmt.get(sku) as (InventoryItem & { id: number }) | undefined;
+            const product = getProductStmt.get(sku) as (InventoryItem & { id: number, costPrice?: number }) | undefined;
             if (product) {
                  if (product.stock! < quantity) {
                     throw new Error('Insufficient stock for product.');
@@ -401,10 +404,11 @@ export async function performSale(
                 let channelToCheck = isOnlineChannel ? 'online' : channel;
                 const channelPriceResult = getChannelPriceStmt.get({ productId: product.id, variantId: null, channel: channelToCheck }) as { price: number } | undefined;
                 priceAtSale = channelPriceResult?.price ?? product.price!;
+                cogsAtSale = product.costPrice || 0;
                 
                 adjustStock(product.id.toString(), -quantity, saleReason);
-                db.prepare('INSERT INTO sales (transactionId, paymentMethod, resellerName, productId, variantId, channel, quantity, priceAtSale, saleDate) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)')
-                  .run(options?.transactionId, options?.paymentMethod, options?.resellerName, product.id, null, channel, quantity, priceAtSale, saleDate.toISOString());
+                db.prepare('INSERT INTO sales (transactionId, paymentMethod, resellerName, productId, variantId, channel, quantity, priceAtSale, cogsAtSale, saleDate) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
+                  .run(options?.transactionId, options?.paymentMethod, options?.resellerName, product.id, null, channel, quantity, priceAtSale, cogsAtSale, saleDate.toISOString());
             } else {
                 throw new Error('Product or variant with specified SKU not found or has variants.');
             }
@@ -415,7 +419,7 @@ export async function performSale(
 export async function fetchAllSales(): Promise<Sale[]> {
      const salesQuery = db.prepare(`
         SELECT 
-            s.id, s.transactionId, s.paymentMethod, s.resellerName, s.productId, s.variantId, s.channel, s.quantity, s.priceAtSale, s.saleDate,
+            s.id, s.transactionId, s.paymentMethod, s.resellerName, s.productId, s.variantId, s.channel, s.quantity, s.priceAtSale, s.cogsAtSale, s.saleDate,
             p.name as productName,
             v.name as variantName,
             COALESCE(v.sku, p.sku) as sku
@@ -437,7 +441,7 @@ export async function getSalesByDate(channel: string, date: Date): Promise<Sale[
 
     const salesQuery = db.prepare(`
         SELECT 
-            s.id, s.transactionId, s.paymentMethod, s.resellerName, s.productId, s.variantId, s.channel, s.quantity, s.priceAtSale, s.saleDate,
+            s.id, s.transactionId, s.paymentMethod, s.resellerName, s.productId, s.variantId, s.channel, s.quantity, s.priceAtSale, s.cogsAtSale, s.saleDate,
             p.name as productName,
             v.name as variantName,
             COALESCE(v.sku, p.sku) as sku

@@ -88,15 +88,6 @@ export default function FinancialStatementsPage() {
         productProfitability,
         totalUnitsSold
     } = useMemo(() => {
-        const productMap = new Map<string, InventoryItem | InventoryItemVariant>();
-        items.forEach(item => {
-            if (item.variants && item.variants.length > 0) {
-                item.variants.forEach(v => productMap.set(v.id.toString(), v));
-            } else {
-                productMap.set(item.id.toString(), item);
-            }
-        });
-
         const salesInDateRange = allSales.filter(sale => {
             if (!dateRange || !dateRange.from) return true;
             const saleDate = new Date(sale.saleDate);
@@ -112,10 +103,9 @@ export default function FinancialStatementsPage() {
 
         salesInDateRange.forEach(sale => {
             const soldItemId = sale.variantId || sale.productId;
-            const product = productMap.get(soldItemId);
             
             const saleRevenue = sale.priceAtSale * sale.quantity;
-            const saleCogs = (product?.costPrice || 0) * sale.quantity;
+            const saleCogs = (sale.cogsAtSale || 0) * sale.quantity;
             
             revenue += saleRevenue;
             cogs += saleCogs;
@@ -156,7 +146,7 @@ export default function FinancialStatementsPage() {
             productProfitability: Array.from(profitabilityMap.values()).sort((a,b) => b.grossProfit - a.grossProfit),
         };
 
-    }, [items, allSales, dateRange]);
+    }, [allSales, dateRange]);
 
 
     const pieChartConfig = useMemo(() => {

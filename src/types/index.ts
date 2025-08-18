@@ -50,6 +50,7 @@ export interface Sale {
   channel: string;
   quantity: number;
   priceAtSale: number;
+  cogsAtSale?: number;
   saleDate: string; // ISO String
   productName: string;
   variantName?: string;
@@ -62,3 +63,5 @@ export interface Reseller {
     phone?: string;
     address?: string;
 }
+
+    

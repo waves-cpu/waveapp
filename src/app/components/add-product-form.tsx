@@ -280,7 +280,7 @@ export function AddProductForm({ existingItem }: AddProductFormProps) {
                              <Table className="table-fixed border">
                                 <TableHeader>
                                     <TableRow>
-                                        <TableHead className="w-[25%] border-r">{t.inventoryTable.name}</TableHead>
+                                        <TableHead className="w-[30%] border-r">{t.inventoryTable.name}</TableHead>
                                         <TableHead className="w-[25%] border-r">SKU</TableHead>
                                         <TableHead className="w-[20%] border-r">{t.finance.priceSettingsPage.costPrice}</TableHead>
                                         <TableHead className="w-[20%] border-r">{t.inventoryTable.price}</TableHead>
