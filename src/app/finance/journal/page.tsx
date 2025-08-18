@@ -29,7 +29,7 @@ type JournalEntry = {
     account: string;
     debit?: number;
     credit?: number;
-    type: 'sale' | 'stock_in' | 'adjustment' | 'capital_adjustment' | 'manual';
+    type: 'sale' | 'stock_in' | 'capital_adjustment' | 'manual';
 };
 
 function GeneralJournalSkeleton() {
@@ -103,41 +103,38 @@ export default function GeneralJournalPage() {
             const cogs = (sale.cogsAtSale || 0) * sale.quantity;
             const description = `Penjualan ${sale.productName} (${sale.quantity}x) - ${sale.channel}`;
             
-            // 1. Catat Piutang/Kas (Debit) dan Pendapatan (Kredit)
             entries.push({ date: saleDate, description, account: 'Piutang Usaha / Kas', debit: revenue, type: 'sale' });
             entries.push({ date: saleDate, description, account: 'Pendapatan Penjualan', credit: revenue, type: 'sale' });
 
-            // 2. Catat HPP (Debit) dan Persediaan (Kredit)
             if (cogs > 0) {
                 entries.push({ date: saleDate, description, account: 'Beban Pokok Penjualan', debit: cogs, type: 'sale' });
                 entries.push({ date: saleDate, description, account: 'Persediaan Barang', credit: cogs, type: 'sale' });
             }
         });
 
-        // Stock adjustments and capital adjustments
-        allProducts.forEach(product => {
-            const processHistories = (histories: any[] | undefined, name: string, costPrice?: number) => {
-                 if(!histories) return;
-                 histories.forEach(h => {
-                    const adjustmentDate = new Date(h.date);
-                    
-                    if (h.change === 0 && h.reason.startsWith('Penyesuaian Modal (HPP)')) {
-                        const value = h.newStockLevel; 
-                        const description = `Penyesuaian Modal Persediaan: ${name}`;
-                        entries.push({ date: adjustmentDate, description, account: 'Persediaan Barang', debit: value, type: 'capital_adjustment' });
-                        entries.push({ date: adjustmentDate, description, account: 'Penyesuaian Modal (Persediaan)', credit: value, type: 'capital_adjustment' });
+        const processHistories = (histories: any[] | undefined, name: string, costPrice?: number) => {
+            if(!histories) return;
+            histories.forEach(h => {
+               const adjustmentDate = new Date(h.date);
+               
+               if (h.change === 0 && h.reason.startsWith('Penyesuaian Modal (HPP)')) {
+                   const value = h.newStockLevel; 
+                   const description = `Penyesuaian Modal Persediaan: ${name}`;
+                   entries.push({ date: adjustmentDate, description, account: 'Persediaan Barang', debit: value, type: 'capital_adjustment' });
+                   entries.push({ date: adjustmentDate, description, account: 'Penyesuaian Modal (Persediaan)', credit: value, type: 'capital_adjustment' });
 
-                    } else if (h.change > 0 && h.reason.toLowerCase().includes('stock in')) {
-                         const value = h.change * (costPrice || 0);
-                         if (value > 0) {
-                            const description = `Stok Masuk: ${name} (${h.change}x)`;
-                            entries.push({ date: adjustmentDate, description, account: 'Persediaan Barang', debit: value, type: 'stock_in'});
-                            entries.push({ date: adjustmentDate, description, account: 'Kas / Utang Usaha', credit: value, type: 'stock_in'});
-                         }
+               } else if (h.change > 0 && h.reason.toLowerCase().includes('stock in')) {
+                    const value = h.change * (costPrice || 0);
+                    if (value > 0) {
+                       const description = `Stok Masuk: ${name} (${h.change}x)`;
+                       entries.push({ date: adjustmentDate, description, account: 'Persediaan Barang', debit: value, type: 'stock_in'});
+                       entries.push({ date: adjustmentDate, description, account: 'Kas / Utang Usaha', credit: value, type: 'stock_in'});
                     }
-                });
-            }
-           
+               }
+           });
+        }
+
+        allProducts.forEach(product => {
             if (product.variants && product.variants.length > 0) {
                 product.variants.forEach(v => processHistories(v.history, `${product.name} - ${v.name}`, v.costPrice))
             } else {
