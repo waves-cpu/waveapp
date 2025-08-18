@@ -85,7 +85,7 @@ const ProductListTable = ({ products, title, icon: Icon }: { products: RankedAss
                             {products.length > 0 ? products.map(product => (
                                 <TableRow key={product.id}>
                                     <TableCell className="font-medium text-xs px-4 py-2">
-                                        <div className="truncate w-40">{product.name}</div>
+                                        <div>{product.name}</div>
                                     </TableCell>
                                     <TableCell className="text-center px-2 py-2 text-xs">{product.salesCount}</TableCell>
                                     <TableCell className="text-right px-4 py-2 text-xs">{formatCurrency(product.stockValue)}</TableCell>
@@ -360,4 +360,5 @@ export default function AssetReportPage() {
             </main>
         </AppLayout>
     );
-}
+
+    
