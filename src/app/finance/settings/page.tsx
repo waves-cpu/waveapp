@@ -213,39 +213,44 @@ export default function PriceSettingsPage() {
     }, [searchTerm, categoryFilter]);
     
     const handleBulkUpdate = () => {
-        if (selectedItemsForBulkUpdate.size === 0 || bulkUpdateValue === '') return;
+        if (selectedItemsForBulkUpdate.size === 0 || bulkUpdateValue === '') {
+            if (bulkUpdateValue === '') {
+                 toast({ title: "Nilai kosong", description: "Harap masukkan angka atau kosongkan untuk menghapus harga.", variant: 'destructive' });
+            }
+            return;
+        }
     
-        const numericValue = parseFloat(bulkUpdateValue);
+        const numericValue = bulkUpdateValue === '' ? undefined : parseFloat(bulkUpdateValue);
     
-        if (isNaN(numericValue) && bulkUpdateValue !== '') {
+        if (numericValue === undefined && bulkUpdateValue !== '') {
             toast({ title: "Nilai tidak valid", description: "Harap masukkan angka yang valid.", variant: 'destructive' });
             return;
         }
-
-        const emptyValue = bulkUpdateValue === '' ? undefined : numericValue;
-    
+        
         fields.forEach((field, index) => {
             if (selectedItemsForBulkUpdate.has(field.id)) {
                 if (bulkUpdateChannel === 'costPrice') {
-                    form.setValue(`items.${index}.costPrice`, emptyValue, { shouldDirty: true });
+                    form.setValue(`items.${index}.costPrice`, numericValue, { shouldDirty: true });
                 } else if (bulkUpdateChannel === 'price') {
-                    form.setValue(`items.${index}.price`, emptyValue, { shouldDirty: true });
+                    form.setValue(`items.${index}.price`, numericValue, { shouldDirty: true });
                 } else {
-                    let currentChannelPrices = form.getValues(`items.${index}.channelPrices`) || [];
-                     if (!Array.isArray(currentChannelPrices)) {
+                    let currentChannelPrices = form.getValues(`items.${index}.channelPrices`);
+                    if (!currentChannelPrices) {
                         currentChannelPrices = CHANNELS.map(ch => ({ channel: ch, price: undefined }));
                     }
 
-                    let newChannelPrices = [...currentChannelPrices];
-
                     const channelsToUpdate = bulkUpdateChannel === 'online' ? ONLINE_CHANNELS : [bulkUpdateChannel];
-
+                    
+                    const newChannelPrices = currentChannelPrices.map(cp => {
+                         if (channelsToUpdate.includes(cp.channel)) {
+                            return { ...cp, price: numericValue };
+                        }
+                        return cp;
+                    });
+                    
                     channelsToUpdate.forEach(ch => {
-                        const idx = newChannelPrices.findIndex(cp => cp.channel === ch);
-                        if (idx > -1) {
-                            newChannelPrices[idx] = { ...newChannelPrices[idx], price: emptyValue };
-                        } else {
-                            newChannelPrices.push({ channel: ch, price: emptyValue });
+                        if (!newChannelPrices.some(cp => cp.channel === ch)) {
+                            newChannelPrices.push({ channel: ch, price: numericValue });
                         }
                     });
 
@@ -256,7 +261,6 @@ export default function PriceSettingsPage() {
     
         toast({ title: "Update Massal Diterapkan", description: `Harga untuk ${selectedItemsForBulkUpdate.size} item telah diperbarui di formulir.` });
     };
-
 
     const toggleAllForBulkUpdate = (checked: boolean) => {
         const allVisibleIds = new Set([
@@ -432,7 +436,7 @@ export default function PriceSettingsPage() {
                                                                 <div className="flex items-center gap-4">
                                                                     <Image src={field.imageUrl || 'https://placehold.co/40x40.png'} alt={field.name} width={40} height={40} className="rounded-sm" data-ai-hint="product image" />
                                                                     <div>
-                                                                        <span className="font-medium text-sm">{field.name}</span>
+                                                                        <span className="font-medium text-sm line-clamp-2">{field.name}</span>
                                                                         <div className="text-xs text-muted-foreground">SKU: {field.sku}</div>
                                                                     </div>
                                                                 </div>
@@ -465,7 +469,7 @@ export default function PriceSettingsPage() {
                                                                     <div className="flex items-center gap-4">
                                                                         <Image src={header.imageUrl || 'https://placehold.co/40x40.png'} alt={header.name} width={40} height={40} className="rounded-sm" data-ai-hint="product image" />
                                                                         <div>
-                                                                            <span className="text-sm">{header.name}</span>
+                                                                            <span className="text-sm line-clamp-2">{header.name}</span>
                                                                             <div className="text-xs text-muted-foreground font-normal">SKU: {header.sku}</div>
                                                                         </div>
                                                                     </div>
@@ -491,7 +495,7 @@ export default function PriceSettingsPage() {
                                                                                 <Store className="h-5 w-5 text-gray-400" />
                                                                             </div>
                                                                             <div>
-                                                                                <div className="font-medium text-sm">{field.name}</div>
+                                                                                <div className="font-medium text-sm line-clamp-2">{field.name}</div>
                                                                                 <div className="text-xs text-muted-foreground">SKU: {field.sku}</div>
                                                                             </div>
                                                                         </div>
@@ -609,4 +613,5 @@ const PriceRowFields = ({ control, index, onRemove }: { control: Control<z.infer
         </>
     )
 }
+
 
