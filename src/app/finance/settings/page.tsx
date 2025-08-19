@@ -217,41 +217,38 @@ export default function PriceSettingsPage() {
     
         const numericValue = parseFloat(bulkUpdateValue);
     
-        if (isNaN(numericValue)) {
+        if (isNaN(numericValue) && bulkUpdateValue !== '') {
             toast({ title: "Nilai tidak valid", description: "Harap masukkan angka yang valid.", variant: 'destructive' });
             return;
         }
+
+        const emptyValue = bulkUpdateValue === '' ? undefined : numericValue;
     
         fields.forEach((field, index) => {
             if (selectedItemsForBulkUpdate.has(field.id)) {
                 if (bulkUpdateChannel === 'costPrice') {
-                    form.setValue(`items.${index}.costPrice`, numericValue, { shouldDirty: true });
+                    form.setValue(`items.${index}.costPrice`, emptyValue, { shouldDirty: true });
                 } else if (bulkUpdateChannel === 'price') {
-                    form.setValue(`items.${index}.price`, numericValue, { shouldDirty: true });
+                    form.setValue(`items.${index}.price`, emptyValue, { shouldDirty: true });
                 } else {
-                    const currentChannelPrices = form.getValues(`items.${index}.channelPrices`) || [];
-                    
-                    let newChannelPrices = Array.isArray(currentChannelPrices) 
-                        ? [...currentChannelPrices] 
-                        : CHANNELS.map(ch => ({ channel: ch, price: undefined }));
-
-                    if (bulkUpdateChannel === 'online') {
-                        ONLINE_CHANNELS.forEach(onlineCh => {
-                            const idx = newChannelPrices.findIndex(cp => cp.channel === onlineCh);
-                            if (idx > -1) {
-                                newChannelPrices[idx] = { ...newChannelPrices[idx], price: numericValue };
-                            } else {
-                                newChannelPrices.push({ channel: onlineCh, price: numericValue });
-                            }
-                        });
-                    } else { // pos or reseller
-                        const idx = newChannelPrices.findIndex(cp => cp.channel === bulkUpdateChannel);
-                        if (idx > -1) {
-                            newChannelPrices[idx] = { ...newChannelPrices[idx], price: numericValue };
-                        } else {
-                            newChannelPrices.push({ channel: bulkUpdateChannel, price: numericValue });
-                        }
+                    let currentChannelPrices = form.getValues(`items.${index}.channelPrices`) || [];
+                     if (!Array.isArray(currentChannelPrices)) {
+                        currentChannelPrices = CHANNELS.map(ch => ({ channel: ch, price: undefined }));
                     }
+
+                    let newChannelPrices = [...currentChannelPrices];
+
+                    const channelsToUpdate = bulkUpdateChannel === 'online' ? ONLINE_CHANNELS : [bulkUpdateChannel];
+
+                    channelsToUpdate.forEach(ch => {
+                        const idx = newChannelPrices.findIndex(cp => cp.channel === ch);
+                        if (idx > -1) {
+                            newChannelPrices[idx] = { ...newChannelPrices[idx], price: emptyValue };
+                        } else {
+                            newChannelPrices.push({ channel: ch, price: emptyValue });
+                        }
+                    });
+
                     form.setValue(`items.${index}.channelPrices`, newChannelPrices, { shouldDirty: true });
                 }
             }
@@ -378,7 +375,7 @@ export default function PriceSettingsPage() {
                                             onChange={(e) => setBulkUpdateValue(e.target.value)}
                                             className="w-full md:w-[160px]"
                                         />
-                                        <Button type="button" variant="outline" onClick={handleBulkUpdate} disabled={selectedItemsForBulkUpdate.size === 0 || !bulkUpdateValue}>
+                                        <Button type="button" variant="outline" onClick={handleBulkUpdate} disabled={selectedItemsForBulkUpdate.size === 0}>
                                             Terapkan ke {selectedItemsForBulkUpdate.size} item
                                         </Button>
                                     </div>
@@ -473,7 +470,12 @@ export default function PriceSettingsPage() {
                                                                         </div>
                                                                     </div>
                                                                 </TableCell>
-                                                                <TableCell colSpan={6} />
+                                                                <TableCell colSpan={5} />
+                                                                <TableCell className="p-1.5">
+                                                                    <Button type="button" variant="ghost" size="icon" className="text-destructive hover:text-destructive-foreground hover:bg-destructive h-8 w-8" onClick={() => remove(variants.map(v => v.originalIndex))}>
+                                                                        <Trash2 className="h-4 w-4" />
+                                                                    </Button>
+                                                                </TableCell>
                                                             </TableRow>
                                                             {variants.map((field) => (
                                                                 <TableRow key={field.id} className="hover:bg-muted/50">
@@ -607,3 +609,4 @@ const PriceRowFields = ({ control, index, onRemove }: { control: Control<z.infer
         </>
     )
 }
+
