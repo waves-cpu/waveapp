@@ -18,9 +18,11 @@ export default function ShippingReportPage() {
           <h1 className="text-lg font-bold">{t.shipping.report}</h1>
         </div>
          <div className="text-center py-20">
-          <p>Halaman untuk Laporan Resi.</p>
+          <p>Halaman untuk Laporan Pengiriman.</p>
         </div>
       </main>
     </AppLayout>
   );
 }
+
+    
