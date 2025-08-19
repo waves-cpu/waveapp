@@ -20,6 +20,12 @@ export const translations = {
             pos: "POS",
             reseller: "Reseller",
         },
+        shipping: {
+            title: "Shipping",
+            receipt: "Receipt",
+            return: "Return",
+            report: "Receipt Report",
+        },
         finance: {
             title: "Finance",
             generalJournal: "General Journal",
@@ -303,6 +309,12 @@ export const translations = {
             lazada: "Lazada",
             pos: "POS",
             reseller: "Reseller",
+        },
+        shipping: {
+            title: "Pengiriman",
+            receipt: "Resi",
+            return: "Return",
+            report: "Laporan Resi",
         },
         finance: {
             title: "Keuangan",
