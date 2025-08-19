@@ -73,7 +73,7 @@ export default function ReceiptPage() {
   const receiptInputRef = useRef<HTMLInputElement>(null);
 
   const [date, setDate] = useState<Date | undefined>(new Date());
-  const [shippingServiceFilter, setShippingServiceFilter] = useState('all');
+  const [shippingServiceFilter, setShippingServiceFilter] = useState(SHIPPING_SERVICES[0]);
 
   const loadReceipts = useCallback(async () => {
     setLoading(true);
@@ -105,7 +105,7 @@ export default function ReceiptPage() {
     return receipts.filter(receipt => {
         const scannedDate = new Date(receipt.scannedAt);
         const inDate = date ? isSameDay(scannedDate, date) : true;
-        const serviceMatch = shippingServiceFilter === 'all' || receipt.shippingService === shippingServiceFilter;
+        const serviceMatch = receipt.shippingService === shippingServiceFilter;
         return inDate && serviceMatch;
     });
   }, [receipts, date, shippingServiceFilter]);
@@ -274,9 +274,6 @@ export default function ReceiptPage() {
                     </Popover>
                 </div>
                  <div className="px-1 py-2 flex items-center gap-2 border-b border-t border-dashed mt-4">
-                    <Button variant={shippingServiceFilter === 'all' ? 'secondary' : 'ghost'} size="sm" onClick={() => setShippingServiceFilter('all')}>
-                        {TReceipt.allShippingServices}
-                    </Button>
                     {SHIPPING_SERVICES.map(service => (
                         <Button key={service} variant={shippingServiceFilter === service ? 'secondary' : 'ghost'} size="sm" onClick={() => setShippingServiceFilter(service)}>
                             {service}
