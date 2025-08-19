@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
@@ -101,14 +100,30 @@ export default function ReceiptPage() {
     }
   }, [shippingService]);
 
-  const filteredReceipts = useMemo(() => {
-    return receipts.filter(receipt => {
-        const scannedDate = new Date(receipt.scannedAt);
-        const inDate = date ? isSameDay(scannedDate, date) : true;
-        const serviceMatch = receipt.shippingService === shippingServiceFilter;
-        return inDate && serviceMatch;
-    });
-  }, [receipts, date, shippingServiceFilter]);
+    const filteredReceipts = useMemo(() => {
+        return receipts.filter(receipt => {
+            const scannedDate = new Date(receipt.scannedAt);
+            const inDate = date ? isSameDay(scannedDate, date) : true;
+            return inDate && receipt.shippingService === shippingServiceFilter;
+        });
+    }, [receipts, date, shippingServiceFilter]);
+    
+    const statusCountsByService = useMemo(() => {
+        const counts: Record<string, Record<ShippingStatus, number>> = {};
+        const receiptsForDate = receipts.filter(r => date ? isSameDay(new Date(r.scannedAt), date) : true);
+
+        SHIPPING_SERVICES.forEach(service => {
+            counts[service] = { pending: 0, shipped: 0, delivered: 0, returned: 0, cancelled: 0 };
+        });
+
+        receiptsForDate.forEach(receipt => {
+            if (counts[receipt.shippingService]) {
+                counts[receipt.shippingService][receipt.status]++;
+            }
+        });
+
+        return counts;
+    }, [receipts, date]);
 
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -273,10 +288,20 @@ export default function ReceiptPage() {
                         </PopoverContent>
                     </Popover>
                 </div>
-                 <div className="px-1 py-2 flex items-center gap-2 border-b border-t border-dashed mt-4">
+                 <div className="grid grid-cols-2 md:grid-cols-4 gap-2 border-b border-t border-dashed mt-4 p-2">
                     {SHIPPING_SERVICES.map(service => (
-                        <Button key={service} variant={shippingServiceFilter === service ? 'secondary' : 'ghost'} size="sm" onClick={() => setShippingServiceFilter(service)}>
-                            {service}
+                        <Button 
+                            key={service} 
+                            variant={shippingServiceFilter === service ? 'secondary' : 'ghost'} 
+                            onClick={() => setShippingServiceFilter(service)}
+                            className="h-auto flex flex-col items-start p-2"
+                        >
+                            <div className="font-bold text-base">{service}</div>
+                            <div className="text-xs text-muted-foreground flex flex-wrap gap-x-2">
+                                {Object.entries(statusCountsByService[service] || {}).map(([status, count]) => 
+                                    count > 0 && <span key={status}>{t.receiptPage.statuses[status as ShippingStatus]}: {count}</span>
+                                )}
+                            </div>
                         </Button>
                     ))}
                 </div>
