@@ -47,8 +47,7 @@ import {
     SelectValue,
   } from "@/components/ui/select"
 import { Calendar as CalendarIcon, ScanLine, Truck, Trash2, CheckCircle, XCircle, Undo2, Hourglass } from 'lucide-react';
-import { format, isWithinInterval, startOfDay, endOfDay } from 'date-fns';
-import { DateRange } from 'react-day-picker';
+import { format, isSameDay } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { addShippingReceipt, fetchShippingReceipts, deleteShippingReceipt, updateShippingReceiptStatus } from '@/lib/inventory-service';
@@ -73,7 +72,7 @@ export default function ReceiptPage() {
   const [receiptToDelete, setReceiptToDelete] = useState<ShippingReceipt | null>(null);
   const receiptInputRef = useRef<HTMLInputElement>(null);
 
-  const [dateRange, setDateRange] = useState<DateRange | undefined>({ from: startOfDay(new Date()), to: new Date() });
+  const [date, setDate] = useState<Date | undefined>(new Date());
   const [shippingServiceFilter, setShippingServiceFilter] = useState('all');
 
   const loadReceipts = useCallback(async () => {
@@ -105,11 +104,11 @@ export default function ReceiptPage() {
   const filteredReceipts = useMemo(() => {
     return receipts.filter(receipt => {
         const scannedDate = new Date(receipt.scannedAt);
-        const inDateRange = dateRange?.from ? isWithinInterval(scannedDate, { start: startOfDay(dateRange.from), end: endOfDay(dateRange.to || dateRange.from) }) : true;
+        const inDate = date ? isSameDay(scannedDate, date) : true;
         const serviceMatch = shippingServiceFilter === 'all' || receipt.shippingService === shippingServiceFilter;
-        return inDateRange && serviceMatch;
+        return inDate && serviceMatch;
     });
-  }, [receipts, dateRange, shippingServiceFilter]);
+  }, [receipts, date, shippingServiceFilter]);
 
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -262,16 +261,12 @@ export default function ReceiptPage() {
                                 variant={"outline"}
                                 className={cn(
                                 "w-[260px] justify-start text-left font-normal",
-                                !dateRange && "text-muted-foreground"
+                                !date && "text-muted-foreground"
                                 )}
                             >
                                 <CalendarIcon className="mr-2 h-4 w-4" />
-                                {dateRange?.from ? (
-                                dateRange.to ? (
-                                    <>{format(dateRange.from, "d MMM yyyy")} - {format(dateRange.to, "d MMM yyyy")}</>
-                                ) : (
-                                    format(dateRange.from, "d MMM yyyy")
-                                )
+                                {date ? (
+                                    format(date, "d MMM yyyy")
                                 ) : (
                                 <span>{TReceipt.dateRange}</span>
                                 )}
@@ -280,11 +275,9 @@ export default function ReceiptPage() {
                             <PopoverContent className="w-auto p-0" align="end">
                             <Calendar
                                 initialFocus
-                                mode="range"
-                                defaultMonth={dateRange?.from}
-                                selected={dateRange}
-                                onSelect={setDateRange}
-                                numberOfMonths={2}
+                                mode="single"
+                                selected={date}
+                                onSelect={setDate}
                             />
                             </PopoverContent>
                         </Popover>
