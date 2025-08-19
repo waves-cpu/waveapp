@@ -27,6 +27,7 @@ export const translations = {
             assetReport: "Asset Report",
             profitLossReport: "Profit & Loss Report",
             priceSettings: "Price Settings",
+            balanceSheet: "Balance Sheet",
             priceSettingsPage: {
                 description: "Select products to set their cost price, default selling price, and channel-specific prices.",
                 selectProduct: "Select Product",
@@ -310,6 +311,7 @@ export const translations = {
             assetReport: "Laporan Aset",
             profitLossReport: "Laporan Laba Rugi",
             priceSettings: "Pengaturan Harga",
+            balanceSheet: "Neraca",
             priceSettingsPage: {
                 description: "Pilih produk untuk mengatur harga modal, harga jual default, dan harga spesifik per kanal penjualan.",
                 selectProduct: "Pilih Produk",
@@ -567,5 +569,3 @@ export const translations = {
         }
     }
 }
-
-    

@@ -35,6 +35,7 @@ import {
   FileBarChart,
   Settings2,
   DollarSign,
+  Scale,
 } from 'lucide-react';
 import { Logo } from './logo';
 import { Separator } from '@/components/ui/separator';
@@ -178,19 +179,11 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                                       </SidebarMenuButton>
                                   </Link>
                               </SidebarMenuItem>
-                              <SidebarMenuItem>
-                                  <Link href="/finance/statements">
-                                      <SidebarMenuButton variant="ghost" size="sm" isActive={pathname === '/finance/statements'}>
-                                          <FileText />
-                                          {t.finance.financialStatements}
-                                      </SidebarMenuButton>
-                                  </Link>
-                              </SidebarMenuItem>
-                              <SidebarMenuItem>
-                                  <Link href="/finance/assets">
-                                      <SidebarMenuButton variant="ghost" size="sm" isActive={pathname === '/finance/assets'}>
-                                          <Archive />
-                                          {t.finance.assetReport}
+                               <SidebarMenuItem>
+                                  <Link href="/finance/balance-sheet">
+                                      <SidebarMenuButton variant="ghost" size="sm" isActive={pathname === '/finance/balance-sheet'}>
+                                          <Scale />
+                                          {t.finance.balanceSheet}
                                       </SidebarMenuButton>
                                   </Link>
                               </SidebarMenuItem>
