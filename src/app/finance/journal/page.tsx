@@ -129,7 +129,7 @@ export default function GeneralJournalPage() {
                    entries.push({ date: adjustmentDate, description, account: 'Persediaan Barang', debit: value, type: 'capital_adjustment' });
                    entries.push({ date: adjustmentDate, description, account: 'Penyesuaian Modal (Persediaan)', credit: value, type: 'capital_adjustment' });
 
-               } else if (h.change > 0 && h.reason.toLowerCase().includes('stock in')) {
+               } else if (h.change > 0 && h.reason.toLowerCase() === 'stock in') {
                     const value = h.change * (costPrice || 0);
                     if (value > 0) {
                        const formattedCostPrice = formatCurrency(costPrice);
