@@ -191,6 +191,14 @@ const createSchema = () => {
         amount REAL NOT NULL,
         type TEXT NOT NULL DEFAULT 'manual'
     );
+
+    CREATE TABLE IF NOT EXISTS shipping_receipts (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      receiptNumber TEXT NOT NULL UNIQUE,
+      shippingService TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'pending',
+      scannedAt TEXT NOT NULL
+    );
   `);
 };
 

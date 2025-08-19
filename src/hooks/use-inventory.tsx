@@ -2,7 +2,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
-import type { InventoryItem, AdjustmentHistory, InventoryItemVariant, Sale, Reseller, ManualJournalEntry } from '@/types';
+import type { InventoryItem, AdjustmentHistory, InventoryItemVariant, Sale, Reseller, ManualJournalEntry, ShippingReceipt } from '@/types';
 import {
   fetchInventoryData,
   addProduct,
@@ -22,6 +22,8 @@ import {
   updatePrices as updatePricesDb,
   addManualJournalEntry,
   fetchManualJournalEntries,
+  addShippingReceipt,
+  fetchShippingReceipts,
 } from '@/lib/inventory-service';
 
 
@@ -50,6 +52,9 @@ interface InventoryContextType {
   updatePrices: (updates: any[]) => Promise<void>;
   manualJournalEntries: ManualJournalEntry[];
   createManualJournalEntry: (entry: Omit<ManualJournalEntry, 'id' | 'type'>) => Promise<void>;
+  shippingReceipts: ShippingReceipt[];
+  scanReceipt: (receiptNumber: string, shippingService: string) => Promise<void>;
+  fetchReceipts: () => Promise<void>;
 }
 
 const InventoryContext = createContext<InventoryContextType | undefined>(undefined);
@@ -60,16 +65,18 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
   const [allSales, setAllSales] = useState<Sale[]>([]);
   const [resellers, setResellers] = useState<Reseller[]>([]);
   const [manualJournalEntries, setManualJournalEntries] = useState<ManualJournalEntry[]>([]);
+  const [shippingReceipts, setShippingReceipts] = useState<ShippingReceipt[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchAllData = useCallback(async () => {
     setLoading(true);
     try {
-      const [inventoryData, salesData, resellerData, manualEntries] = await Promise.all([
+      const [inventoryData, salesData, resellerData, manualEntries, receiptData] = await Promise.all([
         fetchInventoryData(),
         fetchAllSales(),
         getResellers(),
         fetchManualJournalEntries(),
+        fetchShippingReceipts(),
       ]);
       
       setItems(inventoryData.items);
@@ -77,6 +84,7 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
       setAllSales(salesData);
       setResellers(resellerData);
       setManualJournalEntries(manualEntries);
+      setShippingReceipts(receiptData);
 
     } catch (error) {
       console.error("Failed to fetch data:", error);
@@ -88,6 +96,16 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     fetchAllData();
   }, [fetchAllData]);
+
+  const fetchReceipts = useCallback(async () => {
+    const data = await fetchShippingReceipts();
+    setShippingReceipts(data);
+  }, []);
+
+  const scanReceipt = async (receiptNumber: string, shippingService: string) => {
+    await addShippingReceipt(receiptNumber, shippingService);
+    await fetchReceipts();
+  };
   
   const createManualJournalEntry = async (entry: Omit<ManualJournalEntry, 'id' | 'type'>) => {
     await addManualJournalEntry(entry);
@@ -212,7 +230,10 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
         fetchResellers,
         updatePrices,
         manualJournalEntries,
-        createManualJournalEntry
+        createManualJournalEntry,
+        shippingReceipts,
+        scanReceipt,
+        fetchReceipts
       }}>
       {children}
     </InventoryContext.Provider>

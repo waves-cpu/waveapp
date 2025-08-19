@@ -74,4 +74,11 @@ export interface ManualJournalEntry {
     type: 'manual';
 }
 
+export interface ShippingReceipt {
+    id: string;
+    receiptNumber: string;
+    shippingService: string;
+    status: 'pending' | 'shipped' | 'delivered' | 'returned';
+    scannedAt: string; // ISO string
+}
     

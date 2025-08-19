@@ -1,9 +1,8 @@
 
-
 'use server';
 
 import { db } from './db';
-import type { InventoryItem, AdjustmentHistory, InventoryItemVariant, Sale, Reseller, ChannelPrice, ManualJournalEntry } from '@/types';
+import type { InventoryItem, AdjustmentHistory, InventoryItemVariant, Sale, Reseller, ChannelPrice, ManualJournalEntry, ShippingReceipt } from '@/types';
 
 // Settings Functions
 export async function saveSetting(key: string, value: any) {
@@ -668,4 +667,27 @@ export async function editReseller(id: number, data: Omit<Reseller, 'id'>) {
 
 export async function deleteReseller(id: number) {
     db.prepare('DELETE FROM resellers WHERE id = ?').run(id);
+}
+
+// Shipping Receipt Functions
+export async function addShippingReceipt(receiptNumber: string, shippingService: string): Promise<void> {
+    try {
+        db.prepare(`
+            INSERT INTO shipping_receipts (receiptNumber, shippingService, scannedAt)
+            VALUES (?, ?, ?)
+        `).run(receiptNumber, shippingService, new Date().toISOString());
+    } catch (error) {
+        if (error instanceof Error && error.message.includes('UNIQUE constraint failed')) {
+            throw new Error(`Receipt number ${receiptNumber} has already been scanned.`);
+        }
+        throw error;
+    }
+}
+
+export async function fetchShippingReceipts(): Promise<ShippingReceipt[]> {
+    const receipts = db.prepare('SELECT * FROM shipping_receipts ORDER BY scannedAt DESC').all() as any[];
+    return receipts.map(r => ({
+        ...r,
+        id: r.id.toString(),
+    }));
 }
