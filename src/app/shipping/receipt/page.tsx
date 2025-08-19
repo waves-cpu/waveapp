@@ -226,7 +226,7 @@ export default function ReceiptPage() {
                             value={receiptNumber}
                             onChange={(e) => setReceiptNumber(e.target.value)}
                             className="pl-10 h-10 text-base"
-                            disabled={isSubmitting}
+                            disabled={isSubmitting || !shippingService}
                             required
                         />
                     </div>
