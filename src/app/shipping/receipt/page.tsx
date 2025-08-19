@@ -52,8 +52,9 @@ import { useToast } from '@/hooks/use-toast';
 import { addShippingReceipt, fetchShippingReceipts, deleteShippingReceipt, updateShippingReceiptStatus } from '@/lib/inventory-service';
 import type { ShippingReceipt, ShippingStatus } from '@/types';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Pagination } from '@/components/ui/pagination';
 
 const SHIPPING_SERVICES = ['SPX', 'J&T', 'JNE', 'INSTANT'];
 
@@ -73,6 +74,8 @@ export default function ReceiptPage() {
 
   const [date, setDate] = useState<Date | undefined>(new Date());
   const [shippingServiceFilter, setShippingServiceFilter] = useState(SHIPPING_SERVICES[0]);
+  const [itemsPerPage, setItemsPerPage] = useState(25);
+  const [currentPage, setCurrentPage] = useState(1);
 
   const loadReceipts = useCallback(async () => {
     setLoading(true);
@@ -101,29 +104,29 @@ export default function ReceiptPage() {
   }, [shippingService]);
 
     const filteredReceipts = useMemo(() => {
-        return receipts.filter(receipt => {
+        const filtered = receipts.filter(receipt => {
             const scannedDate = new Date(receipt.scannedAt);
             const inDate = date ? isSameDay(scannedDate, date) : true;
             return inDate && receipt.shippingService === shippingServiceFilter;
         });
+        setCurrentPage(1);
+        return filtered;
     }, [receipts, date, shippingServiceFilter]);
     
-    const statusCountsByService = useMemo(() => {
-        const counts: Record<string, Record<ShippingStatus, number>> = {};
-        const receiptsForDate = receipts.filter(r => date ? isSameDay(new Date(r.scannedAt), date) : true);
+    const totalPages = Math.ceil(filteredReceipts.length / itemsPerPage);
 
-        SHIPPING_SERVICES.forEach(service => {
-            counts[service] = { pending: 0, shipped: 0, delivered: 0, returned: 0, cancelled: 0 };
+    const paginatedReceipts = useMemo(() => {
+        const startIndex = (currentPage - 1) * itemsPerPage;
+        return filteredReceipts.slice(startIndex, startIndex + itemsPerPage);
+    }, [filteredReceipts, currentPage, itemsPerPage]);
+
+    const statusCounts = useMemo(() => {
+        const counts: Record<ShippingStatus, number> = { pending: 0, shipped: 0, delivered: 0, returned: 0, cancelled: 0 };
+        filteredReceipts.forEach(receipt => {
+            counts[receipt.status]++;
         });
-
-        receiptsForDate.forEach(receipt => {
-            if (counts[receipt.shippingService]) {
-                counts[receipt.shippingService][receipt.status]++;
-            }
-        });
-
         return counts;
-    }, [receipts, date]);
+    }, [filteredReceipts]);
 
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -297,11 +300,6 @@ export default function ReceiptPage() {
                             className="h-auto flex flex-col items-start p-2"
                         >
                             <div className="font-bold text-base">{service}</div>
-                            <div className="text-xs text-muted-foreground flex flex-wrap gap-x-2">
-                                {Object.entries(statusCountsByService[service] || {}).map(([status, count]) => 
-                                    count > 0 && <span key={status}>{t.receiptPage.statuses[status as ShippingStatus]}: {count}</span>
-                                )}
-                            </div>
                         </Button>
                     ))}
                 </div>
@@ -328,8 +326,8 @@ export default function ReceiptPage() {
                                     <TableCell className="text-center"><Skeleton className="h-8 w-8" /></TableCell>
                                 </TableRow>
                                 ))
-                            ) : filteredReceipts.length > 0 ? (
-                                filteredReceipts.map(receipt => {
+                            ) : paginatedReceipts.length > 0 ? (
+                                paginatedReceipts.map(receipt => {
                                     const { variant, icon: Icon, text, className: statusClassName } = getStatusDisplay(receipt.status);
                                     const availableTransitions = getAvailableStatusTransitions(receipt.status);
                                     return (
@@ -379,6 +377,37 @@ export default function ReceiptPage() {
                     </Table>
                 </div>
             </CardContent>
+            <CardFooter className="flex-col items-start gap-y-2 border-t p-4">
+                <div className="text-xs text-muted-foreground">
+                    Total resi untuk <span className="font-bold">{shippingServiceFilter}</span> pada tanggal <span className="font-bold">{date ? format(date, "d MMM yyyy") : 'semua'}</span>: <span className="font-bold">{filteredReceipts.length}</span>
+                </div>
+                 <div className="text-xs text-muted-foreground flex flex-wrap gap-x-4">
+                    {Object.entries(statusCounts).map(([status, count]) => 
+                        count > 0 && <span key={status}><span className="font-semibold">{TReceipt.statuses[status as ShippingStatus]}:</span> {count}</span>
+                    )}
+                </div>
+                 {totalPages > 1 && (
+                    <div className="w-full flex items-center justify-end">
+                        <Pagination totalPages={totalPages} currentPage={currentPage} onPageChange={setCurrentPage} />
+                        <Select
+                            value={`${itemsPerPage}`}
+                            onValueChange={(value) => {
+                                setItemsPerPage(Number(value));
+                                setCurrentPage(1);
+                            }}
+                        >
+                            <SelectTrigger className="h-8 w-[120px] ml-4">
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {[25, 50, 100].map(size => (
+                                    <SelectItem key={size} value={`${size}`}>{size} / Halaman</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                 )}
+            </CardFooter>
         </Card>
         <AlertDialog open={!!receiptToDelete} onOpenChange={() => setReceiptToDelete(null)}>
             <AlertDialogContent>
@@ -400,3 +429,4 @@ export default function ReceiptPage() {
     </AppLayout>
   );
 }
+
