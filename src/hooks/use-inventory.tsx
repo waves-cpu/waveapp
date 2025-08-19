@@ -3,7 +3,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
-import type { InventoryItem, AdjustmentHistory, InventoryItemVariant, Sale, Reseller, ManualJournalEntry, ShippingReceipt } from '@/types';
+import type { InventoryItem, AdjustmentHistory, InventoryItemVariant, Sale, Reseller, ManualJournalEntry, ShippingReceipt, ShippingStatus } from '@/types';
 import {
   fetchInventoryData,
   addProduct,
@@ -26,6 +26,7 @@ import {
   addShippingReceipt,
   fetchShippingReceipts,
   deleteShippingReceipt,
+  updateShippingReceiptStatus
 } from '@/lib/inventory-service';
 
 
@@ -58,6 +59,7 @@ interface InventoryContextType {
   scanReceipt: (receiptNumber: string, shippingService: string) => Promise<void>;
   fetchReceipts: () => Promise<void>;
   removeReceipt: (id: string) => Promise<void>;
+  updateReceiptStatus: (id: string, status: ShippingStatus) => Promise<void>;
 }
 
 const InventoryContext = createContext<InventoryContextType | undefined>(undefined);
@@ -112,6 +114,11 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
 
   const removeReceipt = async (id: string) => {
     await deleteShippingReceipt(id);
+    await fetchReceipts();
+  }
+
+  const updateReceiptStatus = async (id: string, status: ShippingStatus) => {
+    await updateShippingReceiptStatus(id, status);
     await fetchReceipts();
   }
   
@@ -242,7 +249,8 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
         shippingReceipts,
         scanReceipt,
         fetchReceipts,
-        removeReceipt
+        removeReceipt,
+        updateReceiptStatus
       }}>
       {children}
     </InventoryContext.Provider>

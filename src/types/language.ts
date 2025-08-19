@@ -1,4 +1,5 @@
 
+
 export const translations = {
     en: {
         sidebar: {
@@ -281,6 +282,16 @@ export const translations = {
             receiptDeletedToast: "Receipt Deleted",
             receiptDeletedDesc: "Receipt {receiptNumber} has been deleted.",
             receiptDeleteErrorToast: "Failed to Delete Receipt",
+            statusUpdatedToast: "Status Updated",
+            statusUpdatedDesc: "Receipt status has been updated to {status}.",
+            statusUpdateErrorToast: "Failed to Update Status",
+            statuses: {
+                pending: "Pending",
+                shipped: "Shipped",
+                delivered: "Delivered",
+                returned: "Returned",
+                cancelled: "Cancelled",
+            }
         },
         settings: {
             back: "Back",
@@ -599,6 +610,16 @@ export const translations = {
             receiptDeletedToast: "Resi Dihapus",
             receiptDeletedDesc: "Resi {receiptNumber} telah dihapus.",
             receiptDeleteErrorToast: "Gagal Menghapus Resi",
+            statusUpdatedToast: "Status Diperbarui",
+            statusUpdatedDesc: "Status resi telah diperbarui menjadi {status}.",
+            statusUpdateErrorToast: "Gagal Memperbarui Status",
+            statuses: {
+                pending: "Pending",
+                shipped: "Terkirim",
+                delivered: "Diterima",
+                returned: "Return",
+                cancelled: "Batal",
+            }
         },
         settings: {
             back: "Kembali",
@@ -637,5 +658,3 @@ export const translations = {
         }
     }
 }
-
-    

@@ -1,4 +1,5 @@
 
+
 export interface AdjustmentHistory {
   date: Date;
   change: number;
@@ -74,11 +75,13 @@ export interface ManualJournalEntry {
     type: 'manual';
 }
 
+export type ShippingStatus = 'pending' | 'shipped' | 'delivered' | 'returned' | 'cancelled';
+
 export interface ShippingReceipt {
     id: string;
     receiptNumber: string;
     shippingService: string;
-    status: 'pending' | 'shipped' | 'delivered' | 'returned';
+    status: ShippingStatus;
     scannedAt: string; // ISO string
 }
     

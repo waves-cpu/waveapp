@@ -23,6 +23,12 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+  } from "@/components/ui/dropdown-menu";
+import {
     AlertDialog,
     AlertDialogAction,
     AlertDialogCancel,
@@ -40,13 +46,13 @@ import {
     SelectTrigger,
     SelectValue,
   } from "@/components/ui/select"
-import { Calendar as CalendarIcon, ScanLine, Truck, Trash2 } from 'lucide-react';
+import { Calendar as CalendarIcon, ScanLine, Truck, Trash2, CheckCircle, XCircle, Undo2, Hourglass } from 'lucide-react';
 import { format, isWithinInterval, startOfDay, endOfDay } from 'date-fns';
 import { DateRange } from 'react-day-picker';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
-import { addShippingReceipt, fetchShippingReceipts, deleteShippingReceipt } from '@/lib/inventory-service';
-import type { ShippingReceipt } from '@/types';
+import { addShippingReceipt, fetchShippingReceipts, deleteShippingReceipt, updateShippingReceiptStatus } from '@/lib/inventory-service';
+import type { ShippingReceipt, ShippingStatus } from '@/types';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -88,6 +94,7 @@ export default function ReceiptPage() {
 
   useEffect(() => {
     loadReceipts();
+    receiptInputRef.current?.focus();
   }, [loadReceipts]);
   
   const filteredReceipts = useMemo(() => {
@@ -146,14 +153,32 @@ export default function ReceiptPage() {
     }
   };
   
-  const getStatusVariant = (status: string): "default" | "secondary" | "destructive" | "outline" => {
-    switch (status) {
-        case 'pending': return 'secondary';
-        case 'shipped': return 'default';
-        case 'delivered': return 'default';
-        case 'returned': return 'destructive';
-        default: return 'outline';
-    }
+    const handleStatusChange = async (receiptId: string, newStatus: ShippingStatus) => {
+        try {
+            await updateShippingReceiptStatus(receiptId, newStatus);
+            toast({
+                title: TReceipt.statusUpdatedToast,
+                description: TReceipt.statusUpdatedDesc.replace('{status}', newStatus),
+            });
+            loadReceipts();
+        } catch (error) {
+            toast({
+                variant: 'destructive',
+                title: TReceipt.statusUpdateErrorToast,
+                description: "Gagal memperbarui status resi.",
+            });
+        }
+    };
+  
+  const getStatusDisplay = (status: ShippingStatus) => {
+    const displays = {
+        pending: { variant: 'secondary' as const, icon: Hourglass, text: TReceipt.statuses.pending },
+        shipped: { variant: 'default' as const, icon: Truck, text: TReceipt.statuses.shipped },
+        delivered: { variant: 'default' as const, icon: CheckCircle, text: TReceipt.statuses.delivered, className: 'bg-green-600 hover:bg-green-700' },
+        cancelled: { variant: 'destructive' as const, icon: XCircle, text: TReceipt.statuses.cancelled },
+        returned: { variant: 'destructive' as const, icon: Undo2, text: TReceipt.statuses.returned },
+    };
+    return displays[status] || displays.pending;
   }
 
 
@@ -268,21 +293,38 @@ export default function ReceiptPage() {
                                 </TableRow>
                                 ))
                             ) : filteredReceipts.length > 0 ? (
-                                filteredReceipts.map(receipt => (
-                                    <TableRow key={receipt.id}>
-                                        <TableCell>{format(new Date(receipt.scannedAt), 'd MMM yyyy, HH:mm')}</TableCell>
-                                        <TableCell className="font-mono font-medium">{receipt.receiptNumber}</TableCell>
-                                        <TableCell><Badge variant="outline">{receipt.shippingService}</Badge></TableCell>
-                                        <TableCell>
-                                            <Badge variant={getStatusVariant(receipt.status)} className="capitalize">{receipt.status}</Badge>
-                                        </TableCell>
-                                        <TableCell className="text-center">
-                                            <Button variant="ghost" size="icon" className="text-destructive h-8 w-8" onClick={() => setReceiptToDelete(receipt)}>
-                                                <Trash2 className="h-4 w-4" />
-                                            </Button>
-                                        </TableCell>
-                                    </TableRow>
-                                ))
+                                filteredReceipts.map(receipt => {
+                                    const { variant, icon: Icon, text, className: statusClassName } = getStatusDisplay(receipt.status);
+                                    return (
+                                        <TableRow key={receipt.id}>
+                                            <TableCell>{format(new Date(receipt.scannedAt), 'd MMM yyyy, HH:mm')}</TableCell>
+                                            <TableCell className="font-mono font-medium">{receipt.receiptNumber}</TableCell>
+                                            <TableCell><Badge variant="outline">{receipt.shippingService}</Badge></TableCell>
+                                            <TableCell>
+                                                <DropdownMenu>
+                                                    <DropdownMenuTrigger asChild>
+                                                        <Button variant={variant} size="sm" className={cn("capitalize w-32 justify-start", statusClassName)}>
+                                                            <Icon className="mr-2 h-4 w-4"/>
+                                                            {text}
+                                                        </Button>
+                                                    </DropdownMenuTrigger>
+                                                    <DropdownMenuContent>
+                                                        {(Object.keys(TReceipt.statuses) as ShippingStatus[]).map(status => (
+                                                             <DropdownMenuItem key={status} onSelect={() => handleStatusChange(receipt.id, status)}>
+                                                                {TReceipt.statuses[status]}
+                                                            </DropdownMenuItem>
+                                                        ))}
+                                                    </DropdownMenuContent>
+                                                </DropdownMenu>
+                                            </TableCell>
+                                            <TableCell className="text-center">
+                                                <Button variant="ghost" size="icon" className="text-destructive h-8 w-8" onClick={() => setReceiptToDelete(receipt)}>
+                                                    <Trash2 className="h-4 w-4" />
+                                                </Button>
+                                            </TableCell>
+                                        </TableRow>
+                                    )
+                                })
                             ) : (
                                 <TableRow>
                                     <TableCell colSpan={5} className="h-48 text-center">
@@ -319,5 +361,3 @@ export default function ReceiptPage() {
     </AppLayout>
   );
 }
-
-    

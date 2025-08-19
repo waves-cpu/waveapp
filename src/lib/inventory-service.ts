@@ -3,7 +3,7 @@
 'use server';
 
 import { db } from './db';
-import type { InventoryItem, AdjustmentHistory, InventoryItemVariant, Sale, Reseller, ChannelPrice, ManualJournalEntry, ShippingReceipt } from '@/types';
+import type { InventoryItem, AdjustmentHistory, InventoryItemVariant, Sale, Reseller, ChannelPrice, ManualJournalEntry, ShippingReceipt, ShippingStatus } from '@/types';
 
 // Settings Functions
 export async function saveSetting(key: string, value: any) {
@@ -695,4 +695,8 @@ export async function fetchShippingReceipts(): Promise<ShippingReceipt[]> {
 
 export async function deleteShippingReceipt(id: string): Promise<void> {
     db.prepare('DELETE FROM shipping_receipts WHERE id = ?').run(id);
+}
+
+export async function updateShippingReceiptStatus(id: string, status: ShippingStatus): Promise<void> {
+    db.prepare('UPDATE shipping_receipts SET status = ? WHERE id = ?').run(status, id);
 }
