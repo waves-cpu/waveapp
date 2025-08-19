@@ -32,6 +32,12 @@ type JournalEntry = {
     type: 'sale' | 'stock_in' | 'capital_adjustment' | 'manual';
 };
 
+const formatCurrency = (amount?: number) => {
+    if (amount === undefined || amount === null) return '-';
+    if (amount === 0) return '-';
+    return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(amount);
+}
+
 function GeneralJournalSkeleton() {
      return (
         <Card>
@@ -126,7 +132,8 @@ export default function GeneralJournalPage() {
                } else if (h.change > 0 && h.reason.toLowerCase().includes('stock in')) {
                     const value = h.change * (costPrice || 0);
                     if (value > 0) {
-                       const description = `Stok Masuk: ${name} (${h.change}x)`;
+                       const formattedCostPrice = formatCurrency(costPrice);
+                       const description = `Stok Masuk: ${name} (Tambah ${h.change} @ ${formattedCostPrice})`;
                        entries.push({ date: adjustmentDate, description, account: 'Persediaan Barang', debit: value, type: 'stock_in'});
                        entries.push({ date: adjustmentDate, description, account: 'Kas / Utang Usaha', credit: value, type: 'stock_in'});
                     }
@@ -170,12 +177,6 @@ export default function GeneralJournalPage() {
             return acc;
         }, { debit: 0, credit: 0 });
     }, [paginatedEntries]);
-
-    const formatCurrency = (amount?: number) => {
-        if (amount === undefined || amount === null) return '-';
-        if (amount === 0) return '-';
-        return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(amount);
-    }
 
     if (loading) {
         return (
