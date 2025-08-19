@@ -158,7 +158,7 @@ export default function ReceiptPage() {
             await updateShippingReceiptStatus(receiptId, newStatus);
             toast({
                 title: TReceipt.statusUpdatedToast,
-                description: TReceipt.statusUpdatedDesc.replace('{status}', newStatus),
+                description: TReceipt.statusUpdatedDesc.replace('{status}', TReceipt.statuses[newStatus]),
             });
             loadReceipts();
         } catch (error) {
@@ -181,6 +181,21 @@ export default function ReceiptPage() {
     return displays[status] || displays.pending;
   }
 
+  const getAvailableStatusTransitions = (currentStatus: ShippingStatus): ShippingStatus[] => {
+    switch (currentStatus) {
+        case 'pending':
+            return ['shipped', 'cancelled'];
+        case 'shipped':
+            return ['delivered', 'returned'];
+        case 'delivered':
+        case 'cancelled':
+        case 'returned':
+            return []; // Final states
+        default:
+            return [];
+    }
+  }
+
 
   return (
     <AppLayout>
@@ -193,7 +208,7 @@ export default function ReceiptPage() {
         <Card>
             <CardHeader>
                 <form onSubmit={handleSubmit} className="flex flex-col md:flex-row gap-2">
-                    <Select value={shippingService} onValueChange={setShippingService}>
+                    <Select value={shippingService} onValueChange={setShippingService} required>
                         <SelectTrigger className="w-full md:w-[180px]">
                             <SelectValue placeholder={TReceipt.selectShippingService} />
                         </SelectTrigger>
@@ -212,6 +227,7 @@ export default function ReceiptPage() {
                             onChange={(e) => setReceiptNumber(e.target.value)}
                             className="pl-10 h-10 text-base"
                             disabled={isSubmitting}
+                            required
                         />
                     </div>
                      <Button type="submit" disabled={isSubmitting || !receiptNumber.trim() || !shippingService}>
@@ -295,6 +311,7 @@ export default function ReceiptPage() {
                             ) : filteredReceipts.length > 0 ? (
                                 filteredReceipts.map(receipt => {
                                     const { variant, icon: Icon, text, className: statusClassName } = getStatusDisplay(receipt.status);
+                                    const availableTransitions = getAvailableStatusTransitions(receipt.status);
                                     return (
                                         <TableRow key={receipt.id}>
                                             <TableCell>{format(new Date(receipt.scannedAt), 'd MMM yyyy, HH:mm')}</TableCell>
@@ -302,19 +319,21 @@ export default function ReceiptPage() {
                                             <TableCell><Badge variant="outline">{receipt.shippingService}</Badge></TableCell>
                                             <TableCell>
                                                 <DropdownMenu>
-                                                    <DropdownMenuTrigger asChild>
-                                                        <Button variant={variant} size="sm" className={cn("capitalize w-32 justify-start", statusClassName)}>
+                                                    <DropdownMenuTrigger asChild disabled={availableTransitions.length === 0}>
+                                                        <Button variant={variant} size="sm" className={cn("capitalize w-32 justify-start", statusClassName, availableTransitions.length === 0 && 'cursor-not-allowed')}>
                                                             <Icon className="mr-2 h-4 w-4"/>
                                                             {text}
                                                         </Button>
                                                     </DropdownMenuTrigger>
-                                                    <DropdownMenuContent>
-                                                        {(Object.keys(TReceipt.statuses) as ShippingStatus[]).map(status => (
-                                                             <DropdownMenuItem key={status} onSelect={() => handleStatusChange(receipt.id, status)}>
-                                                                {TReceipt.statuses[status]}
-                                                            </DropdownMenuItem>
-                                                        ))}
-                                                    </DropdownMenuContent>
+                                                     {availableTransitions.length > 0 && (
+                                                        <DropdownMenuContent>
+                                                            {availableTransitions.map(status => (
+                                                                <DropdownMenuItem key={status} onSelect={() => handleStatusChange(receipt.id, status)}>
+                                                                    {TReceipt.statuses[status]}
+                                                                </DropdownMenuItem>
+                                                            ))}
+                                                        </DropdownMenuContent>
+                                                    )}
                                                 </DropdownMenu>
                                             </TableCell>
                                             <TableCell className="text-center">
