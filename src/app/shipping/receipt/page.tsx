@@ -94,9 +94,14 @@ export default function ReceiptPage() {
 
   useEffect(() => {
     loadReceipts();
-    receiptInputRef.current?.focus();
   }, [loadReceipts]);
   
+  useEffect(() => {
+    if (shippingService) {
+        receiptInputRef.current?.focus();
+    }
+  }, [shippingService]);
+
   const filteredReceipts = useMemo(() => {
     return receipts.filter(receipt => {
         const scannedDate = new Date(receipt.scannedAt);
