@@ -9,8 +9,8 @@ import { translations } from '@/types/language';
 import { useInventory } from '@/hooks/use-inventory';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
-import { PieChart, Pie, Cell, ResponsiveContainer, Legend } from 'recharts';
+import { ChartContainer, ChartTooltipContent } from '@/components/ui/chart';
+import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
 import type { ShippingReceipt, ShippingStatus } from '@/types';
 import { subDays, isWithinInterval, startOfDay, endOfDay, format } from "date-fns";
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -221,5 +221,3 @@ export default function ShippingReportPage() {
     </AppLayout>
   );
 }
-
-    
