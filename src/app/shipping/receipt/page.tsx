@@ -240,51 +240,51 @@ export default function ReceiptPage() {
                 </form>
             </CardHeader>
             <CardContent>
-                <div className="flex flex-col md:flex-row gap-4 justify-between items-center py-4 border-t">
+                <div className="flex flex-col md:flex-row gap-4 justify-between items-center pt-4 border-t">
                     <h3 className="font-semibold text-sm">{TReceipt.scannedReceipts}</h3>
-                    <div className="flex gap-2">
-                        <Select value={shippingServiceFilter} onValueChange={setShippingServiceFilter}>
-                            <SelectTrigger className="w-[180px]">
-                                <SelectValue placeholder={TReceipt.shippingService} />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">{TReceipt.allShippingServices}</SelectItem>
-                                {SHIPPING_SERVICES.map(service => (
-                                    <SelectItem key={service} value={service}>{service}</SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                         <Popover>
-                            <PopoverTrigger asChild>
-                            <Button
-                                id="date"
-                                variant={"outline"}
-                                className={cn(
-                                "w-[260px] justify-start text-left font-normal",
-                                !date && "text-muted-foreground"
-                                )}
-                            >
-                                <CalendarIcon className="mr-2 h-4 w-4" />
-                                {date ? (
-                                    format(date, "d MMM yyyy")
-                                ) : (
-                                <span>{TReceipt.dateRange}</span>
-                                )}
-                            </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0" align="end">
-                            <Calendar
-                                initialFocus
-                                mode="single"
-                                selected={date}
-                                onSelect={setDate}
-                            />
-                            </PopoverContent>
-                        </Popover>
-                    </div>
+                     <Popover>
+                        <PopoverTrigger asChild>
+                        <Button
+                            id="date"
+                            variant={"outline"}
+                            className={cn(
+                            "w-full md:w-auto justify-start text-left font-normal",
+                            !date && "text-muted-foreground"
+                            )}
+                            onClick={() => {}}
+                        >
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {date ? (
+                                format(date, "d MMM yyyy")
+                            ) : (
+                            <span>{TReceipt.dateRange}</span>
+                            )}
+                        </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="end">
+                        <Calendar
+                            initialFocus
+                            mode="single"
+                            selected={date}
+                            onSelect={(newDate) => {
+                                setDate(newDate);
+                            }}
+                        />
+                        </PopoverContent>
+                    </Popover>
+                </div>
+                 <div className="px-1 py-2 flex items-center gap-2 border-b border-t border-dashed mt-4">
+                    <Button variant={shippingServiceFilter === 'all' ? 'secondary' : 'ghost'} size="sm" onClick={() => setShippingServiceFilter('all')}>
+                        {TReceipt.allShippingServices}
+                    </Button>
+                    {SHIPPING_SERVICES.map(service => (
+                        <Button key={service} variant={shippingServiceFilter === service ? 'secondary' : 'ghost'} size="sm" onClick={() => setShippingServiceFilter(service)}>
+                            {service}
+                        </Button>
+                    ))}
                 </div>
 
-                <div className="border rounded-md">
+                <div className="border rounded-md mt-4">
                     <Table>
                         <TableHeader>
                             <TableRow>
