@@ -36,6 +36,7 @@ import {
   Settings2,
   DollarSign,
   Scale,
+  ArchiveIcon,
 } from 'lucide-react';
 import { Logo } from './logo';
 import { Separator } from '@/components/ui/separator';
@@ -184,6 +185,14 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                                       <SidebarMenuButton variant="ghost" size="sm" isActive={pathname === '/finance/balance-sheet'}>
                                           <Scale />
                                           {t.finance.balanceSheet}
+                                      </SidebarMenuButton>
+                                  </Link>
+                              </SidebarMenuItem>
+                              <SidebarMenuItem>
+                                  <Link href="/finance/assets">
+                                      <SidebarMenuButton variant="ghost" size="sm" isActive={pathname === '/finance/assets'}>
+                                          <ArchiveIcon />
+                                          {t.finance.assetReport}
                                       </SidebarMenuButton>
                                   </Link>
                               </SidebarMenuItem>
