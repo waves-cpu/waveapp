@@ -77,7 +77,7 @@ export default function HistoryPage({
     items.forEach(item => {
       const processHistory = (history: AdjustmentHistory[], parentItem: InventoryItem, variant?: InventoryItemVariant) => {
         history.forEach(entry => {
-            if (entry.change !== 0) { // Show all non-zero changes
+            if (entry.change !== 0 || entry.reason.toLowerCase() !== 'no change') {
                  historyList.push({
                     type: 'adjustment',
                     date: new Date(entry.date),
@@ -302,9 +302,9 @@ export default function HistoryPage({
                 <TableRow>
                 <TableHead className="w-[35%]">{t.inventoryTable.name}</TableHead>
                 <TableHead>{t.stockHistory.date}</TableHead>
-                <TableHead>{t.stockHistory.reason}</TableHead>
                 <TableHead>{t.stockHistory.change}</TableHead>
                 <TableHead>{t.stockHistory.newTotal}</TableHead>
+                <TableHead className="w-[25%]">{t.stockHistory.reason}</TableHead>
                 </TableRow>
             </TableHeader>
             <TableBody>
@@ -342,13 +342,15 @@ export default function HistoryPage({
                             </div>
                         </TableCell>
                         <TableCell>{format(new Date(entry.date), 'PP')}</TableCell>
-                        <TableCell>{entry.reason}</TableCell>
                         <TableCell>
                             <Badge variant={entry.change >= 0 ? 'default' : 'destructive'} className={cn(entry.change >= 0 ? 'bg-green-600' : 'bg-red-600', 'text-white')}>
                             {entry.change > 0 ? `+${entry.change}` : entry.change}
                             </Badge>
                         </TableCell>
                         <TableCell>{entry.newStockLevel ?? '-'}</TableCell>
+                        <TableCell>
+                            <p className="line-clamp-2">{entry.reason}</p>
+                        </TableCell>
                     </TableRow>
                 ))
                 ) : (
