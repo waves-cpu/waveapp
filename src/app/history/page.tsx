@@ -38,19 +38,16 @@ import { AppLayout } from '../components/app-layout';
 import { Pagination } from '@/components/ui/pagination';
 
 type HistoryEntry = {
-    type: 'adjustment' | 'sales_summary';
+    type: 'adjustment';
     date: Date;
     change: number;
     reason: string;
-    // For adjustments
     itemName?: string;
     variantName?: string;
     variantSku?: string;
     newStockLevel?: number;
     imageUrl?: string;
     itemCategory?: string;
-    // For sales summaries
-    sales?: Sale[];
 };
 
 
@@ -77,12 +74,10 @@ export default function HistoryPage({
   const allHistory = useMemo((): HistoryEntry[] => {
     const historyList: HistoryEntry[] = [];
 
-    // Process adjustments
     items.forEach(item => {
       const processHistory = (history: AdjustmentHistory[], parentItem: InventoryItem, variant?: InventoryItemVariant) => {
         history.forEach(entry => {
-            // Filter out sales adjustments and entries with no change
-            if (entry.change !== 0 && !entry.reason.toLowerCase().startsWith('sale') && !entry.reason.toLowerCase().startsWith('cancelled sale')) {
+            if (entry.change !== 0) { // Show all non-zero changes
                  historyList.push({
                     type: 'adjustment',
                     date: new Date(entry.date),
@@ -108,38 +103,13 @@ export default function HistoryPage({
       }
     });
 
-    // Process and group sales
-    const salesByDay = new Map<string, Sale[]>();
-    allSales.forEach(sale => {
-        const dayKey = startOfDay(new Date(sale.saleDate)).toISOString();
-        if (!salesByDay.has(dayKey)) {
-            salesByDay.set(dayKey, []);
-        }
-        salesByDay.get(dayKey)!.push(sale);
-    });
-
-    salesByDay.forEach((dailySales, dateString) => {
-        const totalChange = dailySales.reduce((sum, sale) => sum - sale.quantity, 0);
-        historyList.push({
-            type: 'sales_summary',
-            date: new Date(dateString),
-            reason: 'Penjualan',
-            change: totalChange,
-            sales: dailySales,
-            itemCategory: 'Penjualan', // Assign a category for filtering
-            newStockLevel: undefined, // Explicitly undefined for sales summary
-        });
-    });
-
-
     return historyList.sort((a, b) => b.date.getTime() - a.date.getTime());
-  }, [items, allSales]);
+  }, [items]);
 
   const filteredHistory = useMemo(() => {
     const filtered = allHistory
       .filter(entry => {
         if (!categoryFilter) return true;
-        if (categoryFilter === 'Penjualan') return entry.type === 'sales_summary';
         return entry.itemCategory === categoryFilter;
       })
       .filter(entry => {
@@ -195,13 +165,8 @@ export default function HistoryPage({
     return { totalIn, totalOut, netChange };
   }, [filteredHistory])
   
-  const viewSalesDetail = (sales: Sale[]) => {
-      setSelectedSales(sales);
-      setSalesDetailOpen(true);
-  }
-
   const uniqueCategoriesWithSales = useMemo(() => {
-      return [...categories, 'Penjualan'].sort()
+      return [...categories].sort()
   },[categories])
 
   const handleApplyDateRange = () => {
@@ -219,7 +184,7 @@ export default function HistoryPage({
     const rows = filteredHistory.map(entry => {
         const rowData = [
             format(entry.date, 'yyyy-MM-dd HH:mm:ss'),
-            entry.itemName || (entry.type === 'sales_summary' ? 'Ringkasan Penjualan' : ''),
+            entry.itemName || '',
             entry.variantName || '',
             entry.variantSku || '',
             entry.itemCategory || '',
@@ -340,49 +305,41 @@ export default function HistoryPage({
                 <TableHead>{t.stockHistory.reason}</TableHead>
                 <TableHead>{t.stockHistory.change}</TableHead>
                 <TableHead>{t.stockHistory.newTotal}</TableHead>
-                <TableHead className="w-[50px] text-center">Aksi</TableHead>
                 </TableRow>
             </TableHeader>
             <TableBody>
                 {loading ? (
                     <TableRow>
-                        <TableCell colSpan={6} className="h-24 text-center">Memuat riwayat...</TableCell>
+                        <TableCell colSpan={5} className="h-24 text-center">Memuat riwayat...</TableCell>
                     </TableRow>
                 ) : paginatedHistory.length > 0 ? (
                 paginatedHistory.map((entry, index) => (
                     <TableRow key={index}>
                         <TableCell>
-                            {entry.type === 'adjustment' ? (
-                                <div className="flex items-center gap-4">
-                                      {entry.imageUrl ? (
-                                        <Image 
-                                            src={entry.imageUrl} 
-                                            alt={entry.itemName!} 
-                                            width={40} height={40} 
-                                            className="rounded-sm" 
-                                            data-ai-hint="product image"
-                                        />
-                                      ) : (
-                                        <div className="flex h-10 w-10 items-center justify-center rounded-sm bg-muted">
-                                            <ShoppingBag className="h-5 w-5 text-muted-foreground" />
+                            <div className="flex items-center gap-4">
+                                {entry.imageUrl ? (
+                                <Image 
+                                    src={entry.imageUrl} 
+                                    alt={entry.itemName!} 
+                                    width={40} height={40} 
+                                    className="rounded-sm" 
+                                    data-ai-hint="product image"
+                                />
+                                ) : (
+                                <div className="flex h-10 w-10 items-center justify-center rounded-sm bg-muted">
+                                    <ShoppingBag className="h-5 w-5 text-muted-foreground" />
+                                </div>
+                                )}
+                                <div>
+                                    <div className="font-medium text-sm">{entry.itemName}</div>
+                                    {entry.variantName && (
+                                        <div className="text-xs text-muted-foreground">
+                                            {entry.variantName}
+                                            {entry.variantSku && ` (SKU: ${entry.variantSku})`}
                                         </div>
-                                      )}
-                                    <div>
-                                        <div className="font-medium text-sm">{entry.itemName}</div>
-                                        {entry.variantName && (
-                                            <div className="text-xs text-muted-foreground">
-                                                {entry.variantName}
-                                                {entry.variantSku && ` (SKU: ${entry.variantSku})`}
-                                            </div>
-                                        )}
-                                    </div>
+                                    )}
                                 </div>
-                            ) : (
-                                <div className="flex items-center gap-2 font-semibold text-primary">
-                                    <ShoppingCart className="h-5 w-5" />
-                                    <span>{entry.reason}</span>
-                                </div>
-                            )}
+                            </div>
                         </TableCell>
                         <TableCell>{format(new Date(entry.date), 'PP')}</TableCell>
                         <TableCell>{entry.reason}</TableCell>
@@ -392,18 +349,11 @@ export default function HistoryPage({
                             </Badge>
                         </TableCell>
                         <TableCell>{entry.newStockLevel ?? '-'}</TableCell>
-                        <TableCell className="text-center">
-                            {entry.type === 'sales_summary' && entry.sales && (
-                                <Button variant="ghost" size="icon" onClick={() => viewSalesDetail(entry.sales!)}>
-                                    <Eye className="h-4 w-4" />
-                                </Button>
-                            )}
-                        </TableCell>
                     </TableRow>
                 ))
                 ) : (
                 <TableRow>
-                    <TableCell colSpan={6} className="h-24 text-center">
+                    <TableCell colSpan={5} className="h-24 text-center">
                     {t.inventoryTable.noItems}
                     </TableCell>
                 </TableRow>
@@ -412,7 +362,7 @@ export default function HistoryPage({
             <TableFooter>
                 <TableRow>
                     <TableCell colSpan={3} className="font-semibold text-right">Total Perubahan:</TableCell>
-                    <TableCell colSpan={3} className="font-semibold">
+                    <TableCell colSpan={2} className="font-semibold">
                         <div className="flex items-center gap-x-4 gap-y-1 flex-wrap">
                             <span className="text-green-600">Masuk: {historyTotals.totalIn}</span>
                             <span className="text-red-600">Keluar: {historyTotals.totalOut}</span>
@@ -463,5 +413,3 @@ export default function HistoryPage({
     </AppLayout>
   );
 }
-
-
