@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
@@ -24,6 +25,7 @@ import {
   fetchManualJournalEntries,
   addShippingReceipt,
   fetchShippingReceipts,
+  deleteShippingReceipt,
 } from '@/lib/inventory-service';
 
 
@@ -55,6 +57,7 @@ interface InventoryContextType {
   shippingReceipts: ShippingReceipt[];
   scanReceipt: (receiptNumber: string, shippingService: string) => Promise<void>;
   fetchReceipts: () => Promise<void>;
+  removeReceipt: (id: string) => Promise<void>;
 }
 
 const InventoryContext = createContext<InventoryContextType | undefined>(undefined);
@@ -106,6 +109,11 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
     await addShippingReceipt(receiptNumber, shippingService);
     await fetchReceipts();
   };
+
+  const removeReceipt = async (id: string) => {
+    await deleteShippingReceipt(id);
+    await fetchReceipts();
+  }
   
   const createManualJournalEntry = async (entry: Omit<ManualJournalEntry, 'id' | 'type'>) => {
     await addManualJournalEntry(entry);
@@ -233,7 +241,8 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
         createManualJournalEntry,
         shippingReceipts,
         scanReceipt,
-        fetchReceipts
+        fetchReceipts,
+        removeReceipt
       }}>
       {children}
     </InventoryContext.Provider>

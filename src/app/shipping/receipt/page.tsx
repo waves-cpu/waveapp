@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
@@ -21,6 +22,16 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { Calendar } from '@/components/ui/calendar';
 import {
     Select,
@@ -29,12 +40,12 @@ import {
     SelectTrigger,
     SelectValue,
   } from "@/components/ui/select"
-import { Calendar as CalendarIcon, ScanLine, Truck, AlertCircle } from 'lucide-react';
+import { Calendar as CalendarIcon, ScanLine, Truck, Trash2 } from 'lucide-react';
 import { format, isWithinInterval, startOfDay, endOfDay } from 'date-fns';
 import { DateRange } from 'react-day-picker';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
-import { addShippingReceipt, fetchShippingReceipts } from '@/lib/inventory-service';
+import { addShippingReceipt, fetchShippingReceipts, deleteShippingReceipt } from '@/lib/inventory-service';
 import type { ShippingReceipt } from '@/types';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -50,7 +61,9 @@ export default function ReceiptPage() {
   const [receipts, setReceipts] = useState<ShippingReceipt[]>([]);
   const [loading, setLoading] = useState(true);
   const [receiptNumber, setReceiptNumber] = useState('');
+  const [shippingService, setShippingService] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [receiptToDelete, setReceiptToDelete] = useState<ShippingReceipt | null>(null);
   const receiptInputRef = useRef<HTMLInputElement>(null);
 
   const [dateRange, setDateRange] = useState<DateRange | undefined>({ from: startOfDay(new Date()), to: new Date() });
@@ -88,21 +101,18 @@ export default function ReceiptPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!receiptNumber.trim() || isSubmitting) return;
+    if (!receiptNumber.trim() || !shippingService || isSubmitting) return;
 
     setIsSubmitting(true);
     try {
-        // Simple validation to guess shipping service
-        let service = 'JNE'; // default
-        if (receiptNumber.toUpperCase().startsWith('SPX')) service = 'SPX';
-        if (receiptNumber.toUpperCase().startsWith('JP')) service = 'J&T';
-
-        await addShippingReceipt(receiptNumber.trim().toUpperCase(), service);
+        await addShippingReceipt(receiptNumber.trim().toUpperCase(), shippingService);
         toast({
             title: 'Resi Berhasil Discan',
             description: `Resi ${receiptNumber.toUpperCase()} telah ditambahkan.`,
         });
         setReceiptNumber('');
+        // Optional: clear shipping service after submission or keep it for next entry
+        // setShippingService(''); 
         loadReceipts(); // Reload the list
     } catch (error) {
         const message = error instanceof Error ? error.message : "Terjadi kesalahan.";
@@ -114,6 +124,25 @@ export default function ReceiptPage() {
     } finally {
         setIsSubmitting(false);
         receiptInputRef.current?.focus();
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!receiptToDelete) return;
+    try {
+        await deleteShippingReceipt(receiptToDelete.id);
+        toast({
+            title: 'Resi Dihapus',
+            description: `Resi ${receiptToDelete.receiptNumber} telah dihapus.`,
+        });
+        setReceiptToDelete(null);
+        loadReceipts();
+    } catch (error) {
+         toast({
+            variant: 'destructive',
+            title: 'Gagal Menghapus Resi',
+            description: 'Terjadi kesalahan saat menghapus resi.',
+        });
     }
   };
   
@@ -138,7 +167,17 @@ export default function ReceiptPage() {
         
         <Card>
             <CardHeader>
-                <form onSubmit={handleSubmit} className="flex gap-2">
+                <form onSubmit={handleSubmit} className="flex flex-col md:flex-row gap-2">
+                    <Select value={shippingService} onValueChange={setShippingService}>
+                        <SelectTrigger className="w-full md:w-[180px]">
+                            <SelectValue placeholder="Pilih Jasa Kirim" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {SHIPPING_SERVICES.map(service => (
+                                <SelectItem key={service} value={service}>{service}</SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
                     <div className="relative flex-grow">
                         <ScanLine className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                         <Input
@@ -150,7 +189,7 @@ export default function ReceiptPage() {
                             disabled={isSubmitting}
                         />
                     </div>
-                     <Button type="submit" disabled={isSubmitting || !receiptNumber.trim()}>
+                     <Button type="submit" disabled={isSubmitting || !receiptNumber.trim() || !shippingService}>
                         {isSubmitting ? 'Menambahkan...' : 'Tambah Resi'}
                     </Button>
                 </form>
@@ -214,6 +253,7 @@ export default function ReceiptPage() {
                                 <TableHead>Nomor Resi</TableHead>
                                 <TableHead>Jasa Kirim</TableHead>
                                 <TableHead>Status</TableHead>
+                                <TableHead className="text-center">Aksi</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -224,6 +264,7 @@ export default function ReceiptPage() {
                                     <TableCell><Skeleton className="h-5 w-48" /></TableCell>
                                     <TableCell><Skeleton className="h-5 w-20" /></TableCell>
                                     <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+                                    <TableCell className="text-center"><Skeleton className="h-8 w-8" /></TableCell>
                                 </TableRow>
                                 ))
                             ) : filteredReceipts.length > 0 ? (
@@ -235,11 +276,16 @@ export default function ReceiptPage() {
                                         <TableCell>
                                             <Badge variant={getStatusVariant(receipt.status)} className="capitalize">{receipt.status}</Badge>
                                         </TableCell>
+                                        <TableCell className="text-center">
+                                            <Button variant="ghost" size="icon" className="text-destructive h-8 w-8" onClick={() => setReceiptToDelete(receipt)}>
+                                                <Trash2 className="h-4 w-4" />
+                                            </Button>
+                                        </TableCell>
                                     </TableRow>
                                 ))
                             ) : (
                                 <TableRow>
-                                    <TableCell colSpan={4} className="h-48 text-center">
+                                    <TableCell colSpan={5} className="h-48 text-center">
                                         <div className="flex flex-col items-center justify-center gap-4 text-muted-foreground">
                                             <Truck className="h-16 w-16" />
                                             <p className="font-semibold">Belum Ada Resi</p>
@@ -253,6 +299,22 @@ export default function ReceiptPage() {
                 </div>
             </CardContent>
         </Card>
+        <AlertDialog open={!!receiptToDelete} onOpenChange={() => setReceiptToDelete(null)}>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>Anda yakin ingin menghapus resi ini?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        Tindakan ini akan menghapus resi <strong>{receiptToDelete?.receiptNumber}</strong> secara permanen. Aksi ini tidak dapat diurungkan.
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel>Batal</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleDelete} className="bg-destructive hover:bg-destructive/90">
+                        Ya, Hapus
+                    </AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
       </main>
     </AppLayout>
   );

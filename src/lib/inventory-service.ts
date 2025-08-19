@@ -1,4 +1,5 @@
 
+
 'use server';
 
 import { db } from './db';
@@ -690,4 +691,8 @@ export async function fetchShippingReceipts(): Promise<ShippingReceipt[]> {
         ...r,
         id: r.id.toString(),
     }));
+}
+
+export async function deleteShippingReceipt(id: string): Promise<void> {
+    db.prepare('DELETE FROM shipping_receipts WHERE id = ?').run(id);
 }
