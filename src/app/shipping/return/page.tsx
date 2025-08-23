@@ -199,7 +199,7 @@ export default function ReturnPage() {
   const { language } = useLanguage();
   const t = translations[language];
   const TReceipt = t.receiptPage;
-  const { shippingReceipts, updateShippingReceiptStatus, loading } = useInventory();
+  const { shippingReceipts, updateShippingReceiptStatus, addShippingReceipt, loading } = useInventory();
   const [receiptToVerify, setReceiptToVerify] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedTransaction, setSelectedTransaction] = useState<{transactionId: string, items: Sale[]} | null>(null);
@@ -212,7 +212,7 @@ export default function ReturnPage() {
 
   const returnedReceipts = useMemo(() => {
     return shippingReceipts
-      .filter(r => r.status === 'returned' || r.status === 'reconciled')
+      .filter(r => r.status === 'returned' || r.status === 'reconciled' || r.status === 'pending')
       .filter(r => {
         if (!dateRange || !dateRange.from) return true;
         const scannedDate = new Date(r.scannedAt);
@@ -225,26 +225,41 @@ export default function ReturnPage() {
     e.preventDefault();
     if (!receiptToVerify.trim()) return;
 
-    const receipt = returnedReceipts.find(r => r.receiptNumber === receiptToVerify.trim().toUpperCase() && r.status === 'returned');
-    
-    if (receipt) {
+    const receiptNumber = receiptToVerify.trim().toUpperCase();
+    const existingReceipt = shippingReceipts.find(r => r.receiptNumber === receiptNumber);
+
+    if (existingReceipt && existingReceipt.status === 'returned') {
         try {
-            await updateShippingReceiptStatus(receipt.id, 'reconciled');
+            await updateShippingReceiptStatus(existingReceipt.id, 'reconciled');
             toast({
                 title: "Resi Berhasil Diverifikasi",
-                description: `Resi ${receipt.receiptNumber} telah ditandai telah sampai.`,
+                description: `Resi ${existingReceipt.receiptNumber} telah ditandai telah sampai.`,
             });
             setReceiptToVerify('');
         } catch (error) {
             toast({ variant: 'destructive', title: "Gagal Update", description: "Gagal memperbarui status resi." });
         }
+    } else if (!existingReceipt) {
+        try {
+            // If receipt doesn't exist, add it for monitoring
+            await addShippingReceipt(receiptNumber, 'Lainnya');
+            toast({
+                title: "Resi Ditambahkan untuk Pemantauan",
+                description: `Resi ${receiptNumber} telah ditambahkan dengan status Pending.`,
+            });
+            setReceiptToVerify('');
+        } catch(error) {
+            const message = error instanceof Error ? error.message : "Gagal menambahkan resi baru.";
+            toast({ variant: 'destructive', title: "Gagal Menambahkan Resi", description: message });
+        }
     } else {
-         toast({ variant: 'destructive', title: "Resi Tidak Ditemukan", description: `Resi ${receiptToVerify} tidak ditemukan di daftar return atau sudah diverifikasi.` });
+         toast({ variant: 'destructive', title: "Resi Tidak Perlu Diverifikasi", description: `Resi ${receiptToVerify} tidak berstatus 'Return'.` });
     }
   }
   
   const getStatusDisplay = (status: ShippingStatus) => {
     const displays: {[key in ShippingStatus]?: { variant: "default" | "secondary" | "destructive" | "outline" | null | undefined, icon: React.ElementType, text: string, className?: string }} = {
+        pending: { variant: 'outline', icon: Hourglass, text: TReceipt.statuses.pending },
         returned: { variant: 'destructive', icon: Undo2, text: TReceipt.statuses.returned, className: 'bg-orange-500 hover:bg-orange-600' },
         reconciled: { variant: 'default', icon: CheckCircle, text: TReceipt.statuses.reconciled, className: 'bg-green-600 hover:bg-green-700' },
     };
@@ -263,19 +278,19 @@ export default function ReturnPage() {
         
         <Card>
             <CardHeader>
-                <CardTitle className="text-base">Verifikasi Barang Return</CardTitle>
-                <CardDescription>Scan resi dari paket yang telah kembali ke toko untuk memverifikasi.</CardDescription>
+                <CardTitle className="text-base">Verifikasi & Pemantauan Barang Return</CardTitle>
+                <CardDescription>Scan resi dari paket yang telah kembali atau yang akan kembali untuk verifikasi atau pemantauan.</CardDescription>
                 <form onSubmit={handleVerifyReceipt} className="flex flex-col md:flex-row gap-2 pt-2">
                     <div className="relative flex-grow">
                         <ScanLine className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                         <Input
-                            placeholder="Scan atau masukkan nomor resi return..."
+                            placeholder="Scan atau masukkan nomor resi..."
                             value={receiptToVerify}
                             onChange={(e) => setReceiptToVerify(e.target.value)}
                             className="pl-10 h-10 text-base"
                         />
                     </div>
-                     <Button type="submit">Verifikasi Resi</Button>
+                     <Button type="submit">Verifikasi / Tambah Resi</Button>
                 </form>
             </CardHeader>
             <CardContent>
