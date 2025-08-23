@@ -84,7 +84,7 @@ export default function ShippingReportPage() {
         services.map(service => [service, { pending: 0, shipped: 0, delivered: 0, returned: 0, cancelled: 0, total: 0 }])
     );
     
-    const deliveredByDay: { [key: string]: number } = {};
+    const shippedByDay: { [key: string]: number } = {};
     
     filteredReceipts.forEach(receipt => {
         if (summaryByService[receipt.shippingService]) {
@@ -92,23 +92,23 @@ export default function ShippingReportPage() {
             summaryByService[receipt.shippingService].total++;
         }
         
-        if (receipt.status === 'delivered') {
+        if (receipt.status === 'shipped') {
             const day = format(new Date(receipt.scannedAt), 'yyyy-MM-dd');
-            deliveredByDay[day] = (deliveredByDay[day] || 0) + 1;
+            shippedByDay[day] = (shippedByDay[day] || 0) + 1;
         }
     });
 
-    const dailyDeliveredChartData = (dateRange?.from && dateRange?.to) 
+    const dailyShippedChartData = (dateRange?.from && dateRange?.to) 
       ? eachDayOfInterval({ start: dateRange.from, end: dateRange.to }).map(day => {
           const formattedDay = format(day, 'yyyy-MM-dd');
           return {
               date: format(day, 'dd MMM'),
-              Diterima: deliveredByDay[formattedDay] || 0,
+              Terkirim: shippedByDay[formattedDay] || 0,
           };
       })
       : [];
 
-    return { summaryByService, dailyDeliveredChartData };
+    return { summaryByService, dailyShippedChartData };
 
   }, [filteredReceipts, dateRange]);
 
@@ -202,12 +202,12 @@ export default function ShippingReportPage() {
 
         <Card>
             <CardHeader>
-                <CardTitle className="text-base">Tren Paket Diterima Harian</CardTitle>
-                <CardDescription>Jumlah resi yang berstatus "Diterima" setiap harinya.</CardDescription>
+                <CardTitle className="text-base">Tren Paket Terkirim Harian</CardTitle>
+                <CardDescription>Jumlah resi yang berstatus "Terkirim" setiap harinya.</CardDescription>
             </CardHeader>
             <CardContent>
                 <ResponsiveContainer width="100%" height={300}>
-                    <LineChart data={reportData.dailyDeliveredChartData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
+                    <LineChart data={reportData.dailyShippedChartData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
                         <CartesianGrid strokeDasharray="3 3" />
                         <XAxis dataKey="date" fontSize={12} tickLine={false} axisLine={false} />
                         <YAxis fontSize={12} tickLine={false} axisLine={false} allowDecimals={false}/>
@@ -219,7 +219,7 @@ export default function ShippingReportPage() {
                             }}
                         />
                         <Legend />
-                        <Line type="monotone" dataKey="Diterima" stroke="hsl(var(--chart-2))" strokeWidth={2} dot={false} />
+                        <Line type="monotone" dataKey="Terkirim" stroke="hsl(var(--chart-2))" strokeWidth={2} dot={false} />
                     </LineChart>
                 </ResponsiveContainer>
             </CardContent>
