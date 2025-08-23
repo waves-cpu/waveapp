@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
@@ -49,11 +50,12 @@ import { Calendar as CalendarIcon, ScanLine, Truck, Trash2, CheckCircle, XCircle
 import { format, isSameDay } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
-import { addShippingReceipt, fetchShippingReceipts, deleteShippingReceipt, updateShippingReceiptStatus } from '@/lib/inventory-service';
+import { useInventory } from '@/hooks/use-inventory';
 import type { ShippingReceipt, ShippingStatus } from '@/types';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardFooter } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Pagination } from '@/components/ui/pagination';
 
 const SHIPPING_SERVICES = ['SPX', 'J&T', 'JNE', 'INSTANT'];
 
@@ -62,9 +64,8 @@ export default function ReceiptPage() {
   const t = translations[language];
   const TReceipt = t.receiptPage;
   const { toast } = useToast();
+  const { shippingReceipts, addShippingReceipt, deleteShippingReceipt, updateShippingReceiptStatus, loading } = useInventory();
   
-  const [receipts, setReceipts] = useState<ShippingReceipt[]>([]);
-  const [loading, setLoading] = useState(true);
   const [receiptNumber, setReceiptNumber] = useState('');
   const [shippingService, setShippingService] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -72,42 +73,40 @@ export default function ReceiptPage() {
   const receiptInputRef = useRef<HTMLInputElement>(null);
 
   const [date, setDate] = useState<Date | undefined>(new Date());
-  const [shippingServiceFilter, setShippingServiceFilter] = useState<string>('all');
-
-  const loadReceipts = useCallback(async () => {
-    setLoading(true);
-    try {
-      const data = await fetchShippingReceipts();
-      setReceipts(data);
-    } catch (error) {
-      toast({
-        variant: 'destructive',
-        title: TReceipt.receiptFetchErrorToast,
-        description: TReceipt.receiptFetchErrorDesc,
-      });
-    } finally {
-      setLoading(false);
-    }
-  }, [toast, TReceipt]);
-
-  useEffect(() => {
-    loadReceipts();
-  }, [loadReceipts]);
+  const [shippingServiceFilter, setShippingServiceFilter] = useState<string>('');
   
+  const [itemsPerPage, setItemsPerPage] = useState(25);
+  const [currentPage, setCurrentPage] = useState(1);
+
   useEffect(() => {
     if (shippingService) {
         receiptInputRef.current?.focus();
     }
   }, [shippingService]);
 
-    const filteredReceipts = useMemo(() => {
-        return receipts.filter(receipt => {
-            const scannedDate = new Date(receipt.scannedAt);
-            const inDate = date ? isSameDay(scannedDate, date) : true;
-            const serviceMatch = shippingServiceFilter === 'all' || receipt.shippingService === shippingServiceFilter;
-            return inDate && serviceMatch;
-        });
-    }, [receipts, date, shippingServiceFilter]);
+  const filteredReceipts = useMemo(() => {
+    return shippingReceipts.filter(receipt => {
+        const scannedDate = new Date(receipt.scannedAt);
+        const inDate = date ? isSameDay(scannedDate, date) : true;
+        const serviceMatch = !shippingServiceFilter || receipt.shippingService === shippingServiceFilter;
+        return inDate && serviceMatch;
+    });
+  }, [shippingReceipts, date, shippingServiceFilter]);
+  
+  const paginatedReceipts = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    return filteredReceipts.slice(startIndex, startIndex + itemsPerPage);
+  }, [filteredReceipts, currentPage, itemsPerPage]);
+
+  const totalPages = Math.ceil(filteredReceipts.length / itemsPerPage);
+
+  const summary = useMemo(() => {
+    return filteredReceipts.reduce((acc, receipt) => {
+        acc[receipt.status] = (acc[receipt.status] || 0) + 1;
+        acc.total = (acc.total || 0) + 1;
+        return acc;
+    }, {} as { [key in ShippingStatus | 'total']: number });
+  }, [filteredReceipts]);
     
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -122,7 +121,6 @@ export default function ReceiptPage() {
             description: TReceipt.receiptAddedDesc.replace('{receiptNumber}', upperCaseReceipt),
         });
         setReceiptNumber('');
-        loadReceipts();
     } catch (error) {
         const message = error instanceof Error ? error.message : "Terjadi kesalahan.";
          toast({
@@ -145,7 +143,6 @@ export default function ReceiptPage() {
             description: TReceipt.receiptDeletedDesc.replace('{receiptNumber}', receiptToDelete.receiptNumber),
         });
         setReceiptToDelete(null);
-        loadReceipts();
     } catch (error) {
          toast({
             variant: 'destructive',
@@ -162,7 +159,6 @@ export default function ReceiptPage() {
                 title: TReceipt.statusUpdatedToast,
                 description: TReceipt.statusUpdatedDesc.replace('{status}', TReceipt.statuses[newStatus]),
             });
-            loadReceipts();
         } catch (error) {
             toast({
                 variant: 'destructive',
@@ -238,51 +234,52 @@ export default function ReceiptPage() {
                 </form>
             </CardHeader>
             <CardContent>
-                <div className="flex flex-col md:flex-row gap-4 justify-between items-center pt-4 border-t">
-                    <h3 className="font-semibold text-sm">{TReceipt.scannedReceipts}</h3>
-                     <div className="flex flex-col md:flex-row gap-2 w-full md:w-auto">
-                        <Select value={shippingServiceFilter} onValueChange={setShippingServiceFilter}>
-                            <SelectTrigger className="w-full md:w-[200px]">
-                                <SelectValue placeholder={TReceipt.selectShippingService} />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">{TReceipt.allShippingServices}</SelectItem>
-                                {SHIPPING_SERVICES.map(service => (
-                                    <SelectItem key={service} value={service}>{service}</SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                        <Popover>
-                            <PopoverTrigger asChild>
-                            <Button
-                                id="date"
-                                variant={"outline"}
-                                className={cn(
-                                "w-full md:w-auto justify-start text-left font-normal",
-                                !date && "text-muted-foreground"
-                                )}
-                                onClick={() => {}}
-                            >
-                                <CalendarIcon className="mr-2 h-4 w-4" />
-                                {date ? (
-                                    format(date, "d MMM yyyy")
-                                ) : (
-                                <span>{TReceipt.dateRange}</span>
-                                )}
-                            </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0" align="end">
-                            <Calendar
-                                initialFocus
-                                mode="single"
-                                selected={date}
-                                onSelect={(newDate) => {
-                                    setDate(newDate);
-                                }}
-                            />
-                            </PopoverContent>
-                        </Popover>
-                    </div>
+                <div className="pt-4 border-t flex flex-wrap gap-2">
+                    {SHIPPING_SERVICES.map(service => (
+                         <Button 
+                            key={service} 
+                            variant={shippingServiceFilter === service ? 'secondary' : 'outline'}
+                            size="sm"
+                            onClick={() => {
+                                setShippingServiceFilter(service)
+                                setCurrentPage(1)
+                            }}
+                        >
+                            {service}
+                        </Button>
+                    ))}
+                </div>
+                <div className="py-4">
+                     <Popover>
+                        <PopoverTrigger asChild>
+                        <Button
+                            id="date"
+                            variant={"outline"}
+                            className={cn(
+                            "w-full md:w-[240px] justify-start text-left font-normal",
+                            !date && "text-muted-foreground"
+                            )}
+                            onClick={() => {}}
+                        >
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {date ? (
+                                format(date, "d MMM yyyy")
+                            ) : (
+                            <span>{TReceipt.dateRange}</span>
+                            )}
+                        </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="end">
+                        <Calendar
+                            initialFocus
+                            mode="single"
+                            selected={date}
+                            onSelect={(newDate) => {
+                                setDate(newDate);
+                            }}
+                        />
+                        </PopoverContent>
+                    </Popover>
                 </div>
                 
                 <div className="border rounded-md mt-4">
@@ -307,8 +304,8 @@ export default function ReceiptPage() {
                                     <TableCell className="text-center"><Skeleton className="h-8 w-8" /></TableCell>
                                 </TableRow>
                                 ))
-                            ) : filteredReceipts.length > 0 ? (
-                                filteredReceipts.map(receipt => {
+                            ) : paginatedReceipts.length > 0 ? (
+                                paginatedReceipts.map(receipt => {
                                     const { variant, icon: Icon, text, className: statusClassName } = getStatusDisplay(receipt.status);
                                     const availableTransitions = getAvailableStatusTransitions(receipt.status);
                                     return (
@@ -358,6 +355,24 @@ export default function ReceiptPage() {
                     </Table>
                 </div>
             </CardContent>
+            {filteredReceipts.length > 0 && (
+                 <CardFooter className="flex-col items-start gap-y-2 border-t p-4">
+                    <div className="text-sm text-muted-foreground">
+                        <p>Total resi untuk <span className="font-semibold">{shippingServiceFilter || 'semua jasa kirim'}</span> pada tanggal <span className="font-semibold">{date ? format(date, 'd MMM yyyy') : 'semua'}</span>: <span className="font-semibold">{summary.total || 0}</span></p>
+                        <div className="flex flex-wrap gap-x-4 gap-y-1">
+                            {(Object.keys(summary) as (ShippingStatus | 'total')[])
+                                .filter(key => key !== 'total' && summary[key] > 0)
+                                .map(status => (
+                                    <span key={status}>{TReceipt.statuses[status as ShippingStatus]}: <span className="font-semibold">{summary[status as ShippingStatus]}</span></span>
+                                ))
+                            }
+                        </div>
+                    </div>
+                     <div className="flex w-full items-center justify-end pt-4">
+                        <Pagination totalPages={totalPages} currentPage={currentPage} onPageChange={setCurrentPage} />
+                     </div>
+                 </CardFooter>
+            )}
         </Card>
         <AlertDialog open={!!receiptToDelete} onOpenChange={() => setReceiptToDelete(null)}>
             <AlertDialogContent>
@@ -379,5 +394,3 @@ export default function ReceiptPage() {
     </AppLayout>
   );
 }
-
-    

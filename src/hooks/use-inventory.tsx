@@ -23,10 +23,10 @@ import {
   updatePrices as updatePricesDb,
   addManualJournalEntry,
   fetchManualJournalEntries,
-  addShippingReceipt,
-  fetchShippingReceipts,
-  deleteShippingReceipt,
-  updateShippingReceiptStatus
+  addShippingReceipt as addShippingReceiptDb,
+  fetchShippingReceipts as fetchShippingReceiptsDb,
+  deleteShippingReceipt as deleteShippingReceiptDb,
+  updateShippingReceiptStatus as updateShippingReceiptStatusDb
 } from '@/lib/inventory-service';
 
 
@@ -56,10 +56,10 @@ interface InventoryContextType {
   manualJournalEntries: ManualJournalEntry[];
   createManualJournalEntry: (entry: Omit<ManualJournalEntry, 'id' | 'type'>) => Promise<void>;
   shippingReceipts: ShippingReceipt[];
-  scanReceipt: (receiptNumber: string, shippingService: string) => Promise<void>;
-  fetchReceipts: () => Promise<void>;
-  removeReceipt: (id: string) => Promise<void>;
-  updateReceiptStatus: (id: string, status: ShippingStatus) => Promise<void>;
+  addShippingReceipt: (receiptNumber: string, shippingService: string) => Promise<void>;
+  fetchShippingReceipts: () => Promise<void>;
+  deleteShippingReceipt: (id: string) => Promise<void>;
+  updateShippingReceiptStatus: (id: string, status: ShippingStatus) => Promise<void>;
 }
 
 const InventoryContext = createContext<InventoryContextType | undefined>(undefined);
@@ -73,6 +73,15 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
   const [shippingReceipts, setShippingReceipts] = useState<ShippingReceipt[]>([]);
   const [loading, setLoading] = useState(true);
 
+   const fetchShippingReceipts = useCallback(async () => {
+    try {
+        const receiptData = await fetchShippingReceiptsDb();
+        setShippingReceipts(receiptData);
+    } catch (error) {
+        console.error("Failed to fetch shipping receipts:", error);
+    }
+  }, []);
+
   const fetchAllData = useCallback(async () => {
     setLoading(true);
     try {
@@ -81,7 +90,7 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
         fetchAllSales(),
         getResellers(),
         fetchManualJournalEntries(),
-        fetchShippingReceipts(),
+        fetchShippingReceiptsDb(),
       ]);
       
       setItems(inventoryData.items);
@@ -102,24 +111,19 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
     fetchAllData();
   }, [fetchAllData]);
 
-  const fetchReceipts = useCallback(async () => {
-    const data = await fetchShippingReceipts();
-    setShippingReceipts(data);
-  }, []);
-
-  const scanReceipt = async (receiptNumber: string, shippingService: string) => {
-    await addShippingReceipt(receiptNumber, shippingService);
-    await fetchReceipts();
+  const addShippingReceipt = async (receiptNumber: string, shippingService: string) => {
+    await addShippingReceiptDb(receiptNumber, shippingService);
+    await fetchShippingReceipts();
   };
 
-  const removeReceipt = async (id: string) => {
-    await deleteShippingReceipt(id);
-    await fetchReceipts();
+  const deleteShippingReceipt = async (id: string) => {
+    await deleteShippingReceiptDb(id);
+    await fetchShippingReceipts();
   }
 
-  const updateReceiptStatus = async (id: string, status: ShippingStatus) => {
-    await updateShippingReceiptStatus(id, status);
-    await fetchReceipts();
+  const updateShippingReceiptStatus = async (id: string, status: ShippingStatus) => {
+    await updateShippingReceiptStatusDb(id, status);
+    await fetchShippingReceipts();
   }
   
   const createManualJournalEntry = async (entry: Omit<ManualJournalEntry, 'id' | 'type'>) => {
@@ -247,10 +251,10 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
         manualJournalEntries,
         createManualJournalEntry,
         shippingReceipts,
-        scanReceipt,
-        fetchReceipts,
-        removeReceipt,
-        updateReceiptStatus
+        addShippingReceipt,
+        fetchShippingReceipts,
+        deleteShippingReceipt,
+        updateShippingReceiptStatus
       }}>
       {children}
     </InventoryContext.Provider>
