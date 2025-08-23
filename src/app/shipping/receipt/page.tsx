@@ -99,14 +99,6 @@ export default function ReceiptPage() {
   }, [filteredReceipts, currentPage, itemsPerPage]);
 
   const totalPages = Math.ceil(filteredReceipts.length / itemsPerPage);
-
-  const summary = useMemo(() => {
-    return filteredReceipts.reduce((acc, receipt) => {
-        acc[receipt.status] = (acc[receipt.status] || 0) + 1;
-        acc.total = (acc.total || 0) + 1;
-        return acc;
-    }, {} as { [key in ShippingStatus | 'total']: number });
-  }, [filteredReceipts]);
     
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -234,22 +226,22 @@ export default function ReceiptPage() {
                 </form>
             </CardHeader>
             <CardContent>
-                <div className="pt-4 border-t flex flex-wrap gap-2">
-                    {SHIPPING_SERVICES.map(service => (
-                         <Button 
-                            key={service} 
-                            variant={shippingServiceFilter === service ? 'secondary' : 'outline'}
-                            size="sm"
-                            onClick={() => {
-                                setShippingServiceFilter(service)
-                                setCurrentPage(1)
-                            }}
-                        >
-                            {service}
-                        </Button>
-                    ))}
-                </div>
-                <div className="py-4">
+                 <div className="py-4 border-t flex flex-col md:flex-row justify-between items-center gap-4">
+                     <div className="flex flex-wrap gap-2">
+                        {SHIPPING_SERVICES.map(service => (
+                            <Button 
+                                key={service} 
+                                variant={shippingServiceFilter === service ? 'secondary' : 'outline'}
+                                size="sm"
+                                onClick={() => {
+                                    setShippingServiceFilter(service)
+                                    setCurrentPage(1)
+                                }}
+                            >
+                                {service}
+                            </Button>
+                        ))}
+                    </div>
                      <Popover>
                         <PopoverTrigger asChild>
                         <Button
@@ -355,6 +347,13 @@ export default function ReceiptPage() {
                     </Table>
                 </div>
             </CardContent>
+            <CardFooter className="flex-col items-start gap-y-2 border-t p-4">
+               <Pagination
+                    totalPages={totalPages}
+                    currentPage={currentPage}
+                    onPageChange={setCurrentPage}
+                />
+            </CardFooter>
         </Card>
         <AlertDialog open={!!receiptToDelete} onOpenChange={() => setReceiptToDelete(null)}>
             <AlertDialogContent>
