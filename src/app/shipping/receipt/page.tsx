@@ -148,23 +148,22 @@ export default function ReceiptPage() {
   };
   
   const handleStatusChange = async (receipt: ShippingReceipt, newStatus: ShippingStatus) => {
-    if (newStatus === 'returned') {
-        setReceiptToReturn(receipt);
-        setIsReturnDialogOpen(true);
-    } else {
-        try {
-            await updateShippingReceiptStatus(receipt.id, newStatus);
-            toast({
-                title: TReceipt.statusUpdatedToast,
-                description: TReceipt.statusUpdatedDesc.replace('{status}', TReceipt.statuses[newStatus]),
-            });
-        } catch (error) {
-            toast({
-                variant: 'destructive',
-                title: TReceipt.statusUpdateErrorToast,
-                description: "Gagal memperbarui status resi.",
-            });
+    try {
+        await updateShippingReceiptStatus(receipt.id, newStatus);
+        toast({
+            title: TReceipt.statusUpdatedToast,
+            description: TReceipt.statusUpdatedDesc.replace('{status}', TReceipt.statuses[newStatus]),
+        });
+        if (newStatus === 'returned') {
+            setReceiptToReturn(receipt);
+            setIsReturnDialogOpen(true);
         }
+    } catch (error) {
+        toast({
+            variant: 'destructive',
+            title: TReceipt.statusUpdateErrorToast,
+            description: "Gagal memperbarui status resi.",
+        });
     }
   };
   
@@ -379,5 +378,3 @@ export default function ReceiptPage() {
     </>
   );
 }
-
-    
