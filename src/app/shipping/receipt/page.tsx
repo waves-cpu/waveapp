@@ -355,24 +355,6 @@ export default function ReceiptPage() {
                     </Table>
                 </div>
             </CardContent>
-            {filteredReceipts.length > 0 && (
-                 <CardFooter className="flex-col items-start gap-y-2 border-t p-4">
-                    <div className="text-sm text-muted-foreground">
-                        <p>Total resi untuk <span className="font-semibold">{shippingServiceFilter || 'semua jasa kirim'}</span> pada tanggal <span className="font-semibold">{date ? format(date, 'd MMM yyyy') : 'semua'}</span>: <span className="font-semibold">{summary.total || 0}</span></p>
-                        <div className="flex flex-wrap gap-x-4 gap-y-1">
-                            {(Object.keys(summary) as (ShippingStatus | 'total')[])
-                                .filter(key => key !== 'total' && summary[key] > 0)
-                                .map(status => (
-                                    <span key={status}>{TReceipt.statuses[status as ShippingStatus]}: <span className="font-semibold">{summary[status as ShippingStatus]}</span></span>
-                                ))
-                            }
-                        </div>
-                    </div>
-                     <div className="flex w-full items-center justify-end pt-4">
-                        <Pagination totalPages={totalPages} currentPage={currentPage} onPageChange={setCurrentPage} />
-                     </div>
-                 </CardFooter>
-            )}
         </Card>
         <AlertDialog open={!!receiptToDelete} onOpenChange={() => setReceiptToDelete(null)}>
             <AlertDialogContent>
