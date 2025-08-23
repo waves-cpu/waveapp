@@ -73,8 +73,7 @@ export default function ReceiptPage() {
   const [receiptToDelete, setReceiptToDelete] = useState<ShippingReceipt | null>(null);
   const [receiptToReturn, setReceiptToReturn] = useState<ShippingReceipt | null>(null);
   const [isReturnDialogOpen, setIsReturnDialogOpen] = useState(false);
-  const [receiptToConfirm, setReceiptToConfirm] = useState<ShippingReceipt | null>(null);
-
+  
   const receiptInputRef = useRef<HTMLInputElement>(null);
   
   const [date, setDate] = useState<Date | undefined>(new Date());
@@ -150,7 +149,8 @@ export default function ReceiptPage() {
   
   const handleStatusChange = async (receipt: ShippingReceipt, newStatus: ShippingStatus) => {
     if (newStatus === 'returned') {
-        setReceiptToConfirm(receipt);
+        setReceiptToReturn(receipt);
+        setIsReturnDialogOpen(true);
     } else {
         try {
             await updateShippingReceiptStatus(receipt.id, newStatus);
@@ -167,26 +167,6 @@ export default function ReceiptPage() {
         }
     }
   };
-
-  const confirmReturnStatusChange = async () => {
-    if (!receiptToConfirm) return;
-    try {
-      await updateShippingReceiptStatus(receiptToConfirm.id, 'returned');
-      toast({
-        title: TReceipt.statusUpdatedToast,
-        description: TReceipt.statusUpdatedDesc.replace('{status}', TReceipt.statuses.returned),
-      });
-    } catch(error) {
-      toast({
-        variant: 'destructive',
-        title: TReceipt.statusUpdateErrorToast,
-        description: "Gagal mengubah status menjadi 'Return'.",
-      });
-    } finally {
-      setReceiptToConfirm(null);
-    }
-  };
-
   
   const getStatusDisplay = (status: ShippingStatus) => {
     const displays = {
@@ -195,6 +175,7 @@ export default function ReceiptPage() {
         delivered: { variant: 'default' as const, icon: CheckCircle, text: TReceipt.statuses.delivered, className: 'bg-green-600 hover:bg-green-700' },
         cancelled: { variant: 'destructive' as const, icon: XCircle, text: TReceipt.statuses.cancelled },
         returned: { variant: 'destructive' as const, icon: Undo2, text: TReceipt.statuses.returned, className: 'bg-orange-500 hover:bg-orange-600' },
+        reconciled: { variant: 'default' as const, icon: CheckCircle, text: TReceipt.statuses.reconciled, className: 'bg-green-600 hover:bg-green-700' },
     };
     return displays[status] || displays.pending;
   }
@@ -208,6 +189,7 @@ export default function ReceiptPage() {
         case 'delivered':
         case 'cancelled':
         case 'returned':
+        case 'reconciled':
             return []; // Final states
         default:
             return [];
@@ -386,23 +368,7 @@ export default function ReceiptPage() {
                 </AlertDialogFooter>
             </AlertDialogContent>
         </AlertDialog>
-        
-        <AlertDialog open={!!receiptToConfirm} onOpenChange={() => setReceiptToConfirm(null)}>
-            <AlertDialogContent>
-                <AlertDialogHeader>
-                <AlertDialogTitle>Konfirmasi Ubah Status Menjadi "Return"</AlertDialogTitle>
-                <AlertDialogDescription>
-                    Apakah Anda yakin ingin mengubah status untuk resi {receiptToConfirm?.receiptNumber} menjadi "Return"? Resi ini akan muncul di halaman Return untuk diproses lebih lanjut.
-                </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                <AlertDialogCancel>Batal</AlertDialogCancel>
-                <AlertDialogAction onClick={confirmReturnStatusChange}>
-                    Ya, Ubah Status
-                </AlertDialogAction>
-                </AlertDialogFooter>
-            </AlertDialogContent>
-        </AlertDialog>
+
       </main>
     </AppLayout>
     <ReturnProcessingDialog
@@ -414,3 +380,4 @@ export default function ReceiptPage() {
   );
 }
 
+    
