@@ -73,7 +73,6 @@ export default function ReceiptPage() {
   const receiptInputRef = useRef<HTMLInputElement>(null);
 
   const [date, setDate] = useState<Date | undefined>(new Date());
-  const [shippingServiceFilter, setShippingServiceFilter] = useState<string>('');
   
   const [itemsPerPage, setItemsPerPage] = useState(25);
   const [currentPage, setCurrentPage] = useState(1);
@@ -83,15 +82,21 @@ export default function ReceiptPage() {
         receiptInputRef.current?.focus();
     }
   }, [shippingService]);
+  
+  useEffect(() => {
+    if (!isSubmitting) {
+        receiptInputRef.current?.focus();
+    }
+  }, [isSubmitting]);
 
   const filteredReceipts = useMemo(() => {
     return shippingReceipts.filter(receipt => {
         const scannedDate = new Date(receipt.scannedAt);
         const inDate = date ? isSameDay(scannedDate, date) : true;
-        const serviceMatch = !shippingServiceFilter || receipt.shippingService === shippingServiceFilter;
+        const serviceMatch = !shippingService || receipt.shippingService === shippingService;
         return inDate && serviceMatch;
     });
-  }, [shippingReceipts, date, shippingServiceFilter]);
+  }, [shippingReceipts, date, shippingService]);
   
   const paginatedReceipts = useMemo(() => {
     const startIndex = (currentPage - 1) * itemsPerPage;
@@ -122,7 +127,6 @@ export default function ReceiptPage() {
         });
     } finally {
         setIsSubmitting(false);
-        receiptInputRef.current?.focus();
     }
   };
 
@@ -227,21 +231,6 @@ export default function ReceiptPage() {
             </CardHeader>
             <CardContent>
                  <div className="py-4 border-t flex flex-col md:flex-row justify-between items-center gap-4">
-                     <div className="flex flex-wrap gap-2">
-                        {SHIPPING_SERVICES.map(service => (
-                            <Button 
-                                key={service} 
-                                variant={shippingServiceFilter === service ? 'secondary' : 'outline'}
-                                size="sm"
-                                onClick={() => {
-                                    setShippingServiceFilter(service)
-                                    setCurrentPage(1)
-                                }}
-                            >
-                                {service}
-                            </Button>
-                        ))}
-                    </div>
                      <Popover>
                         <PopoverTrigger asChild>
                         <Button
@@ -347,13 +336,15 @@ export default function ReceiptPage() {
                     </Table>
                 </div>
             </CardContent>
-            <CardFooter className="flex-col items-start gap-y-2 border-t p-4">
-               <Pagination
-                    totalPages={totalPages}
-                    currentPage={currentPage}
-                    onPageChange={setCurrentPage}
-                />
-            </CardFooter>
+            {totalPages > 1 && (
+                <CardFooter className="flex-col items-start gap-y-2 border-t p-4">
+                    <Pagination
+                            totalPages={totalPages}
+                            currentPage={currentPage}
+                            onPageChange={setCurrentPage}
+                        />
+                </CardFooter>
+            )}
         </Card>
         <AlertDialog open={!!receiptToDelete} onOpenChange={() => setReceiptToDelete(null)}>
             <AlertDialogContent>
