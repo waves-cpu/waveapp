@@ -212,7 +212,7 @@ export default function ReturnPage() {
 
   const returnedReceipts = useMemo(() => {
     return shippingReceipts
-      .filter(r => r.status === 'returned' || r.status === 'reconciled' || r.status === 'pending')
+      .filter(r => r.status === 'returned' || r.status === 'reconciled')
       .filter(r => {
         if (!dateRange || !dateRange.from) return true;
         const scannedDate = new Date(r.scannedAt);
