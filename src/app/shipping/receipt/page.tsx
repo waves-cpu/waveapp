@@ -142,8 +142,8 @@ function ReturnProcessingDialog({ open, onOpenChange, receipt }: ReturnProcessin
             setReturnItems(prev => [...prev, {
                 id: item.id,
                 productId: parentProduct.id,
-                variantId: parentProduct.hasVariants ? item.id : undefined,
-                name: parentProduct.hasVariants ? `${parentProduct.name} - ${item.name}`: parentProduct.name,
+                variantId: (item as any).productId ? item.id : undefined,
+                name: (item as any).productId ? `${parentProduct.name} - ${item.name}`: parentProduct.name,
                 sku: item.sku,
                 imageUrl: parentProduct.imageUrl,
                 returnQuantity: 1,
@@ -193,7 +193,7 @@ function ReturnProcessingDialog({ open, onOpenChange, receipt }: ReturnProcessin
 
     return (
         <>
-         <Dialog open={open} onOpenChange={onOpenChange}>
+         <Dialog open={open} onOpenChange={(isOpen) => { if (!isOpen) setProductForVariantSelection(null); onOpenChange(isOpen);}}>
             <DialogContentPrimitive className="max-w-3xl">
                 <DialogHeaderPrimitive>
                     <DialogTitle>Proses Barang Return (Resi: {receipt.receiptNumber})</DialogTitle>
@@ -253,6 +253,7 @@ function ReturnProcessingDialog({ open, onOpenChange, receipt }: ReturnProcessin
                 item={productForVariantSelection}
                 onSelect={handleVariantSelect}
                 cart={[]}
+                ignoreStockCheck={true}
             />
          )}
         </>
@@ -272,14 +273,15 @@ export default function ReceiptPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [receiptToDelete, setReceiptToDelete] = useState<ShippingReceipt | null>(null);
   const receiptInputRef = useRef<HTMLInputElement>(null);
+  
+  const [receiptToReturn, setReceiptToReturn] = useState<ShippingReceipt | null>(null);
+  const [isReturnDialogOpen, setIsReturnDialogOpen] = useState(false);
 
   const [date, setDate] = useState<Date | undefined>(new Date());
   
   const [itemsPerPage, setItemsPerPage] = useState(25);
   const [currentPage, setCurrentPage] = useState(1);
   
-  const [receiptToReturn, setReceiptToReturn] = useState<ShippingReceipt | null>(null);
-  const [isReturnDialogOpen, setIsReturnDialogOpen] = useState(false);
 
   useEffect(() => {
     if (!isSubmitting) {
@@ -405,8 +407,8 @@ export default function ReceiptPage() {
         
         <Card>
             <CardHeader>
-                 <form onSubmit={handleSubmit} className="flex flex-col md:flex-row gap-2">
-                    <div className="relative flex-grow">
+                 <form onSubmit={handleSubmit} className="flex flex-col md:flex-row items-center gap-2">
+                    <div className="relative flex-grow w-full">
                         <ScanLine className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                         <Input
                             ref={receiptInputRef}

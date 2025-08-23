@@ -31,9 +31,11 @@ interface VariantSelectionDialogProps {
   item: InventoryItem;
   onSelect: (variant: InventoryItemVariant | null) => void;
   cart: CartItem[];
+  /** When true, stock level checks are ignored. Used for returns. */
+  ignoreStockCheck?: boolean;
 }
 
-export function VariantSelectionDialog({ open, onOpenChange, item, onSelect, cart }: VariantSelectionDialogProps) {
+export function VariantSelectionDialog({ open, onOpenChange, item, onSelect, cart, ignoreStockCheck = false }: VariantSelectionDialogProps) {
   const { language } = useLanguage();
   const t = translations[language];
   
@@ -60,7 +62,7 @@ export function VariantSelectionDialog({ open, onOpenChange, item, onSelect, car
                     {(item.variants || []).map(variant => {
                         const itemInCart = cart.find(ci => ci.id === variant.id);
                         const availableStock = variant.stock - (itemInCart?.quantity || 0);
-                        const isOutOfStock = availableStock <= 0;
+                        const isOutOfStock = !ignoreStockCheck && availableStock <= 0;
 
                         return (
                             <TableRow 
