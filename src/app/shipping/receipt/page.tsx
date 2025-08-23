@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
@@ -46,14 +45,14 @@ import {
     SelectTrigger,
     SelectValue,
   } from "@/components/ui/select"
-import { Calendar as CalendarIcon, ScanLine, Truck, Trash2, CheckCircle, XCircle, Undo2, Hourglass } from 'lucide-react';
+import { Calendar as CalendarIcon, ScanLine, Truck, Trash2, CheckCircle, XCircle, Undo2, Hourglass, FileDown } from 'lucide-react';
 import { format, isSameDay } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { useInventory } from '@/hooks/use-inventory';
 import type { ShippingReceipt, ShippingStatus } from '@/types';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardHeader, CardFooter } from '@/components/ui/card';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Pagination } from '@/components/ui/pagination';
 
@@ -76,6 +75,9 @@ export default function ReceiptPage() {
   
   const [itemsPerPage, setItemsPerPage] = useState(25);
   const [currentPage, setCurrentPage] = useState(1);
+  
+  const [receiptToReturn, setReceiptToReturn] = useState<ShippingReceipt | null>(null);
+  const [isReturnConfirmOpen, setIsReturnConfirmOpen] = useState(false);
 
   useEffect(() => {
     if (!isSubmitting) {
@@ -142,12 +144,34 @@ export default function ReceiptPage() {
     }
   };
   
-    const handleStatusChange = async (receiptId: string, newStatus: ShippingStatus) => {
+    const handleStatusChange = async (receipt: ShippingReceipt, newStatus: ShippingStatus) => {
+        if (newStatus === 'returned') {
+            setReceiptToReturn(receipt);
+            setIsReturnConfirmOpen(true);
+        } else {
+            try {
+                await updateShippingReceiptStatus(receipt.id, newStatus);
+                toast({
+                    title: TReceipt.statusUpdatedToast,
+                    description: TReceipt.statusUpdatedDesc.replace('{status}', TReceipt.statuses[newStatus]),
+                });
+            } catch (error) {
+                toast({
+                    variant: 'destructive',
+                    title: TReceipt.statusUpdateErrorToast,
+                    description: "Gagal memperbarui status resi.",
+                });
+            }
+        }
+    };
+    
+    const confirmReturn = async () => {
+        if (!receiptToReturn) return;
         try {
-            await updateShippingReceiptStatus(receiptId, newStatus);
+            await updateShippingReceiptStatus(receiptToReturn.id, 'returned');
             toast({
                 title: TReceipt.statusUpdatedToast,
-                description: TReceipt.statusUpdatedDesc.replace('{status}', TReceipt.statuses[newStatus]),
+                description: TReceipt.statusUpdatedDesc.replace('{status}', TReceipt.statuses.returned),
             });
         } catch (error) {
             toast({
@@ -155,6 +179,9 @@ export default function ReceiptPage() {
                 title: TReceipt.statusUpdateErrorToast,
                 description: "Gagal memperbarui status resi.",
             });
+        } finally {
+            setIsReturnConfirmOpen(false);
+            setReceiptToReturn(null);
         }
     };
   
@@ -206,18 +233,6 @@ export default function ReceiptPage() {
                             ))}
                         </SelectContent>
                     </Select>
-                    <div className="relative flex-grow">
-                        <ScanLine className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                        <Input
-                            ref={receiptInputRef}
-                            placeholder={TReceipt.scanOrEnterReceipt}
-                            value={receiptNumber}
-                            onChange={(e) => setReceiptNumber(e.target.value)}
-                            className="pl-10 h-10 text-base"
-                            disabled={isSubmitting || !shippingService}
-                            required
-                        />
-                    </div>
                      <Popover>
                         <PopoverTrigger asChild>
                         <Button
@@ -248,6 +263,18 @@ export default function ReceiptPage() {
                         />
                         </PopoverContent>
                     </Popover>
+                    <div className="relative flex-grow">
+                        <ScanLine className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                        <Input
+                            ref={receiptInputRef}
+                            placeholder={TReceipt.scanOrEnterReceipt}
+                            value={receiptNumber}
+                            onChange={(e) => setReceiptNumber(e.target.value)}
+                            className="pl-10 h-10 text-base"
+                            disabled={isSubmitting || !shippingService}
+                            required
+                        />
+                    </div>
                 </form>
             </CardHeader>
             <CardContent>
@@ -298,7 +325,7 @@ export default function ReceiptPage() {
                                                      {availableTransitions.length > 0 && (
                                                         <DropdownMenuContent>
                                                             {availableTransitions.map(status => (
-                                                                <DropdownMenuItem key={status} onSelect={() => handleStatusChange(receipt.id, status)}>
+                                                                <DropdownMenuItem key={status} onSelect={() => handleStatusChange(receipt, status)}>
                                                                     {TReceipt.statuses[status]}
                                                                 </DropdownMenuItem>
                                                             ))}
@@ -329,14 +356,14 @@ export default function ReceiptPage() {
                     </Table>
                 </div>
             </CardContent>
-            {totalPages > 1 && (
-                <CardFooter className="border-t pt-4">
+             {totalPages > 1 && (
+                <div className="p-4 border-t">
                     <Pagination
                             totalPages={totalPages}
                             currentPage={currentPage}
                             onPageChange={setCurrentPage}
                         />
-                </CardFooter>
+                </div>
             )}
         </Card>
         <AlertDialog open={!!receiptToDelete} onOpenChange={() => setReceiptToDelete(null)}>
@@ -351,6 +378,22 @@ export default function ReceiptPage() {
                     <AlertDialogCancel>{t.common.cancel}</AlertDialogCancel>
                     <AlertDialogAction onClick={handleDelete} className="bg-destructive hover:bg-destructive/90">
                         {TReceipt.deleteConfirmAction}
+                    </AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
+        <AlertDialog open={isReturnConfirmOpen} onOpenChange={setIsReturnConfirmOpen}>
+             <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>Konfirmasi Ubah Status Menjadi "Return"</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        Apakah Anda yakin ingin mengubah status untuk resi <strong>{receiptToReturn?.receiptNumber}</strong> menjadi "Return"? Resi ini akan muncul di halaman Return untuk diproses lebih lanjut.
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel>Batal</AlertDialogCancel>
+                    <AlertDialogAction onClick={confirmReturn}>
+                        Ya, Ubah Status
                     </AlertDialogAction>
                 </AlertDialogFooter>
             </AlertDialogContent>
