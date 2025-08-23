@@ -1,46 +1,62 @@
 
 'use client';
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { AppLayout } from '@/app/components/app-layout';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { useLanguage } from '@/hooks/use-language';
 import { translations } from '@/types/language';
 import { useInventory } from '@/hooks/use-inventory';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { ChartContainer, ChartTooltipContent } from '@/components/ui/chart';
-import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import type { ShippingReceipt, ShippingStatus } from '@/types';
-import { subDays, isWithinInterval, startOfDay, endOfDay, format } from "date-fns";
+import { subDays, isWithinInterval, startOfDay, endOfDay, format, eachDayOfInterval } from "date-fns";
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { Calendar as CalendarIcon, CheckCircle, Hourglass, Truck, Undo2, XCircle } from 'lucide-react';
 import { DateRange } from 'react-day-picker';
 import { cn } from '@/lib/utils';
-
-const formatCurrency = (amount: number) => `Rp${Math.round(amount).toLocaleString('id-ID')}`;
-
-const STATUS_COLORS: { [key in ShippingStatus]: string } = {
-  pending: "hsl(var(--chart-3))",
-  shipped: "hsl(var(--chart-1))",
-  delivered: "hsl(var(--chart-2))",
-  returned: "hsl(var(--chart-5))",
-  cancelled: "hsl(var(--chart-4))",
-};
+import { Skeleton } from '@/components/ui/skeleton';
 
 const getStatusDisplay = (status: ShippingStatus, t: any) => {
-    const displays: {[key in ShippingStatus]: { icon: React.ElementType, text: string }} = {
-        pending: { icon: Hourglass, text: t.statuses.pending },
-        shipped: { icon: Truck, text: t.statuses.shipped },
-        delivered: { icon: CheckCircle, text: t.statuses.delivered },
-        cancelled: { icon: XCircle, text: t.statuses.cancelled },
-        returned: { icon: Undo2, text: t.statuses.returned },
+    const displays: {[key in ShippingStatus]: { icon: React.ElementType, text: string, color: string }} = {
+        pending: { icon: Hourglass, text: t.statuses.pending, color: 'text-yellow-500' },
+        shipped: { icon: Truck, text: t.statuses.shipped, color: 'text-blue-500' },
+        delivered: { icon: CheckCircle, text: t.statuses.delivered, color: 'text-green-500' },
+        cancelled: { icon: XCircle, text: t.statuses.cancelled, color: 'text-red-500' },
+        returned: { icon: Undo2, text: t.statuses.returned, color: 'text-orange-500' },
     };
     return displays[status] || displays.pending;
 }
 
+function ReportSkeleton() {
+    return (
+        <div className="space-y-4">
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                {[...Array(4)].map((_, i) => (
+                    <Card key={i}>
+                        <CardHeader>
+                            <Skeleton className="h-6 w-24 mb-2" />
+                        </CardHeader>
+                        <CardContent className="space-y-3">
+                            {[...Array(5)].map((_, j) => <Skeleton key={j} className="h-5 w-3/4" />)}
+                        </CardContent>
+                    </Card>
+                ))}
+            </div>
+            <Card>
+                <CardHeader>
+                    <Skeleton className="h-6 w-48 mb-2" />
+                    <Skeleton className="h-4 w-64" />
+                </CardHeader>
+                <CardContent>
+                    <Skeleton className="h-72 w-full" />
+                </CardContent>
+            </Card>
+        </div>
+    )
+}
 
 export default function ShippingReportPage() {
   const { language } = useLanguage();
@@ -63,25 +79,55 @@ export default function ShippingReportPage() {
   }, [shippingReceipts, dateRange]);
 
   const reportData = useMemo(() => {
-    const totalByService: { [key: string]: number } = {};
-    const totalByStatus: { [key: string]: number } = { pending: 0, shipped: 0, delivered: 0, returned: 0, cancelled: 0 };
+    const services = ['SPX', 'J&T', 'JNE', 'INSTANT'];
+    const summaryByService: { [key: string]: { [key in ShippingStatus]: number } & { total: number } } = {};
     
-    filteredReceipts.forEach(receipt => {
-        totalByService[receipt.shippingService] = (totalByService[receipt.shippingService] || 0) + 1;
-        totalByStatus[receipt.status] = (totalByStatus[receipt.status] || 0) + 1;
+    services.forEach(service => {
+        summaryByService[service] = { pending: 0, shipped: 0, delivered: 0, returned: 0, cancelled: 0, total: 0 };
     });
 
-    const statusChartData = Object.entries(totalByStatus)
-        .filter(([, value]) => value > 0)
-        .map(([name, value]) => ({
-            name: TReceipt.statuses[name as ShippingStatus] || name,
-            value,
-            fill: STATUS_COLORS[name as ShippingStatus]
-        }));
+    const shippedByDay: { [key: string]: number } = {};
     
-    return { totalByService, statusChartData };
+    filteredReceipts.forEach(receipt => {
+        if (summaryByService[receipt.shippingService]) {
+            summaryByService[receipt.shippingService][receipt.status]++;
+            summaryByService[receipt.shippingService].total++;
+        }
+        
+        if (receipt.status === 'shipped') {
+            const day = format(new Date(receipt.scannedAt), 'yyyy-MM-dd');
+            shippedByDay[day] = (shippedByDay[day] || 0) + 1;
+        }
+    });
 
-  }, [filteredReceipts, TReceipt.statuses]);
+    const dailyShippedChartData = (dateRange?.from && dateRange?.to) 
+      ? eachDayOfInterval({ start: dateRange.from, end: dateRange.to }).map(day => {
+          const formattedDay = format(day, 'yyyy-MM-dd');
+          return {
+              date: format(day, 'dd MMM'),
+              Terkirim: shippedByDay[formattedDay] || 0,
+          };
+      })
+      : [];
+
+    return { summaryByService, dailyShippedChartData };
+
+  }, [filteredReceipts, dateRange]);
+
+
+  if (loading) {
+    return (
+        <AppLayout>
+            <main className="flex-1 p-4 md:p-10">
+                 <div className="flex items-center gap-4 mb-6">
+                    <SidebarTrigger className="md:hidden" />
+                    <h1 className="text-lg font-bold">{t.shipping.report}</h1>
+                </div>
+                <ReportSkeleton />
+            </main>
+        </AppLayout>
+    )
+  }
 
 
   return (
@@ -128,95 +174,58 @@ export default function ShippingReportPage() {
         </div>
 
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-4">
-            {Object.entries(reportData.totalByService).map(([service, count]) => (
+            {Object.entries(reportData.summaryByService).map(([service, summary]) => (
                  <Card key={service}>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">{service}</CardTitle>
-                        <Truck className="h-4 w-4 text-muted-foreground" />
+                    <CardHeader className="pb-4">
+                        <CardTitle className="text-base font-bold flex items-center gap-2">
+                            <Truck className="h-5 w-5" />
+                            {service}
+                        </CardTitle>
+                        <CardDescription className="text-xs">Total Resi: {summary.total}</CardDescription>
                     </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold">{count}</div>
-                        <p className="text-xs text-muted-foreground">total resi</p>
+                    <CardContent className="text-sm space-y-2">
+                        {(Object.keys(summary) as (ShippingStatus | 'total')[]).map(status => {
+                            if (status === 'total' || summary[status] === 0) return null;
+                            const display = getStatusDisplay(status, TReceipt);
+                            return (
+                                <div key={status} className="flex justify-between items-center">
+                                    <div className="flex items-center gap-2">
+                                        <display.icon className={cn("h-4 w-4", display.color)} />
+                                        <span>{display.text}</span>
+                                    </div>
+                                    <span className="font-semibold">{summary[status]}</span>
+                                </div>
+                            )
+                        })}
                     </CardContent>
                 </Card>
             ))}
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Card className="md:col-span-1">
-                <CardHeader>
-                    <CardTitle className="text-base">Ringkasan Status</CardTitle>
-                </CardHeader>
-                <CardContent>
-                   {reportData.statusChartData.length > 0 ? (
-                        <ChartContainer config={{}} className="mx-auto aspect-square h-[250px]">
-                            <ResponsiveContainer width="100%" height="100%">
-                                <PieChart>
-                                    <Tooltip
-                                        cursor={false}
-                                        content={<ChartTooltipContent hideLabel />}
-                                    />
-                                    <Pie data={reportData.statusChartData} dataKey="value" nameKey="name" innerRadius={60} strokeWidth={5}>
-                                        {reportData.statusChartData.map(entry => (
-                                            <Cell key={entry.name} fill={entry.fill} />
-                                        ))}
-                                    </Pie>
-                                    <Legend />
-                                </PieChart>
-                            </ResponsiveContainer>
-                        </ChartContainer>
-                   ) : (
-                        <div className="h-[250px] flex items-center justify-center text-muted-foreground text-sm">
-                            Tidak ada data untuk ditampilkan.
-                        </div>
-                   )}
-                </CardContent>
-            </Card>
-            <Card className="md:col-span-2">
-                 <CardHeader>
-                    <CardTitle className="text-base">Daftar Resi</CardTitle>
-                    <CardDescription>Semua resi dalam rentang tanggal yang dipilih.</CardDescription>
-                </CardHeader>
-                <CardContent className="p-0">
-                    <div className="border-t">
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead className="w-[150px]">Tanggal Scan</TableHead>
-                                    <TableHead>No. Resi</TableHead>
-                                    <TableHead>Jasa Kirim</TableHead>
-                                    <TableHead>Status</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                               {loading ? (
-                                    <TableRow><TableCell colSpan={4} className="text-center h-24">Memuat data...</TableCell></TableRow>
-                               ) : filteredReceipts.length > 0 ? (
-                                   filteredReceipts.map(receipt => {
-                                        const { icon: Icon, text } = getStatusDisplay(receipt.status, TReceipt);
-                                        return (
-                                             <TableRow key={receipt.id}>
-                                                <TableCell>{format(new Date(receipt.scannedAt), 'd MMM, HH:mm')}</TableCell>
-                                                <TableCell className="font-mono">{receipt.receiptNumber}</TableCell>
-                                                <TableCell>{receipt.shippingService}</TableCell>
-                                                <TableCell>
-                                                    <div className="flex items-center gap-2">
-                                                        <Icon className="h-4 w-4" style={{ color: STATUS_COLORS[receipt.status] }} />
-                                                        <span>{text}</span>
-                                                    </div>
-                                                </TableCell>
-                                             </TableRow>
-                                        )
-                                   })
-                               ) : (
-                                    <TableRow><TableCell colSpan={4} className="text-center h-24">Tidak ada data.</TableCell></TableRow>
-                               )}
-                            </TableBody>
-                        </Table>
-                    </div>
-                </CardContent>
-            </Card>
-        </div>
+        <Card>
+            <CardHeader>
+                <CardTitle className="text-base">Tren Pengiriman Harian</CardTitle>
+                <CardDescription>Jumlah resi yang berstatus "Terkirim" setiap harinya.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                <ResponsiveContainer width="100%" height={300}>
+                    <LineChart data={reportData.dailyShippedChartData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="date" fontSize={12} tickLine={false} axisLine={false} />
+                        <YAxis fontSize={12} tickLine={false} axisLine={false} allowDecimals={false}/>
+                        <Tooltip
+                            contentStyle={{
+                                background: "hsl(var(--background))",
+                                border: "1px solid hsl(var(--border))",
+                                borderRadius: "var(--radius)",
+                            }}
+                        />
+                        <Legend />
+                        <Line type="monotone" dataKey="Terkirim" stroke="hsl(var(--primary))" strokeWidth={2} dot={false} />
+                    </LineChart>
+                </ResponsiveContainer>
+            </CardContent>
+        </Card>
       </main>
     </AppLayout>
   );
