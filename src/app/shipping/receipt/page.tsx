@@ -55,211 +55,10 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Pagination } from '@/components/ui/pagination';
-import {
-  Dialog,
-  DialogTitle,
-  DialogDescription,
-  DialogHeader as DialogHeaderPrimitive,
-  DialogContent as DialogContentPrimitive,
-  DialogFooter,
-} from '@/components/ui/dialog';
-import { VariantSelectionDialog } from '@/app/components/variant-selection-dialog';
-import { useScanSounds } from '@/hooks/use-scan-sounds';
+import { ReturnProcessingDialog } from '@/app/shipping/return/page';
 
 
 const SHIPPING_SERVICES = ['SPX', 'J&T', 'JNE', 'INSTANT'];
-
-
-interface ReturnItem {
-    id: string; // variantId or productId
-    productId: string;
-    variantId?: string;
-    name: string;
-    sku?: string;
-    imageUrl?: string;
-    returnQuantity: number;
-}
-
-interface ReturnProcessingDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  receipt: ShippingReceipt | null;
-}
-
-function ReturnProcessingDialog({ open, onOpenChange, receipt }: ReturnProcessingDialogProps) {
-    const { language } = useLanguage();
-    const t = translations[language];
-    const { toast } = useToast();
-    const { updateStock, updateShippingReceiptStatus, getProductBySku } = useInventory();
-    const { playSuccessSound, playErrorSound } = useScanSounds();
-
-    const [returnItems, setReturnItems] = useState<ReturnItem[]>([]);
-    const [skuInput, setSkuInput] = useState('');
-    const [isSubmitting, setIsSubmitting] = useState(false);
-    const [productForVariantSelection, setProductForVariantSelection] = useState<InventoryItem | null>(null);
-
-    useEffect(() => {
-        if (!open) {
-            setReturnItems([]);
-            setSkuInput('');
-        }
-    }, [open]);
-
-    const handleSkuSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!skuInput.trim()) return;
-
-        try {
-            const product = await getProductBySku(skuInput.trim());
-            if (!product) {
-                playErrorSound();
-                toast({ variant: 'destructive', title: "Produk tidak ditemukan" });
-                return;
-            }
-
-            if (product.variants && product.variants.length > 1) {
-                setProductForVariantSelection(product);
-            } else {
-                const itemToAdd = (product.variants && product.variants.length === 1) ? product.variants[0] : product;
-                addItemToReturnList(product, itemToAdd as InventoryItemVariant);
-            }
-        } catch (error) {
-            playErrorSound();
-            toast({ variant: 'destructive', title: "Error", description: "Gagal mencari produk." });
-        } finally {
-            setSkuInput('');
-        }
-    };
-    
-    const addItemToReturnList = (parentProduct: InventoryItem, item: InventoryItemVariant) => {
-        playSuccessSound();
-        const existingItemIndex = returnItems.findIndex(ri => ri.id === item.id);
-        if (existingItemIndex > -1) {
-            const updatedItems = [...returnItems];
-            updatedItems[existingItemIndex].returnQuantity += 1;
-            setReturnItems(updatedItems);
-        } else {
-            setReturnItems(prev => [...prev, {
-                id: item.id,
-                productId: parentProduct.id,
-                variantId: (item as any).productId ? item.id : undefined,
-                name: (item as any).productId ? `${parentProduct.name} - ${item.name}`: parentProduct.name,
-                sku: item.sku,
-                imageUrl: parentProduct.imageUrl,
-                returnQuantity: 1,
-            }]);
-        }
-    };
-
-    const handleVariantSelect = (variant: InventoryItemVariant | null) => {
-        if (variant && productForVariantSelection) {
-            addItemToReturnList(productForVariantSelection, variant);
-        }
-        setProductForVariantSelection(null);
-    };
-
-    const updateQuantity = (itemId: string, newQuantity: number) => {
-        const qty = Math.max(0, newQuantity);
-        setReturnItems(items => items.map(item => item.id === itemId ? { ...item, returnQuantity: qty } : item).filter(item => item.returnQuantity > 0));
-    };
-
-    const handleFinalizeReturn = async () => {
-        if (!receipt || returnItems.length === 0) return;
-        setIsSubmitting(true);
-        try {
-            const stockUpdates = returnItems.map(item => 
-                updateStock(item.id, item.returnQuantity, `Return dari resi #${receipt.receiptNumber}`)
-            );
-            await Promise.all(stockUpdates);
-            await updateShippingReceiptStatus(receipt.id, 'returned');
-            
-            toast({
-                title: "Return Berhasil Diproses",
-                description: `${returnItems.length} jenis item telah dikembalikan ke stok.`,
-            });
-            onOpenChange(false);
-        } catch (error) {
-            toast({
-                variant: 'destructive',
-                title: "Gagal Memproses Return",
-                description: "Terjadi kesalahan saat mengembalikan stok.",
-            });
-        } finally {
-            setIsSubmitting(false);
-        }
-    };
-
-    if (!receipt) return null;
-
-    return (
-        <>
-         <Dialog open={open} onOpenChange={(isOpen) => { if (!isOpen) setProductForVariantSelection(null); onOpenChange(isOpen);}}>
-            <DialogContentPrimitive className="max-w-3xl">
-                <DialogHeaderPrimitive>
-                    <DialogTitle>Proses Barang Return (Resi: {receipt.receiptNumber})</DialogTitle>
-                    <DialogDescription>
-                        Scan SKU produk yang ada di dalam paket retur untuk menambahkannya ke daftar.
-                    </DialogDescription>
-                </DialogHeaderPrimitive>
-                <form onSubmit={handleSkuSubmit} className="pt-4">
-                    <Input
-                        placeholder="Scan atau masukkan SKU..."
-                        value={skuInput}
-                        onChange={(e) => setSkuInput(e.target.value)}
-                        autoFocus
-                    />
-                </form>
-                <div className="mt-4 border rounded-md max-h-80 overflow-y-auto">
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead className="w-[60%]">Produk</TableHead>
-                                <TableHead className="text-center">Jumlah Diretur</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {returnItems.length > 0 ? returnItems.map(item => (
-                                <TableRow key={item.id}>
-                                    <TableCell>{item.name}</TableCell>
-                                    <TableCell>
-                                        <Input 
-                                            type="number" 
-                                            value={item.returnQuantity} 
-                                            onChange={(e) => updateQuantity(item.id, parseInt(e.target.value, 10))}
-                                            className="w-20 mx-auto text-center"
-                                        />
-                                    </TableCell>
-                                </TableRow>
-                            )) : (
-                                <TableRow>
-                                    <TableCell colSpan={2} className="text-center h-24 text-muted-foreground">Scan produk untuk memulai...</TableCell>
-                                </TableRow>
-                            )}
-                        </TableBody>
-                    </Table>
-                </div>
-                 <DialogFooter className="pt-6">
-                    <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>Batal</Button>
-                    <Button onClick={handleFinalizeReturn} disabled={isSubmitting || returnItems.length === 0}>
-                        {isSubmitting ? 'Memproses...' : 'Tandai Retur & Stok Masuk'}
-                    </Button>
-                </DialogFooter>
-            </DialogContentPrimitive>
-         </Dialog>
-         {productForVariantSelection && (
-             <VariantSelectionDialog
-                open={!!productForVariantSelection}
-                onOpenChange={() => setProductForVariantSelection(null)}
-                item={productForVariantSelection}
-                onSelect={handleVariantSelect}
-                cart={[]}
-                ignoreStockCheck={true}
-            />
-         )}
-        </>
-    )
-}
-
 
 export default function ReceiptPage() {
   const { language } = useLanguage();
@@ -272,11 +71,12 @@ export default function ReceiptPage() {
   const [shippingService, setShippingService] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [receiptToDelete, setReceiptToDelete] = useState<ShippingReceipt | null>(null);
-  const receiptInputRef = useRef<HTMLInputElement>(null);
-  
   const [receiptToReturn, setReceiptToReturn] = useState<ShippingReceipt | null>(null);
   const [isReturnDialogOpen, setIsReturnDialogOpen] = useState(false);
+  const [receiptToConfirm, setReceiptToConfirm] = useState<ShippingReceipt | null>(null);
 
+  const receiptInputRef = useRef<HTMLInputElement>(null);
+  
   const [date, setDate] = useState<Date | undefined>(new Date());
   
   const [itemsPerPage, setItemsPerPage] = useState(25);
@@ -350,8 +150,7 @@ export default function ReceiptPage() {
   
   const handleStatusChange = async (receipt: ShippingReceipt, newStatus: ShippingStatus) => {
     if (newStatus === 'returned') {
-        setReceiptToReturn(receipt);
-        setIsReturnDialogOpen(true);
+        setReceiptToConfirm(receipt);
     } else {
         try {
             await updateShippingReceiptStatus(receipt.id, newStatus);
@@ -368,6 +167,26 @@ export default function ReceiptPage() {
         }
     }
   };
+
+  const confirmReturnStatusChange = async () => {
+    if (!receiptToConfirm) return;
+    try {
+      await updateShippingReceiptStatus(receiptToConfirm.id, 'returned');
+      toast({
+        title: TReceipt.statusUpdatedToast,
+        description: TReceipt.statusUpdatedDesc.replace('{status}', TReceipt.statuses.returned),
+      });
+    } catch(error) {
+      toast({
+        variant: 'destructive',
+        title: TReceipt.statusUpdateErrorToast,
+        description: "Gagal mengubah status menjadi 'Return'.",
+      });
+    } finally {
+      setReceiptToConfirm(null);
+    }
+  };
+
   
   const getStatusDisplay = (status: ShippingStatus) => {
     const displays = {
@@ -408,18 +227,6 @@ export default function ReceiptPage() {
         <Card>
             <CardHeader>
                  <form onSubmit={handleSubmit} className="flex flex-col md:flex-row items-center gap-2">
-                    <div className="relative flex-grow w-full">
-                        <ScanLine className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                        <Input
-                            ref={receiptInputRef}
-                            placeholder={TReceipt.scanOrEnterReceipt}
-                            value={receiptNumber}
-                            onChange={(e) => setReceiptNumber(e.target.value)}
-                            className="pl-10 h-10 text-base"
-                            disabled={isSubmitting}
-                            required
-                        />
-                    </div>
                      <Select value={shippingService} onValueChange={setShippingService} required>
                         <SelectTrigger className="w-full md:w-[180px]">
                             <SelectValue placeholder={TReceipt.selectShippingService} />
@@ -460,6 +267,18 @@ export default function ReceiptPage() {
                         />
                         </PopoverContent>
                     </Popover>
+                    <div className="relative flex-grow w-full">
+                        <ScanLine className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                        <Input
+                            ref={receiptInputRef}
+                            placeholder={TReceipt.scanOrEnterReceipt}
+                            value={receiptNumber}
+                            onChange={(e) => setReceiptNumber(e.target.value)}
+                            className="pl-10 h-10 text-base"
+                            disabled={isSubmitting}
+                            required
+                        />
+                    </div>
                 </form>
             </CardHeader>
             <CardContent>
@@ -564,6 +383,23 @@ export default function ReceiptPage() {
                     <AlertDialogAction onClick={handleDelete} className="bg-destructive hover:bg-destructive/90">
                         {TReceipt.deleteConfirmAction}
                     </AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
+        
+        <AlertDialog open={!!receiptToConfirm} onOpenChange={() => setReceiptToConfirm(null)}>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                <AlertDialogTitle>Konfirmasi Ubah Status Menjadi "Return"</AlertDialogTitle>
+                <AlertDialogDescription>
+                    Apakah Anda yakin ingin mengubah status untuk resi {receiptToConfirm?.receiptNumber} menjadi "Return"? Resi ini akan muncul di halaman Return untuk diproses lebih lanjut.
+                </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                <AlertDialogCancel>Batal</AlertDialogCancel>
+                <AlertDialogAction onClick={confirmReturnStatusChange}>
+                    Ya, Ubah Status
+                </AlertDialogAction>
                 </AlertDialogFooter>
             </AlertDialogContent>
         </AlertDialog>
