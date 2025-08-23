@@ -1,4 +1,5 @@
 
+
 import Database from 'better-sqlite3';
 import path from 'path';
 import fs from 'fs';
@@ -91,6 +92,13 @@ const runMigrations = () => {
     if (!variantColumns.some((col: any) => col.name === 'costPrice')) {
         console.log('Adding costPrice column to variants table...');
         db.exec('ALTER TABLE variants ADD COLUMN costPrice REAL');
+    }
+
+    // Add transactionId to shipping_receipts
+    const shippingReceiptsColumns = db.pragma('table_info(shipping_receipts)');
+    if (!shippingReceiptsColumns.some((col: any) => col.name === 'transactionId')) {
+        console.log('Adding transactionId column to shipping_receipts table...');
+        db.exec('ALTER TABLE shipping_receipts ADD COLUMN transactionId TEXT');
     }
 
   } catch (error) {
@@ -197,7 +205,8 @@ const createSchema = () => {
       receiptNumber TEXT NOT NULL UNIQUE,
       shippingService TEXT NOT NULL,
       status TEXT NOT NULL DEFAULT 'pending',
-      scannedAt TEXT NOT NULL
+      scannedAt TEXT NOT NULL,
+      transactionId TEXT
     );
   `);
 };

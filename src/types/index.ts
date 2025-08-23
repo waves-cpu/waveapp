@@ -83,5 +83,6 @@ export interface ShippingReceipt {
     shippingService: string;
     status: ShippingStatus;
     scannedAt: string; // ISO string
+    transactionId?: string;
 }
     

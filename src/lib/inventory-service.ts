@@ -672,11 +672,16 @@ export async function deleteReseller(id: number) {
 
 // Shipping Receipt Functions
 export async function addShippingReceipt(receiptNumber: string, shippingService: string): Promise<void> {
+    const saleExists = db.prepare('SELECT id FROM sales WHERE transactionId = ?').get(receiptNumber);
+    if(!saleExists) {
+        throw new Error(`Tidak ada transaksi penjualan yang cocok dengan nomor resi ${receiptNumber}. Pastikan ID Transaksi sama dengan nomor resi.`);
+    }
+
     try {
         db.prepare(`
-            INSERT INTO shipping_receipts (receiptNumber, shippingService, scannedAt)
-            VALUES (?, ?, ?)
-        `).run(receiptNumber, shippingService, new Date().toISOString());
+            INSERT INTO shipping_receipts (receiptNumber, shippingService, scannedAt, transactionId)
+            VALUES (?, ?, ?, ?)
+        `).run(receiptNumber, shippingService, new Date().toISOString(), receiptNumber);
     } catch (error) {
         if (error instanceof Error && error.message.includes('UNIQUE constraint failed')) {
             throw new Error(`Receipt number ${receiptNumber} has already been scanned.`);
@@ -700,3 +705,4 @@ export async function deleteShippingReceipt(id: string): Promise<void> {
 export async function updateShippingReceiptStatus(id: string, status: ShippingStatus): Promise<void> {
     db.prepare('UPDATE shipping_receipts SET status = ? WHERE id = ?').run(status, id);
 }
+
