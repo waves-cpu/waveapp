@@ -224,9 +224,6 @@ export default function ReceiptPage() {
                             required
                         />
                     </div>
-                     <Button type="submit" disabled={isSubmitting || !receiptNumber.trim() || !shippingService}>
-                        {isSubmitting ? TReceipt.adding : TReceipt.addReceipt}
-                    </Button>
                 </form>
             </CardHeader>
             <CardContent>
@@ -337,7 +334,7 @@ export default function ReceiptPage() {
                 </div>
             </CardContent>
             {totalPages > 1 && (
-                <CardFooter className="flex-col items-start gap-y-2 border-t p-4">
+                <CardFooter>
                     <Pagination
                             totalPages={totalPages}
                             currentPage={currentPage}
