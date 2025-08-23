@@ -80,12 +80,10 @@ export default function ShippingReportPage() {
 
   const reportData = useMemo(() => {
     const services = ['SPX', 'J&T', 'JNE', 'INSTANT'];
-    const summaryByService: { [key: string]: { [key in ShippingStatus]: number } & { total: number } } = {};
+    const summaryByService: { [key: string]: { [key in ShippingStatus]: number } & { total: number } } = Object.fromEntries(
+        services.map(service => [service, { pending: 0, shipped: 0, delivered: 0, returned: 0, cancelled: 0, total: 0 }])
+    );
     
-    services.forEach(service => {
-        summaryByService[service] = { pending: 0, shipped: 0, delivered: 0, returned: 0, cancelled: 0, total: 0 };
-    });
-
     const shippedByDay: { [key: string]: number } = {};
     
     filteredReceipts.forEach(receipt => {
@@ -94,6 +92,7 @@ export default function ShippingReportPage() {
             summaryByService[receipt.shippingService].total++;
         }
         
+        // Count receipts with status 'shipped' for the daily trend chart
         if (receipt.status === 'shipped') {
             const day = format(new Date(receipt.scannedAt), 'yyyy-MM-dd');
             shippedByDay[day] = (shippedByDay[day] || 0) + 1;
