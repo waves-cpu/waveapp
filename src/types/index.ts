@@ -75,7 +75,7 @@ export interface ManualJournalEntry {
     type: 'manual';
 }
 
-export type ShippingStatus = 'pending' | 'shipped' | 'delivered' | 'returned' | 'cancelled';
+export type ShippingStatus = 'pending' | 'shipped' | 'delivered' | 'returned' | 'cancelled' | 'reconciled';
 
 export interface ShippingReceipt {
     id: string;

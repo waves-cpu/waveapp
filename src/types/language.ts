@@ -291,6 +291,7 @@ export const translations = {
                 delivered: "Delivered",
                 returned: "Returned",
                 cancelled: "Cancelled",
+                reconciled: "Reconciled",
             }
         },
         settings: {
@@ -619,6 +620,7 @@ export const translations = {
                 delivered: "Diterima",
                 returned: "Return",
                 cancelled: "Batal",
+                reconciled: "Selesai",
             }
         },
         settings: {

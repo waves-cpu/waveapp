@@ -1,19 +1,22 @@
 
+
 'use client';
 
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { AppLayout } from '@/app/components/app-layout';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { useLanguage } from '@/hooks/use-language';
 import { translations } from '@/types/language';
 import { useInventory } from '@/hooks/use-inventory';
-import type { Sale } from '@/types';
+import type { Sale, ShippingReceipt, ShippingStatus } from '@/types';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableRow, TableHeader, TableHead } from '@/components/ui/table';
-import { Search, Undo2, ArchiveRestore } from 'lucide-react';
-import { format } from 'date-fns';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { Calendar as CalendarIcon, Search, Undo2, ArchiveRestore, ScanLine, Check, Hourglass, XCircle, Truck, CheckCircle } from 'lucide-react';
+import { format, isWithinInterval, startOfDay, endOfDay } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import {
   Dialog,
@@ -31,9 +34,12 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
-import { useForm, useFieldArray } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
+import { DateRange } from 'react-day-picker';
+import { cn } from '@/lib/utils';
+import { Badge } from '@/components/ui/badge';
 
 const returnItemSchema = z.object({
   id: z.string(),
@@ -51,7 +57,7 @@ const returnItemSchema = z.object({
 
 const returnFormSchema = z.object({
   transactionId: z.string(),
-  items: z.array(returnItemSchema).min(1, "Harus ada setidaknya satu item untuk direturn."),
+  items: z.array(returnItemSchema).min(1, "Harus ada setidaknya satu item untuk diretur."),
 });
 
 
@@ -134,9 +140,9 @@ function ReturnProcessingDialog({ open, onOpenChange, transaction }: ReturnProce
          <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="max-w-2xl">
                 <DialogHeader>
-                    <DialogTitle>Proses Return Barang</DialogTitle>
+                    <DialogTitle>Proses Stok Masuk dari Return</DialogTitle>
                     <DialogDescription>
-                        Masukkan jumlah barang yang dikembalikan ke stok untuk transaksi #{transaction.transactionId.slice(-6)}.
+                        Masukkan jumlah barang yang dikembalikan ke stok.
                     </DialogDescription>
                 </DialogHeader>
                 <Form {...form}>
@@ -179,7 +185,7 @@ function ReturnProcessingDialog({ open, onOpenChange, transaction }: ReturnProce
                          </Table>
                          <DialogFooter className="pt-6">
                             <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>Batal</Button>
-                            <Button type="submit">Proses Return</Button>
+                            <Button type="submit">Proses Stok Masuk</Button>
                         </DialogFooter>
                     </form>
                 </Form>
@@ -192,44 +198,59 @@ function ReturnProcessingDialog({ open, onOpenChange, transaction }: ReturnProce
 export default function ReturnPage() {
   const { language } = useLanguage();
   const t = translations[language];
-  const { allSales, loading } = useInventory();
-  const [searchTerm, setSearchTerm] = useState('');
+  const TReceipt = t.receiptPage;
+  const { shippingReceipts, updateShippingReceiptStatus, loading } = useInventory();
+  const [receiptToVerify, setReceiptToVerify] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedTransaction, setSelectedTransaction] = useState<{transactionId: string, items: Sale[]} | null>(null);
+  const { toast } = useToast();
 
-  const groupedSales = useMemo(() => {
-    const groups: { [key: string]: Sale[] } = {};
-    allSales.forEach(sale => {
-        const id = sale.transactionId || `sale-${sale.id}`;
-        if (!groups[id]) {
-            groups[id] = [];
+  const [dateRange, setDateRange] = useState<DateRange | undefined>({
+    from: new Date(new Date().setDate(1)),
+    to: new Date(),
+  });
+
+  const returnedReceipts = useMemo(() => {
+    return shippingReceipts
+      .filter(r => r.status === 'returned' || r.status === 'reconciled')
+      .filter(r => {
+        if (!dateRange || !dateRange.from) return true;
+        const scannedDate = new Date(r.scannedAt);
+        const toDate = dateRange.to || dateRange.from;
+        return isWithinInterval(scannedDate, { start: startOfDay(dateRange.from), end: endOfDay(toDate) });
+      });
+  }, [shippingReceipts, dateRange]);
+
+  const handleVerifyReceipt = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!receiptToVerify.trim()) return;
+
+    const receipt = returnedReceipts.find(r => r.receiptNumber === receiptToVerify.trim().toUpperCase() && r.status === 'returned');
+    
+    if (receipt) {
+        try {
+            await updateShippingReceiptStatus(receipt.id, 'reconciled');
+            toast({
+                title: "Resi Berhasil Diverifikasi",
+                description: `Resi ${receipt.receiptNumber} telah ditandai telah sampai.`,
+            });
+            setReceiptToVerify('');
+        } catch (error) {
+            toast({ variant: 'destructive', title: "Gagal Update", description: "Gagal memperbarui status resi." });
         }
-        groups[id].push(sale);
-    });
-    return Object.entries(groups).map(([transactionId, items]) => ({
-        transactionId,
-        items,
-        date: new Date(items[0].saleDate),
-        resellerName: items[0].resellerName,
-        channel: items[0].channel,
-        totalItems: items.reduce((sum, item) => sum + item.quantity, 0),
-    })).sort((a,b) => b.date.getTime() - a.date.getTime());
-  }, [allSales]);
-
-  const filteredTransactions = useMemo(() => {
-    if (!searchTerm) return groupedSales;
-    const lowerSearchTerm = searchTerm.toLowerCase();
-    return groupedSales.filter(group => 
-        group.transactionId.toLowerCase().includes(lowerSearchTerm) ||
-        group.resellerName?.toLowerCase().includes(lowerSearchTerm) ||
-        group.items.some(item => item.sku?.toLowerCase().includes(lowerSearchTerm) || item.productName.toLowerCase().includes(lowerSearchTerm))
-    );
-  }, [groupedSales, searchTerm]);
+    } else {
+         toast({ variant: 'destructive', title: "Resi Tidak Ditemukan", description: `Resi ${receiptToVerify} tidak ditemukan di daftar return atau sudah diverifikasi.` });
+    }
+  }
   
-  const handleProcessReturn = (transactionId: string, items: Sale[]) => {
-    setSelectedTransaction({ transactionId, items });
-    setIsDialogOpen(true);
-  };
+  const getStatusDisplay = (status: ShippingStatus) => {
+    const displays: {[key in ShippingStatus]?: { variant: "default" | "secondary" | "destructive" | "outline" | null | undefined, icon: React.ElementType, text: string, className?: string }} = {
+        returned: { variant: 'destructive', icon: Undo2, text: TReceipt.statuses.returned, className: 'bg-orange-500 hover:bg-orange-600' },
+        reconciled: { variant: 'default', icon: CheckCircle, text: TReceipt.statuses.reconciled, className: 'bg-green-600 hover:bg-green-700' },
+    };
+    return displays[status];
+  }
+
 
   return (
     <>
@@ -242,55 +263,108 @@ export default function ReturnPage() {
         
         <Card>
             <CardHeader>
-                <CardTitle className="text-base">Cari Transaksi untuk Diretur</CardTitle>
-                <CardDescription>Cari berdasarkan ID Transaksi, nama produk, SKU, atau nama reseller.</CardDescription>
-                <div className="relative pt-2">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                        placeholder="Cari transaksi..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="pl-10 w-full md:w-1/2"
-                    />
-                </div>
+                <CardTitle className="text-base">Verifikasi Barang Return</CardTitle>
+                <CardDescription>Scan resi dari paket yang telah kembali ke toko untuk memverifikasi.</CardDescription>
+                <form onSubmit={handleVerifyReceipt} className="flex flex-col md:flex-row gap-2 pt-2">
+                    <div className="relative flex-grow">
+                        <ScanLine className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                        <Input
+                            placeholder="Scan atau masukkan nomor resi return..."
+                            value={receiptToVerify}
+                            onChange={(e) => setReceiptToVerify(e.target.value)}
+                            className="pl-10 h-10 text-base"
+                        />
+                    </div>
+                     <Button type="submit">Verifikasi Resi</Button>
+                </form>
             </CardHeader>
             <CardContent>
+                <div className="flex justify-end mb-4">
+                     <Popover>
+                        <PopoverTrigger asChild>
+                        <Button
+                            id="date"
+                            variant={"outline"}
+                            className={cn(
+                            "w-full md:w-[300px] justify-start text-left font-normal",
+                            !dateRange && "text-muted-foreground"
+                            )}
+                        >
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {dateRange?.from ? (
+                            dateRange.to ? (
+                                <>{format(dateRange.from, "LLL dd, y")} - {format(dateRange.to, "LLL dd, y")}</>
+                            ) : (
+                                format(dateRange.from, "LLL dd, y")
+                            )
+                            ) : (
+                            <span>Pilih rentang tanggal</span>
+                            )}
+                        </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="end">
+                        <Calendar
+                            initialFocus
+                            mode="range"
+                            defaultMonth={dateRange?.from}
+                            selected={dateRange}
+                            onSelect={setDateRange}
+                            numberOfMonths={2}
+                        />
+                        </PopoverContent>
+                    </Popover>
+                </div>
                 <div className="border rounded-md">
                      <Table>
                         <TableHeader>
                             <TableRow>
-                                <TableHead className="w-[150px]">Tanggal</TableHead>
-                                <TableHead>Detail Transaksi</TableHead>
+                                <TableHead className="w-[150px]">Tanggal Scan Awal</TableHead>
+                                <TableHead>No. Resi</TableHead>
+                                <TableHead>Jasa Kirim</TableHead>
+                                <TableHead>Status</TableHead>
                                 <TableHead className="text-center w-[150px]">Aksi</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                             {loading ? (
-                                <TableRow><TableCell colSpan={3} className="text-center h-24">Memuat data transaksi...</TableCell></TableRow>
-                            ) : filteredTransactions.length > 0 ? (
-                                filteredTransactions.slice(0, 50).map(group => (
-                                    <TableRow key={group.transactionId}>
-                                        <TableCell>{format(group.date, 'd MMM yyyy, HH:mm')}</TableCell>
-                                        <TableCell>
-                                            <p className="font-mono text-xs">ID: {group.transactionId.slice(-10)}</p>
-                                            <p className="font-medium">{group.totalItems} item dari kanal {group.channel}</p>
-                                            {group.resellerName && <p className="text-sm text-muted-foreground">Reseller: {group.resellerName}</p>}
-                                        </TableCell>
-                                        <TableCell className="text-center">
-                                            <Button variant="outline" size="sm" onClick={() => handleProcessReturn(group.transactionId, group.items)}>
-                                                <ArchiveRestore className="mr-2 h-4 w-4" />
-                                                Proses Return
-                                            </Button>
-                                        </TableCell>
-                                    </TableRow>
-                                ))
+                                <TableRow><TableCell colSpan={5} className="text-center h-24">Memuat data...</TableCell></TableRow>
+                            ) : returnedReceipts.length > 0 ? (
+                                returnedReceipts.map(receipt => {
+                                    const display = getStatusDisplay(receipt.status);
+                                    return (
+                                        <TableRow key={receipt.id} className={cn(receipt.status === 'reconciled' && 'bg-green-100 dark:bg-green-900/30 hover:bg-green-200 dark:hover:bg-green-900/50')}>
+                                            <TableCell>{format(new Date(receipt.scannedAt), 'd MMM yyyy')}</TableCell>
+                                            <TableCell className="font-mono">{receipt.receiptNumber}</TableCell>
+                                            <TableCell><Badge variant="secondary">{receipt.shippingService}</Badge></TableCell>
+                                            <TableCell>
+                                                {display && (
+                                                     <Badge variant={display.variant} className={display.className}>
+                                                        <display.icon className="mr-1 h-3 w-3" />
+                                                        {display.text}
+                                                    </Badge>
+                                                )}
+                                            </TableCell>
+                                            <TableCell className="text-center">
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    disabled={receipt.status !== 'reconciled'}
+                                                    onClick={() => {/* Implement logic to find sale and open dialog */}}
+                                                >
+                                                    <ArchiveRestore className="mr-2 h-4 w-4" />
+                                                    Proses Stok
+                                                </Button>
+                                            </TableCell>
+                                        </TableRow>
+                                    )
+                                })
                             ) : (
                                 <TableRow>
-                                    <TableCell colSpan={3} className="text-center h-48">
+                                    <TableCell colSpan={5} className="text-center h-48">
                                          <div className="flex flex-col items-center justify-center gap-4 text-muted-foreground">
-                                            <Search className="h-16 w-16" />
-                                            <p className="font-semibold">Transaksi Tidak Ditemukan</p>
-                                            <p className="text-sm">Coba kata kunci pencarian yang lain.</p>
+                                            <Undo2 className="h-16 w-16" />
+                                            <p className="font-semibold">Tidak Ada Resi Return</p>
+                                            <p className="text-sm">Tidak ada resi dengan status return pada rentang tanggal ini.</p>
                                         </div>
                                     </TableCell>
                                 </TableRow>
@@ -298,9 +372,6 @@ export default function ReturnPage() {
                         </TableBody>
                     </Table>
                 </div>
-                {filteredTransactions.length > 50 && (
-                    <p className="text-center text-sm text-muted-foreground mt-4">Hanya 50 transaksi terbaru yang ditampilkan. Gunakan pencarian untuk hasil yang lebih spesifik.</p>
-                )}
             </CardContent>
         </Card>
       </main>
@@ -314,4 +385,3 @@ export default function ReturnPage() {
     </>
   );
 }
-
