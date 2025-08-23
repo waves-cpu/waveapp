@@ -78,12 +78,6 @@ export default function ReceiptPage() {
   const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
-    if (shippingService) {
-        receiptInputRef.current?.focus();
-    }
-  }, [shippingService]);
-  
-  useEffect(() => {
     if (!isSubmitting) {
         receiptInputRef.current?.focus();
     }
@@ -290,7 +284,7 @@ export default function ReceiptPage() {
                                     const availableTransitions = getAvailableStatusTransitions(receipt.status);
                                     return (
                                         <TableRow key={receipt.id}>
-                                            <TableCell>{format(new Date(receipt.scannedAt), 'd MMM yyyy, HH:mm')}</TableCell>
+                                            <TableCell>{format(new Date(receipt.scannedAt), 'd MMM yyyy')}</TableCell>
                                             <TableCell className="font-mono font-medium">{receipt.receiptNumber}</TableCell>
                                             <TableCell><Badge variant="outline">{receipt.shippingService}</Badge></TableCell>
                                             <TableCell>
