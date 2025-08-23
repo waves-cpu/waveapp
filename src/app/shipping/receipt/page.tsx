@@ -201,31 +201,29 @@ export default function ReceiptPage() {
         
         <Card>
             <CardHeader>
-                <div className="flex flex-col md:flex-row gap-2">
-                    <form onSubmit={handleSubmit} className="flex flex-grow gap-2">
-                        <Select value={shippingService} onValueChange={setShippingService} required>
-                            <SelectTrigger className="w-full md:w-[180px]">
-                                <SelectValue placeholder={TReceipt.selectShippingService} />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {SHIPPING_SERVICES.map(service => (
-                                    <SelectItem key={service} value={service}>{service}</SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                        <div className="relative flex-grow">
-                            <ScanLine className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                            <Input
-                                ref={receiptInputRef}
-                                placeholder={TReceipt.scanOrEnterReceipt}
-                                value={receiptNumber}
-                                onChange={(e) => setReceiptNumber(e.target.value)}
-                                className="pl-10 h-10 text-base"
-                                disabled={isSubmitting || !shippingService}
-                                required
-                            />
-                        </div>
-                    </form>
+                 <form onSubmit={handleSubmit} className="flex flex-col md:flex-row gap-2">
+                    <Select value={shippingService} onValueChange={setShippingService} required>
+                        <SelectTrigger className="w-full md:w-[180px]">
+                            <SelectValue placeholder={TReceipt.selectShippingService} />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {SHIPPING_SERVICES.map(service => (
+                                <SelectItem key={service} value={service}>{service}</SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                    <div className="relative flex-grow">
+                        <ScanLine className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                        <Input
+                            ref={receiptInputRef}
+                            placeholder={TReceipt.scanOrEnterReceipt}
+                            value={receiptNumber}
+                            onChange={(e) => setReceiptNumber(e.target.value)}
+                            className="pl-10 h-10 text-base"
+                            disabled={isSubmitting || !shippingService}
+                            required
+                        />
+                    </div>
                      <Popover>
                         <PopoverTrigger asChild>
                         <Button
@@ -256,7 +254,7 @@ export default function ReceiptPage() {
                         />
                         </PopoverContent>
                     </Popover>
-                </div>
+                </form>
             </CardHeader>
             <CardContent>
                 <div className="border rounded-md mt-4">
@@ -264,7 +262,12 @@ export default function ReceiptPage() {
                         <TableHeader>
                             <TableRow>
                                 <TableHead className="w-[200px]">{TReceipt.scannedAt}</TableHead>
-                                <TableHead>{TReceipt.receiptNumber}</TableHead>
+                                <TableHead>
+                                    <div className="flex items-center gap-2">
+                                        {TReceipt.receiptNumber}
+                                        <Badge variant="secondary">{filteredReceipts.length}</Badge>
+                                    </div>
+                                </TableHead>
                                 <TableHead>{TReceipt.shippingService}</TableHead>
                                 <TableHead>{TReceipt.status}</TableHead>
                                 <TableHead className="text-center">{TReceipt.actions}</TableHead>
