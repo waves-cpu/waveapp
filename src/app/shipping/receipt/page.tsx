@@ -55,7 +55,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Pagination } from '@/components/ui/pagination';
-import { ReturnProcessingDialog } from './return/return-processing-dialog';
+import { ReturnProcessingDialog } from '../return/return-processing-dialog';
 
 
 const SHIPPING_SERVICES = ['SPX', 'J&T', 'JNE', 'INSTANT'];
