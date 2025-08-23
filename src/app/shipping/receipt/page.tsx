@@ -84,10 +84,10 @@ export default function ReceiptPage() {
   
 
   useEffect(() => {
-    if (!isSubmitting) {
+    if (shippingService && !isSubmitting) {
         receiptInputRef.current?.focus();
     }
-  }, [isSubmitting]);
+  }, [shippingService, isSubmitting]);
 
   const filteredReceipts = useMemo(() => {
     return shippingReceipts.filter(receipt => {
@@ -275,7 +275,7 @@ export default function ReceiptPage() {
                             value={receiptNumber}
                             onChange={(e) => setReceiptNumber(e.target.value)}
                             className="pl-10 h-10 text-base"
-                            disabled={isSubmitting}
+                            disabled={!shippingService || isSubmitting}
                             required
                         />
                     </div>
@@ -414,4 +414,3 @@ export default function ReceiptPage() {
   );
 }
 
-    
