@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
@@ -325,7 +326,7 @@ export default function ReceiptPage() {
   
   const handleStatusChange = async (receipt: ShippingReceipt, newStatus: ShippingStatus) => {
     if (newStatus === 'returned') {
-        const sales = salesByTransactionId.get(receipt.receiptNumber);
+        const sales = salesByTransactionId.get(receipt.transactionId || '');
         if (!sales || sales.length === 0) {
             toast({
                 variant: 'destructive',
@@ -557,9 +558,8 @@ export default function ReceiptPage() {
         open={isReturnDialogOpen}
         onOpenChange={setIsReturnDialogOpen}
         receipt={receiptToReturn}
-        salesForReceipt={salesByTransactionId.get(receiptToReturn?.receiptNumber || '') || []}
+        salesForReceipt={salesByTransactionId.get(receiptToReturn?.transactionId || '') || []}
     />
     </>
   );
 }
-
