@@ -286,7 +286,14 @@ export default function ReturnPage() {
             } catch (error) {
                 toast({ variant: 'destructive', title: "Gagal Update", description: "Gagal memperbarui status resi." });
             }
-        } else {
+        } else if (existingReceipt.status === 'reconciled') {
+            toast({
+                variant: 'default',
+                title: "Resi Sudah Diproses",
+                description: `Resi ${receiptToVerify} sudah ditandai selesai (reconciled).`
+            });
+        }
+        else {
             toast({
                 variant: 'destructive',
                 title: "Status Resi Tidak Sesuai",
@@ -454,3 +461,4 @@ export default function ReturnPage() {
     </>
   );
 }
+
