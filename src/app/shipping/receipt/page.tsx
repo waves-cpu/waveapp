@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
@@ -46,191 +45,227 @@ import {
     SelectTrigger,
     SelectValue,
   } from "@/components/ui/select"
-import { Calendar as CalendarIcon, ScanLine, Truck, Trash2, CheckCircle, XCircle, Undo2, Hourglass, FileDown } from 'lucide-react';
+import { Calendar as CalendarIcon, ScanLine, Truck, Trash2, CheckCircle, XCircle, Undo2, Hourglass, FileDown, ShoppingBag } from 'lucide-react';
 import { format, isSameDay } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { useInventory } from '@/hooks/use-inventory';
-import type { ShippingReceipt, ShippingStatus, Sale } from '@/types';
+import type { ShippingReceipt, ShippingStatus, Sale, InventoryItem, InventoryItemVariant } from '@/types';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Pagination } from '@/components/ui/pagination';
-import { useForm, useFieldArray } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
 import {
   Dialog,
-  DialogTitle as DialogTitlePrimitive,
-  DialogDescription as DialogDescriptionPrimitive,
+  DialogTitle,
+  DialogDescription,
   DialogHeader as DialogHeaderPrimitive,
   DialogContent as DialogContentPrimitive,
-  DialogFooter as DialogFooterPrimitive,
+  DialogFooter,
 } from '@/components/ui/dialog';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { VariantSelectionDialog } from '@/app/components/variant-selection-dialog';
+import { useScanSounds } from '@/hooks/use-scan-sounds';
 
 
 const SHIPPING_SERVICES = ['SPX', 'J&T', 'JNE', 'INSTANT'];
 
 
-const returnItemSchema = z.object({
-  id: z.string(),
-  productId: z.string(),
-  variantId: z.string().optional(),
-  name: z.string(),
-  sku: z.string().optional(),
-  quantitySold: z.number(),
-  returnQuantity: z.coerce.number().int().min(0, "Jumlah harus non-negatif."),
-  reason: z.string().optional(),
-}).refine(data => data.returnQuantity <= data.quantitySold, {
-    message: "Jumlah return tidak bisa melebihi jumlah terjual.",
-    path: ["returnQuantity"],
-});
-
-const returnFormSchema = z.object({
-  receiptId: z.string(),
-  items: z.array(returnItemSchema).min(1, "Harus ada setidaknya satu item untuk diretur."),
-});
+interface ReturnItem {
+    id: string; // variantId or productId
+    productId: string;
+    variantId?: string;
+    name: string;
+    sku?: string;
+    imageUrl?: string;
+    returnQuantity: number;
+}
 
 interface ReturnProcessingDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   receipt: ShippingReceipt | null;
-  salesForReceipt: Sale[];
 }
 
-function ReturnProcessingDialog({ open, onOpenChange, receipt, salesForReceipt }: ReturnProcessingDialogProps) {
+function ReturnProcessingDialog({ open, onOpenChange, receipt }: ReturnProcessingDialogProps) {
     const { language } = useLanguage();
     const t = translations[language];
     const { toast } = useToast();
-    const { updateStock, updateShippingReceiptStatus } = useInventory();
+    const { updateStock, updateShippingReceiptStatus, getProductBySku } = useInventory();
+    const { playSuccessSound, playErrorSound } = useScanSounds();
 
-    const form = useForm<z.infer<typeof returnFormSchema>>({
-        resolver: zodResolver(returnFormSchema),
-    });
+    const [returnItems, setReturnItems] = useState<ReturnItem[]>([]);
+    const [skuInput, setSkuInput] = useState('');
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [productForVariantSelection, setProductForVariantSelection] = useState<InventoryItem | null>(null);
 
-    const { fields } = useFieldArray({
-        control: form.control,
-        name: "items"
-    });
-
-    React.useEffect(() => {
-        if (receipt && salesForReceipt) {
-            form.reset({
-                receiptId: receipt.id,
-                items: salesForReceipt.map(item => ({
-                    id: item.id,
-                    productId: item.productId,
-                    variantId: item.variantId,
-                    name: item.productName + (item.variantName ? ` - ${item.variantName}` : ''),
-                    sku: item.sku,
-                    quantitySold: item.quantity,
-                    returnQuantity: 0,
-                    reason: `Return dari resi #${receipt.receiptNumber}`,
-                }))
-            })
+    useEffect(() => {
+        if (!open) {
+            setReturnItems([]);
+            setSkuInput('');
         }
-    }, [receipt, salesForReceipt, form]);
+    }, [open]);
 
-    const onSubmit = async (values: z.infer<typeof returnFormSchema>) => {
+    const handleSkuSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!skuInput.trim()) return;
+
         try {
-            const stockUpdates = values.items
-                .filter(item => item.returnQuantity > 0)
-                .map(item => {
-                    const idToUpdate = item.variantId || item.productId;
-                    return updateStock(idToUpdate, item.returnQuantity, item.reason || 'Customer Return');
-                });
-            
-            if(stockUpdates.length === 0) {
-                toast({ variant: 'destructive', title: "Tidak ada item dipilih", description: "Masukkan jumlah item yang akan diretur." });
+            const product = await getProductBySku(skuInput.trim());
+            if (!product) {
+                playErrorSound();
+                toast({ variant: 'destructive', title: "Produk tidak ditemukan" });
                 return;
             }
 
+            if (product.variants && product.variants.length > 1) {
+                setProductForVariantSelection(product);
+            } else {
+                const itemToAdd = (product.variants && product.variants.length === 1) ? product.variants[0] : product;
+                addItemToReturnList(product, itemToAdd as InventoryItemVariant);
+            }
+        } catch (error) {
+            playErrorSound();
+            toast({ variant: 'destructive', title: "Error", description: "Gagal mencari produk." });
+        } finally {
+            setSkuInput('');
+        }
+    };
+    
+    const addItemToReturnList = (parentProduct: InventoryItem, item: InventoryItemVariant) => {
+        playSuccessSound();
+        const existingItemIndex = returnItems.findIndex(ri => ri.id === item.id);
+        if (existingItemIndex > -1) {
+            const updatedItems = [...returnItems];
+            updatedItems[existingItemIndex].returnQuantity += 1;
+            setReturnItems(updatedItems);
+        } else {
+            setReturnItems(prev => [...prev, {
+                id: item.id,
+                productId: parentProduct.id,
+                variantId: parentProduct.hasVariants ? item.id : undefined,
+                name: parentProduct.hasVariants ? `${parentProduct.name} - ${item.name}`: parentProduct.name,
+                sku: item.sku,
+                imageUrl: parentProduct.imageUrl,
+                returnQuantity: 1,
+            }]);
+        }
+    };
+
+    const handleVariantSelect = (variant: InventoryItemVariant | null) => {
+        if (variant && productForVariantSelection) {
+            addItemToReturnList(productForVariantSelection, variant);
+        }
+        setProductForVariantSelection(null);
+    };
+
+    const updateQuantity = (itemId: string, newQuantity: number) => {
+        const qty = Math.max(0, newQuantity);
+        setReturnItems(items => items.map(item => item.id === itemId ? { ...item, returnQuantity: qty } : item).filter(item => item.returnQuantity > 0));
+    };
+
+    const handleFinalizeReturn = async () => {
+        if (!receipt || returnItems.length === 0) return;
+        setIsSubmitting(true);
+        try {
+            const stockUpdates = returnItems.map(item => 
+                updateStock(item.id, item.returnQuantity, `Return dari resi #${receipt.receiptNumber}`)
+            );
             await Promise.all(stockUpdates);
-            await updateShippingReceiptStatus(values.receiptId, 'returned');
-
-
+            await updateShippingReceiptStatus(receipt.id, 'returned');
+            
             toast({
                 title: "Return Berhasil Diproses",
-                description: `${stockUpdates.length} jenis item telah dikembalikan ke stok.`,
+                description: `${returnItems.length} jenis item telah dikembalikan ke stok.`,
             });
             onOpenChange(false);
         } catch (error) {
-             toast({
+            toast({
                 variant: 'destructive',
                 title: "Gagal Memproses Return",
                 description: "Terjadi kesalahan saat mengembalikan stok.",
             });
+        } finally {
+            setIsSubmitting(false);
         }
     };
-
 
     if (!receipt) return null;
 
     return (
+        <>
          <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContentPrimitive className="max-w-2xl">
+            <DialogContentPrimitive className="max-w-3xl">
                 <DialogHeaderPrimitive>
-                    <DialogTitlePrimitive>Proses Barang Return (Resi: {receipt.receiptNumber})</DialogTitlePrimitive>
-                    <DialogDescriptionPrimitive>
-                        Masukkan jumlah barang yang benar-benar kembali ke gudang. Stok akan otomatis ditambahkan.
-                    </DialogDescriptionPrimitive>
+                    <DialogTitle>Proses Barang Return (Resi: {receipt.receiptNumber})</DialogTitle>
+                    <DialogDescription>
+                        Scan SKU produk yang ada di dalam paket retur untuk menambahkannya ke daftar.
+                    </DialogDescription>
                 </DialogHeaderPrimitive>
-                <Form {...form}>
-                    <form onSubmit={form.handleSubmit(onSubmit)}>
-                         <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead className="w-1/2">Produk</TableHead>
-                                    <TableHead>Terjual</TableHead>
-                                    <TableHead>Jumlah Return</TableHead>
+                <form onSubmit={handleSkuSubmit} className="pt-4">
+                    <Input
+                        placeholder="Scan atau masukkan SKU..."
+                        value={skuInput}
+                        onChange={(e) => setSkuInput(e.target.value)}
+                        autoFocus
+                    />
+                </form>
+                <div className="mt-4 border rounded-md max-h-80 overflow-y-auto">
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead className="w-[60%]">Produk</TableHead>
+                                <TableHead className="text-center">Jumlah Diretur</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {returnItems.length > 0 ? returnItems.map(item => (
+                                <TableRow key={item.id}>
+                                    <TableCell>{item.name}</TableCell>
+                                    <TableCell>
+                                        <Input 
+                                            type="number" 
+                                            value={item.returnQuantity} 
+                                            onChange={(e) => updateQuantity(item.id, parseInt(e.target.value, 10))}
+                                            className="w-20 mx-auto text-center"
+                                        />
+                                    </TableCell>
                                 </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {fields.map((field, index) => (
-                                    <TableRow key={field.id}>
-                                        <TableCell>
-                                            <p className="font-medium text-sm">{field.name}</p>
-                                            <p className="text-xs text-muted-foreground">SKU: {field.sku}</p>
-                                        </TableCell>
-                                        <TableCell>
-                                            {field.quantitySold}
-                                        </TableCell>
-                                        <TableCell>
-                                             <FormField
-                                                control={form.control}
-                                                name={`items.${index}.returnQuantity`}
-                                                render={({ field: formField }) => (
-                                                    <FormItem>
-                                                        <FormControl>
-                                                            <Input type="number" {...formField} className="w-20 h-8" />
-                                                        </FormControl>
-                                                        <FormMessage className="text-xs"/>
-                                                    </FormItem>
-                                                )}
-                                            />
-                                        </TableCell>
-                                    </TableRow>
-                                ))}
-                            </TableBody>
-                         </Table>
-                         <DialogFooterPrimitive className="pt-6">
-                            <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>Batal</Button>
-                            <Button type="submit">Proses & Kembalikan ke Stok</Button>
-                        </DialogFooterPrimitive>
-                    </form>
-                </Form>
+                            )) : (
+                                <TableRow>
+                                    <TableCell colSpan={2} className="text-center h-24 text-muted-foreground">Scan produk untuk memulai...</TableCell>
+                                </TableRow>
+                            )}
+                        </TableBody>
+                    </Table>
+                </div>
+                 <DialogFooter className="pt-6">
+                    <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>Batal</Button>
+                    <Button onClick={handleFinalizeReturn} disabled={isSubmitting || returnItems.length === 0}>
+                        {isSubmitting ? 'Memproses...' : 'Tandai Retur & Stok Masuk'}
+                    </Button>
+                </DialogFooter>
             </DialogContentPrimitive>
          </Dialog>
+         {productForVariantSelection && (
+             <VariantSelectionDialog
+                open={!!productForVariantSelection}
+                onOpenChange={() => setProductForVariantSelection(null)}
+                item={productForVariantSelection}
+                onSelect={handleVariantSelect}
+                cart={[]}
+            />
+         )}
+        </>
     )
 }
+
 
 export default function ReceiptPage() {
   const { language } = useLanguage();
   const t = translations[language];
   const TReceipt = t.receiptPage;
   const { toast } = useToast();
-  const { allSales, shippingReceipts, addShippingReceipt, deleteShippingReceipt, updateShippingReceiptStatus, loading } = useInventory();
+  const { shippingReceipts, addShippingReceipt, deleteShippingReceipt, updateShippingReceiptStatus, loading } = useInventory();
   
   const [receiptNumber, setReceiptNumber] = useState('');
   const [shippingService, setShippingService] = useState('');
@@ -251,19 +286,6 @@ export default function ReceiptPage() {
         receiptInputRef.current?.focus();
     }
   }, [isSubmitting]);
-
-  const salesByTransactionId = useMemo(() => {
-    const map = new Map<string, Sale[]>();
-    allSales.forEach(sale => {
-        if(sale.transactionId) {
-            if(!map.has(sale.transactionId)) {
-                map.set(sale.transactionId, []);
-            }
-            map.get(sale.transactionId)!.push(sale);
-        }
-    });
-    return map;
-  }, [allSales]);
 
   const filteredReceipts = useMemo(() => {
     return shippingReceipts.filter(receipt => {
@@ -326,15 +348,6 @@ export default function ReceiptPage() {
   
   const handleStatusChange = async (receipt: ShippingReceipt, newStatus: ShippingStatus) => {
     if (newStatus === 'returned') {
-        const sales = salesByTransactionId.get(receipt.transactionId || '');
-        if (!sales || sales.length === 0) {
-            toast({
-                variant: 'destructive',
-                title: "Transaksi Tidak Ditemukan",
-                description: `Tidak ditemukan detail penjualan untuk resi ${receipt.receiptNumber}. Tidak bisa memproses return.`,
-            });
-            return;
-        }
         setReceiptToReturn(receipt);
         setIsReturnDialogOpen(true);
     } else {
@@ -393,7 +406,19 @@ export default function ReceiptPage() {
         <Card>
             <CardHeader>
                  <form onSubmit={handleSubmit} className="flex flex-col md:flex-row gap-2">
-                    <Select value={shippingService} onValueChange={setShippingService} required>
+                    <div className="relative flex-grow">
+                        <ScanLine className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                        <Input
+                            ref={receiptInputRef}
+                            placeholder={TReceipt.scanOrEnterReceipt}
+                            value={receiptNumber}
+                            onChange={(e) => setReceiptNumber(e.target.value)}
+                            className="pl-10 h-10 text-base"
+                            disabled={isSubmitting}
+                            required
+                        />
+                    </div>
+                     <Select value={shippingService} onValueChange={setShippingService} required>
                         <SelectTrigger className="w-full md:w-[180px]">
                             <SelectValue placeholder={TReceipt.selectShippingService} />
                         </SelectTrigger>
@@ -433,18 +458,6 @@ export default function ReceiptPage() {
                         />
                         </PopoverContent>
                     </Popover>
-                    <div className="relative flex-grow">
-                        <ScanLine className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                        <Input
-                            ref={receiptInputRef}
-                            placeholder={TReceipt.scanOrEnterReceipt}
-                            value={receiptNumber}
-                            onChange={(e) => setReceiptNumber(e.target.value)}
-                            className="pl-10 h-10 text-base"
-                            disabled={isSubmitting || !shippingService}
-                            required
-                        />
-                    </div>
                 </form>
             </CardHeader>
             <CardContent>
@@ -558,7 +571,6 @@ export default function ReceiptPage() {
         open={isReturnDialogOpen}
         onOpenChange={setIsReturnDialogOpen}
         receipt={receiptToReturn}
-        salesForReceipt={salesByTransactionId.get(receiptToReturn?.transactionId || '') || []}
     />
     </>
   );
