@@ -71,11 +71,7 @@ export default function ShopeeSalesPage() {
       const parsedDate = parse(`${year}-${month}-${day}`, 'yyyy-MM-dd', new Date());
       if (isValid(parsedDate)) {
         setDate(parsedDate);
-      } else {
-        router.replace('/sales/shopee');
       }
-    } else {
-        router.replace('/sales/shopee');
     }
   }, [params.date, router]);
 

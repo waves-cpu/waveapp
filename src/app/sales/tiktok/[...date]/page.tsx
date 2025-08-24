@@ -71,11 +71,7 @@ export default function TiktokSalesPage() {
       const parsedDate = parse(`${year}-${month}-${day}`, 'yyyy-MM-dd', new Date());
       if (isValid(parsedDate)) {
         setDate(parsedDate);
-      } else {
-        router.replace('/sales/tiktok');
       }
-    } else {
-        router.replace('/sales/tiktok');
     }
   }, [params.date, router]);
 

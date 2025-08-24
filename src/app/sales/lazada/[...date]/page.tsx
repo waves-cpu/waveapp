@@ -71,11 +71,7 @@ export default function LazadaSalesPage() {
       const parsedDate = parse(`${year}-${month}-${day}`, 'yyyy-MM-dd', new Date());
       if (isValid(parsedDate)) {
         setDate(parsedDate);
-      } else {
-        router.replace('/sales/lazada');
       }
-    } else {
-        router.replace('/sales/lazada');
     }
   }, [params.date, router]);
 
