@@ -3,6 +3,7 @@
 
 import { db } from './db';
 import type { InventoryItem, AdjustmentHistory, InventoryItemVariant, Sale, Reseller, ChannelPrice, ManualJournalEntry } from '@/types';
+import { startOfDay, endOfDay } from 'date-fns';
 
 // Settings Functions
 export async function saveSetting(key: string, value: any) {
@@ -458,10 +459,8 @@ export async function fetchAllSales(): Promise<Sale[]> {
 }
 
 export async function getSalesByDate(channel: string, date: Date): Promise<Sale[]> {
-    const startOfDay = new Date(date);
-    startOfDay.setHours(0, 0, 0, 0);
-    const endOfDay = new Date(date);
-    endOfDay.setHours(23, 59, 59, 999);
+    const startDate = startOfDay(date).toISOString();
+    const endDate = endOfDay(date).toISOString();
 
     const salesQuery = db.prepare(`
         SELECT 
@@ -473,15 +472,15 @@ export async function getSalesByDate(channel: string, date: Date): Promise<Sale[
         JOIN products p ON s.productId = p.id
         LEFT JOIN variants v ON s.variantId = v.id
         WHERE s.channel = @channel 
-        AND s.saleDate >= @startOfDay 
-        AND s.saleDate <= @endOfDay
+        AND s.saleDate >= @startDate 
+        AND s.saleDate <= @endDate
         ORDER BY s.saleDate DESC
     `);
     
     const sales = salesQuery.all({ 
         channel, 
-        startOfDay: startOfDay.toISOString(), 
-        endOfDay: endOfDay.toISOString() 
+        startDate, 
+        endDate 
     }) as any[];
     
     return sales.map(s => ({...s, id: s.id.toString()}));
