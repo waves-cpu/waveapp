@@ -95,9 +95,9 @@ export default function ShopeeSalesPage() {
   }, [fetchSales, toast]);
   
   useEffect(() => {
-    const newDate = parseDateFromParams(Array.isArray(params.date) ? params.date : undefined);
-    setDate(newDate);
-    loadSales(newDate);
+    const dateFromParams = parseDateFromParams(Array.isArray(params.date) ? params.date : undefined);
+    setDate(dateFromParams);
+    loadSales(dateFromParams);
   }, [params.date, loadSales]);
   
   useEffect(() => {
