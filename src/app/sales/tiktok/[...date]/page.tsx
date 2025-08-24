@@ -43,6 +43,18 @@ import { AppLayout } from '@/app/components/app-layout';
 import { useScanSounds } from '@/hooks/use-scan-sounds';
 import { useParams, useRouter } from 'next/navigation';
 
+function parseDateFromParams(dateArray: string[] | undefined): Date {
+    let newDate = new Date();
+    if (dateArray && dateArray.length === 3) {
+      const [month, day, year] = dateArray;
+      const parsedDate = parse(`${year}-${month}-${day}`, 'yyyy-MM-dd', new Date());
+      if (isValid(parsedDate)) {
+        newDate = parsedDate;
+      }
+    }
+    return newDate;
+}
+
 export default function TiktokSalesPage() {
   const { language } = useLanguage();
   const t = translations[language];
@@ -52,7 +64,7 @@ export default function TiktokSalesPage() {
   const router = useRouter();
   const params = useParams();
 
-  const [date, setDate] = useState<Date | undefined>(new Date());
+  const [date, setDate] = useState<Date>(() => parseDateFromParams(Array.isArray(params.date) ? params.date : undefined));
 
   const [isDatePickerOpen, setDatePickerOpen] = useState(false);
   const [sales, setSales] = useState<Sale[]>([]);
@@ -82,15 +94,7 @@ export default function TiktokSalesPage() {
   }, [fetchSales, toast]);
   
   useEffect(() => {
-    const dateArray = Array.isArray(params.date) ? params.date : [];
-    let newDate = new Date();
-    if (dateArray.length === 3) {
-      const [month, day, year] = dateArray;
-      const parsedDate = parse(`${year}-${month}-${day}`, 'yyyy-MM-dd', new Date());
-      if (isValid(parsedDate)) {
-        newDate = parsedDate;
-      }
-    }
+    const newDate = parseDateFromParams(Array.isArray(params.date) ? params.date : undefined);
     setDate(newDate);
     loadSales(newDate);
   }, [params.date, loadSales]);
@@ -365,3 +369,5 @@ export default function TiktokSalesPage() {
     </AppLayout>
   );
 }
+
+    
