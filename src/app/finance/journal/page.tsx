@@ -15,7 +15,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar as CalendarIcon, FileText, PlusCircle } from 'lucide-react';
 import { cn } from "@/lib/utils";
-import { format, isWithinInterval, startOfDay, endOfDay } from "date-fns";
+import { format, isWithinInterval, startOfDay, endOfDay, parseISO } from "date-fns";
 import { DateRange } from "react-day-picker";
 import { id as localeId } from 'date-fns/locale';
 import { Skeleton } from "@/components/ui/skeleton";
@@ -96,7 +96,7 @@ export default function GeneralJournalPage() {
 
         // Manual entries
         manualJournalEntries.forEach(entry => {
-            const entryDate = new Date(entry.date);
+            const entryDate = parseISO(entry.date);
             entries.push({ date: entryDate, description: entry.description, account: entry.debitAccount, debit: entry.amount, type: 'manual'});
             entries.push({ date: entryDate, description: entry.description, account: entry.creditAccount, credit: entry.amount, type: 'manual'});
         });
@@ -104,7 +104,7 @@ export default function GeneralJournalPage() {
 
         // Sales entries
         allSales.forEach(sale => {
-            const saleDate = new Date(sale.saleDate);
+            const saleDate = parseISO(sale.saleDate);
             const revenue = sale.priceAtSale * sale.quantity;
             const cogs = (sale.cogsAtSale || 0) * sale.quantity;
             const description = `Penjualan ${sale.productName} (${sale.quantity}x) - ${sale.channel}`;
@@ -154,8 +154,7 @@ export default function GeneralJournalPage() {
 
     const filteredEntries = useMemo(() => {
         const filtered = journalEntries.filter(entry => {
-            const entryDate = new Date(entry.date);
-            const isInDateRange = dateRange?.from ? isWithinInterval(entryDate, { start: startOfDay(dateRange.from), end: endOfDay(dateRange.to || dateRange.from) }) : true;
+            const isInDateRange = dateRange?.from ? isWithinInterval(entry.date, { start: startOfDay(dateRange.from), end: endOfDay(dateRange.to || dateRange.from) }) : true;
             const isTypeMatch = transactionType === 'all' || entry.type === transactionType;
             return isInDateRange && isTypeMatch;
         });

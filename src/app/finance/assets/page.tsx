@@ -12,7 +12,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { DollarSign, Package, TrendingUp, TrendingDown, Hourglass, BarChart, PieChart } from "lucide-react";
 import { Bar, BarChart as RechartsBarChart, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, Pie, PieChart as RechartsPieChart, Cell } from "recharts";
 import { ChartConfig, ChartContainer, ChartTooltipContent } from "@/components/ui/chart";
-import { subDays, isAfter } from "date-fns";
+import { subDays, isAfter, parseISO } from "date-fns";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import type { InventoryItem, InventoryItemVariant } from "@/types";
@@ -121,7 +121,7 @@ export default function AssetReportPage() {
         const salesVolumeMap = new Map<string, number>();
         
         allSales.forEach(sale => {
-            if (isAfter(new Date(sale.saleDate), turnoverDateThreshold)) {
+            if (isAfter(parseISO(sale.saleDate), turnoverDateThreshold)) {
                 const soldId = sale.variantId || sale.productId;
                 if(soldId) {
                     salesVolumeMap.set(soldId.toString(), (salesVolumeMap.get(soldId.toString()) || 0) + sale.quantity);

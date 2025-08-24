@@ -3,7 +3,7 @@
 
 import { db } from './db';
 import type { InventoryItem, AdjustmentHistory, InventoryItemVariant, Sale, Reseller, ChannelPrice, ManualJournalEntry } from '@/types';
-import { startOfDay, endOfDay } from 'date-fns';
+import { format as formatDate, parseISO } from 'date-fns';
 
 // Settings Functions
 export async function saveSetting(key: string, value: any) {
@@ -394,6 +394,8 @@ export async function performSale(
     
     db.transaction(() => {
         const saleDate = options?.saleDate || new Date();
+        // Store date as YYYY-MM-DD string to avoid timezone issues
+        const saleDateString = formatDate(saleDate, 'yyyy-MM-dd');
         const saleReason = `Sale (${channel})` + (options?.resellerName ? ` - ${options.resellerName}` : '');
 
         let priceAtSale;
@@ -415,7 +417,7 @@ export async function performSale(
 
             adjustStock(variant.id.toString(), -quantity, saleReason);
             db.prepare('INSERT INTO sales (transactionId, paymentMethod, resellerName, productId, variantId, channel, quantity, priceAtSale, cogsAtSale, saleDate) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
-              .run(options?.transactionId, options?.paymentMethod, options?.resellerName, variant.productId, variant.id, channel, quantity, priceAtSale, cogsAtSale, saleDate.toISOString());
+              .run(options?.transactionId, options?.paymentMethod, options?.resellerName, variant.productId, variant.id, channel, quantity, priceAtSale, cogsAtSale, saleDateString);
         } else {
             const product = getProductStmt.get(sku) as (InventoryItem & { id: number, costPrice?: number }) | undefined;
             if (product) {
@@ -433,7 +435,7 @@ export async function performSale(
                 
                 adjustStock(product.id.toString(), -quantity, saleReason);
                 db.prepare('INSERT INTO sales (transactionId, paymentMethod, resellerName, productId, variantId, channel, quantity, priceAtSale, cogsAtSale, saleDate) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
-                  .run(options?.transactionId, options?.paymentMethod, options?.resellerName, product.id, null, channel, quantity, priceAtSale, cogsAtSale, saleDate.toISOString());
+                  .run(options?.transactionId, options?.paymentMethod, options?.resellerName, product.id, null, channel, quantity, priceAtSale, cogsAtSale, saleDateString);
             } else {
                 throw new Error('Product or variant with specified SKU not found or has variants.');
             }
@@ -451,7 +453,7 @@ export async function fetchAllSales(): Promise<Sale[]> {
         FROM sales s
         JOIN products p ON s.productId = p.id
         LEFT JOIN variants v ON s.variantId = v.id
-        ORDER BY s.saleDate DESC
+        ORDER BY s.saleDate DESC, s.id DESC
     `);
     
     const sales = salesQuery.all() as any[];
@@ -459,8 +461,7 @@ export async function fetchAllSales(): Promise<Sale[]> {
 }
 
 export async function getSalesByDate(channel: string, date: Date): Promise<Sale[]> {
-    const startDate = startOfDay(date).toISOString();
-    const endDate = endOfDay(date).toISOString();
+    const dateString = formatDate(date, 'yyyy-MM-dd');
 
     const salesQuery = db.prepare(`
         SELECT 
@@ -472,15 +473,13 @@ export async function getSalesByDate(channel: string, date: Date): Promise<Sale[
         JOIN products p ON s.productId = p.id
         LEFT JOIN variants v ON s.variantId = v.id
         WHERE s.channel = @channel 
-        AND s.saleDate >= @startDate 
-        AND s.saleDate <= @endDate
-        ORDER BY s.saleDate DESC
+        AND s.saleDate = @dateString
+        ORDER BY s.id DESC
     `);
     
     const sales = salesQuery.all({ 
         channel, 
-        startDate, 
-        endDate 
+        dateString 
     }) as any[];
     
     return sales.map(s => ({...s, id: s.id.toString()}));

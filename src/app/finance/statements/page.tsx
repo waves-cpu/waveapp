@@ -12,7 +12,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { DollarSign, Package, TrendingUp, ShoppingCart, Activity } from "lucide-react";
 import { Pie, PieChart as RechartsPieChart, Cell, Tooltip, ResponsiveContainer, Legend } from "recharts";
 import { ChartConfig, ChartContainer, ChartTooltipContent } from "@/components/ui/chart";
-import { subDays, isWithinInterval, startOfDay, endOfDay, format } from "date-fns";
+import { subDays, isWithinInterval, startOfDay, endOfDay, format, parseISO } from "date-fns";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import type { InventoryItem, InventoryItemVariant, Sale } from "@/types";
@@ -90,7 +90,7 @@ export default function FinancialStatementsPage() {
     } = useMemo(() => {
         const salesInDateRange = allSales.filter(sale => {
             if (!dateRange || !dateRange.from) return true;
-            const saleDate = new Date(sale.saleDate);
+            const saleDate = parseISO(sale.saleDate);
             const toDate = dateRange.to || dateRange.from;
             return isWithinInterval(saleDate, { start: startOfDay(dateRange.from), end: endOfDay(toDate) });
         });

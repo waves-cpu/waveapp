@@ -14,7 +14,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { Calendar as CalendarIcon } from 'lucide-react';
 import { cn } from "@/lib/utils";
-import { format, isWithinInterval, startOfDay, endOfDay } from "date-fns";
+import { format, isWithinInterval, startOfDay, endOfDay, parseISO } from "date-fns";
 import { DateRange } from "react-day-picker";
 import { id as localeId } from 'date-fns/locale';
 import { Skeleton } from "@/components/ui/skeleton";
@@ -84,14 +84,15 @@ export default function ProfitLossPage() {
     });
 
     const financialData = useMemo(() => {
-        const isInDateRange = (date: Date) => {
+        const isInDateRange = (dateString: string) => {
             if (!dateRange || !dateRange.from) return true;
+            const date = parseISO(dateString);
             const toDate = dateRange.to || dateRange.from;
             return isWithinInterval(date, { start: startOfDay(dateRange.from), end: endOfDay(toDate) });
         };
 
-        const salesInDateRange = allSales.filter(sale => isInDateRange(new Date(sale.saleDate)));
-        const manualEntriesInDateRange = manualJournalEntries.filter(entry => isInDateRange(new Date(entry.date)));
+        const salesInDateRange = allSales.filter(sale => isInDateRange(sale.saleDate));
+        const manualEntriesInDateRange = manualJournalEntries.filter(entry => isInDateRange(entry.date));
 
         const totalRevenue = salesInDateRange.reduce((sum, sale) => sum + (sale.priceAtSale * sale.quantity), 0);
         const totalCogs = salesInDateRange.reduce((sum, sale) => sum + ((sale.cogsAtSale || 0) * sale.quantity), 0);
