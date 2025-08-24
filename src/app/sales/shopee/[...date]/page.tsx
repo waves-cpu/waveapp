@@ -91,7 +91,7 @@ export default function ShopeeSalesPage() {
       setLoading(false);
     }
   }, [fetchSales, toast]);
-
+  
   useEffect(() => {
     const dateArray = Array.isArray(params.date) ? params.date : [];
     let newDate = new Date();
@@ -112,9 +112,9 @@ export default function ShopeeSalesPage() {
 
   const handleDateChange = (newDate: Date | undefined) => {
     if (newDate) {
+        setDatePickerOpen(false);
         const formattedDate = format(newDate, 'MM-dd-yyyy');
         router.push(`/sales/shopee/${formattedDate}`);
-        setDatePickerOpen(false);
     }
   }
 

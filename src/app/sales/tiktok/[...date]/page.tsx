@@ -91,7 +91,7 @@ export default function TiktokSalesPage() {
       setLoading(false);
     }
   }, [fetchSales, toast]);
-
+  
   useEffect(() => {
     const dateArray = Array.isArray(params.date) ? params.date : [];
     let newDate = new Date();
@@ -112,10 +112,9 @@ export default function TiktokSalesPage() {
 
   const handleDateChange = (newDate: Date | undefined) => {
     if (newDate) {
-        setDate(newDate);
+        setDatePickerOpen(false);
         const formattedDate = format(newDate, 'MM-dd-yyyy');
         router.push(`/sales/tiktok/${formattedDate}`);
-        setDatePickerOpen(false);
     }
   }
 
