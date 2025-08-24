@@ -36,7 +36,6 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { VariantSelectionDialog } from '@/app/components/variant-selection-dialog';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -53,17 +52,7 @@ export default function ShopeeSalesPage() {
   const router = useRouter();
   const params = useParams();
 
-  const [date, setDate] = useState<Date | undefined>(() => {
-    const dateArray = Array.isArray(params.date) ? params.date : [];
-    if (dateArray.length === 3) {
-      const [month, day, year] = dateArray;
-      const parsedDate = parse(`${year}-${month}-${day}`, 'yyyy-MM-dd', new Date());
-      if (isValid(parsedDate)) {
-        return parsedDate;
-      }
-    }
-    return new Date();
-  });
+  const [date, setDate] = useState<Date | undefined>(new Date());
   
   const [isDatePickerOpen, setDatePickerOpen] = useState(false);
   const [sales, setSales] = useState<Sale[]>([]);
