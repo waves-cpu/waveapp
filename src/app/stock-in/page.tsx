@@ -10,11 +10,7 @@ import { translations } from "@/types/language";
 import { PackagePlus, PlusCircle } from 'lucide-react';
 import { AppLayout } from '../components/app-layout';
 
-export default function StockInPage({
-  searchParams,
-}: {
-  searchParams?: { [key: string]: string | string[] | undefined };
-}) {
+export default function StockInPage() {
     const { language } = useLanguage();
     const t = translations[language];
     const [isProductSelectionOpen, setProductSelectionOpen] = useState(false);

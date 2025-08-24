@@ -43,11 +43,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { AppLayout } from '@/app/components/app-layout';
 import { useScanSounds } from '@/hooks/use-scan-sounds';
 
-export default function TiktokSalesPage({
-  searchParams,
-}: {
-  searchParams?: { [key: string]: string | string[] | undefined };
-}) {
+export default function TiktokSalesPage() {
   const { language } = useLanguage();
   const t = translations[language];
   const { fetchSales, recordSale, cancelSale, getProductBySku } = useInventory();

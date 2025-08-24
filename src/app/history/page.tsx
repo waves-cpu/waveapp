@@ -51,11 +51,7 @@ type HistoryEntry = {
 };
 
 
-export default function HistoryPage({
-  searchParams,
-}: {
-  searchParams?: { [key: string]: string | string[] | undefined };
-}) {
+export default function HistoryPage() {
   const { items, categories, allSales, loading } = useInventory();
   const { language } = useLanguage();
   const t = translations[language];

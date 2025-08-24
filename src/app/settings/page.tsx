@@ -25,11 +25,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { AppLayout } from "../components/app-layout";
 
 
-function SettingsContent({
-  searchParams,
-}: {
-  searchParams?: { [key: string]: string | string[] | undefined };
-}) {
+function SettingsContent() {
     const { theme, setTheme } = useTheme();
     const { language, setLanguage } = useLanguage();
     const t = translations[language];
