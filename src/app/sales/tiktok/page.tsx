@@ -98,7 +98,7 @@ export default function TiktokSalesPage() {
     if (!date) return;
     setIsSubmitting(true);
     try {
-        await recordSale(saleSku, 'tiktok', 1);
+        await recordSale(saleSku, 'tiktok', 1, { saleDate: date });
         playSuccessSound();
         toast({
             title: 'Penjualan Berhasil',

@@ -98,7 +98,7 @@ export default function LazadaSalesPage() {
     if (!date) return;
     setIsSubmitting(true);
     try {
-        await recordSale(saleSku, 'lazada', 1);
+        await recordSale(saleSku, 'lazada', 1, { saleDate: date });
         playSuccessSound();
         toast({
             title: 'Penjualan Berhasil',

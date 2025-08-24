@@ -98,7 +98,7 @@ export default function ShopeeSalesPage() {
     if (!date) return;
     setIsSubmitting(true);
     try {
-        await recordSale(saleSku, 'shopee', 1);
+        await recordSale(saleSku, 'shopee', 1, { saleDate: date });
         playSuccessSound();
         toast({
             title: 'Penjualan Berhasil',
