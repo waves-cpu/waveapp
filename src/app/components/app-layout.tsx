@@ -120,7 +120,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                           <SidebarMenu className="ml-4 mt-2 border-l border-muted-foreground/20 pl-4">
                                <SidebarMenuItem>
                                   <Link href="/sales/shopee">
-                                      <SidebarMenuButton variant="ghost" size="sm" isActive={pathname === '/sales/shopee'}>
+                                      <SidebarMenuButton variant="ghost" size="sm" isActive={pathname.startsWith('/sales/shopee')}>
                                           <ShoppingBag />
                                           {t.sales.shopee}
                                       </SidebarMenuButton>
@@ -128,7 +128,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                               </SidebarMenuItem>
                               <SidebarMenuItem>
                                   <Link href="/sales/tiktok">
-                                      <SidebarMenuButton variant="ghost" size="sm" isActive={pathname === '/sales/tiktok'}>
+                                      <SidebarMenuButton variant="ghost" size="sm" isActive={pathname.startsWith('/sales/tiktok')}>
                                           <ShoppingBag />
                                           {t.sales.tiktok}
                                       </SidebarMenuButton>
@@ -136,7 +136,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                               </SidebarMenuItem>
                               <SidebarMenuItem>
                                   <Link href="/sales/lazada">
-                                      <SidebarMenuButton variant="ghost" size="sm" isActive={pathname === '/sales/lazada'}>
+                                      <SidebarMenuButton variant="ghost" size="sm" isActive={pathname.startsWith('/sales/lazada')}>
                                           <ShoppingBag />
                                           {t.sales.lazada}
                                       </SidebarMenuButton>
@@ -239,5 +239,3 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     </div>
   );
 }
-
-    
