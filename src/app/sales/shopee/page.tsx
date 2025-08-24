@@ -19,7 +19,7 @@ import {
 } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { Calendar as CalendarIcon, ScanLine, Trash2, ShoppingCart } from 'lucide-react';
-import { format } from 'date-fns';
+import { format, startOfDay } from 'date-fns';
 import { useInventory } from '@/hooks/use-inventory';
 import { useLanguage } from '@/hooks/use-language';
 import { translations } from '@/types/language';
@@ -81,7 +81,8 @@ export default function ShopeeSalesPage() {
 
   useEffect(() => {
     if (date) {
-      loadSales(date);
+      // Use startOfDay to ignore time and timezone issues when fetching data
+      loadSales(startOfDay(date));
     }
   }, [date, loadSales]);
   
@@ -101,7 +102,7 @@ export default function ShopeeSalesPage() {
             description: `1 item dengan SKU ${saleSku} berhasil terjual.`,
         });
         setSku(''); // Clear main input
-        loadSales(date);
+        loadSales(startOfDay(date));
     } catch (error) {
         playErrorSound();
         const message = error instanceof Error ? error.message : 'Terjadi kesalahan saat mencatat penjualan.';
@@ -194,7 +195,7 @@ export default function ShopeeSalesPage() {
             title: 'Penjualan Dibatalkan',
             description: 'Penjualan telah berhasil dibatalkan dan stok dikembalikan.',
         });
-        loadSales(date);
+        loadSales(startOfDay(date));
     } catch (error) {
         console.error('Failed to cancel sale:', error);
         toast({
