@@ -94,13 +94,6 @@ const runMigrations = () => {
         db.exec('ALTER TABLE variants ADD COLUMN costPrice REAL');
     }
 
-    // Add transactionId to shipping_receipts
-    const shippingReceiptsColumns = db.pragma('table_info(shipping_receipts)');
-    if (!shippingReceiptsColumns.some((col: any) => col.name === 'transactionId')) {
-        console.log('Adding transactionId column to shipping_receipts table...');
-        db.exec('ALTER TABLE shipping_receipts ADD COLUMN transactionId TEXT');
-    }
-
   } catch (error) {
     if (error instanceof Error && error.message.includes('no such table:')) {
         // ignore if tables don't exist yet
@@ -113,6 +106,7 @@ const runMigrations = () => {
 
 // Create tables if they don't exist
 const createSchema = () => {
+  db.exec('DROP TABLE IF EXISTS shipping_receipts');
   db.exec(`
     CREATE TABLE IF NOT EXISTS products (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -198,15 +192,6 @@ const createSchema = () => {
         creditAccount TEXT NOT NULL,
         amount REAL NOT NULL,
         type TEXT NOT NULL DEFAULT 'manual'
-    );
-
-    CREATE TABLE IF NOT EXISTS shipping_receipts (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      receiptNumber TEXT NOT NULL UNIQUE,
-      shippingService TEXT NOT NULL,
-      status TEXT NOT NULL DEFAULT 'pending',
-      scannedAt TEXT NOT NULL,
-      transactionId TEXT
     );
   `);
 };

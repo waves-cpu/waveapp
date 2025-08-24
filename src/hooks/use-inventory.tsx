@@ -3,7 +3,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
-import type { InventoryItem, AdjustmentHistory, InventoryItemVariant, Sale, Reseller, ManualJournalEntry, ShippingReceipt, ShippingStatus } from '@/types';
+import type { InventoryItem, AdjustmentHistory, InventoryItemVariant, Sale, Reseller, ManualJournalEntry } from '@/types';
 import {
   fetchInventoryData,
   addProduct,
@@ -23,10 +23,6 @@ import {
   updatePrices as updatePricesDb,
   addManualJournalEntry,
   fetchManualJournalEntries,
-  addShippingReceipt as addShippingReceiptDb,
-  fetchShippingReceipts as fetchShippingReceiptsDb,
-  deleteShippingReceipt as deleteShippingReceiptDb,
-  updateShippingReceiptStatus as updateShippingReceiptStatusDb
 } from '@/lib/inventory-service';
 
 
@@ -55,11 +51,6 @@ interface InventoryContextType {
   updatePrices: (updates: any[]) => Promise<void>;
   manualJournalEntries: ManualJournalEntry[];
   createManualJournalEntry: (entry: Omit<ManualJournalEntry, 'id' | 'type'>) => Promise<void>;
-  shippingReceipts: ShippingReceipt[];
-  addShippingReceipt: (receiptNumber: string, shippingService: string) => Promise<void>;
-  fetchShippingReceipts: () => Promise<void>;
-  deleteShippingReceipt: (id: string) => Promise<void>;
-  updateShippingReceiptStatus: (id: string, status: ShippingStatus) => Promise<void>;
 }
 
 const InventoryContext = createContext<InventoryContextType | undefined>(undefined);
@@ -70,27 +61,16 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
   const [allSales, setAllSales] = useState<Sale[]>([]);
   const [resellers, setResellers] = useState<Reseller[]>([]);
   const [manualJournalEntries, setManualJournalEntries] = useState<ManualJournalEntry[]>([]);
-  const [shippingReceipts, setShippingReceipts] = useState<ShippingReceipt[]>([]);
   const [loading, setLoading] = useState(true);
-
-   const fetchShippingReceipts = useCallback(async () => {
-    try {
-        const receiptData = await fetchShippingReceiptsDb();
-        setShippingReceipts(receiptData);
-    } catch (error) {
-        console.error("Failed to fetch shipping receipts:", error);
-    }
-  }, []);
 
   const fetchAllData = useCallback(async () => {
     setLoading(true);
     try {
-      const [inventoryData, salesData, resellerData, manualEntries, receiptData] = await Promise.all([
+      const [inventoryData, salesData, resellerData, manualEntries] = await Promise.all([
         fetchInventoryData(),
         fetchAllSales(),
         getResellers(),
         fetchManualJournalEntries(),
-        fetchShippingReceiptsDb(),
       ]);
       
       setItems(inventoryData.items);
@@ -98,7 +78,6 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
       setAllSales(salesData);
       setResellers(resellerData);
       setManualJournalEntries(manualEntries);
-      setShippingReceipts(receiptData);
 
     } catch (error) {
       console.error("Failed to fetch data:", error);
@@ -111,20 +90,6 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
     fetchAllData();
   }, [fetchAllData]);
 
-  const addShippingReceipt = async (receiptNumber: string, shippingService: string) => {
-    await addShippingReceiptDb(receiptNumber, shippingService);
-    await fetchShippingReceipts();
-  };
-
-  const deleteShippingReceipt = async (id: string) => {
-    await deleteShippingReceiptDb(id);
-    await fetchShippingReceipts();
-  }
-
-  const updateShippingReceiptStatus = async (id: string, status: ShippingStatus) => {
-    await updateShippingReceiptStatusDb(id, status);
-    await fetchShippingReceipts();
-  }
   
   const createManualJournalEntry = async (entry: Omit<ManualJournalEntry, 'id' | 'type'>) => {
     await addManualJournalEntry(entry);
@@ -250,11 +215,6 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
         updatePrices,
         manualJournalEntries,
         createManualJournalEntry,
-        shippingReceipts,
-        addShippingReceipt,
-        fetchShippingReceipts,
-        deleteShippingReceipt,
-        updateShippingReceiptStatus
       }}>
       {children}
     </InventoryContext.Provider>

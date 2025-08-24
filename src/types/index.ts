@@ -74,15 +74,4 @@ export interface ManualJournalEntry {
     amount: number;
     type: 'manual';
 }
-
-export type ShippingStatus = 'pending' | 'shipped' | 'delivered' | 'returned' | 'cancelled' | 'reconciled';
-
-export interface ShippingReceipt {
-    id: string;
-    receiptNumber: string;
-    shippingService: string;
-    status: ShippingStatus;
-    scannedAt: string; // ISO string
-    transactionId?: string;
-}
     
