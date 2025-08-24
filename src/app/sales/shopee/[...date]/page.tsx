@@ -53,7 +53,18 @@ export default function ShopeeSalesPage() {
   const router = useRouter();
   const params = useParams();
 
-  const [date, setDate] = useState<Date | undefined>();
+  const [date, setDate] = useState<Date | undefined>(() => {
+    const dateArray = Array.isArray(params.date) ? params.date : [];
+    if (dateArray.length === 3) {
+      const [month, day, year] = dateArray;
+      const parsedDate = parse(`${year}-${month}-${day}`, 'yyyy-MM-dd', new Date());
+      if (isValid(parsedDate)) {
+        return parsedDate;
+      }
+    }
+    return new Date();
+  });
+  
   const [isDatePickerOpen, setDatePickerOpen] = useState(false);
   const [sales, setSales] = useState<Sale[]>([]);
   const [loading, setLoading] = useState(true);
@@ -63,18 +74,6 @@ export default function ShopeeSalesPage() {
 
   const [productForVariantSelection, setProductForVariantSelection] = useState<InventoryItem | null>(null);
   const [isVariantDialogOpen, setIsVariantDialogOpen] = useState(false);
-
-  useEffect(() => {
-    const dateArray = Array.isArray(params.date) ? params.date : [];
-    if (dateArray.length === 3) {
-      const [month, day, year] = dateArray;
-      const parsedDate = parse(`${year}-${month}-${day}`, 'yyyy-MM-dd', new Date());
-      if (isValid(parsedDate)) {
-        setDate(parsedDate);
-      }
-    }
-  }, [params.date, router]);
-
 
   const loadSales = useCallback(async (selectedDate: Date) => {
     setLoading(true);
@@ -94,10 +93,18 @@ export default function ShopeeSalesPage() {
   }, [fetchSales, toast]);
 
   useEffect(() => {
-    if (date) {
-      loadSales(date);
+    const dateArray = Array.isArray(params.date) ? params.date : [];
+    let newDate = new Date();
+    if (dateArray.length === 3) {
+      const [month, day, year] = dateArray;
+      const parsedDate = parse(`${year}-${month}-${day}`, 'yyyy-MM-dd', new Date());
+      if (isValid(parsedDate)) {
+        newDate = parsedDate;
+      }
     }
-  }, [date, loadSales]);
+    setDate(newDate);
+    loadSales(newDate);
+  }, [params.date, loadSales]);
   
   useEffect(() => {
     skuInputRef.current?.focus();
@@ -105,7 +112,6 @@ export default function ShopeeSalesPage() {
 
   const handleDateChange = (newDate: Date | undefined) => {
     if (newDate) {
-        setDate(newDate);
         const formattedDate = format(newDate, 'MM-dd-yyyy');
         router.push(`/sales/shopee/${formattedDate}`);
         setDatePickerOpen(false);
