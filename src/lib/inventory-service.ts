@@ -394,8 +394,7 @@ export async function performSale(
     
     db.transaction(() => {
         const saleDate = options?.saleDate || new Date();
-        // Store date as YYYY-MM-DD string to avoid timezone issues
-        const saleDateString = formatDate(saleDate, 'yyyy-MM-dd');
+        const saleDateString = formatDate(saleDate, 'yyyy-MM-dd HH:mm:ss');
         const saleReason = `Sale (${channel})` + (options?.resellerName ? ` - ${options.resellerName}` : '');
 
         let priceAtSale;
@@ -457,7 +456,11 @@ export async function fetchAllSales(): Promise<Sale[]> {
     `);
     
     const sales = salesQuery.all() as any[];
-    return sales.map(s => ({...s, id: s.id.toString()}));
+    return sales.map(s => ({
+        ...s, 
+        id: s.id.toString(),
+        saleDate: s.saleDate, // Keep as string from DB
+    }));
 }
 
 export async function getSalesByDate(channel: string, date: Date): Promise<Sale[]> {
@@ -473,7 +476,7 @@ export async function getSalesByDate(channel: string, date: Date): Promise<Sale[
         JOIN products p ON s.productId = p.id
         LEFT JOIN variants v ON s.variantId = v.id
         WHERE s.channel = @channel 
-        AND s.saleDate = @dateString
+        AND date(s.saleDate) = @dateString
         ORDER BY s.id DESC
     `);
     
@@ -482,7 +485,11 @@ export async function getSalesByDate(channel: string, date: Date): Promise<Sale[
         dateString 
     }) as any[];
     
-    return sales.map(s => ({...s, id: s.id.toString()}));
+    return sales.map(s => ({
+        ...s, 
+        id: s.id.toString(),
+        saleDate: s.saleDate // Keep as string from DB
+    }));
 }
 
 export async function revertSale(saleId: string) {
