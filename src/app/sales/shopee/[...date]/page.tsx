@@ -36,6 +36,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
+  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { VariantSelectionDialog } from '@/app/components/variant-selection-dialog';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -44,15 +45,14 @@ import { useScanSounds } from '@/hooks/use-scan-sounds';
 import { useParams, useRouter } from 'next/navigation';
 
 function parseDateFromParams(dateArray: string[] | undefined): Date {
-    let newDate = new Date();
     if (dateArray && dateArray.length === 3) {
       const [month, day, year] = dateArray;
       const parsedDate = parse(`${year}-${month}-${day}`, 'yyyy-MM-dd', new Date());
       if (isValid(parsedDate)) {
-        newDate = parsedDate;
+        return parsedDate;
       }
     }
-    return newDate;
+    return new Date();
 }
 
 
@@ -66,7 +66,7 @@ export default function ShopeeSalesPage() {
   const params = useParams();
 
   const [date, setDate] = useState<Date>(() => parseDateFromParams(Array.isArray(params.date) ? params.date : undefined));
-
+  
   const [isDatePickerOpen, setDatePickerOpen] = useState(false);
   const [sales, setSales] = useState<Sale[]>([]);
   const [loading, setLoading] = useState(true);
@@ -95,9 +95,9 @@ export default function ShopeeSalesPage() {
   }, [fetchSales, toast]);
   
   useEffect(() => {
-    const dateFromParams = parseDateFromParams(Array.isArray(params.date) ? params.date : undefined);
-    setDate(dateFromParams);
-    loadSales(dateFromParams);
+    const dateFromUrl = parseDateFromParams(Array.isArray(params.date) ? params.date : undefined)
+    setDate(dateFromUrl);
+    loadSales(dateFromUrl);
   }, [params.date, loadSales]);
   
   useEffect(() => {
