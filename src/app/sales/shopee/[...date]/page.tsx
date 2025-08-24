@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -45,8 +45,9 @@ import { useScanSounds } from '@/hooks/use-scan-sounds';
 import { useParams, useRouter } from 'next/navigation';
 
 function parseDateFromParams(dateArray: string[] | undefined): Date {
-    if (dateArray && dateArray.length === 3) {
-      const [month, day, year] = dateArray;
+    if (dateArray && dateArray.length > 0) {
+      // Assuming the format is MM-dd-yyyy
+      const [month, day, year] = dateArray[0].split('-');
       const parsedDate = parse(`${year}-${month}-${day}`, 'yyyy-MM-dd', new Date());
       if (isValid(parsedDate)) {
         return parsedDate;
@@ -54,7 +55,6 @@ function parseDateFromParams(dateArray: string[] | undefined): Date {
     }
     return new Date();
 }
-
 
 export default function ShopeeSalesPage() {
   const { language } = useLanguage();
@@ -64,18 +64,19 @@ export default function ShopeeSalesPage() {
   const { playSuccessSound, playErrorSound } = useScanSounds();
   const router = useRouter();
   const params = useParams();
-
-  const [date, setDate] = useState<Date>(() => parseDateFromParams(Array.isArray(params.date) ? params.date : undefined));
   
-  const [isDatePickerOpen, setDatePickerOpen] = useState(false);
   const [sales, setSales] = useState<Sale[]>([]);
   const [loading, setLoading] = useState(true);
   const [sku, setSku] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const skuInputRef = useRef<HTMLInputElement>(null);
+  const [isDatePickerOpen, setDatePickerOpen] = useState(false);
 
   const [productForVariantSelection, setProductForVariantSelection] = useState<InventoryItem | null>(null);
   const [isVariantDialogOpen, setIsVariantDialogOpen] = useState(false);
+
+  // The single source of truth for the date is the URL param.
+  const currentDate = useMemo(() => parseDateFromParams(Array.isArray(params.date) ? params.date : undefined), [params.date]);
 
   const loadSales = useCallback(async (selectedDate: Date) => {
     setLoading(true);
@@ -94,16 +95,16 @@ export default function ShopeeSalesPage() {
     }
   }, [fetchSales, toast]);
   
+  // This effect reacts to changes in the URL parameter.
   useEffect(() => {
-    const dateFromUrl = parseDateFromParams(Array.isArray(params.date) ? params.date : undefined)
-    setDate(dateFromUrl);
-    loadSales(dateFromUrl);
-  }, [params.date, loadSales]);
+    loadSales(currentDate);
+  }, [currentDate, loadSales]);
   
   useEffect(() => {
     skuInputRef.current?.focus();
   }, []);
 
+  // This function's only job is to change the URL.
   const handleDateChange = (newDate: Date | undefined) => {
     if (newDate) {
         setDatePickerOpen(false);
@@ -113,17 +114,17 @@ export default function ShopeeSalesPage() {
   }
 
   const handleRecordSale = useCallback(async (saleSku: string) => {
-    if (!date) return;
+    if (!currentDate) return;
     setIsSubmitting(true);
     try {
-        await recordSale(saleSku, 'shopee', 1, { saleDate: date });
+        await recordSale(saleSku, 'shopee', 1, { saleDate: currentDate });
         playSuccessSound();
         toast({
             title: 'Penjualan Berhasil',
             description: `1 item dengan SKU ${saleSku} berhasil terjual.`,
         });
         setSku(''); 
-        loadSales(date);
+        loadSales(currentDate);
     } catch (error) {
         playErrorSound();
         const message = error instanceof Error ? error.message : 'Terjadi kesalahan saat mencatat penjualan.';
@@ -136,7 +137,7 @@ export default function ShopeeSalesPage() {
         setIsSubmitting(false);
         skuInputRef.current?.focus();
     }
-  }, [date, recordSale, toast, loadSales, playSuccessSound, playErrorSound]);
+  }, [currentDate, recordSale, toast, loadSales, playSuccessSound, playErrorSound]);
 
   const handleSkuSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -208,14 +209,14 @@ export default function ShopeeSalesPage() {
   };
   
   const handleCancelSale = async (saleId: string) => {
-    if (!date) return;
+    if (!currentDate) return;
     try {
         await cancelSale(saleId);
         toast({
             title: 'Penjualan Dibatalkan',
             description: 'Penjualan telah berhasil dibatalkan dan stok dikembalikan.',
         });
-        loadSales(date);
+        loadSales(currentDate);
     } catch (error) {
         console.error('Failed to cancel sale:', error);
         toast({
@@ -225,7 +226,6 @@ export default function ShopeeSalesPage() {
         });
     }
   };
-
 
   return (
     <AppLayout>
@@ -259,17 +259,17 @@ export default function ShopeeSalesPage() {
                     variant={'outline'}
                     className={cn(
                       'w-full md:w-[240px] justify-start text-left font-normal',
-                      !date && 'text-muted-foreground'
+                      !currentDate && 'text-muted-foreground'
                     )}
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    {date ? format(date, 'PP') : <span>{t.stockHistory.dateRange}</span>}
+                    {currentDate ? format(currentDate, 'PP') : <span>{t.stockHistory.dateRange}</span>}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="end">
                   <Calendar
                     mode="single"
-                    selected={date}
+                    selected={currentDate}
                     onSelect={handleDateChange}
                     initialFocus
                   />
