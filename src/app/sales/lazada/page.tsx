@@ -50,7 +50,8 @@ export default function LazadaSalesPage() {
   const { toast } = useToast();
   const { playSuccessSound, playErrorSound } = useScanSounds();
 
-  const [date, setDate] = useState<Date | undefined>(undefined);
+  const [date, setDate] = useState<Date | undefined>(new Date());
+  const [isDatePickerOpen, setDatePickerOpen] = useState(false);
   const [sales, setSales] = useState<Sale[]>([]);
   const [loading, setLoading] = useState(true);
   const [sku, setSku] = useState('');
@@ -77,11 +78,6 @@ export default function LazadaSalesPage() {
       setLoading(false);
     }
   }, [fetchSales, toast]);
-
-  useEffect(() => {
-    // Set initial date on client to avoid hydration mismatch
-    setDate(new Date());
-  }, []);
 
   useEffect(() => {
     if (date) {
@@ -235,7 +231,7 @@ export default function LazadaSalesPage() {
                       />
                   </div>
               </form>
-              <Popover>
+              <Popover open={isDatePickerOpen} onOpenChange={setDatePickerOpen}>
                 <PopoverTrigger asChild>
                   <Button
                     id="date"
@@ -253,7 +249,10 @@ export default function LazadaSalesPage() {
                   <Calendar
                     mode="single"
                     selected={date}
-                    onSelect={(newDate) => setDate(newDate || new Date())}
+                    onSelect={(newDate) => {
+                      setDate(newDate || new Date());
+                      setDatePickerOpen(false);
+                    }}
                     initialFocus
                   />
                 </PopoverContent>
