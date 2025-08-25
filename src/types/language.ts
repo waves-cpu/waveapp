@@ -367,7 +367,7 @@ export const translations = {
             itemName: "Nama Barang",
             itemNamePlaceholder: "cth., Teh Hijau Organik",
             category: "Kategori",
-            categoryPlaceholder: "cth., Minuman",
+            categoryPlaceholder: "Kategori",
             price: "Harga",
             pricePlaceholder: "cth., 50000",
             initialStock: "Stok Awal",
