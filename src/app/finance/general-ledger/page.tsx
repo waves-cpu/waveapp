@@ -41,18 +41,7 @@ const formatCurrency = (amount?: number) => {
 function GeneralLedgerSkeleton() {
     return (
         <Card>
-            <CardHeader>
-                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                    <div className="space-y-1">
-                        <Skeleton className="h-6 w-32" />
-                        <Skeleton className="h-4 w-48" />
-                    </div>
-                    <div className="flex gap-2">
-                        <Skeleton className="h-9 w-full md:w-60" />
-                        <Skeleton className="h-9 w-full md:w-60" />
-                    </div>
-                </div>
-            </CardHeader>
+            
             <CardContent>
                 <div className="border rounded-md">
                     <Table>
@@ -213,8 +202,7 @@ export default function GeneralLedgerPage() {
                      <div className="flex items-center gap-4">
                         <SidebarTrigger className="md:hidden" />
                         <div className="space-y-1">
-                            <h1 className="text-lg font-bold">{t.finance.generalLedger}: {selectedAccount}</h1>
-                            <p className="text-xs text-muted-foreground">Rincian transaksi per akun.</p>
+                            <h1 className="text-lg font-bold">{t.finance.generalLedger}</h1>
                         </div>
                     </div>
                     <div className="flex flex-col md:flex-row gap-2">
