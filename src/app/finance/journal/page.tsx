@@ -19,7 +19,7 @@ import { format, isWithinInterval, startOfDay, endOfDay, parseISO } from "date-f
 import { DateRange } from "react-day-picker";
 import { id as localeId } from 'date-fns/locale';
 import { Skeleton } from "@/components/ui/skeleton";
-import type { ManualJournalEntry } from "@/types";
+import type { ManualJournalEntry, Sale } from "@/types";
 import { AddManualJournalDialog } from "@/app/components/add-manual-journal-dialog";
 import { Pagination } from "@/components/ui/pagination";
 import {
@@ -37,6 +37,7 @@ import { useToast } from "@/hooks/use-toast";
 
 type JournalEntry = {
     id?: string;
+    transactionId?: string; // For sales
     date: Date;
     description: string;
     account: string;
@@ -92,7 +93,7 @@ function GeneralJournalSkeleton() {
 export default function GeneralJournalPage() {
     const { language } = useLanguage();
     const t = translations[language];
-    const { allSales, items: allProducts, manualJournalEntries, loading, deleteManualJournalEntry } = useInventory();
+    const { allSales, items: allProducts, manualJournalEntries, loading, deleteManualJournalEntry, cancelSaleTransaction, cancelSale } = useInventory();
     const { toast } = useToast();
     const [isAddEntryDialogOpen, setAddEntryDialogOpen] = useState(false);
     const [entryToDelete, setEntryToDelete] = useState<JournalEntry | null>(null);
@@ -125,12 +126,14 @@ export default function GeneralJournalPage() {
             const cogs = (sale.cogsAtSale || 0) * sale.quantity;
             const description = `Penjualan ${sale.productName} (${sale.quantity}x) - ${sale.channel}`;
             
-            entries.push({ date: saleDate, description, account: 'Piutang Usaha / Kas', debit: revenue, type: 'sale' });
-            entries.push({ date: saleDate, description, account: 'Pendapatan Penjualan', credit: revenue, type: 'sale' });
+            const saleEntryBase = { id: sale.id, transactionId: sale.transactionId, date: saleDate, description, type: 'sale' as const };
+
+            entries.push({ ...saleEntryBase, account: 'Piutang Usaha / Kas', debit: revenue });
+            entries.push({ ...saleEntryBase, account: 'Pendapatan Penjualan', credit: revenue });
 
             if (cogs > 0) {
-                entries.push({ date: saleDate, description, account: 'Beban Pokok Penjualan', debit: cogs, type: 'sale' });
-                entries.push({ date: saleDate, description, account: 'Persediaan Barang', credit: cogs, type: 'sale' });
+                entries.push({ ...saleEntryBase, account: 'Beban Pokok Penjualan', debit: cogs });
+                entries.push({ ...saleEntryBase, account: 'Persediaan Barang', credit: cogs });
             }
         });
 
@@ -142,16 +145,16 @@ export default function GeneralJournalPage() {
                if (h.change === 0 && h.reason.startsWith('Penyesuaian Modal (HPP)')) {
                    const value = h.newStockLevel; 
                    const description = `Penyesuaian Modal Persediaan: ${name}`;
-                   entries.push({ date: adjustmentDate, description, account: 'Persediaan Barang', debit: value, type: 'capital_adjustment' });
-                   entries.push({ date: adjustmentDate, description, account: 'Penyesuaian Modal (Persediaan)', credit: value, type: 'capital_adjustment' });
+                   entries.push({ id: h.id, date: adjustmentDate, description, account: 'Persediaan Barang', debit: value, type: 'capital_adjustment' });
+                   entries.push({ id: h.id, date: adjustmentDate, description, account: 'Penyesuaian Modal (Persediaan)', credit: value, type: 'capital_adjustment' });
 
                } else if (h.change > 0 && h.reason.toLowerCase() === 'stock in') {
                     const value = h.change * (costPrice || 0);
                     if (value > 0) {
                        const formattedCostPrice = formatCurrency(costPrice);
                        const description = `Stok Masuk: ${name} (Tambah ${h.change} @ ${formattedCostPrice})`;
-                       entries.push({ date: adjustmentDate, description, account: 'Persediaan Barang', debit: value, type: 'stock_in'});
-                       entries.push({ date: adjustmentDate, description, account: 'Kas / Utang Usaha', credit: value, type: 'stock_in'});
+                       entries.push({ id: h.id, date: adjustmentDate, description, account: 'Persediaan Barang', debit: value, type: 'stock_in'});
+                       entries.push({ id: h.id, date: adjustmentDate, description, account: 'Kas / Utang Usaha', credit: value, type: 'stock_in'});
                     }
                }
            });
@@ -196,20 +199,39 @@ export default function GeneralJournalPage() {
     const handleDelete = async () => {
         if (!entryToDelete || !entryToDelete.id) return;
         try {
-            await deleteManualJournalEntry(entryToDelete.id);
-            toast({
-                title: "Entri Dihapus",
-                description: "Entri jurnal manual telah berhasil dihapus.",
-            });
+             if (entryToDelete.type === 'manual') {
+                await deleteManualJournalEntry(entryToDelete.id);
+                toast({ title: "Entri Dihapus", description: "Entri jurnal manual telah berhasil dihapus." });
+            } else if (entryToDelete.type === 'sale') {
+                if (entryToDelete.transactionId) {
+                    await cancelSaleTransaction(entryToDelete.transactionId);
+                } else {
+                    await cancelSale(entryToDelete.id);
+                }
+                toast({ title: "Penjualan Dibatalkan", description: "Transaksi penjualan telah dibatalkan dan stok dikembalikan." });
+            } else {
+                 toast({ variant: 'destructive', title: "Aksi Tidak Diizinkan", description: "Jenis entri ini tidak dapat dihapus dari sini." });
+            }
             setEntryToDelete(null);
         } catch (error) {
             toast({
                 variant: 'destructive',
                 title: "Gagal Menghapus",
-                description: "Terjadi kesalahan saat menghapus entri jurnal.",
+                description: `Terjadi kesalahan: ${error instanceof Error ? error.message : 'Unknown error'}`,
             });
         }
     };
+
+    const getDeleteDialogDescription = () => {
+        if (!entryToDelete) return "";
+        if (entryToDelete.type === 'manual') {
+            return `Anda yakin ingin menghapus entri jurnal untuk "${entryToDelete.description}"? Tindakan ini tidak dapat diurungkan.`;
+        }
+        if (entryToDelete.type === 'sale') {
+            return `Anda yakin ingin membatalkan transaksi "${entryToDelete.description}"? Stok akan dikembalikan. Tindakan ini tidak dapat diurungkan.`;
+        }
+        return `Anda yakin ingin menghapus entri ini? Tindakan ini mungkin memiliki konsekuensi yang tidak terduga.`;
+    }
 
 
     if (loading) {
@@ -320,7 +342,7 @@ export default function GeneralJournalPage() {
                                                 <TableCell className="text-right text-xs font-mono">{formatCurrency(entry.debit)}</TableCell>
                                                 <TableCell className="text-right text-xs font-mono">{formatCurrency(entry.credit)}</TableCell>
                                                 <TableCell className="text-center">
-                                                    {entry.type === 'manual' && entry.debit && (
+                                                    {(entry.type === 'manual' || entry.type === 'sale') && entry.debit && (
                                                          <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => setEntryToDelete(entry)}>
                                                             <Trash2 className="h-3.5 w-3.5" />
                                                         </Button>
@@ -391,7 +413,7 @@ export default function GeneralJournalPage() {
                     <AlertDialogHeader>
                         <AlertDialogTitle>Hapus Entri Jurnal?</AlertDialogTitle>
                         <AlertDialogDescription>
-                            Anda yakin ingin menghapus entri jurnal untuk "{entryToDelete?.description}"? Tindakan ini tidak dapat diurungkan.
+                           {getDeleteDialogDescription()}
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
@@ -406,3 +428,5 @@ export default function GeneralJournalPage() {
     );
 
 }
+
+    
