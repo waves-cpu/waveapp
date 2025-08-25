@@ -23,12 +23,14 @@ import {
   updatePrices as updatePricesDb,
   addManualJournalEntry,
   fetchManualJournalEntries,
+  bulkAddProducts,
 } from '@/lib/inventory-service';
 
 
 interface InventoryContextType {
   items: InventoryItem[];
   addItem: (item: any) => Promise<void>;
+  bulkAddItems: (items: any[]) => Promise<void>;
   updateItem: (itemId: string, itemData: any) => Promise<void>;
   updateStock: (itemId: string, change: number, reason: string) => Promise<void>;
   getItem: (itemId: string) => InventoryItem | undefined;
@@ -125,6 +127,11 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
     await fetchAllData();
   };
 
+  const bulkAddItems = async (itemsData: any[]) => {
+    await bulkAddProducts(itemsData);
+    await fetchAllData();
+  };
+
   const updateItem = async (itemId: string, itemData: any) => {
     await editProduct(itemId, itemData);
     await fetchAllData();
@@ -192,7 +199,8 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
   return (
     <InventoryContext.Provider value={{ 
         items, 
-        addItem, 
+        addItem,
+        bulkAddItems,
         updateItem, 
         bulkUpdateVariants, 
         updateStock, 

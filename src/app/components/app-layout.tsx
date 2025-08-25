@@ -37,6 +37,7 @@ import {
   DollarSign,
   Scale,
   ArchiveIcon,
+  Sheet,
 } from 'lucide-react';
 import { Logo } from './logo';
 import { Separator } from '@/components/ui/separator';
@@ -85,6 +86,14 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                                       <SidebarMenuButton variant="ghost" size="sm" isActive={pathname === '/add-product'}>
                                           <PlusCircle />
                                           {t.dashboard.addItem}
+                                      </SidebarMenuButton>
+                                  </Link>
+                              </SidebarMenuItem>
+                               <SidebarMenuItem>
+                                  <Link href="/bulk-add-product">
+                                      <SidebarMenuButton variant="ghost" size="sm" isActive={pathname === '/bulk-add-product'}>
+                                          <Sheet />
+                                          {t.dashboard.bulk}
                                       </SidebarMenuButton>
                                   </Link>
                               </SidebarMenuItem>

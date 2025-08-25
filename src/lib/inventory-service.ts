@@ -1,4 +1,5 @@
 
+
 'use server';
 
 import { db } from './db';
@@ -178,6 +179,105 @@ export async function addProduct(itemData: any) {
                 });
             }
         }
+    })();
+}
+
+export async function bulkAddProducts(itemsData: any[]) {
+    const addProductStmt = db.prepare(`
+        INSERT INTO products (name, category, sku, imageUrl, hasVariants, stock, price, size, costPrice)
+        VALUES (@name, @category, @sku, @imageUrl, @hasVariants, @stock, @price, @size, @costPrice)
+    `);
+    
+    const addVariantStmt = db.prepare(`
+        INSERT INTO variants (productId, name, sku, price, stock, costPrice)
+        VALUES (@productId, @name, @sku, @price, @stock, @costPrice)
+    `);
+
+    const addHistoryStmt = db.prepare(`
+        INSERT INTO history (productId, variantId, change, reason, newStockLevel, date)
+        VALUES (@productId, @variantId, @change, @reason, @newStockLevel, @date)
+    `);
+
+    db.transaction(() => {
+        const productGroups = new Map<string, any[]>();
+        
+        // Group items by parent SKU
+        itemsData.forEach(item => {
+            const parentSku = item['SKU Induk'] || `NO_PARENT_SKU_${item['SKU Varian'] || item['Nama Produk']}`;
+            if (!productGroups.has(parentSku)) {
+                productGroups.set(parentSku, []);
+            }
+            productGroups.get(parentSku)!.push(item);
+        });
+
+        productGroups.forEach((items) => {
+            const parentItem = items[0];
+            const hasVariants = items.length > 1 || (items.length === 1 && items[0]['SKU Varian']);
+
+            if (hasVariants) {
+                const productResult = addProductStmt.run({
+                    name: parentItem['Nama Produk'],
+                    category: parentItem['Kategori'],
+                    sku: parentItem['SKU Induk'] || null,
+                    imageUrl: 'https://placehold.co/40x40.png',
+                    hasVariants: 1,
+                    stock: null,
+                    price: null,
+                    size: null,
+                    costPrice: null
+                });
+                const productId = productResult.lastInsertRowid as number;
+
+                items.forEach(variantData => {
+                    const stock = Number(variantData['Stok Awal']) || 0;
+                    const variantResult = addVariantStmt.run({
+                        productId: productId,
+                        name: variantData['Nama Varian'],
+                        sku: variantData['SKU Varian'] || null,
+                        price: Number(variantData['Harga Jual']) || 0,
+                        stock: stock,
+                        costPrice: Number(variantData['Harga Modal']) || 0
+                    });
+                    const variantId = variantResult.lastInsertRowid;
+                    if (stock > 0) {
+                        addHistoryStmt.run({
+                            productId: productId,
+                            variantId: variantId,
+                            change: stock,
+                            reason: 'Initial Stock (Bulk Import)',
+                            newStockLevel: stock,
+                            date: new Date().toISOString()
+                        });
+                    }
+                });
+
+            } else { // Single product
+                const stock = Number(parentItem['Stok Awal']) || 0;
+                const productResult = addProductStmt.run({
+                    name: parentItem['Nama Produk'],
+                    category: parentItem['Kategori'],
+                    sku: parentItem['SKU Induk'] || null,
+                    imageUrl: 'https://placehold.co/40x40.png',
+                    hasVariants: 0,
+                    stock: stock,
+                    price: Number(parentItem['Harga Jual']) || 0,
+                    size: null,
+                    costPrice: Number(parentItem['Harga Modal']) || 0
+                });
+                const productId = productResult.lastInsertRowid as number;
+
+                if (stock > 0) {
+                    addHistoryStmt.run({
+                        productId: productId,
+                        variantId: null,
+                        change: stock,
+                        reason: 'Initial Stock (Bulk Import)',
+                        newStockLevel: stock,
+                        date: new Date().toISOString()
+                    });
+                }
+            }
+        });
     })();
 }
 
