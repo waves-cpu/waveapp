@@ -10,14 +10,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFoo
 import { Skeleton } from "@/components/ui/skeleton";
 import { useInventory } from "@/hooks/use-inventory";
 import { useMemo, useState } from "react";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
-import { Calendar } from "@/components/ui/calendar";
-import { Calendar as CalendarIcon } from 'lucide-react';
-import { cn } from "@/lib/utils";
-import { DateRange } from "react-day-picker";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { id as localeId } from 'date-fns/locale';
-import { format, isWithinInterval, startOfDay, endOfDay, parseISO } from "date-fns";
+import { format, isWithinInterval, startOfMonth, endOfMonth, parseISO } from "date-fns";
 
 const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('id-ID', {
@@ -102,17 +98,22 @@ export default function BalanceSheetPage() {
     const t = translations[language];
     const { items, allSales, manualJournalEntries, loading } = useInventory();
     
-    const [dateRange, setDateRange] = useState<DateRange | undefined>({
-        from: new Date(new Date().getFullYear(), 0, 1),
-        to: new Date(),
-    });
+    const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
+    const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+
+    const years = useMemo(() => {
+        const allYears = new Set(allSales.map(s => parseISO(s.saleDate).getFullYear()));
+        if (allYears.size === 0) allYears.add(new Date().getFullYear());
+        return Array.from(allYears).sort((a,b) => b-a);
+    }, [allSales]);
 
     const financialData = useMemo(() => {
+        const startDate = startOfMonth(new Date(selectedYear, selectedMonth));
+        const endDate = endOfMonth(new Date(selectedYear, selectedMonth));
+        
         const isInDateRange = (dateString: string) => {
-            if (!dateRange || !dateRange.from) return true;
             const date = parseISO(dateString);
-            const toDate = dateRange.to || dateRange.from;
-            return isWithinInterval(date, { start: startOfDay(dateRange.from), end: endOfDay(toDate) });
+            return isWithinInterval(date, { start: startDate, end: endDate });
         };
         
         const salesInDateRange = allSales.filter(sale => isInDateRange(sale.saleDate));
@@ -169,7 +170,7 @@ export default function BalanceSheetPage() {
             totalLiabilitiesAndEquity
         };
 
-    }, [items, allSales, manualJournalEntries, dateRange]);
+    }, [items, allSales, manualJournalEntries, selectedMonth, selectedYear]);
 
     if (loading) {
         return (
@@ -193,40 +194,32 @@ export default function BalanceSheetPage() {
                         <SidebarTrigger className="md:hidden" />
                         <h1 className="text-lg font-bold">{t.finance.balanceSheet}</h1>
                     </div>
-                    <Popover>
-                        <PopoverTrigger asChild>
-                        <Button
-                            id="date"
-                            variant={"outline"}
-                            className={cn(
-                            "w-full md:w-[260px] justify-start text-left font-normal",
-                            !dateRange && "text-muted-foreground"
-                            )}
-                        >
-                            <CalendarIcon className="mr-2 h-4 w-4" />
-                            {dateRange?.from ? (
-                            dateRange.to ? (
-                                <>{format(dateRange.from, "d MMM yyyy", {locale: localeId})} - {format(dateRange.to, "d MMM yyyy", {locale: localeId})}</>
-                            ) : (
-                                format(dateRange.from, "d MMM yyyy", {locale: localeId})
-                            )
-                            ) : (
-                            <span>Pilih rentang tanggal</span>
-                            )}
-                        </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="end">
-                        <Calendar
-                            initialFocus
-                            mode="range"
-                            defaultMonth={dateRange?.from}
-                            selected={dateRange}
-                            onSelect={setDateRange}
-                            numberOfMonths={2}
-                            locale={localeId}
-                        />
-                        </PopoverContent>
-                    </Popover>
+                    <div className="flex items-center gap-2">
+                        <Select value={selectedMonth.toString()} onValueChange={(value) => setSelectedMonth(parseInt(value))}>
+                            <SelectTrigger className="w-full md:w-[180px]">
+                                <SelectValue placeholder="Pilih Bulan" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {Array.from({ length: 12 }).map((_, i) => (
+                                    <SelectItem key={i} value={i.toString()}>
+                                        {format(new Date(0, i), 'MMMM', { locale: localeId })}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                        <Select value={selectedYear.toString()} onValueChange={(value) => setSelectedYear(parseInt(value))}>
+                            <SelectTrigger className="w-full md:w-[120px]">
+                                <SelectValue placeholder="Pilih Tahun" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {years.map(year => (
+                                    <SelectItem key={year} value={year.toString()}>
+                                        {year}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
                 </div>
 
                 <div className="grid md:grid-cols-2 gap-8 items-start">

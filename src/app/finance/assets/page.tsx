@@ -12,20 +12,16 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { DollarSign, Package, TrendingUp, TrendingDown, Hourglass, BarChart, PieChart, Calendar as CalendarIcon } from "lucide-react";
 import { Bar, BarChart as RechartsBarChart, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, Pie, PieChart as RechartsPieChart, Cell } from "recharts";
 import { ChartConfig, ChartContainer, ChartTooltipContent } from "@/components/ui/chart";
-import { subDays, isAfter, parseISO, isWithinInterval, startOfDay, endOfDay, format } from "date-fns";
+import { subDays, isAfter, parseISO, isWithinInterval, startOfMonth, endOfMonth, format } from "date-fns";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import type { InventoryItem, InventoryItemVariant } from "@/types";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
-import { Calendar } from "@/components/ui/calendar";
-import { cn } from "@/lib/utils";
-import { DateRange } from "react-day-picker";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { id as localeId } from 'date-fns/locale';
 
 const formatCurrency = (amount: number) => `Rp${Math.round(amount).toLocaleString('id-ID')}`;
 
-const ASSET_TURNOVER_DAYS = 30;
 const FAST_MOVING_THRESHOLD = 50;
 const SLOW_MOVING_THRESHOLD = 5;
 
@@ -116,10 +112,14 @@ export default function AssetReportPage() {
     const TAsset = t.finance.assetReportPage;
     const { items, allSales, loading } = useInventory();
     
-    const [dateRange, setDateRange] = useState<DateRange | undefined>({
-      from: subDays(new Date(), ASSET_TURNOVER_DAYS - 1),
-      to: new Date(),
-    });
+    const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
+    const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+
+    const years = useMemo(() => {
+        const allYears = new Set(allSales.map(s => parseISO(s.saleDate).getFullYear()));
+        if (allYears.size === 0) allYears.add(new Date().getFullYear());
+        return Array.from(allYears).sort((a,b) => b-a);
+    }, [allSales]);
 
     const { 
         assetClassification, 
@@ -128,12 +128,12 @@ export default function AssetReportPage() {
         nonMovingProducts,
         variantAssetClassification
     } = useMemo(() => {
+        const startDate = startOfMonth(new Date(selectedYear, selectedMonth));
+        const endDate = endOfMonth(new Date(selectedYear, selectedMonth));
         
         const isInDateRange = (dateString: string) => {
-            if (!dateRange || !dateRange.from) return true;
             const date = parseISO(dateString);
-            const toDate = dateRange.to || dateRange.from;
-            return isWithinInterval(date, { start: startOfDay(dateRange.from), end: endOfDay(toDate) });
+            return isWithinInterval(date, { start: startDate, end: endDate });
         };
         
         const salesInDateRange = allSales.filter(sale => isInDateRange(sale.saleDate));
@@ -237,7 +237,7 @@ export default function AssetReportPage() {
             slowMovingProducts: slow.sort((a,b) => b.salesCount - a.salesCount).slice(0, 10),
             nonMovingProducts: non.sort((a,b) => b.stockValue - a.stockValue).slice(0, 10),
         };
-    }, [items, allSales, dateRange, TAsset.fastLabel, TAsset.slowLabel, TAsset.nonMovingLabel]);
+    }, [items, allSales, selectedMonth, selectedYear, TAsset.fastLabel, TAsset.slowLabel, TAsset.nonMovingLabel]);
 
     const chartData = [
         {
@@ -282,40 +282,32 @@ export default function AssetReportPage() {
                         <SidebarTrigger className="md:hidden" />
                         <h1 className="text-base font-bold">{t.finance.assetReport}</h1>
                     </div>
-                    <Popover>
-                        <PopoverTrigger asChild>
-                        <Button
-                            id="date"
-                            variant={"outline"}
-                            className={cn(
-                            "w-full md:w-[260px] justify-start text-left font-normal",
-                            !dateRange && "text-muted-foreground"
-                            )}
-                        >
-                            <CalendarIcon className="mr-2 h-4 w-4" />
-                            {dateRange?.from ? (
-                            dateRange.to ? (
-                                <>{format(dateRange.from, "d MMM yyyy", {locale: localeId})} - {format(dateRange.to, "d MMM yyyy", {locale: localeId})}</>
-                            ) : (
-                                format(dateRange.from, "d MMM yyyy", {locale: localeId})
-                            )
-                            ) : (
-                            <span>Pilih rentang tanggal</span>
-                            )}
-                        </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="end">
-                        <Calendar
-                            initialFocus
-                            mode="range"
-                            defaultMonth={dateRange?.from}
-                            selected={dateRange}
-                            onSelect={setDateRange}
-                            numberOfMonths={2}
-                            locale={localeId}
-                        />
-                        </PopoverContent>
-                    </Popover>
+                    <div className="flex items-center gap-2">
+                         <Select value={selectedMonth.toString()} onValueChange={(value) => setSelectedMonth(parseInt(value))}>
+                            <SelectTrigger className="w-full md:w-[180px]">
+                                <SelectValue placeholder="Pilih Bulan" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {Array.from({ length: 12 }).map((_, i) => (
+                                    <SelectItem key={i} value={i.toString()}>
+                                        {format(new Date(0, i), 'MMMM', { locale: localeId })}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                        <Select value={selectedYear.toString()} onValueChange={(value) => setSelectedYear(parseInt(value))}>
+                            <SelectTrigger className="w-full md:w-[120px]">
+                                <SelectValue placeholder="Pilih Tahun" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {years.map(year => (
+                                    <SelectItem key={year} value={year.toString()}>
+                                        {year}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
                 </div>
 
 

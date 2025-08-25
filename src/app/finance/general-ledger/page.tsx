@@ -11,16 +11,11 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { format, parseISO, isWithinInterval, startOfDay, endOfDay } from "date-fns";
+import { format, parseISO, isWithinInterval, startOfMonth, endOfMonth } from "date-fns";
 import type { ManualJournalEntry, Sale } from "@/types";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { chartOfAccounts } from "@/types";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
-import { Calendar } from "@/components/ui/calendar";
-import { Calendar as CalendarIcon } from 'lucide-react';
-import { cn } from "@/lib/utils";
-import { DateRange } from "react-day-picker";
 import { id as localeId } from 'date-fns/locale';
 
 type JournalEntry = {
@@ -85,18 +80,22 @@ export default function GeneralLedgerPage() {
     const t = translations[language];
     const { allSales, items: allProducts, manualJournalEntries, loading } = useInventory();
     const [selectedAccount, setSelectedAccount] = useState<string>(chartOfAccounts[0]);
-    const [dateRange, setDateRange] = useState<DateRange | undefined>({
-      from: new Date(new Date().getFullYear(), 0, 1), // Awal tahun ini
-      to: new Date(),
-    });
+    const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
+    const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+
+    const years = useMemo(() => {
+        const allYears = new Set(allSales.map(s => parseISO(s.saleDate).getFullYear()));
+        if (allYears.size === 0) allYears.add(new Date().getFullYear());
+        return Array.from(allYears).sort((a,b) => b-a);
+    }, [allSales]);
 
     const ledgers = useMemo((): Map<string, LedgerAccount> => {
         const ledgerMap = new Map<string, LedgerAccount>();
+        const startDate = startOfMonth(new Date(selectedYear, selectedMonth));
+        const endDate = endOfMonth(new Date(selectedYear, selectedMonth));
 
         const isInDateRange = (date: Date) => {
-            if (!dateRange || !dateRange.from) return true;
-            const toDate = dateRange.to || dateRange.from;
-            return isWithinInterval(date, { start: startOfDay(dateRange.from), end: endOfDay(toDate) });
+            return isWithinInterval(date, { start: startDate, end: endDate });
         };
 
         const addEntry = (accountName: string, entry: JournalEntry) => {
@@ -187,7 +186,7 @@ export default function GeneralLedgerPage() {
         }
 
         return ledgerMap;
-    }, [allSales, allProducts, manualJournalEntries, dateRange]);
+    }, [allSales, allProducts, manualJournalEntries, selectedMonth, selectedYear]);
 
     const displayedLedger = useMemo(() => {
         return ledgers.get(selectedAccount);
@@ -223,40 +222,30 @@ export default function GeneralLedgerPage() {
                                 <CardDescription className="text-xs">Rincian transaksi per akun.</CardDescription>
                             </div>
                             <div className="flex flex-col md:flex-row gap-2">
-                                <Popover>
-                                    <PopoverTrigger asChild>
-                                    <Button
-                                        id="date"
-                                        variant={"outline"}
-                                        className={cn(
-                                        "w-full md:w-[260px] justify-start text-left font-normal",
-                                        !dateRange && "text-muted-foreground"
-                                        )}
-                                    >
-                                        <CalendarIcon className="mr-2 h-4 w-4" />
-                                        {dateRange?.from ? (
-                                        dateRange.to ? (
-                                            <>{format(dateRange.from, "d MMM yyyy", {locale: localeId})} - {format(dateRange.to, "d MMM yyyy", {locale: localeId})}</>
-                                        ) : (
-                                            format(dateRange.from, "d MMM yyyy", {locale: localeId})
-                                        )
-                                        ) : (
-                                        <span>Pilih rentang tanggal</span>
-                                        )}
-                                    </Button>
-                                    </PopoverTrigger>
-                                    <PopoverContent className="w-auto p-0" align="end">
-                                    <Calendar
-                                        initialFocus
-                                        mode="range"
-                                        defaultMonth={dateRange?.from}
-                                        selected={dateRange}
-                                        onSelect={setDateRange}
-                                        numberOfMonths={2}
-                                        locale={localeId}
-                                    />
-                                    </PopoverContent>
-                                </Popover>
+                                <Select value={selectedMonth.toString()} onValueChange={(value) => setSelectedMonth(parseInt(value))}>
+                                    <SelectTrigger className="w-full md:w-[180px]">
+                                        <SelectValue placeholder="Pilih Bulan" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {Array.from({ length: 12 }).map((_, i) => (
+                                            <SelectItem key={i} value={i.toString()}>
+                                                {format(new Date(0, i), 'MMMM', { locale: localeId })}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                                <Select value={selectedYear.toString()} onValueChange={(value) => setSelectedYear(parseInt(value))}>
+                                    <SelectTrigger className="w-full md:w-[120px]">
+                                        <SelectValue placeholder="Pilih Tahun" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {years.map(year => (
+                                            <SelectItem key={year} value={year.toString()}>
+                                                {year}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
                                 <Select value={selectedAccount} onValueChange={setSelectedAccount}>
                                     <SelectTrigger className="w-full md:w-[300px]">
                                         <SelectValue placeholder="Pilih Akun" />
