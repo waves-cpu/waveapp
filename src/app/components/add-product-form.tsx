@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useForm, useFieldArray } from 'react-hook-form';
@@ -32,7 +33,7 @@ import { PlusCircle, Trash2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 import type { InventoryItem } from '@/types';
-import { Skeleton } from '@/components/ui/skeleton';
+import { categories } from '@/types';
 
 const variantSchema = z.object({
     id: z.string().optional(),
@@ -71,24 +72,6 @@ const formSchema = z.object({
     message: "At least one variant is required when 'has variants' is checked.",
     path: ["variants"],
 });
-
-const categories = [
-    "T-Shirt Oversize",
-    "T-Shirt Boxy",
-    "Longsleeve",
-    "Ringer",
-    "Muscle",
-    "Hoodie",
-    "Rugby",
-    "Kids",
-    "Long Pants",
-    "Short Pants",
-    "Boxer",
-    "Caps",
-    "Accecoris",
-    "Sandals",
-    "Bag"
-];
 
 interface AddProductFormProps {
     existingItem?: InventoryItem;
@@ -137,17 +120,18 @@ export function AddProductForm({ existingItem }: AddProductFormProps) {
     resolver: zodResolver(formSchema),
     defaultValues: defaultValues,
   });
-  
-  const hasVariants = form.watch('hasVariants');
+
   const { fields, append, remove } = useFieldArray({
     control: form.control,
     name: "variants"
   });
 
+  const hasVariants = form.watch('hasVariants');
+
   useEffect(() => {
     form.reset(defaultValues);
   }, [defaultValues, form]);
-
+  
   useEffect(() => {
     if (hasVariants && fields.length === 0 && !isEditMode) {
       append([
@@ -413,5 +397,7 @@ export function AddProductForm({ existingItem }: AddProductFormProps) {
     </Card>
   );
 }
+
+    
 
     

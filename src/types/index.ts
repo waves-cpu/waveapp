@@ -1,5 +1,23 @@
 
 
+export const categories = [
+    "T-Shirt Oversize",
+    "T-Shirt Boxy",
+    "Longsleeve",
+    "Ringer",
+    "Muscle",
+    "Hoodie",
+    "Rugby",
+    "Kids",
+    "Long Pants",
+    "Short Pants",
+    "Boxer",
+    "Caps",
+    "Accecoris",
+    "Sandals",
+    "Bag"
+];
+
 export interface AdjustmentHistory {
   date: Date;
   change: number;

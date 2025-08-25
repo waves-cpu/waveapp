@@ -1,8 +1,10 @@
 
+
 'use client';
 
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
 import type { InventoryItem, AdjustmentHistory, InventoryItemVariant, Sale, Reseller, ManualJournalEntry } from '@/types';
+import { categories as allCategories } from '@/types';
 import {
   fetchInventoryData,
   addProduct,
@@ -56,7 +58,7 @@ const InventoryContext = createContext<InventoryContextType | undefined>(undefin
 
 export const InventoryProvider = ({ children }: { children: ReactNode }) => {
   const [items, setItems] = useState<InventoryItem[]>([]);
-  const [categories, setCategories] = useState<string[]>([]);
+  const [categories, setCategories] = useState<string[]>(allCategories);
   const [allSales, setAllSales] = useState<Sale[]>([]);
   const [resellers, setResellers] = useState<Reseller[]>([]);
   const [manualJournalEntries, setManualJournalEntries] = useState<ManualJournalEntry[]>([]);
@@ -73,7 +75,7 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
       ]);
       
       setItems(inventoryData.items);
-      setCategories(inventoryData.categories);
+      // setCategories(inventoryData.categories); // Now using the static list
       setAllSales(salesData);
       setResellers(resellerData);
       setManualJournalEntries(manualEntries);

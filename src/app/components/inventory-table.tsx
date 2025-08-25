@@ -37,6 +37,7 @@ import {
   Edit,
 } from 'lucide-react';
 import type { InventoryItem, InventoryItemVariant } from '@/types';
+import { categories as allCategories } from '@/types';
 import { useLanguage } from '@/hooks/use-language';
 import { translations } from '@/types/language';
 import Image from 'next/image';
@@ -48,6 +49,8 @@ import { cn } from '@/lib/utils';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { Pagination } from '@/components/ui/pagination';
+import { AppLayout } from '../app-layout';
+import Dashboard from './dashboard';
 
 interface InventoryTableProps {
   onUpdateStock: (itemId: string) => void;
@@ -176,7 +179,7 @@ const PriceWithDetails = ({ item }: { item: InventoryItem | InventoryItemVariant
 
 
 export function InventoryTable({ onUpdateStock }: InventoryTableProps) {
-  const { items, categories, loading } = useInventory();
+  const { items, loading } = useInventory();
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
   const [stockFilter, setStockFilter] = useState<'all' | 'low' | 'empty'>('all');
@@ -281,7 +284,7 @@ export function InventoryTable({ onUpdateStock }: InventoryTableProps) {
                     </SelectTrigger>
                     <SelectContent>
                     <SelectItem value="all">{t.inventoryTable.allCategories}</SelectItem>
-                    {categories.map((category) => (
+                    {allCategories.map((category) => (
                         <SelectItem key={category} value={category}>
                         {category}
                         </SelectItem>
@@ -506,3 +509,4 @@ export function InventoryTable({ onUpdateStock }: InventoryTableProps) {
     
 
     
+
