@@ -19,6 +19,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { Badge } from '@/components/ui/badge';
 
 type ProductData = {
   'Nama Produk'?: string;
@@ -42,7 +43,7 @@ export default function BulkAddProductPage() {
     const [error, setError] = useState<string | null>(null);
     const [uploadType, setUploadType] = useState<UploadType>('unknown');
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const { bulkAddItems, bulkUpdateImages } = useInventory();
+    const { items, bulkAddItems, bulkUpdateImages } = useInventory();
     const { toast } = useToast();
     const router = useRouter();
 
@@ -104,17 +105,18 @@ export default function BulkAddProductPage() {
     }
 
     const downloadTemplate = (type: 'basic' | 'media') => {
-        let sampleData: any[];
+        let dataToExport: any[];
         let fileName: string;
 
         if (type === 'media') {
-            sampleData = [
-                { 'Nama Produk': 'T-Shirt Keren', 'SKU Induk': 'TS001', 'Image URL': 'https://placehold.co/200x200.png' },
-                { 'Nama Produk': 'Topi Polos', 'SKU Induk': 'TP001', 'Image URL': 'https://placehold.co/200x200.png' }
-            ];
-            fileName = 'Template_Update_Media.xlsx';
+            dataToExport = items.map(item => ({
+                'Nama Produk': item.name,
+                'SKU Induk': item.sku || '',
+                'Image URL': item.imageUrl || ''
+            }));
+            fileName = 'Daftar_Produk_Untuk_Update_Media.xlsx';
         } else {
-             sampleData = [
+             dataToExport = [
                 {
                     'Nama Produk': 'T-Shirt Keren', 'Kategori': 'Pakaian', 'SKU Induk': 'TS001', 'Nama Varian': 'Merah - L', 'SKU Varian': 'TS001-M-L', 'Harga Modal': 50000, 'Harga Jual': 100000, 'Stok Awal': 50, 'Image URL': 'https://placehold.co/100x100.png'
                 },
@@ -128,7 +130,7 @@ export default function BulkAddProductPage() {
             fileName = 'Template_Informasi_Dasar.xlsx';
         }
 
-        const worksheet = XLSX.utils.json_to_sheet(sampleData);
+        const worksheet = XLSX.utils.json_to_sheet(dataToExport);
         const workbook = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(workbook, worksheet, 'Template Produk');
         XLSX.writeFile(workbook, fileName);
