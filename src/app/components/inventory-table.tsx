@@ -289,14 +289,6 @@ export function InventoryTable({ onUpdateStock }: InventoryTableProps) {
                     </SelectContent>
                 </Select>
             </div>
-            <div className="flex items-center gap-2 w-full md:w-auto justify-end">
-                <Button asChild size="sm">
-                <Link href="/add-product">
-                    <PlusCircle className="mr-2 h-4 w-4" />
-                    {t.dashboard.addItem}
-                </Link>
-                </Button>
-            </div>
         </div>
         <div className="px-4 py-2 flex items-center gap-2 border-b border-dashed">
             <Button variant={stockFilter === 'all' ? 'secondary' : 'ghost'} size="sm" onClick={() => setStockFilter('all')}>
