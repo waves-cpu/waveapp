@@ -344,4 +344,4 @@ export default function GeneralJournalPage() {
         </AppLayout>
     );
 
-    
+}
