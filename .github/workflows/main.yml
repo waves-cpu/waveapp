@@ -1,0 +1,22 @@
+name: Fly Deploy
+on:
+  push:
+    branches:
+      - main
+jobs:
+  deploy:
+    name: Deploy app
+    runs-on: ubuntu-latest
+    concurrency:
+      group: ${{ github.repository }}
+      cancel-in-progress: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: superfly/fly-pr-review-apps@v1
+        with:
+          fly-token: ${{ secrets.FLY_API_TOKEN }}
+          config-path: fly.toml
+          app-name-suffix: pr-${{ github.event.number }}
+          delete-on-close: true
+          comment-on-deploy: true
+          postgres-create: false
