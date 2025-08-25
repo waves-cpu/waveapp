@@ -104,7 +104,7 @@ export default function GeneralJournalPage() {
       to: new Date(),
     });
     const [transactionType, setTransactionType] = useState('all');
-    const [itemsPerPage, setItemsPerPage] = useState(15);
+    const [itemsPerPage, setItemsPerPage] = useState(16);
     const [currentPage, setCurrentPage] = useState(1);
 
 
@@ -342,7 +342,7 @@ export default function GeneralJournalPage() {
                                                 <TableCell className="text-right text-xs font-mono">{formatCurrency(entry.debit)}</TableCell>
                                                 <TableCell className="text-right text-xs font-mono">{formatCurrency(entry.credit)}</TableCell>
                                                 <TableCell className="text-center">
-                                                    {(entry.type === 'manual' || entry.type === 'sale') && entry.debit && (
+                                                    {entry.debit && (
                                                          <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => setEntryToDelete(entry)}>
                                                             <Trash2 className="h-3.5 w-3.5" />
                                                         </Button>
@@ -393,7 +393,7 @@ export default function GeneralJournalPage() {
                                             <SelectValue placeholder={itemsPerPage} />
                                         </SelectTrigger>
                                         <SelectContent side="top">
-                                            {[15, 20, 50, 100].map((pageSize) => (
+                                            {[16, 20, 50, 100].map((pageSize) => (
                                             <SelectItem key={pageSize} value={`${pageSize}`}>
                                                 {`${pageSize} / ${t.productSelectionDialog.page}`}
                                             </SelectItem>

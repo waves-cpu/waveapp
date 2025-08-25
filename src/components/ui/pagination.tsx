@@ -156,6 +156,7 @@ const Pagination = ({ totalPages, currentPage, onPageChange, className }: Custom
     const handleInputKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
         if (e.key === 'Enter') {
             handleInputBlur();
+            (e.target as HTMLInputElement).blur();
         }
     };
 

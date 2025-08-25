@@ -14,6 +14,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { format, parseISO } from "date-fns";
 import type { ManualJournalEntry, Sale } from "@/types";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { chartOfAccounts } from "@/types";
 
 type JournalEntry = {
     date: Date;
@@ -34,25 +35,6 @@ const formatCurrency = (amount?: number) => {
     if (amount === undefined || amount === null) return '-';
     return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(amount);
 };
-
-const chartOfAccounts = [
-    "Piutang Usaha / Kas",
-    "Pendapatan Penjualan",
-    "Beban Pokok Penjualan",
-    "Persediaan Barang",
-    "Kas / Utang Usaha",
-    "Penyesuaian Modal (Persediaan)",
-    "Biaya Operasional",
-    "Biaya Gaji",
-    "Biaya Sewa",
-    "Biaya Pemasaran",
-    "Aset Tetap",
-    "Akumulasi Penyusutan",
-    "Utang Bank",
-    "Modal Disetor",
-    "Pendapatan Lain-lain",
-    "Biaya Lain-lain"
-].sort();
 
 function GeneralLedgerSkeleton() {
     return (
@@ -167,7 +149,7 @@ export default function GeneralLedgerPage() {
         for (const account of ledgerMap.values()) {
             account.entries.sort((a, b) => a.date.getTime() - b.date.getTime());
             let currentBalance = 0;
-            const isDebitNormal = !['pendapatan', 'modal', 'utang', 'kewajiban'].some(term => account.accountName.toLowerCase().includes(term));
+            const isDebitNormal = !['pendapatan', 'modal', 'utang', 'kewajiban', 'akumulasi'].some(term => account.accountName.toLowerCase().includes(term));
             
             account.entries.forEach(entry => {
                 const debit = entry.debit || 0;

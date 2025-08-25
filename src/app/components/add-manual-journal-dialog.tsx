@@ -25,6 +25,7 @@ import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { CalendarIcon } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { chartOfAccounts } from '@/types';
 
 const formSchema = z.object({
   date: z.date({
@@ -46,26 +47,6 @@ const formSchema = z.object({
     message: "Akun debit dan kredit tidak boleh sama.",
     path: ["creditAccount"],
 });
-
-const chartOfAccounts = [
-    "Piutang Usaha / Kas",
-    "Pendapatan Penjualan",
-    "Beban Pokok Penjualan",
-    "Persediaan Barang",
-    "Kas / Utang Usaha",
-    "Penyesuaian Modal (Persediaan)",
-    // Manual Accounts
-    "Biaya Operasional",
-    "Biaya Gaji",
-    "Biaya Sewa",
-    "Biaya Pemasaran",
-    "Aset Tetap",
-    "Akumulasi Penyusutan",
-    "Utang Bank",
-    "Modal Disetor",
-    "Pendapatan Lain-lain",
-    "Biaya Lain-lain"
-].sort();
 
 interface AddManualJournalDialogProps {
     open: boolean;

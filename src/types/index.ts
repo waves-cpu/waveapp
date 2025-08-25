@@ -18,6 +18,26 @@ export const categories = [
     "Bag"
 ];
 
+export const chartOfAccounts = [
+    "Piutang Usaha / Kas",
+    "Pendapatan Penjualan",
+    "Beban Pokok Penjualan",
+    "Persediaan Barang",
+    "Kas / Utang Usaha",
+    "Penyesuaian Modal (Persediaan)",
+    // Manual Accounts
+    "Biaya Operasional",
+    "Biaya Gaji",
+    "Biaya Sewa",
+    "Biaya Pemasaran",
+    "Aset Tetap",
+    "Akumulasi Penyusutan",
+    "Utang Bank",
+    "Modal Disetor",
+    "Pendapatan Lain-lain",
+    "Biaya Lain-lain"
+].sort();
+
 export interface AdjustmentHistory {
   date: Date;
   change: number;
