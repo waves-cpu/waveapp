@@ -201,9 +201,9 @@ export async function bulkAddProducts(itemsData: any[]) {
     db.transaction(() => {
         const productGroups = new Map<string, any[]>();
         
-        // Group items by parent SKU
+        // Group items by parent SKU. If no parent SKU, group by product name to treat them as variants of a new product.
         itemsData.forEach(item => {
-            const parentSku = item['SKU Induk'] || `NO_PARENT_SKU_${item['SKU Varian'] || item['Nama Produk']}`;
+            const parentSku = item['SKU Induk'] || `NO_SKU_GROUP_${item['Nama Produk']}`;
             if (!productGroups.has(parentSku)) {
                 productGroups.set(parentSku, []);
             }
@@ -212,14 +212,14 @@ export async function bulkAddProducts(itemsData: any[]) {
 
         productGroups.forEach((items) => {
             const parentItem = items[0];
-            const hasVariants = items.length > 1 || (items.length === 1 && items[0]['SKU Varian']);
+            const hasVariants = items.length > 1 || (items.length === 1 && items[0]['Nama Varian']);
 
             if (hasVariants) {
                 const productResult = addProductStmt.run({
                     name: parentItem['Nama Produk'],
                     category: parentItem['Kategori'],
                     sku: parentItem['SKU Induk'] || null,
-                    imageUrl: 'https://placehold.co/40x40.png',
+                    imageUrl: parentItem['Image URL'] || 'https://placehold.co/40x40.png',
                     hasVariants: 1,
                     stock: null,
                     price: null,
@@ -257,7 +257,7 @@ export async function bulkAddProducts(itemsData: any[]) {
                     name: parentItem['Nama Produk'],
                     category: parentItem['Kategori'],
                     sku: parentItem['SKU Induk'] || null,
-                    imageUrl: 'https://placehold.co/40x40.png',
+                    imageUrl: parentItem['Image URL'] || 'https://placehold.co/40x40.png',
                     hasVariants: 0,
                     stock: stock,
                     price: Number(parentItem['Harga Jual']) || 0,
@@ -280,6 +280,7 @@ export async function bulkAddProducts(itemsData: any[]) {
         });
     })();
 }
+
 
 export async function editProduct(itemId: string, itemData: any) {
     const updateProductStmt = db.prepare(`

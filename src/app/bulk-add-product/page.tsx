@@ -8,11 +8,17 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Upload, FileDown, AlertCircle } from 'lucide-react';
+import { Upload, FileDown, AlertCircle, Info } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { useInventory } from '@/hooks/use-inventory';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 
 type ProductData = {
   'Nama Produk': string;
@@ -23,6 +29,7 @@ type ProductData = {
   'Harga Modal'?: number;
   'Harga Jual'?: number;
   'Stok Awal'?: number;
+  'Image URL'?: string;
 };
 
 const REQUIRED_COLUMNS = ['Nama Produk', 'Kategori'];
@@ -80,8 +87,11 @@ export default function BulkAddProductPage() {
         reader.readAsBinaryString(file);
     }
 
-    const downloadTemplate = () => {
-        const worksheet = XLSX.utils.json_to_sheet([
+    const downloadTemplate = (type: 'basic' | 'media') => {
+        let sampleData: any[];
+        let fileName: string;
+
+        const baseSample = [
             {
                 'Nama Produk': 'T-Shirt Keren', 'Kategori': 'Pakaian', 'SKU Induk': 'TS001', 'Nama Varian': 'Merah - L', 'SKU Varian': 'TS001-M-L', 'Harga Modal': 50000, 'Harga Jual': 100000, 'Stok Awal': 50
             },
@@ -91,10 +101,20 @@ export default function BulkAddProductPage() {
             {
                 'Nama Produk': 'Topi Polos', 'Kategori': 'Aksesoris', 'SKU Induk': 'TP001', 'Nama Varian': '', 'SKU Varian': '', 'Harga Modal': 25000, 'Harga Jual': 50000, 'Stok Awal': 100
             }
-        ]);
+        ];
+
+        if (type === 'media') {
+            sampleData = baseSample.map(item => ({ ...item, 'Image URL': 'https://placehold.co/100x100.png' }));
+            fileName = 'Template_Informasi_Media.xlsx';
+        } else {
+            sampleData = baseSample;
+            fileName = 'Template_Informasi_Dasar.xlsx';
+        }
+
+        const worksheet = XLSX.utils.json_to_sheet(sampleData);
         const workbook = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(workbook, worksheet, 'Template Produk');
-        XLSX.writeFile(workbook, 'Template_Tambah_Produk_Masal.xlsx');
+        XLSX.writeFile(workbook, fileName);
     };
     
     const handleSubmit = async () => {
@@ -104,7 +124,7 @@ export default function BulkAddProductPage() {
             await bulkAddItems(data);
             toast({
                 title: 'Impor Berhasil',
-                description: `${data.length} produk telah berhasil ditambahkan.`
+                description: `${data.length} baris data produk telah berhasil diproses.`
             });
             router.push('/');
         } catch (error) {
@@ -133,15 +153,29 @@ export default function BulkAddProductPage() {
                         <CardHeader>
                             <CardTitle>Impor dari Excel</CardTitle>
                             <CardDescription>
-                                Unduh template, isi dengan data produk Anda, lalu unggah file di sini untuk menambah banyak produk sekaligus.
+                                Unduh salah satu template, isi dengan data produk Anda, lalu unggah file di sini untuk menambah banyak produk sekaligus.
                             </CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-6">
                             <div className="flex flex-col sm:flex-row gap-4">
-                                 <Button onClick={downloadTemplate} variant="outline">
-                                    <FileDown className="mr-2 h-4 w-4"/>
-                                    Unduh Template
-                                </Button>
+                                 <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <Button variant="outline">
+                                            <FileDown className="mr-2 h-4 w-4"/>
+                                            Unduh Template
+                                        </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent>
+                                        <DropdownMenuItem onClick={() => downloadTemplate('basic')}>
+                                            <Info className="mr-2 h-4 w-4" />
+                                            <span>Informasi Dasar</span>
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem onClick={() => downloadTemplate('media')}>
+                                            <Info className="mr-2 h-4 w-4" />
+                                            <span>Informasi Media</span>
+                                        </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
                                 <div className="relative">
                                     <Button asChild>
                                         <label htmlFor="file-upload">
@@ -183,6 +217,7 @@ export default function BulkAddProductPage() {
                                                     <TableHead>Harga Modal</TableHead>
                                                     <TableHead>Harga Jual</TableHead>
                                                     <TableHead>Stok Awal</TableHead>
+                                                    <TableHead>Image URL</TableHead>
                                                 </TableRow>
                                             </TableHeader>
                                             <TableBody>
@@ -196,6 +231,7 @@ export default function BulkAddProductPage() {
                                                         <TableCell>{row['Harga Modal']}</TableCell>
                                                         <TableCell>{row['Harga Jual']}</TableCell>
                                                         <TableCell>{row['Stok Awal']}</TableCell>
+                                                        <TableCell>{row['Image URL']}</TableCell>
                                                     </TableRow>
                                                 ))}
                                             </TableBody>
@@ -218,4 +254,3 @@ export default function BulkAddProductPage() {
         </AppLayout>
     );
 }
-
