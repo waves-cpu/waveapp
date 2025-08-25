@@ -265,7 +265,7 @@ export function AddProductForm({ existingItem }: AddProductFormProps) {
                          <Table className="table-fixed border">
                             <TableHeader>
                                 <TableRow>
-                                    <TableHead className="w-[15%] border-r">{t.inventoryTable.name}</TableHead>
+                                    <TableHead className="w-[20%] border-r">{t.inventoryTable.name}</TableHead>
                                     <TableHead className="w-[25%] border-r">SKU</TableHead>
                                     <TableHead className="w-[25%] border-r">{t.inventoryTable.price}</TableHead>
                                     <TableHead className="w-[15%] border-r">Stok</TableHead>
@@ -323,8 +323,8 @@ export function AddProductForm({ existingItem }: AddProductFormProps) {
                                                 )}
                                             />
                                         </TableCell>
-                                        <TableCell className="p-1">
-                                            <Button type="button" variant="ghost" size="icon" className="text-destructive hover:text-destructive-foreground hover:bg-destructive mt-1 h-8 w-8" onClick={() => remove(index)}>
+                                        <TableCell className="p-1 align-middle text-center">
+                                            <Button type="button" variant="ghost" size="icon" className="text-destructive hover:text-destructive-foreground hover:bg-destructive h-8 w-8" onClick={() => remove(index)}>
                                                 <Trash2 className="h-4 w-4" />
                                             </Button>
                                         </TableCell>
@@ -393,6 +393,7 @@ export function AddProductForm({ existingItem }: AddProductFormProps) {
     </Card>
   );
 }
+
 
 
 
