@@ -212,7 +212,10 @@ export default function GeneralLedgerPage() {
                 <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
                      <div className="flex items-center gap-4">
                         <SidebarTrigger className="md:hidden" />
-                        <h1 className="text-lg font-bold">{t.finance.generalLedger}</h1>
+                        <div className="space-y-1">
+                            <h1 className="text-lg font-bold">{t.finance.generalLedger}: {selectedAccount}</h1>
+                            <p className="text-xs text-muted-foreground">Rincian transaksi per akun.</p>
+                        </div>
                     </div>
                     <div className="flex flex-col md:flex-row gap-2">
                         <Select value={selectedMonth.toString()} onValueChange={(value) => setSelectedMonth(parseInt(value))}>
@@ -253,12 +256,6 @@ export default function GeneralLedgerPage() {
                 </div>
 
                 <Card className="flex flex-col flex-grow">
-                    <CardHeader>
-                        <div className="space-y-1">
-                            <CardTitle className="text-base">Buku Besar: {selectedAccount}</CardTitle>
-                            <CardDescription className="text-xs">Rincian transaksi per akun.</CardDescription>
-                        </div>
-                    </CardHeader>
                     <CardContent className="flex-grow p-0">
                          <div className="border-t h-full">
                             <ScrollArea className="h-full">
