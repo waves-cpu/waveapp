@@ -20,6 +20,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 type ProductData = {
   'Nama Produk'?: string;
@@ -43,9 +44,10 @@ export default function BulkAddProductPage() {
     const [error, setError] = useState<string | null>(null);
     const [uploadType, setUploadType] = useState<UploadType>('unknown');
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const { items, bulkAddItems, bulkUpdateImages } = useInventory();
+    const { items, categories, bulkAddItems, bulkUpdateImages } = useInventory();
     const { toast } = useToast();
     const router = useRouter();
+    const [mediaCategoryFilter, setMediaCategoryFilter] = useState('all');
 
 
     const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -109,7 +111,11 @@ export default function BulkAddProductPage() {
         let fileName: string;
 
         if (type === 'media') {
-            dataToExport = items.map(item => ({
+            const filteredItems = mediaCategoryFilter === 'all'
+                ? items
+                : items.filter(item => item.category === mediaCategoryFilter);
+            
+            dataToExport = filteredItems.map(item => ({
                 'Nama Produk': item.name,
                 'SKU Induk': item.sku || '',
                 'Image URL': item.imageUrl || ''
@@ -197,9 +203,27 @@ export default function BulkAddProductPage() {
                                             <Info className="mr-2 h-4 w-4" />
                                             <span>Tambah Produk (Dasar & Varian)</span>
                                         </DropdownMenuItem>
-                                        <DropdownMenuItem onClick={() => downloadTemplate('media')}>
-                                            <ImageIcon className="mr-2 h-4 w-4" />
-                                            <span>Update Gambar Produk</span>
+                                        <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="flex flex-col items-start gap-2 p-2">
+                                            <div className="flex items-center">
+                                                <ImageIcon className="mr-2 h-4 w-4" />
+                                                <span>Update Gambar Produk</span>
+                                            </div>
+                                            <div className="pl-6 w-full space-y-2">
+                                                 <Select value={mediaCategoryFilter} onValueChange={setMediaCategoryFilter}>
+                                                    <SelectTrigger className="w-full h-8 text-xs">
+                                                        <SelectValue placeholder="Pilih kategori" />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value="all">Semua Kategori</SelectItem>
+                                                        {categories.map((category) => (
+                                                            <SelectItem key={category} value={category}>
+                                                            {category}
+                                                            </SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
+                                                <Button size="sm" className="w-full h-8 text-xs" onClick={() => downloadTemplate('media')}>Unduh</Button>
+                                            </div>
                                         </DropdownMenuItem>
                                     </DropdownMenuContent>
                                 </DropdownMenu>
