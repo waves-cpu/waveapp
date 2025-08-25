@@ -202,9 +202,7 @@ export default function GeneralLedgerPage() {
                 <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
                      <div className="flex items-center gap-4">
                         <SidebarTrigger className="md:hidden" />
-                        <div className="space-y-1">
-                            <h1 className="text-lg font-bold">{t.finance.generalLedger}</h1>
-                        </div>
+                        <h1 className="text-lg font-bold">{t.finance.generalLedger}</h1>
                     </div>
                     <div className="flex flex-col md:flex-row gap-2">
                         <Select value={selectedMonth.toString()} onValueChange={(value) => setSelectedMonth(parseInt(value))}>
@@ -269,7 +267,7 @@ export default function GeneralLedgerPage() {
                                             ))
                                         ) : (
                                             <TableRow>
-                                                <TableCell colSpan={4} className="h-48 text-center">
+                                                <TableCell colSpan={4} className="h-48 text-center align-middle">
                                                     <div className="flex flex-col items-center justify-center gap-4 text-muted-foreground">
                                                         <BookText className="h-12 w-12" />
                                                         <div className="text-center">
