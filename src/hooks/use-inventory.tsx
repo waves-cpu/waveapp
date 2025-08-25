@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
@@ -24,6 +23,7 @@ import {
   updatePrices as updatePricesDb,
   addManualJournalEntry,
   fetchManualJournalEntries,
+  deleteManualJournalEntry as deleteManualJournalEntryDb,
 } from '@/lib/inventory-service';
 
 
@@ -52,6 +52,7 @@ interface InventoryContextType {
   updatePrices: (updates: any[]) => Promise<void>;
   manualJournalEntries: ManualJournalEntry[];
   createManualJournalEntry: (entry: Omit<ManualJournalEntry, 'id' | 'type'>) => Promise<void>;
+  deleteManualJournalEntry: (id: string) => Promise<void>;
 }
 
 const InventoryContext = createContext<InventoryContextType | undefined>(undefined);
@@ -94,6 +95,11 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
   
   const createManualJournalEntry = async (entry: Omit<ManualJournalEntry, 'id' | 'type'>) => {
     await addManualJournalEntry(entry);
+    await fetchAllData();
+  }
+
+  const deleteManualJournalEntry = async (id: string) => {
+    await deleteManualJournalEntryDb(id);
     await fetchAllData();
   }
 
@@ -216,6 +222,7 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
         updatePrices,
         manualJournalEntries,
         createManualJournalEntry,
+        deleteManualJournalEntry,
       }}>
       {children}
     </InventoryContext.Provider>

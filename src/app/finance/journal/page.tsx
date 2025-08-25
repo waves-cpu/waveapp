@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Calendar as CalendarIcon, FileText, PlusCircle } from 'lucide-react';
+import { Calendar as CalendarIcon, FileText, PlusCircle, Trash2 } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import { format, isWithinInterval, startOfDay, endOfDay, parseISO } from "date-fns";
 import { DateRange } from "react-day-picker";
@@ -22,8 +22,21 @@ import { Skeleton } from "@/components/ui/skeleton";
 import type { ManualJournalEntry } from "@/types";
 import { AddManualJournalDialog } from "@/app/components/add-manual-journal-dialog";
 import { Pagination } from "@/components/ui/pagination";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { useToast } from "@/hooks/use-toast";
+
 
 type JournalEntry = {
+    id?: string;
     date: Date;
     description: string;
     account: string;
@@ -79,8 +92,11 @@ function GeneralJournalSkeleton() {
 export default function GeneralJournalPage() {
     const { language } = useLanguage();
     const t = translations[language];
-    const { allSales, items: allProducts, manualJournalEntries, loading } = useInventory();
+    const { allSales, items: allProducts, manualJournalEntries, loading, deleteManualJournalEntry } = useInventory();
+    const { toast } = useToast();
     const [isAddEntryDialogOpen, setAddEntryDialogOpen] = useState(false);
+    const [entryToDelete, setEntryToDelete] = useState<JournalEntry | null>(null);
+
 
     const [dateRange, setDateRange] = useState<DateRange | undefined>({
       from: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
@@ -97,8 +113,8 @@ export default function GeneralJournalPage() {
         // Manual entries
         manualJournalEntries.forEach(entry => {
             const entryDate = parseISO(entry.date);
-            entries.push({ date: entryDate, description: entry.description, account: entry.debitAccount, debit: entry.amount, type: 'manual'});
-            entries.push({ date: entryDate, description: entry.description, account: entry.creditAccount, credit: entry.amount, type: 'manual'});
+            entries.push({ id: entry.id, date: entryDate, description: entry.description, account: entry.debitAccount, debit: entry.amount, type: 'manual'});
+            entries.push({ id: entry.id, date: entryDate, description: entry.description, account: entry.creditAccount, credit: entry.amount, type: 'manual'});
         });
 
 
@@ -176,6 +192,25 @@ export default function GeneralJournalPage() {
             return acc;
         }, { debit: 0, credit: 0 });
     }, [paginatedEntries]);
+
+    const handleDelete = async () => {
+        if (!entryToDelete || !entryToDelete.id) return;
+        try {
+            await deleteManualJournalEntry(entryToDelete.id);
+            toast({
+                title: "Entri Dihapus",
+                description: "Entri jurnal manual telah berhasil dihapus.",
+            });
+            setEntryToDelete(null);
+        } catch (error) {
+            toast({
+                variant: 'destructive',
+                title: "Gagal Menghapus",
+                description: "Terjadi kesalahan saat menghapus entri jurnal.",
+            });
+        }
+    };
+
 
     if (loading) {
         return (
@@ -272,6 +307,7 @@ export default function GeneralJournalPage() {
                                         <TableHead className="text-xs">Akun</TableHead>
                                         <TableHead className="text-right text-xs">Debit</TableHead>
                                         <TableHead className="text-right text-xs">Kredit</TableHead>
+                                        <TableHead className="w-[50px] text-center text-xs">Aksi</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
@@ -283,11 +319,18 @@ export default function GeneralJournalPage() {
                                                 <TableCell className={cn("text-xs", entry.credit && "pl-8")}>{entry.account}</TableCell>
                                                 <TableCell className="text-right text-xs font-mono">{formatCurrency(entry.debit)}</TableCell>
                                                 <TableCell className="text-right text-xs font-mono">{formatCurrency(entry.credit)}</TableCell>
+                                                <TableCell className="text-center">
+                                                    {entry.type === 'manual' && index % 2 === 0 && (
+                                                         <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => setEntryToDelete(entry)}>
+                                                            <Trash2 className="h-3.5 w-3.5" />
+                                                        </Button>
+                                                    )}
+                                                </TableCell>
                                             </TableRow>
                                         ))
                                     ) : (
                                         <TableRow>
-                                            <TableCell colSpan={5} className="h-48 text-center text-muted-foreground">
+                                            <TableCell colSpan={6} className="h-48 text-center text-muted-foreground">
                                                  <div className="flex flex-col items-center justify-center gap-4">
                                                     <FileText className="h-12 w-12" />
                                                     <p className="font-semibold text-sm">Tidak Ada Jurnal</p>
@@ -302,6 +345,7 @@ export default function GeneralJournalPage() {
                                         <TableCell colSpan={3} className="text-right font-semibold text-xs">Total Halaman Ini</TableCell>
                                         <TableCell className="text-right font-semibold text-xs font-mono">{formatCurrency(pageTotals.debit)}</TableCell>
                                         <TableCell className="text-right font-semibold text-xs font-mono">{formatCurrency(pageTotals.credit)}</TableCell>
+                                        <TableCell />
                                     </TableRow>
                                 </TableFooter>
                             </Table>
@@ -341,6 +385,23 @@ export default function GeneralJournalPage() {
                 </Card>
             </main>
             <AddManualJournalDialog open={isAddEntryDialogOpen} onOpenChange={setAddEntryDialogOpen} />
+
+            <AlertDialog open={!!entryToDelete} onOpenChange={(isOpen) => !isOpen && setEntryToDelete(null)}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Hapus Entri Jurnal?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Anda yakin ingin menghapus entri jurnal untuk "{entryToDelete?.description}"? Tindakan ini tidak dapat diurungkan.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Batal</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleDelete} className="bg-destructive hover:bg-destructive/90">
+                            Ya, Hapus
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </AppLayout>
     );
 

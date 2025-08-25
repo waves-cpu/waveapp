@@ -1,5 +1,4 @@
 
-
 'use server';
 
 import { db } from './db';
@@ -40,6 +39,10 @@ export async function fetchManualJournalEntries(): Promise<ManualJournalEntry[]>
         ...e,
         id: e.id.toString(),
     }));
+}
+
+export async function deleteManualJournalEntry(id: string) {
+    db.prepare('DELETE FROM manual_journal_entries WHERE id = ?').run(id);
 }
 
 
