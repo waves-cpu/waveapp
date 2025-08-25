@@ -6,16 +6,22 @@ import { SidebarTrigger } from "@/components/ui/sidebar";
 import { useLanguage } from "@/hooks/use-language";
 import { translations } from "@/types/language";
 import { useInventory } from "@/hooks/use-inventory";
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { DollarSign, Package, TrendingUp, TrendingDown, Hourglass, BarChart, PieChart } from "lucide-react";
+import { DollarSign, Package, TrendingUp, TrendingDown, Hourglass, BarChart, PieChart, Calendar as CalendarIcon } from "lucide-react";
 import { Bar, BarChart as RechartsBarChart, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, Pie, PieChart as RechartsPieChart, Cell } from "recharts";
 import { ChartConfig, ChartContainer, ChartTooltipContent } from "@/components/ui/chart";
-import { subDays, isAfter, parseISO } from "date-fns";
+import { subDays, isAfter, parseISO, isWithinInterval, startOfDay, endOfDay, format } from "date-fns";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import type { InventoryItem, InventoryItemVariant } from "@/types";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
+import { cn } from "@/lib/utils";
+import { DateRange } from "react-day-picker";
+import { id as localeId } from 'date-fns/locale';
 
 const formatCurrency = (amount: number) => `Rp${Math.round(amount).toLocaleString('id-ID')}`;
 
@@ -109,6 +115,11 @@ export default function AssetReportPage() {
     const t = translations[language];
     const TAsset = t.finance.assetReportPage;
     const { items, allSales, loading } = useInventory();
+    
+    const [dateRange, setDateRange] = useState<DateRange | undefined>({
+      from: subDays(new Date(), ASSET_TURNOVER_DAYS - 1),
+      to: new Date(),
+    });
 
     const { 
         assetClassification, 
@@ -117,15 +128,22 @@ export default function AssetReportPage() {
         nonMovingProducts,
         variantAssetClassification
     } = useMemo(() => {
-        const turnoverDateThreshold = subDays(new Date(), ASSET_TURNOVER_DAYS);
+        
+        const isInDateRange = (dateString: string) => {
+            if (!dateRange || !dateRange.from) return true;
+            const date = parseISO(dateString);
+            const toDate = dateRange.to || dateRange.from;
+            return isWithinInterval(date, { start: startOfDay(dateRange.from), end: endOfDay(toDate) });
+        };
+        
+        const salesInDateRange = allSales.filter(sale => isInDateRange(sale.saleDate));
+
         const salesVolumeMap = new Map<string, number>();
         
-        allSales.forEach(sale => {
-            if (isAfter(parseISO(sale.saleDate), turnoverDateThreshold)) {
-                const soldId = sale.variantId || sale.productId;
-                if(soldId) {
-                    salesVolumeMap.set(soldId.toString(), (salesVolumeMap.get(soldId.toString()) || 0) + sale.quantity);
-                }
+        salesInDateRange.forEach(sale => {
+            const soldId = sale.variantId || sale.productId;
+            if(soldId) {
+                salesVolumeMap.set(soldId.toString(), (salesVolumeMap.get(soldId.toString()) || 0) + sale.quantity);
             }
         });
 
@@ -219,7 +237,7 @@ export default function AssetReportPage() {
             slowMovingProducts: slow.sort((a,b) => b.salesCount - a.salesCount).slice(0, 10),
             nonMovingProducts: non.sort((a,b) => b.stockValue - a.stockValue).slice(0, 10),
         };
-    }, [items, allSales, TAsset.fastLabel, TAsset.slowLabel, TAsset.nonMovingLabel]);
+    }, [items, allSales, dateRange, TAsset.fastLabel, TAsset.slowLabel, TAsset.nonMovingLabel]);
 
     const chartData = [
         {
@@ -259,10 +277,47 @@ export default function AssetReportPage() {
     return (
         <AppLayout>
             <main className="flex-1 p-4 md:p-10 pb-8">
-                <div className="flex items-center gap-4 mb-6">
-                    <SidebarTrigger className="md:hidden" />
-                    <h1 className="text-base font-bold">{t.finance.assetReport}</h1>
+                 <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
+                    <div className="flex items-center gap-4">
+                        <SidebarTrigger className="md:hidden" />
+                        <h1 className="text-base font-bold">{t.finance.assetReport}</h1>
+                    </div>
+                    <Popover>
+                        <PopoverTrigger asChild>
+                        <Button
+                            id="date"
+                            variant={"outline"}
+                            className={cn(
+                            "w-full md:w-[260px] justify-start text-left font-normal",
+                            !dateRange && "text-muted-foreground"
+                            )}
+                        >
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {dateRange?.from ? (
+                            dateRange.to ? (
+                                <>{format(dateRange.from, "d MMM yyyy", {locale: localeId})} - {format(dateRange.to, "d MMM yyyy", {locale: localeId})}</>
+                            ) : (
+                                format(dateRange.from, "d MMM yyyy", {locale: localeId})
+                            )
+                            ) : (
+                            <span>Pilih rentang tanggal</span>
+                            )}
+                        </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="end">
+                        <Calendar
+                            initialFocus
+                            mode="range"
+                            defaultMonth={dateRange?.from}
+                            selected={dateRange}
+                            onSelect={setDateRange}
+                            numberOfMonths={2}
+                            locale={localeId}
+                        />
+                        </PopoverContent>
+                    </Popover>
                 </div>
+
 
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-4">
                     <Card>

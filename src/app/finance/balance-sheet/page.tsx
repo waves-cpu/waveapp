@@ -9,7 +9,15 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useInventory } from "@/hooks/use-inventory";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
+import { Calendar as CalendarIcon } from 'lucide-react';
+import { cn } from "@/lib/utils";
+import { DateRange } from "react-day-picker";
+import { id as localeId } from 'date-fns/locale';
+import { format, isWithinInterval, startOfDay, endOfDay, parseISO } from "date-fns";
 
 const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('id-ID', {
@@ -93,8 +101,23 @@ export default function BalanceSheetPage() {
     const { language } = useLanguage();
     const t = translations[language];
     const { items, allSales, manualJournalEntries, loading } = useInventory();
+    
+    const [dateRange, setDateRange] = useState<DateRange | undefined>({
+        from: new Date(new Date().getFullYear(), 0, 1),
+        to: new Date(),
+    });
 
     const financialData = useMemo(() => {
+        const isInDateRange = (dateString: string) => {
+            if (!dateRange || !dateRange.from) return true;
+            const date = parseISO(dateString);
+            const toDate = dateRange.to || dateRange.from;
+            return isWithinInterval(date, { start: startOfDay(dateRange.from), end: endOfDay(toDate) });
+        };
+        
+        const salesInDateRange = allSales.filter(sale => isInDateRange(sale.saleDate));
+        const manualEntriesInDateRange = manualJournalEntries.filter(entry => isInDateRange(entry.date));
+
         // ASET
         const totalInventoryValue = items.reduce((sum, item) => {
             const cost = item.costPrice || 0;
@@ -104,17 +127,17 @@ export default function BalanceSheetPage() {
             return sum + ((item.stock || 0) * cost);
         }, 0);
 
-        const totalRevenue = allSales.reduce((sum, sale) => sum + (sale.priceAtSale * sale.quantity), 0);
+        const totalRevenue = salesInDateRange.reduce((sum, sale) => sum + (sale.priceAtSale * sale.quantity), 0);
         
         // LIABILITAS + EKUITAS
-        const totalCogs = allSales.reduce((sum, sale) => sum + ((sale.cogsAtSale || 0) * sale.quantity), 0);
+        const totalCogs = salesInDateRange.reduce((sum, sale) => sum + ((sale.cogsAtSale || 0) * sale.quantity), 0);
         const grossProfit = totalRevenue - totalCogs;
         
-        const operationalExpenses = manualJournalEntries
+        const operationalExpenses = manualEntriesInDateRange
             .filter(entry => entry.debitAccount.toLowerCase().includes('biaya') || entry.debitAccount.toLowerCase().includes('beban'))
             .reduce((sum, entry) => sum + entry.amount, 0);
 
-        const otherIncome = manualJournalEntries
+        const otherIncome = manualEntriesInDateRange
             .filter(entry => entry.creditAccount.toLowerCase().includes('pendapatan'))
             .reduce((sum, entry) => sum + entry.amount, 0);
         
@@ -146,7 +169,7 @@ export default function BalanceSheetPage() {
             totalLiabilitiesAndEquity
         };
 
-    }, [items, allSales, manualJournalEntries]);
+    }, [items, allSales, manualJournalEntries, dateRange]);
 
     if (loading) {
         return (
@@ -165,9 +188,45 @@ export default function BalanceSheetPage() {
     return (
         <AppLayout>
             <main className="flex-1 p-4 md:p-10">
-                <div className="flex items-center gap-4 mb-6">
-                    <SidebarTrigger className="md:hidden" />
-                    <h1 className="text-lg font-bold">{t.finance.balanceSheet}</h1>
+                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
+                    <div className="flex items-center gap-4">
+                        <SidebarTrigger className="md:hidden" />
+                        <h1 className="text-lg font-bold">{t.finance.balanceSheet}</h1>
+                    </div>
+                    <Popover>
+                        <PopoverTrigger asChild>
+                        <Button
+                            id="date"
+                            variant={"outline"}
+                            className={cn(
+                            "w-full md:w-[260px] justify-start text-left font-normal",
+                            !dateRange && "text-muted-foreground"
+                            )}
+                        >
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {dateRange?.from ? (
+                            dateRange.to ? (
+                                <>{format(dateRange.from, "d MMM yyyy", {locale: localeId})} - {format(dateRange.to, "d MMM yyyy", {locale: localeId})}</>
+                            ) : (
+                                format(dateRange.from, "d MMM yyyy", {locale: localeId})
+                            )
+                            ) : (
+                            <span>Pilih rentang tanggal</span>
+                            )}
+                        </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="end">
+                        <Calendar
+                            initialFocus
+                            mode="range"
+                            defaultMonth={dateRange?.from}
+                            selected={dateRange}
+                            onSelect={setDateRange}
+                            numberOfMonths={2}
+                            locale={localeId}
+                        />
+                        </PopoverContent>
+                    </Popover>
                 </div>
 
                 <div className="grid md:grid-cols-2 gap-8 items-start">
