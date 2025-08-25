@@ -17,6 +17,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { chartOfAccounts } from "@/types";
 import { Button } from "@/components/ui/button";
 import { id as localeId } from 'date-fns/locale';
+import { BookText } from "lucide-react";
 
 type JournalEntry = {
     date: Date;
@@ -268,8 +269,14 @@ export default function GeneralLedgerPage() {
                                             ))
                                         ) : (
                                             <TableRow>
-                                                <TableCell colSpan={4} className="h-48 text-center text-muted-foreground">
-                                                    Tidak ada transaksi untuk akun ini pada periode yang dipilih.
+                                                <TableCell colSpan={4} className="h-48 text-center">
+                                                    <div className="flex flex-col items-center justify-center gap-4 text-muted-foreground">
+                                                        <BookText className="h-12 w-12" />
+                                                        <div className="text-center">
+                                                            <p className="font-semibold text-sm">Tidak Ada Entri</p>
+                                                            <p className="text-xs">Tidak ada transaksi untuk akun ini pada periode yang dipilih.</p>
+                                                        </div>
+                                                    </div>
                                                 </TableCell>
                                             </TableRow>
                                         )}
