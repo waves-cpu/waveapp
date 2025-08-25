@@ -251,75 +251,67 @@ export default function GeneralJournalPage() {
     return (
         <AppLayout>
             <main className="flex-1 p-4 md:p-10">
-                <div className="flex items-center justify-between gap-4 mb-6">
+                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
                     <div className="flex items-center gap-4">
                         <SidebarTrigger className="md:hidden" />
                         <h1 className="text-lg font-bold">{t.finance.generalJournal}</h1>
                     </div>
-                    <Button variant="outline" onClick={() => setAddEntryDialogOpen(true)}>
-                        <PlusCircle className="mr-2 h-4 w-4" />
-                        Tambah Entri
-                    </Button>
+                     <div className="flex flex-col sm:flex-row items-center gap-2">
+                        <Select value={transactionType} onValueChange={setTransactionType}>
+                            <SelectTrigger className="w-full sm:w-[180px]">
+                                <SelectValue placeholder="Jenis Transaksi" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">Semua Transaksi</SelectItem>
+                                <SelectItem value="sale">Penjualan</SelectItem>
+                                <SelectItem value="stock_in">Stok Masuk</SelectItem>
+                                <SelectItem value="capital_adjustment">Penyesuaian Modal</SelectItem>
+                                <SelectItem value="manual">Manual</SelectItem>
+                            </SelectContent>
+                        </Select>
+                            <Popover>
+                            <PopoverTrigger asChild>
+                            <Button
+                                id="date"
+                                variant={"outline"}
+                                className={cn(
+                                "w-full sm:w-[260px] justify-start text-left font-normal",
+                                !dateRange && "text-muted-foreground"
+                                )}
+                            >
+                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                {dateRange?.from ? (
+                                dateRange.to ? (
+                                    <>{format(dateRange.from, "d MMM yyyy", {locale: localeId})} - {format(dateRange.to, "d MMM yyyy", {locale: localeId})}</>
+                                ) : (
+                                    format(dateRange.from, "d MMM yyyy", {locale: localeId})
+                                )
+                                ) : (
+                                <span>Pilih rentang tanggal</span>
+                                )}
+                            </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="end">
+                            <Calendar
+                                initialFocus
+                                mode="range"
+                                defaultMonth={dateRange?.from}
+                                selected={dateRange}
+                                onSelect={setDateRange}
+                                numberOfMonths={2}
+                                locale={localeId}
+                            />
+                            </PopoverContent>
+                        </Popover>
+                        <Button variant="outline" onClick={() => setAddEntryDialogOpen(true)} className="w-full sm:w-auto">
+                            <PlusCircle className="mr-2 h-4 w-4" />
+                            Tambah Entri
+                        </Button>
+                    </div>
                 </div>
 
                 <Card>
-                    <CardHeader>
-                        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                             <div className="space-y-1">
-                                <CardTitle className="text-base">Jurnal Umum</CardTitle>
-                                <CardDescription className="text-xs">Catatan kronologis semua transaksi keuangan.</CardDescription>
-                            </div>
-                            <div className="flex flex-col md:flex-row gap-2">
-                                <Select value={transactionType} onValueChange={setTransactionType}>
-                                    <SelectTrigger className="w-full md:w-[180px]">
-                                        <SelectValue placeholder="Jenis Transaksi" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="all">Semua Transaksi</SelectItem>
-                                        <SelectItem value="sale">Penjualan</SelectItem>
-                                        <SelectItem value="stock_in">Stok Masuk</SelectItem>
-                                        <SelectItem value="capital_adjustment">Penyesuaian Modal</SelectItem>
-                                        <SelectItem value="manual">Manual</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                                 <Popover>
-                                    <PopoverTrigger asChild>
-                                    <Button
-                                        id="date"
-                                        variant={"outline"}
-                                        className={cn(
-                                        "w-full md:w-[260px] justify-start text-left font-normal",
-                                        !dateRange && "text-muted-foreground"
-                                        )}
-                                    >
-                                        <CalendarIcon className="mr-2 h-4 w-4" />
-                                        {dateRange?.from ? (
-                                        dateRange.to ? (
-                                            <>{format(dateRange.from, "d MMM yyyy", {locale: localeId})} - {format(dateRange.to, "d MMM yyyy", {locale: localeId})}</>
-                                        ) : (
-                                            format(dateRange.from, "d MMM yyyy", {locale: localeId})
-                                        )
-                                        ) : (
-                                        <span>Pilih rentang tanggal</span>
-                                        )}
-                                    </Button>
-                                    </PopoverTrigger>
-                                    <PopoverContent className="w-auto p-0" align="end">
-                                    <Calendar
-                                        initialFocus
-                                        mode="range"
-                                        defaultMonth={dateRange?.from}
-                                        selected={dateRange}
-                                        onSelect={setDateRange}
-                                        numberOfMonths={2}
-                                        locale={localeId}
-                                    />
-                                    </PopoverContent>
-                                </Popover>
-                            </div>
-                        </div>
-                    </CardHeader>
-                    <CardContent>
+                    <CardContent className="pt-6">
                         <div className="border rounded-md">
                             <Table>
                                 <TableHeader>
@@ -342,7 +334,7 @@ export default function GeneralJournalPage() {
                                                 <TableCell className="text-right text-xs font-mono">{formatCurrency(entry.debit)}</TableCell>
                                                 <TableCell className="text-right text-xs font-mono">{formatCurrency(entry.credit)}</TableCell>
                                                 <TableCell className="text-center">
-                                                    {entry.debit && (
+                                                    {entry.debit && (entry.type === 'manual' || entry.type === 'sale') && (
                                                          <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => setEntryToDelete(entry)}>
                                                             <Trash2 className="h-3.5 w-3.5" />
                                                         </Button>
@@ -428,5 +420,3 @@ export default function GeneralJournalPage() {
     );
 
 }
-
-    
