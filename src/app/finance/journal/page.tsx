@@ -320,7 +320,7 @@ export default function GeneralJournalPage() {
                                                 <TableCell className="text-right text-xs font-mono">{formatCurrency(entry.debit)}</TableCell>
                                                 <TableCell className="text-right text-xs font-mono">{formatCurrency(entry.credit)}</TableCell>
                                                 <TableCell className="text-center">
-                                                    {entry.type === 'manual' && index % 2 === 0 && (
+                                                    {entry.type === 'manual' && entry.debit && (
                                                          <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => setEntryToDelete(entry)}>
                                                             <Trash2 className="h-3.5 w-3.5" />
                                                         </Button>
