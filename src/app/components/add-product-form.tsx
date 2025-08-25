@@ -269,7 +269,7 @@ export function AddProductForm({ existingItem }: AddProductFormProps) {
                                     <TableHead className="w-[25%] border-r">SKU</TableHead>
                                     <TableHead className="w-[25%] border-r">{t.inventoryTable.price}</TableHead>
                                     <TableHead className="w-[15%] border-r">Stok</TableHead>
-                                    <TableHead className="w-[50px]"></TableHead>
+                                    <TableHead className="w-[40px]"></TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -393,5 +393,6 @@ export function AddProductForm({ existingItem }: AddProductFormProps) {
     </Card>
   );
 }
+
 
 
