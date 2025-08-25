@@ -275,7 +275,7 @@ export function InventoryTable({ onUpdateStock }: InventoryTableProps) {
                     placeholder={t.inventoryTable.searchPlaceholder}
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10 w-full md:w-64"
+                    className="pl-10 w-full md:w-96"
                     />
                 </div>
                 <Select onValueChange={(value) => setCategoryFilter(value === 'all' ? null : value)} defaultValue="all">
