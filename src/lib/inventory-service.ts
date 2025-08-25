@@ -281,6 +281,31 @@ export async function bulkAddProducts(itemsData: any[]) {
     })();
 }
 
+export async function bulkUpdateImages(itemsData: any[]) {
+    const updateImageStmt = db.prepare('UPDATE products SET imageUrl = ? WHERE sku = ? OR name = ?');
+    let updated = 0;
+    let notFound = 0;
+
+    db.transaction(() => {
+        for (const item of itemsData) {
+            const imageUrl = item['Image URL'];
+            const sku = item['SKU Induk'];
+            const name = item['Nama Produk'];
+            if (!imageUrl || (!sku && !name)) {
+                continue;
+            }
+            // Prioritize SKU, then name
+            const result = updateImageStmt.run(imageUrl, sku || `__IMPOSSIBLE_SKU_${Math.random()}__`, name);
+            if (result.changes > 0) {
+                updated++;
+            } else {
+                notFound++;
+            }
+        }
+    })();
+    return { updated, notFound };
+}
+
 
 export async function editProduct(itemId: string, itemData: any) {
     const updateProductStmt = db.prepare(`

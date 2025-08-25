@@ -8,7 +8,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Upload, FileDown, AlertCircle, Info } from 'lucide-react';
+import { Upload, FileDown, AlertCircle, Info, Image as ImageIcon } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { useInventory } from '@/hooks/use-inventory';
 import { useToast } from '@/hooks/use-toast';
@@ -21,8 +21,8 @@ import {
 } from "@/components/ui/dropdown-menu"
 
 type ProductData = {
-  'Nama Produk': string;
-  'Kategori': string;
+  'Nama Produk'?: string;
+  'Kategori'?: string;
   'SKU Induk'?: string;
   'Nama Varian'?: string;
   'SKU Varian'?: string;
@@ -32,13 +32,17 @@ type ProductData = {
   'Image URL'?: string;
 };
 
-const REQUIRED_COLUMNS = ['Nama Produk', 'Kategori'];
+type UploadType = 'addProduct' | 'updateMedia' | 'unknown';
+
+const REQUIRED_ADD_COLUMNS = ['Nama Produk', 'Kategori'];
+const REQUIRED_MEDIA_COLUMNS = ['Nama Produk', 'SKU Induk', 'Image URL'];
 
 export default function BulkAddProductPage() {
     const [data, setData] = useState<ProductData[]>([]);
     const [error, setError] = useState<string | null>(null);
+    const [uploadType, setUploadType] = useState<UploadType>('unknown');
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const { bulkAddItems } = useInventory();
+    const { bulkAddItems, bulkUpdateImages } = useInventory();
     const { toast } = useToast();
     const router = useRouter();
 
@@ -48,6 +52,8 @@ export default function BulkAddProductPage() {
         if (file) {
             processFile(file);
         }
+        // Reset file input to allow re-uploading the same file
+        event.target.value = '';
     };
 
     const handleDrop = (event: React.DragEvent<HTMLDivElement>) => {
@@ -61,6 +67,8 @@ export default function BulkAddProductPage() {
     const processFile = (file: File) => {
         setError(null);
         setData([]);
+        setUploadType('unknown');
+
         const reader = new FileReader();
         reader.onload = (e) => {
             try {
@@ -68,17 +76,25 @@ export default function BulkAddProductPage() {
                 const sheetName = workbook.SheetNames[0];
                 const worksheet = workbook.Sheets[sheetName];
                 const jsonData = XLSX.utils.sheet_to_json<ProductData>(worksheet);
+                const headers = XLSX.utils.sheet_to_json<any>(worksheet, { header: 1 })[0] as string[];
 
-                // Validate headers
-                const headers = XLSX.utils.sheet_to_json<any>(worksheet, { header: 1 })[0];
-                const missingHeaders = REQUIRED_COLUMNS.filter(col => !headers.includes(col));
+                // Determine upload type based on headers
+                const hasAddHeaders = REQUIRED_ADD_COLUMNS.every(col => headers.includes(col));
+                const hasMediaHeaders = REQUIRED_MEDIA_COLUMNS.every(col => headers.includes(col));
 
-                if (missingHeaders.length > 0) {
-                    setError(`Kolom yang wajib diisi hilang dari file: ${missingHeaders.join(', ')}. Silakan unduh dan gunakan template yang disediakan.`);
-                    return;
+                if (hasAddHeaders && headers.length > 3) { // More than just media headers
+                    setUploadType('addProduct');
+                    setData(jsonData);
+                } else if (hasMediaHeaders && headers.length <= REQUIRED_MEDIA_COLUMNS.length) {
+                    setUploadType('updateMedia');
+                    setData(jsonData);
+                } else {
+                    setUploadType('unknown');
+                    const missingAdd = REQUIRED_ADD_COLUMNS.filter(col => !headers.includes(col)).join(', ');
+                    const missingMedia = REQUIRED_MEDIA_COLUMNS.filter(col => !headers.includes(col)).join(', ');
+                    setError(`Format file tidak dikenali. Untuk menambah produk, pastikan ada kolom: ${REQUIRED_ADD_COLUMNS.join(', ')}. Untuk update media, pastikan hanya ada kolom: ${REQUIRED_MEDIA_COLUMNS.join(', ')}.`);
                 }
                 
-                setData(jsonData);
             } catch (err) {
                 console.error("Error processing file:", err);
                 setError("Gagal memproses file. Pastikan format file benar.");
@@ -91,23 +107,24 @@ export default function BulkAddProductPage() {
         let sampleData: any[];
         let fileName: string;
 
-        const baseSample = [
-            {
-                'Nama Produk': 'T-Shirt Keren', 'Kategori': 'Pakaian', 'SKU Induk': 'TS001', 'Nama Varian': 'Merah - L', 'SKU Varian': 'TS001-M-L', 'Harga Modal': 50000, 'Harga Jual': 100000, 'Stok Awal': 50
-            },
-             {
-                'Nama Produk': 'T-Shirt Keren', 'Kategori': 'Pakaian', 'SKU Induk': 'TS001', 'Nama Varian': 'Merah - XL', 'SKU Varian': 'TS001-M-XL', 'Harga Modal': 50000, 'Harga Jual': 100000, 'Stok Awal': 30
-            },
-            {
-                'Nama Produk': 'Topi Polos', 'Kategori': 'Aksesoris', 'SKU Induk': 'TP001', 'Nama Varian': '', 'SKU Varian': '', 'Harga Modal': 25000, 'Harga Jual': 50000, 'Stok Awal': 100
-            }
-        ];
-
         if (type === 'media') {
-            sampleData = baseSample.map(item => ({ ...item, 'Image URL': 'https://placehold.co/100x100.png' }));
-            fileName = 'Template_Informasi_Media.xlsx';
+            sampleData = [
+                { 'Nama Produk': 'T-Shirt Keren', 'SKU Induk': 'TS001', 'Image URL': 'https://placehold.co/200x200.png' },
+                { 'Nama Produk': 'Topi Polos', 'SKU Induk': 'TP001', 'Image URL': 'https://placehold.co/200x200.png' }
+            ];
+            fileName = 'Template_Update_Media.xlsx';
         } else {
-            sampleData = baseSample;
+             sampleData = [
+                {
+                    'Nama Produk': 'T-Shirt Keren', 'Kategori': 'Pakaian', 'SKU Induk': 'TS001', 'Nama Varian': 'Merah - L', 'SKU Varian': 'TS001-M-L', 'Harga Modal': 50000, 'Harga Jual': 100000, 'Stok Awal': 50, 'Image URL': 'https://placehold.co/100x100.png'
+                },
+                {
+                    'Nama Produk': 'T-Shirt Keren', 'Kategori': 'Pakaian', 'SKU Induk': 'TS001', 'Nama Varian': 'Merah - XL', 'SKU Varian': 'TS001-M-XL', 'Harga Modal': 50000, 'Harga Jual': 100000, 'Stok Awal': 30
+                },
+                {
+                    'Nama Produk': 'Topi Polos', 'Kategori': 'Aksesoris', 'SKU Induk': 'TP001', 'Nama Varian': '', 'SKU Varian': '', 'Harga Modal': 25000, 'Harga Jual': 50000, 'Stok Awal': 100, 'Image URL': 'https://placehold.co/100x100.png'
+                }
+            ];
             fileName = 'Template_Informasi_Dasar.xlsx';
         }
 
@@ -118,21 +135,29 @@ export default function BulkAddProductPage() {
     };
     
     const handleSubmit = async () => {
-        if(data.length === 0) return;
+        if(data.length === 0 || uploadType === 'unknown') return;
         setIsSubmitting(true);
         try {
-            await bulkAddItems(data);
-            toast({
-                title: 'Impor Berhasil',
-                description: `${data.length} baris data produk telah berhasil diproses.`
-            });
+            if (uploadType === 'addProduct') {
+                await bulkAddItems(data);
+                toast({
+                    title: 'Impor Produk Berhasil',
+                    description: `${data.length} baris data produk telah berhasil diproses.`
+                });
+            } else if (uploadType === 'updateMedia') {
+                 const result = await bulkUpdateImages(data);
+                 toast({
+                    title: 'Update Media Berhasil',
+                    description: `${result.updated} produk diperbarui, ${result.notFound} tidak ditemukan.`
+                });
+            }
             router.push('/');
         } catch (error) {
-            console.error("Error submitting bulk products:", error);
+            console.error("Error submitting bulk data:", error);
             toast({
                 variant: 'destructive',
                 title: 'Impor Gagal',
-                description: error instanceof Error ? error.message : 'Terjadi kesalahan saat menyimpan produk.'
+                description: error instanceof Error ? error.message : 'Terjadi kesalahan saat menyimpan data.'
             })
         } finally {
             setIsSubmitting(false);
@@ -153,7 +178,7 @@ export default function BulkAddProductPage() {
                         <CardHeader>
                             <CardTitle>Impor dari Excel</CardTitle>
                             <CardDescription>
-                                Unduh salah satu template, isi dengan data produk Anda, lalu unggah file di sini untuk menambah banyak produk sekaligus.
+                                Unduh salah satu template, isi dengan data Anda, lalu unggah file di sini untuk menambah produk baru atau hanya memperbarui gambar.
                             </CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-6">
@@ -168,11 +193,11 @@ export default function BulkAddProductPage() {
                                     <DropdownMenuContent>
                                         <DropdownMenuItem onClick={() => downloadTemplate('basic')}>
                                             <Info className="mr-2 h-4 w-4" />
-                                            <span>Informasi Dasar</span>
+                                            <span>Tambah Produk (Dasar & Varian)</span>
                                         </DropdownMenuItem>
                                         <DropdownMenuItem onClick={() => downloadTemplate('media')}>
-                                            <Info className="mr-2 h-4 w-4" />
-                                            <span>Informasi Media</span>
+                                            <ImageIcon className="mr-2 h-4 w-4" />
+                                            <span>Update Gambar Produk</span>
                                         </DropdownMenuItem>
                                     </DropdownMenuContent>
                                 </DropdownMenu>
@@ -204,34 +229,22 @@ export default function BulkAddProductPage() {
 
                              {data.length > 0 && (
                                 <div className="space-y-2">
-                                    <h3 className="font-medium">Pratinjau Data ({data.length} baris)</h3>
+                                    <h3 className="font-medium">Pratinjau Data ({data.length} baris) - Mode: <Badge variant="outline">{uploadType === 'addProduct' ? 'Tambah Produk' : 'Update Media'}</Badge></h3>
                                     <ScrollArea className="h-72 w-full border rounded-md">
                                         <Table>
                                             <TableHeader className="sticky top-0 bg-card">
                                                 <TableRow>
-                                                    <TableHead>Nama Produk</TableHead>
-                                                    <TableHead>Kategori</TableHead>
-                                                    <TableHead>SKU Induk</TableHead>
-                                                    <TableHead>Nama Varian</TableHead>
-                                                    <TableHead>SKU Varian</TableHead>
-                                                    <TableHead>Harga Modal</TableHead>
-                                                    <TableHead>Harga Jual</TableHead>
-                                                    <TableHead>Stok Awal</TableHead>
-                                                    <TableHead>Image URL</TableHead>
+                                                    {Object.keys(data[0] || {}).map(header => (
+                                                        <TableHead key={header}>{header}</TableHead>
+                                                    ))}
                                                 </TableRow>
                                             </TableHeader>
                                             <TableBody>
                                                 {data.map((row, index) => (
                                                     <TableRow key={index}>
-                                                        <TableCell>{row['Nama Produk']}</TableCell>
-                                                        <TableCell>{row['Kategori']}</TableCell>
-                                                        <TableCell>{row['SKU Induk']}</TableCell>
-                                                        <TableCell>{row['Nama Varian']}</TableCell>
-                                                        <TableCell>{row['SKU Varian']}</TableCell>
-                                                        <TableCell>{row['Harga Modal']}</TableCell>
-                                                        <TableCell>{row['Harga Jual']}</TableCell>
-                                                        <TableCell>{row['Stok Awal']}</TableCell>
-                                                        <TableCell>{row['Image URL']}</TableCell>
+                                                         {Object.keys(row).map(key => (
+                                                            <TableCell key={key}>{(row as any)[key]}</TableCell>
+                                                         ))}
                                                     </TableRow>
                                                 ))}
                                             </TableBody>
@@ -241,10 +254,10 @@ export default function BulkAddProductPage() {
                             )}
 
                         </CardContent>
-                        {data.length > 0 && (
+                        {data.length > 0 && uploadType !== 'unknown' && (
                             <CardFooter className="justify-end">
                                 <Button onClick={handleSubmit} disabled={isSubmitting}>
-                                    {isSubmitting ? 'Menyimpan...' : 'Simpan Semua Produk'}
+                                    {isSubmitting ? 'Menyimpan...' : (uploadType === 'addProduct' ? 'Simpan Semua Produk' : 'Update Gambar')}
                                 </Button>
                             </CardFooter>
                         )}
