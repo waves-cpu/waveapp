@@ -208,60 +208,60 @@ export default function GeneralLedgerPage() {
 
     return (
         <AppLayout>
-            <main className="flex-1 p-4 md:p-10">
-                <div className="flex items-center gap-4 mb-6">
-                    <SidebarTrigger className="md:hidden" />
-                    <h1 className="text-lg font-bold">{t.finance.generalLedger}</h1>
+            <main className="flex-1 p-4 md:p-10 flex flex-col">
+                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
+                     <div className="flex items-center gap-4">
+                        <SidebarTrigger className="md:hidden" />
+                        <h1 className="text-lg font-bold">{t.finance.generalLedger}</h1>
+                    </div>
+                    <div className="flex flex-col md:flex-row gap-2">
+                        <Select value={selectedMonth.toString()} onValueChange={(value) => setSelectedMonth(parseInt(value))}>
+                            <SelectTrigger className="w-full md:w-[180px]">
+                                <SelectValue placeholder="Pilih Bulan" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {Array.from({ length: 12 }).map((_, i) => (
+                                    <SelectItem key={i} value={i.toString()}>
+                                        {format(new Date(0, i), 'MMMM', { locale: localeId })}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                        <Select value={selectedYear.toString()} onValueChange={(value) => setSelectedYear(parseInt(value))}>
+                            <SelectTrigger className="w-full md:w-[120px]">
+                                <SelectValue placeholder="Pilih Tahun" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {years.map(year => (
+                                    <SelectItem key={year} value={year.toString()}>
+                                        {year}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                        <Select value={selectedAccount} onValueChange={setSelectedAccount}>
+                            <SelectTrigger className="w-full md:w-[300px]">
+                                <SelectValue placeholder="Pilih Akun" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {chartOfAccounts.map(acc => (
+                                    <SelectItem key={acc} value={acc}>{acc}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
                 </div>
 
-                <Card>
+                <Card className="flex flex-col flex-grow">
                     <CardHeader>
-                        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                            <div className="space-y-1">
-                                <CardTitle className="text-base">Buku Besar</CardTitle>
-                                <CardDescription className="text-xs">Rincian transaksi per akun.</CardDescription>
-                            </div>
-                            <div className="flex flex-col md:flex-row gap-2">
-                                <Select value={selectedMonth.toString()} onValueChange={(value) => setSelectedMonth(parseInt(value))}>
-                                    <SelectTrigger className="w-full md:w-[180px]">
-                                        <SelectValue placeholder="Pilih Bulan" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {Array.from({ length: 12 }).map((_, i) => (
-                                            <SelectItem key={i} value={i.toString()}>
-                                                {format(new Date(0, i), 'MMMM', { locale: localeId })}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                                <Select value={selectedYear.toString()} onValueChange={(value) => setSelectedYear(parseInt(value))}>
-                                    <SelectTrigger className="w-full md:w-[120px]">
-                                        <SelectValue placeholder="Pilih Tahun" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {years.map(year => (
-                                            <SelectItem key={year} value={year.toString()}>
-                                                {year}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                                <Select value={selectedAccount} onValueChange={setSelectedAccount}>
-                                    <SelectTrigger className="w-full md:w-[300px]">
-                                        <SelectValue placeholder="Pilih Akun" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {chartOfAccounts.map(acc => (
-                                            <SelectItem key={acc} value={acc}>{acc}</SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            </div>
+                        <div className="space-y-1">
+                            <CardTitle className="text-base">Buku Besar: {selectedAccount}</CardTitle>
+                            <CardDescription className="text-xs">Rincian transaksi per akun.</CardDescription>
                         </div>
                     </CardHeader>
-                    <CardContent>
-                        <div className="border rounded-md">
-                            <ScrollArea className="h-[60vh]">
+                    <CardContent className="flex-grow p-0">
+                         <div className="border-t h-full">
+                            <ScrollArea className="h-full">
                                 <Table>
                                     <TableHeader className="sticky top-0 bg-card">
                                         <TableRow>
@@ -289,8 +289,8 @@ export default function GeneralLedgerPage() {
                                             </TableRow>
                                         )}
                                     </TableBody>
-                                    {displayedLedger && (
-                                        <TableFooter>
+                                    {displayedLedger && displayedLedger.entries.length > 0 && (
+                                        <TableFooter className="sticky bottom-0 bg-card">
                                             <TableRow className="bg-muted hover:bg-muted font-semibold">
                                                 <TableCell colSpan={2} className="text-right text-xs">Total</TableCell>
                                                 <TableCell className="text-right text-xs font-mono">{formatCurrency(displayedLedger.totalDebit)}</TableCell>
