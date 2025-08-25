@@ -28,7 +28,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import {
-  FileDown,
   Search,
   Pencil,
   PlusCircle,
@@ -257,33 +256,6 @@ export function InventoryTable({ onUpdateStock }: InventoryTableProps) {
     return counts;
   }, [items]);
 
-  const downloadCSV = () => {
-    const headers = ['ID', 'Name', 'SKU', 'Category', 'Price', 'Stock', 'Is Parent'];
-    const rows: string[] = [];
-    
-    filteredItems.forEach(item => {
-      if (item.variants && item.variants.length > 0) {
-        rows.push([item.id, `"${item.name}"`, item.sku || '', item.category, '', '', 'TRUE'].join(','));
-        item.variants.forEach(variant => {
-          rows.push([variant.id, `"${variant.name}"`, variant.sku || '', item.category, variant.price, variant.stock, 'FALSE'].join(','));
-        });
-      } else {
-        rows.push([item.id, `"${item.name}"`, item.sku || '', item.category, item.price, item.stock, 'FALSE'].join(','))
-      }
-    });
-
-    const csvString = [headers.join(','), ...rows].join('\n');
-    const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', 'stock_report.csv');
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
   if (loading) {
       return <InventoryTableSkeleton />;
   }
@@ -318,10 +290,6 @@ export function InventoryTable({ onUpdateStock }: InventoryTableProps) {
                 </Select>
             </div>
             <div className="flex items-center gap-2 w-full md:w-auto justify-end">
-                <Button onClick={downloadCSV} variant="outline" size="sm">
-                <FileDown className="mr-2 h-4 w-4" />
-                {t.inventoryTable.exportCsv}
-                </Button>
                 <Button asChild size="sm">
                 <Link href="/add-product">
                     <PlusCircle className="mr-2 h-4 w-4" />
@@ -542,5 +510,7 @@ export function InventoryTable({ onUpdateStock }: InventoryTableProps) {
     </>
   );
 }
+
+    
 
     
