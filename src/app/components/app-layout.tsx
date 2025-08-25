@@ -182,6 +182,14 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                                   </Link>
                               </SidebarMenuItem>
                                <SidebarMenuItem>
+                                  <Link href="/finance/general-ledger">
+                                      <SidebarMenuButton variant="ghost" size="sm" isActive={pathname === '/finance/general-ledger'}>
+                                          <FileText />
+                                          {t.finance.generalLedger}
+                                      </SidebarMenuButton>
+                                  </Link>
+                              </SidebarMenuItem>
+                               <SidebarMenuItem>
                                   <Link href="/finance/balance-sheet">
                                       <SidebarMenuButton variant="ghost" size="sm" isActive={pathname === '/finance/balance-sheet'}>
                                           <Scale />

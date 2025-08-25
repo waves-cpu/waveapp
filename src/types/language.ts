@@ -24,6 +24,7 @@ export const translations = {
         finance: {
             title: "Finance",
             generalJournal: "General Journal",
+            generalLedger: "General Ledger",
             financialStatements: "Financial Statements",
             assetReport: "Asset Report",
             profitLossReport: "Profit & Loss Report",
@@ -308,6 +309,7 @@ export const translations = {
         finance: {
             title: "Keuangan",
             generalJournal: "Jurnal Umum",
+            generalLedger: "Buku Besar",
             financialStatements: "Laporan Keuangan",
             assetReport: "Laporan Aset",
             profitLossReport: "Laporan Laba Rugi",
