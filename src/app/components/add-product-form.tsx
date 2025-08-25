@@ -137,18 +137,26 @@ export function AddProductForm({ existingItem }: AddProductFormProps) {
     resolver: zodResolver(formSchema),
     defaultValues: defaultValues,
   });
-
-  useEffect(() => {
-    form.reset(defaultValues);
-  }, [defaultValues, form]);
-
-
+  
+  const hasVariants = form.watch('hasVariants');
   const { fields, append, remove } = useFieldArray({
     control: form.control,
     name: "variants"
   });
 
-  const hasVariants = form.watch('hasVariants');
+  useEffect(() => {
+    form.reset(defaultValues);
+  }, [defaultValues, form]);
+
+  useEffect(() => {
+    if (hasVariants && fields.length === 0 && !isEditMode) {
+      append([
+        { name: '', sku: '', price: 0, stock: 0 },
+        { name: '', sku: '', price: 0, stock: 0 },
+        { name: '', sku: '', price: 0, stock: 0 }
+      ]);
+    }
+  }, [hasVariants, fields.length, append, isEditMode]);
   
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsSubmitting(true);
@@ -292,8 +300,8 @@ export function AddProductForm({ existingItem }: AddProductFormProps) {
                                                     name={`variants.${index}.name`}
                                                     render={({ field }) => (
                                                         <FormItem>
-                                                            <FormControl><Input placeholder={t.bulkStockInDialog.variantName} {...field} className="border-none focus-visible:ring-1" /></FormControl>
-                                                            <FormMessage className="px-2 py-1"/>
+                                                            <FormControl><Input placeholder={t.bulkStockInDialog.variantName} {...field} className="border-none focus-visible:ring-1 text-xs" /></FormControl>
+                                                            <FormMessage className="px-2 py-1 text-xs"/>
                                                         </FormItem>
                                                     )}
                                                 />
@@ -304,8 +312,8 @@ export function AddProductForm({ existingItem }: AddProductFormProps) {
                                                     name={`variants.${index}.sku`}
                                                     render={({ field }) => (
                                                         <FormItem>
-                                                            <FormControl><Input placeholder="e.g., VAR-LG" {...field} className="border-none focus-visible:ring-1" /></FormControl>
-                                                            <FormMessage className="px-2 py-1"/>
+                                                            <FormControl><Input placeholder="e.g., VAR-LG" {...field} className="border-none focus-visible:ring-1 text-xs" /></FormControl>
+                                                            <FormMessage className="px-2 py-1 text-xs"/>
                                                         </FormItem>
                                                     )}
                                                 />
@@ -316,8 +324,8 @@ export function AddProductForm({ existingItem }: AddProductFormProps) {
                                                     name={`variants.${index}.price`}
                                                     render={({ field }) => (
                                                         <FormItem>
-                                                            <FormControl><Input type="number" placeholder="50000" {...field} className="border-none focus-visible:ring-1" /></FormControl>
-                                                            <FormMessage className="px-2 py-1"/>
+                                                            <FormControl><Input type="number" placeholder="50000" {...field} className="border-none focus-visible:ring-1 text-xs" /></FormControl>
+                                                            <FormMessage className="px-2 py-1 text-xs"/>
                                                         </FormItem>
                                                     )}
                                                 />
@@ -328,14 +336,14 @@ export function AddProductForm({ existingItem }: AddProductFormProps) {
                                                     name={`variants.${index}.stock`}
                                                     render={({ field }) => (
                                                         <FormItem>
-                                                            <FormControl><Input type="number" placeholder="50" {...field} className="border-none focus-visible:ring-1" /></FormControl>
-                                                            <FormMessage className="px-2 py-1"/>
+                                                            <FormControl><Input type="number" placeholder="50" {...field} className="border-none focus-visible:ring-1 text-xs" /></FormControl>
+                                                            <FormMessage className="px-2 py-1 text-xs"/>
                                                         </FormItem>
                                                     )}
                                                 />
                                             </TableCell>
                                             <TableCell className="p-1">
-                                                <Button type="button" variant="ghost" size="icon" className="text-destructive hover:text-destructive-foreground hover:bg-destructive mt-1" onClick={() => remove(index)}>
+                                                <Button type="button" variant="ghost" size="icon" className="text-destructive hover:text-destructive-foreground hover:bg-destructive mt-1 h-8 w-8" onClick={() => remove(index)}>
                                                     <Trash2 className="h-4 w-4" />
                                                 </Button>
                                             </TableCell>
@@ -405,7 +413,5 @@ export function AddProductForm({ existingItem }: AddProductFormProps) {
     </Card>
   );
 }
-
-    
 
     
