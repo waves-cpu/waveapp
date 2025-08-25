@@ -173,24 +173,24 @@ export default function BalanceSheetPage() {
                 <div className="grid md:grid-cols-2 gap-8 items-start">
                     <Card>
                         <CardHeader>
-                            <CardTitle>Aset</CardTitle>
+                            <CardTitle className="text-base">Aset</CardTitle>
                         </CardHeader>
                         <CardContent>
                              <Table>
                                 <TableBody>
                                     <TableRow>
-                                        <TableCell className="font-medium">Kas dan Setara Kas</TableCell>
-                                        <TableCell className="text-right">{formatCurrency(financialData.assets.cash)}</TableCell>
+                                        <TableCell className="font-medium text-xs">Kas dan Setara Kas</TableCell>
+                                        <TableCell className="text-right text-xs">{formatCurrency(financialData.assets.cash)}</TableCell>
                                     </TableRow>
                                      <TableRow>
-                                        <TableCell className="font-medium">Persediaan Barang</TableCell>
-                                        <TableCell className="text-right">{formatCurrency(financialData.assets.inventory)}</TableCell>
+                                        <TableCell className="font-medium text-xs">Persediaan Barang</TableCell>
+                                        <TableCell className="text-right text-xs">{formatCurrency(financialData.assets.inventory)}</TableCell>
                                     </TableRow>
                                 </TableBody>
                              </Table>
                         </CardContent>
                         <CardFooter className="font-bold">
-                            <div className="flex justify-between w-full">
+                            <div className="flex justify-between w-full text-sm">
                                 <span>Total Aset</span>
                                 <span>{formatCurrency(financialData.assets.total)}</span>
                             </div>
@@ -200,20 +200,20 @@ export default function BalanceSheetPage() {
                     <div className="space-y-6">
                         <Card>
                              <CardHeader>
-                                <CardTitle>Liabilitas</CardTitle>
+                                <CardTitle className="text-base">Liabilitas</CardTitle>
                             </CardHeader>
                             <CardContent>
                                 <Table>
                                     <TableBody>
                                          <TableRow>
-                                            <TableCell className="font-medium">Utang Usaha</TableCell>
-                                            <TableCell className="text-right">{formatCurrency(financialData.liabilities.accountsPayable)}</TableCell>
+                                            <TableCell className="font-medium text-xs">Utang Usaha</TableCell>
+                                            <TableCell className="text-right text-xs">{formatCurrency(financialData.liabilities.accountsPayable)}</TableCell>
                                         </TableRow>
                                     </TableBody>
                                 </Table>
                             </CardContent>
                              <CardFooter className="font-bold">
-                                <div className="flex justify-between w-full">
+                                <div className="flex justify-between w-full text-sm">
                                     <span>Total Liabilitas</span>
                                     <span>{formatCurrency(financialData.liabilities.total)}</span>
                                 </div>
@@ -221,20 +221,20 @@ export default function BalanceSheetPage() {
                         </Card>
                          <Card>
                              <CardHeader>
-                                <CardTitle>Ekuitas</CardTitle>
+                                <CardTitle className="text-base">Ekuitas</CardTitle>
                             </CardHeader>
                             <CardContent>
                                  <Table>
                                     <TableBody>
                                          <TableRow>
-                                            <TableCell className="font-medium">Laba Ditahan</TableCell>
-                                            <TableCell className="text-right">{formatCurrency(financialData.equity.retainedEarnings)}</TableCell>
+                                            <TableCell className="font-medium text-xs">Laba Ditahan</TableCell>
+                                            <TableCell className="text-right text-xs">{formatCurrency(financialData.equity.retainedEarnings)}</TableCell>
                                         </TableRow>
                                     </TableBody>
                                 </Table>
                             </CardContent>
                               <CardFooter className="font-bold">
-                                <div className="flex justify-between w-full">
+                                <div className="flex justify-between w-full text-sm">
                                     <span>Total Ekuitas</span>
                                     <span>{formatCurrency(financialData.equity.total)}</span>
                                 </div>
@@ -243,7 +243,7 @@ export default function BalanceSheetPage() {
 
                         <Card className="bg-muted">
                             <CardFooter className="pt-6 font-bold">
-                                <div className="flex justify-between w-full">
+                                <div className="flex justify-between w-full text-sm">
                                     <span>Total Liabilitas dan Ekuitas</span>
                                     <span>{formatCurrency(financialData.totalLiabilitiesAndEquity)}</span>
                                 </div>
