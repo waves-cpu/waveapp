@@ -77,21 +77,14 @@ export const PosReceipt = React.forwardRef<HTMLDivElement, PosReceiptProps>((pro
 
             <section>
                 {receipt.items.map(item => {
-                    const isVariant = item.name && item.name !== item.productName;
+                    const isVariant = !!item.variantName && item.variantName !== item.productName;
                     return (
                         <div key={item.id} className="mb-1">
                             <p className="font-bold">{item.productName}</p>
-                            {isVariant ? (
-                                <div className="flex justify-between items-center pl-2">
-                                    <span>{item.name} {item.quantity} x {formatCurrency(item.price)}</span>
-                                    <span className="text-right">{formatCurrency(item.quantity * item.price)}</span>
-                                </div>
-                            ) : (
-                                <div className="flex justify-between items-center">
-                                    <span>{item.quantity} x {formatCurrency(item.price)}</span>
-                                    <span className="text-right">{formatCurrency(item.quantity * item.price)}</span>
-                                </div>
-                            )}
+                            <div className="flex justify-between items-center pl-2">
+                                <span>{isVariant ? item.name : ''} {item.quantity} x {formatCurrency(item.price)}</span>
+                                <span className="text-right">{formatCurrency(item.quantity * item.price)}</span>
+                            </div>
                         </div>
                     );
                 })}
