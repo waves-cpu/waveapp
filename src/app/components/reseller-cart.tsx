@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState, useCallback, useEffect, useRef } from 'react';
+import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { useInventory } from '@/hooks/use-inventory';
 import type { InventoryItem, InventoryItemVariant, Reseller } from '@/types';
 import { PosSearch } from './pos-search';
@@ -19,6 +19,7 @@ import { useLanguage } from '@/hooks/use-language';
 import { translations } from '@/types/language';
 import { useScanSounds } from '@/hooks/use-scan-sounds';
 import { PosReceipt, type ReceiptData } from './pos-receipt';
+import { useDebounce } from '@/hooks/use-debounce';
 
 export interface CartItem extends InventoryItemVariant {
     productId: string;
@@ -33,7 +34,7 @@ interface ResellerCartProps {
 
 export function ResellerCart({ reseller }: ResellerCartProps) {
     const LOCAL_STORAGE_KEY = `resellerCart_${reseller.id}`;
-    const { getProductBySku, recordSale, items: inventoryItems, loading: inventoryLoading } = useInventory();
+    const { recordSale, items: inventoryItems } = useInventory();
     const { language } = useLanguage();
     const { playSuccessSound, playErrorSound } = useScanSounds();
     const t = translations[language];
@@ -43,6 +44,24 @@ export function ResellerCart({ reseller }: ResellerCartProps) {
     const [isClient, setIsClient] = useState(false);
     const [receiptToPrint, setReceiptToPrint] = useState<ReceiptData | null>(null);
     const receiptRef = useRef<HTMLDivElement>(null);
+    const [searchTerm, setSearchTerm] = useState('');
+    const debouncedSearchTerm = useDebounce(searchTerm, 300);
+
+    const searchSuggestions = useMemo(() => {
+        if (debouncedSearchTerm.length < 3) return [];
+        const lowercasedTerm = debouncedSearchTerm.toLowerCase();
+        
+        // Prioritize SKU match
+        const exactSkuMatch = inventoryItems.find(item => item.sku?.toLowerCase() === lowercasedTerm);
+        if (exactSkuMatch) return [exactSkuMatch];
+        const variantSkuMatch = inventoryItems.find(item => item.variants?.some(v => v.sku?.toLowerCase() === lowercasedTerm));
+        if(variantSkuMatch) return [variantSkuMatch];
+        
+        // Then search by name
+        return inventoryItems.filter(item => 
+            item.name.toLowerCase().includes(lowercasedTerm)
+        ).slice(0, 10);
+    }, [debouncedSearchTerm, inventoryItems]);
 
 
     useEffect(() => {
@@ -89,7 +108,7 @@ export function ResellerCart({ reseller }: ResellerCartProps) {
         return channelPrice ?? item.price!;
     };
 
-    const addToCart = (item: InventoryItem, variant?: InventoryItemVariant) => {
+    const addToCart = useCallback((item: InventoryItem, variant?: InventoryItemVariant) => {
         const itemToAddRaw = variant || item;
         const price = getPriceForChannel(itemToAddRaw, 'reseller');
 
@@ -100,7 +119,7 @@ export function ResellerCart({ reseller }: ResellerCartProps) {
         const existingCartItem = cart.find(ci => ci.id === itemToAdd.id);
         const quantityInCart = existingCartItem?.quantity || 0;
         
-        if (quantityInCart >= itemToAdd.stock) {
+        if (itemToAdd.stock === undefined || quantityInCart >= itemToAdd.stock) {
              toast({
                 variant: "destructive",
                 title: "Stok tidak mencukupi",
@@ -121,62 +140,32 @@ export function ResellerCart({ reseller }: ResellerCartProps) {
             }
             return [...currentCart, { ...itemToAdd, quantity: 1 }];
         });
-    };
+    }, [cart, playErrorSound, playSuccessSound, toast]);
 
-    const handleProductSelect = useCallback(async (sku: string) => {
+    const handleProductSelect = useCallback(async (product: InventoryItem) => {
         try {
-            const product = await getProductBySku(sku);
-            if (!product) {
-                 toast({
-                    variant: "destructive",
-                    title: "Produk tidak ditemukan",
-                    description: `Tidak ada produk dengan SKU: ${sku}`,
-                });
-                playErrorSound();
-                return;
-            }
             if (product.variants && product.variants.length > 1) {
                 setProductForVariantSelection(product);
             } else if (product.variants && product.variants.length === 1) {
                 addToCart(product, product.variants[0]);
             } else {
-                 const itemInCart = cart.find(ci => ci.id === product.id);
-                 if (product.stock === undefined || (product.stock - (itemInCart?.quantity || 0)) <= 0) {
-                     toast({
-                        variant: "destructive",
-                        title: "Stok tidak mencukupi",
-                        description: `Stok untuk ${product.name} habis.`,
-                    });
-                    playErrorSound();
-                    return;
-                }
                 addToCart(product);
             }
         } catch (error) {
-            console.error("Error fetching product by SKU:", error);
+            console.error("Error adding product to cart:", error);
             toast({
                 variant: "destructive",
                 title: "Error",
-                description: "Gagal mengambil data produk.",
+                description: "Gagal menambahkan produk ke keranjang.",
             });
             playErrorSound();
         }
-    }, [getProductBySku, toast, cart, playErrorSound, playSuccessSound]);
+    }, [addToCart, playErrorSound, toast]);
 
 
     const handleVariantSelect = (variant: InventoryItemVariant | null) => {
         if (variant && productForVariantSelection) {
-            const itemInCart = cart.find(ci => ci.id === variant.id);
-            if(variant.stock - (itemInCart?.quantity || 0) <= 0) {
-                toast({
-                    variant: "destructive",
-                    title: "Stok tidak mencukupi",
-                    description: `Stok untuk ${productForVariantSelection.name} - ${variant.name} habis.`,
-                });
-                playErrorSound();
-            } else {
-                addToCart(productForVariantSelection, variant);
-            }
+            addToCart(productForVariantSelection, variant);
         }
         setProductForVariantSelection(null);
     };
@@ -240,7 +229,12 @@ export function ResellerCart({ reseller }: ResellerCartProps) {
         <>
             <div className="flex-grow grid grid-cols-1 lg:grid-cols-5 gap-4 p-4 h-full no-print">
                 <div className="lg:col-span-3 flex flex-col gap-4 h-full">
-                    <PosSearch onProductSelect={handleProductSelect} />
+                    <PosSearch 
+                        onProductSelect={handleProductSelect} 
+                        searchTerm={searchTerm}
+                        setSearchTerm={setSearchTerm}
+                        suggestions={searchSuggestions}
+                    />
                     <Card className="flex-grow flex flex-col">
                         <CardHeader>
                             <CardTitle className="text-base">{t.pos.orderSummary}</CardTitle>

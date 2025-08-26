@@ -198,6 +198,8 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
   }
 
   const getProductBySku = async (sku: string) => {
+    // This function can now be smarter, checking both client and server if needed
+    // For now, it just calls the server-side function
     return await findProductBySku(sku);
   };
 
