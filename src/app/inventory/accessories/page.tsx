@@ -7,7 +7,7 @@ import {
   History
 } from 'lucide-react';
 import { InventoryTable } from '@/app/components/inventory-table';
-import { UpdateStockDialog } from '@/app/components/update-stock-dialog';
+import { UpdateStockDialogAccessories } from '@/app/components/update-stock-dialog-accessories';
 import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/hooks/use-language';
 import { translations } from '@/types/language';
@@ -60,7 +60,7 @@ function AccessoriesPageContent() {
         </div>
       </main>
 
-      <UpdateStockDialog
+      <UpdateStockDialogAccessories
         open={isUpdateStockOpen}
         onOpenChange={setUpdateStockOpen}
         itemId={selectedItemId}
