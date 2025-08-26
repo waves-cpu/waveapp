@@ -115,7 +115,7 @@ export function UpdateStockDialogAccessories({ open, onOpenChange, itemId }: Upd
                 <FormItem>
                   <FormLabel>{t.updateStockDialog.reason}</FormLabel>
                   <FormControl>
-                    <Input placeholder={t.updateStockDialog.reasonPlaceholder} {...field} />
+                    <Input placeholder="cth., Kiriman baru, Kebutuhan Produksi" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
