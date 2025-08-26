@@ -462,7 +462,7 @@ export function InventoryTable({ onUpdateStock, category }: InventoryTableProps)
                                     </DropdownMenuTrigger>
                                     <DropdownMenuContent align="end">
                                         <DropdownMenuItem asChild>
-                                             <Link href={`/edit-product/${item.id}`}>
+                                             <Link href={category === 'Accessories' ? `/inventory/edit-accessory/${item.id}` : `/edit-product/${item.id}`}>
                                                 <Pencil className="mr-2 h-4 w-4" />
                                                 <span>{t.inventoryTable.editProduct}</span>
                                             </Link>
@@ -528,5 +528,3 @@ export function InventoryTable({ onUpdateStock, category }: InventoryTableProps)
     </>
   );
 }
-
-
