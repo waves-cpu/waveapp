@@ -139,8 +139,18 @@ export function PosCart() {
             if (product.variants && product.variants.length > 1) {
                 setProductForVariantSelection(product);
             } else if (product.variants && product.variants.length === 1) {
+                 if (product.variants[0].stock <= 0) {
+                     toast({ variant: "destructive", title: "Stok Habis", description: `Stok untuk ${product.name} - ${product.variants[0].name} sudah habis.` });
+                     playErrorSound();
+                     return;
+                 }
                 addToCart(product, product.variants[0]);
             } else {
+                 if (product.stock !== undefined && product.stock <= 0) {
+                     toast({ variant: "destructive", title: "Stok Habis", description: `Stok untuk ${product.name} sudah habis.` });
+                     playErrorSound();
+                     return;
+                 }
                 addToCart(product);
             }
         } catch (error) {
@@ -260,7 +270,7 @@ export function PosCart() {
                                                 <div className="flex items-center gap-3">
                                                     <Image src={item.parentImageUrl || 'https://placehold.co/40x40.png'} alt={item.productName} width={32} height={32} className="rounded-md" data-ai-hint="product image" />
                                                     <div>
-                                                        <p className="font-medium text-sm">{item.productName}</p>
+                                                        <p className="font-medium text-sm truncate max-w-[250px]">{item.productName}</p>
                                                         <p className="text-xs text-muted-foreground">{item.name}</p>
                                                     </div>
                                                 </div>
