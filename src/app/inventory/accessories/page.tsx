@@ -4,6 +4,7 @@
 import React, { useState, useMemo } from 'react';
 import {
   PlusCircle,
+  History
 } from 'lucide-react';
 import { InventoryTable } from '@/app/components/inventory-table';
 import { UpdateStockDialog } from '@/app/components/update-stock-dialog';
@@ -37,6 +38,12 @@ function AccessoriesPageContent() {
                 </h1>
             </div>
             <div className="flex items-center gap-2">
+                 <Button asChild size="sm" variant="outline">
+                    <Link href="/inventory/accessories/history">
+                        <History className="mr-2 h-4 w-4" />
+                        Riwayat
+                    </Link>
+                </Button>
                 <Button asChild size="sm">
                     <Link href="/inventory/add-accessory">
                         <PlusCircle className="mr-2 h-4 w-4" />
