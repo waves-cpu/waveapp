@@ -28,7 +28,7 @@ import { translations } from '@/types/language';
 import type { InventoryItem } from '@/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 
 const variantSchema = z.object({
   id: z.string(),
@@ -63,12 +63,12 @@ export function BulkEditVariantsDialog({ open, onOpenChange, item }: BulkEditVar
   });
 
   useEffect(() => {
-    if (item) {
+    if (open && item) {
         form.reset({
             variants: item.variants || []
         });
     }
-  }, [item, form]);
+  }, [open, item, form]);
 
 
   const { fields } = useFieldArray({
@@ -104,7 +104,7 @@ export function BulkEditVariantsDialog({ open, onOpenChange, item }: BulkEditVar
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <ScrollArea className="h-96 border rounded-md">
+            <ScrollArea className="h-96">
                 <Table>
                     <TableHeader>
                         <TableRow>
@@ -181,3 +181,4 @@ export function BulkEditVariantsDialog({ open, onOpenChange, item }: BulkEditVar
     </Dialog>
   );
 }
+
