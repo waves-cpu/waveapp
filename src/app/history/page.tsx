@@ -26,10 +26,8 @@ import type { InventoryItem, AdjustmentHistory, InventoryItemVariant, Sale } fro
 import { useLanguage } from '@/hooks/use-language';
 import { translations } from '@/types/language';
 import { SidebarTrigger } from '@/components/ui/sidebar';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Calendar } from '@/components/ui/calendar';
-import { DateRange } from 'react-day-picker';
-import { format, startOfDay, isSameDay, parseISO } from 'date-fns';
+import { format, startOfDay, isSameDay, parseISO, isWithinInterval, startOfMonth, endOfMonth } from 'date-fns';
+import { id as localeId } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import Image from 'next/image';
@@ -67,9 +65,8 @@ export default function HistoryPage() {
   
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
-  const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
-  const [tempDateRange, setTempDateRange] = useState<DateRange | undefined>(dateRange);
-  const [isDatePickerOpen, setDatePickerOpen] = useState(false);
+  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [adjustmentTypeFilter, setAdjustmentTypeFilter] = useState<'all' | 'in' | 'out'>('all');
   const [selectedSales, setSelectedSales] = useState<Sale[]>([]);
   const [isSalesDetailOpen, setSalesDetailOpen] = useState(false);
@@ -85,7 +82,6 @@ export default function HistoryPage() {
       const processHistory = (history: AdjustmentHistory[], parentItem: InventoryItem, variant?: InventoryItemVariant) => {
         history.forEach(entry => {
             const reasonLower = entry.reason.toLowerCase();
-            // A more robust check for sales-related entries
             const isSaleAdjustment = allSaleChannels.some(ch => reasonLower.startsWith(`sale (${ch})`) || reasonLower.startsWith(`cancelled sale (${ch})`) || reasonLower.startsWith(`cancelled transaction #${ch}`));
             const isInitialStock = reasonLower === 'initial stock';
             
@@ -148,11 +144,18 @@ export default function HistoryPage() {
     return historyList.sort((a, b) => b.date.getTime() - a.date.getTime());
   }, [items, allSales]);
 
+  const years = useMemo(() => {
+    const allYears = new Set(allHistory.map(h => h.date.getFullYear()));
+    if (allYears.size === 0) allYears.add(new Date().getFullYear());
+    return Array.from(allYears).sort((a, b) => b - a);
+  }, [allHistory]);
+
+
   const filteredHistory = useMemo(() => {
     const filtered = allHistory
       .filter(entry => {
         if (!categoryFilter) return true;
-        if (entry.type === 'sales') return true; // Always show sales aggregates or filter them by a special keyword? For now, show them.
+        if (entry.type === 'sales') return true; 
         return entry.itemCategory === categoryFilter;
       })
       .filter(entry => {
@@ -168,16 +171,8 @@ export default function HistoryPage() {
         );
       })
       .filter(entry => {
-          if (!dateRange || (!dateRange.from && !dateRange.to)) return true;
           const entryDate = new Date(entry.date);
-          entryDate.setHours(0,0,0,0);
-          if (dateRange.from && entryDate < dateRange.from) return false;
-          if (dateRange.to) {
-             const toDate = new Date(dateRange.to);
-             toDate.setHours(23,59,59,999);
-             if(entryDate > toDate) return false;
-          }
-          return true;
+          return entryDate.getFullYear() === selectedYear && entryDate.getMonth() === selectedMonth;
       })
       .filter(entry => {
         if (adjustmentTypeFilter === 'all') return true;
@@ -189,7 +184,7 @@ export default function HistoryPage() {
 
       setCurrentPage(1);
       return filtered;
-  }, [allHistory, categoryFilter, searchTerm, dateRange, adjustmentTypeFilter]);
+  }, [allHistory, categoryFilter, searchTerm, selectedMonth, selectedYear, adjustmentTypeFilter]);
 
   const totalPages = Math.ceil(filteredHistory.length / itemsPerPage);
   
@@ -219,16 +214,6 @@ export default function HistoryPage() {
   const uniqueCategoriesWithSales = useMemo(() => {
       return [...categories].sort()
   },[categories])
-
-  const handleApplyDateRange = () => {
-    setDateRange(tempDateRange);
-    setDatePickerOpen(false);
-  };
-  
-  const handleCancelDateRange = () => {
-    setTempDateRange(dateRange);
-    setDatePickerOpen(false);
-  };
 
   const handleShowSalesDetail = (sales: Sale[]) => {
     setSelectedSales(sales);
@@ -311,43 +296,30 @@ export default function HistoryPage() {
                         ))}
                         </SelectContent>
                     </Select>
-                    <Popover open={isDatePickerOpen} onOpenChange={setDatePickerOpen}>
-                        <PopoverTrigger asChild>
-                        <Button
-                            id="date"
-                            variant={"outline"}
-                            className={cn(
-                            "w-full md:w-[300px] justify-start text-left font-normal",
-                            !dateRange && "text-muted-foreground"
-                            )}
-                        >
-                            <CalendarIcon className="mr-2 h-4 w-4" />
-                            {dateRange?.from ? (
-                            dateRange.to ? (
-                                <>{format(dateRange.from, "LLL dd, y")} - {format(dateRange.to, "LLL dd, y")}</>
-                            ) : (
-                                format(dateRange.from, "LLL dd, y")
-                            )
-                            ) : (
-                            <span>{t.stockHistory.dateRange}</span>
-                            )}
-                        </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                            initialFocus
-                            mode="range"
-                            defaultMonth={tempDateRange?.from}
-                            selected={tempDateRange}
-                            onSelect={setTempDateRange}
-                            numberOfMonths={2}
-                        />
-                        <div className="p-2 border-t flex justify-end gap-2">
-                          <Button variant="ghost" onClick={handleCancelDateRange}>{t.common.cancel}</Button>
-                          <Button onClick={handleApplyDateRange}>{t.common.apply}</Button>
-                        </div>
-                        </PopoverContent>
-                    </Popover>
+                    <Select value={selectedMonth.toString()} onValueChange={(value) => setSelectedMonth(parseInt(value))}>
+                        <SelectTrigger className="w-full md:w-[180px]">
+                            <SelectValue placeholder="Pilih Bulan" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {Array.from({ length: 12 }).map((_, i) => (
+                                <SelectItem key={i} value={i.toString()}>
+                                    {format(new Date(0, i), 'MMMM', { locale: localeId })}
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                    <Select value={selectedYear.toString()} onValueChange={(value) => setSelectedYear(parseInt(value))}>
+                        <SelectTrigger className="w-full md:w-[120px]">
+                            <SelectValue placeholder="Pilih Tahun" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {years.map(year => (
+                                <SelectItem key={year} value={year.toString()}>
+                                    {year}
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
                     <Button onClick={downloadCSV} variant="outline" size="sm">
                         <FileDown className="mr-2 h-4 w-4" />
                         {t.inventoryTable.exportCsv.replace('Excel', 'CSV')}
