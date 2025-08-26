@@ -344,7 +344,7 @@ export default function GeneralJournalPage() {
                                         ))
                                     ) : (
                                         <TableRow>
-                                            <TableCell colSpan={6} className="h-48 text-center text-muted-foreground">
+                                            <TableCell colSpan={6} className="h-48 text-center align-middle text-muted-foreground">
                                                  <div className="flex flex-col items-center justify-center gap-4">
                                                     <FileText className="h-12 w-12" />
                                                     <p className="font-semibold text-sm">Tidak Ada Jurnal</p>
