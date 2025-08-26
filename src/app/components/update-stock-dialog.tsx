@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect } from 'react';
@@ -53,20 +54,14 @@ export function UpdateStockDialog({ open, onOpenChange, itemId }: UpdateStockDia
     },
   });
 
-  const itemWithStock = itemId ? getItem(itemId) : null;
-  
-  // Determine if it's a variant or a simple product to get the correct stock
-  let item;
-  let stock;
-  if(itemWithStock){
-    if (itemWithStock.variants && itemId) {
-        item = itemWithStock.variants.find(v => v.id === itemId);
-        stock = item?.stock;
-    } else {
-        item = itemWithStock;
-        stock = item?.stock;
-    }
-  }
+  const parentItem = itemId ? getItem(itemId) : null;
+
+  // This logic now correctly finds either the variant or the simple product.
+  const item = parentItem
+    ? (parentItem.variants?.find(v => v.id === itemId) || (parentItem.id === itemId ? parentItem : undefined))
+    : null;
+
+  const stock = item?.stock;
 
 
   useEffect(() => {
@@ -142,3 +137,4 @@ export function UpdateStockDialog({ open, onOpenChange, itemId }: UpdateStockDia
     </Dialog>
   );
 }
+
