@@ -85,7 +85,8 @@ export default function HistoryPage() {
       const processHistory = (history: AdjustmentHistory[], parentItem: InventoryItem, variant?: InventoryItemVariant) => {
         history.forEach(entry => {
             const isSaleAdjustment = allSaleChannels.some(ch => entry.reason.toLowerCase().startsWith(`sale (${ch})`));
-            if (!isSaleAdjustment && (entry.change !== 0 || entry.reason.toLowerCase() !== 'no change')) {
+            const isInitialStock = entry.reason.toLowerCase() === 'initial stock';
+            if (!isSaleAdjustment && !isInitialStock && (entry.change !== 0 || entry.reason.toLowerCase() !== 'no change')) {
                  historyList.push({
                     type: 'adjustment',
                     date: new Date(entry.date),
@@ -278,7 +279,7 @@ export default function HistoryPage() {
             {t.stockHistory.title}
           </h1>
         </div>
-        <div className="bg-card rounded-lg border shadow-sm">
+        <div className="bg-card rounded-lg border shadow-sm flex flex-col flex-grow">
           <div className="p-4 flex flex-col gap-4 border-b">
             <div className="flex flex-col md:flex-row gap-4 justify-between items-start">
                 <div className="flex flex-col md:flex-row gap-4 w-full flex-1">
@@ -359,6 +360,7 @@ export default function HistoryPage() {
                 </Button>
             </div>
           </div>
+          <div className='flex-grow overflow-y-auto'>
           <Table>
             <TableHeader>
                 <TableRow>
@@ -471,6 +473,7 @@ export default function HistoryPage() {
                 </TableRow>
             </TableFooter>
             </Table>
+            </div>
             <div className="flex items-center justify-end p-4 border-t">
                 <div className="flex items-center gap-4">
                     <Pagination
@@ -508,3 +511,4 @@ export default function HistoryPage() {
     </AppLayout>
   );
 }
+
