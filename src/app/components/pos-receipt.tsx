@@ -78,7 +78,10 @@ export const PosReceipt = React.forwardRef<HTMLDivElement, PosReceiptProps>((pro
             <section>
                 {receipt.items.map(item => (
                     <div key={item.id} className="mb-1">
-                        <p className="font-bold">{item.productName}{item.name !== item.productName && ` - ${item.name}`}</p>
+                        <p className="font-bold">
+                            {item.productName}
+                            {item.variantName && item.variantName !== item.productName ? ` - ${item.variantName}` : ''}
+                        </p>
                         <div className="flex justify-between items-center">
                             <span>{item.quantity} x {formatCurrency(item.price)}</span>
                             <span className="text-right">{formatCurrency(item.quantity * item.price)}</span>
