@@ -27,7 +27,6 @@ const formSchema = z.object({
   name: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
   category: z.string(), // Always "Accessories"
   sku: z.string().optional(),
-  imageUrl: z.string().url({ message: "Please enter a valid URL." }).optional().or(z.literal('')),
   price: z.coerce.number().min(0, "Price must be non-negative."),
   stock: z.coerce.number().int().min(0, "Stock must be a non-negative integer."),
   size: z.string().optional(),
@@ -48,7 +47,6 @@ export function AddAccessoryForm() {
         name: '',
         category: 'Accessories',
         sku: '',
-        imageUrl: '',
         price: undefined,
         stock: undefined,
         size: '',
@@ -58,7 +56,7 @@ export function AddAccessoryForm() {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsSubmitting(true);
     try {
-        await addItem({ ...values, hasVariants: false });
+        await addItem({ ...values, hasVariants: false, imageUrl: '' });
         toast({
         title: t.addItemDialog.itemAdded,
         description: `${values.name} ${t.addItemDialog.hasBeenAdded}`,
@@ -107,20 +105,7 @@ export function AddAccessoryForm() {
                     </FormItem>
                   )}
                 />
-                <FormField
-                  control={form.control}
-                  name="imageUrl"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Image URL</FormLabel>
-                      <FormControl>
-                        <Input placeholder="https://example.com/image.png" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
+                
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <FormField
                     control={form.control}
