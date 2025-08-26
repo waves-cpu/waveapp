@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { useInventory } from '@/hooks/use-inventory';
 import {
   Table,
@@ -29,7 +29,7 @@ import { SidebarTrigger } from '@/components/ui/sidebar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { DateRange } from 'react-day-picker';
-import { format, startOfDay } from 'date-fns';
+import { format, startOfDay, isSameDay, parseISO } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import Image from 'next/image';
@@ -37,7 +37,7 @@ import { DailySalesDetailDialog } from '@/app/components/daily-sales-detail-dial
 import { AppLayout } from '../components/app-layout';
 import { Pagination } from '@/components/ui/pagination';
 
-type HistoryEntry = {
+type AdjustmentEntry = {
     type: 'adjustment';
     date: Date;
     change: number;
@@ -50,6 +50,15 @@ type HistoryEntry = {
     itemCategory?: string;
 };
 
+type AggregatedSalesEntry = {
+    type: 'sales';
+    date: Date;
+    channel: string;
+    totalItems: number;
+    sales: Sale[];
+};
+
+type HistoryEntry = AdjustmentEntry | AggregatedSalesEntry;
 
 export default function HistoryPage() {
   const { items, categories, allSales, loading } = useInventory();
@@ -69,11 +78,14 @@ export default function HistoryPage() {
 
   const allHistory = useMemo((): HistoryEntry[] => {
     const historyList: HistoryEntry[] = [];
+    const onlineSaleChannels = ['shopee', 'tiktok', 'lazada'];
 
+    // Process adjustments first
     items.forEach(item => {
       const processHistory = (history: AdjustmentHistory[], parentItem: InventoryItem, variant?: InventoryItemVariant) => {
         history.forEach(entry => {
-            if (entry.change !== 0 || entry.reason.toLowerCase() !== 'no change') {
+            const isOnlineSale = onlineSaleChannels.some(ch => entry.reason.toLowerCase().includes(`sale (${ch})`));
+            if (!isOnlineSale && (entry.change !== 0 || entry.reason.toLowerCase() !== 'no change')) {
                  historyList.push({
                     type: 'adjustment',
                     date: new Date(entry.date),
@@ -99,18 +111,54 @@ export default function HistoryPage() {
       }
     });
 
+    // Group and aggregate online sales
+    const groupedSales = new Map<string, { date: Date; channel: string; totalItems: number; sales: Sale[] }>();
+    
+    allSales
+        .filter(sale => onlineSaleChannels.includes(sale.channel))
+        .forEach(sale => {
+            const saleDate = parseISO(sale.saleDate);
+            const key = `${format(saleDate, 'yyyy-MM-dd')}-${sale.channel}`;
+            
+            if (!groupedSales.has(key)) {
+                groupedSales.set(key, {
+                    date: saleDate,
+                    channel: sale.channel,
+                    totalItems: 0,
+                    sales: [],
+                });
+            }
+            const group = groupedSales.get(key)!;
+            group.totalItems += sale.quantity;
+            group.sales.push(sale);
+        });
+
+    groupedSales.forEach(group => {
+        historyList.push({
+            type: 'sales',
+            date: group.date,
+            channel: group.channel,
+            totalItems: group.totalItems,
+            sales: group.sales,
+        });
+    });
+
     return historyList.sort((a, b) => b.date.getTime() - a.date.getTime());
-  }, [items]);
+  }, [items, allSales]);
 
   const filteredHistory = useMemo(() => {
     const filtered = allHistory
       .filter(entry => {
         if (!categoryFilter) return true;
+        if (entry.type === 'sales') return true; // Always show sales aggregates or filter them by a special keyword? For now, show them.
         return entry.itemCategory === categoryFilter;
       })
       .filter(entry => {
         const lowerSearchTerm = searchTerm.toLowerCase();
         if(!lowerSearchTerm) return true;
+        if (entry.type === 'sales') {
+            return entry.channel.toLowerCase().includes(lowerSearchTerm) || `sales ${entry.channel}`.includes(lowerSearchTerm);
+        }
         return (
             (entry.itemName && entry.itemName.toLowerCase().includes(lowerSearchTerm)) ||
             (entry.variantName && entry.variantName.toLowerCase().includes(lowerSearchTerm)) ||
@@ -131,8 +179,9 @@ export default function HistoryPage() {
       })
       .filter(entry => {
         if (adjustmentTypeFilter === 'all') return true;
-        if (adjustmentTypeFilter === 'in') return entry.change > 0;
-        if (adjustmentTypeFilter === 'out') return entry.change < 0;
+        const change = entry.type === 'adjustment' ? entry.change : -entry.totalItems;
+        if (adjustmentTypeFilter === 'in') return change > 0;
+        if (adjustmentTypeFilter === 'out') return change < 0;
         return true;
       });
 
@@ -151,10 +200,11 @@ export default function HistoryPage() {
     let totalIn = 0;
     let totalOut = 0;
     filteredHistory.forEach(entry => {
-        if (entry.change > 0) {
-            totalIn += entry.change;
+        const change = entry.type === 'adjustment' ? entry.change : -entry.totalItems;
+        if (change > 0) {
+            totalIn += change;
         } else {
-            totalOut += Math.abs(entry.change);
+            totalOut += Math.abs(change);
         }
     });
     const netChange = totalIn - totalOut;
@@ -175,9 +225,27 @@ export default function HistoryPage() {
     setDatePickerOpen(false);
   };
 
+  const handleShowSalesDetail = (sales: Sale[]) => {
+    setSelectedSales(sales);
+    setSalesDetailOpen(true);
+  };
+
   const downloadCSV = () => {
     const headers = ['Tanggal', 'Nama Produk', 'Varian', 'SKU', 'Kategori', 'Alasan', 'Perubahan', 'Stok Akhir'];
     const rows = filteredHistory.map(entry => {
+        if(entry.type === 'sales') {
+            return [
+                format(entry.date, 'yyyy-MM-dd HH:mm:ss'),
+                `Penjualan ${entry.channel}`,
+                '',
+                '',
+                'Penjualan Online',
+                `Total ${entry.totalItems} item terjual`,
+                -entry.totalItems,
+                'N/A'
+            ].join(',');
+        }
+
         const rowData = [
             format(entry.date, 'yyyy-MM-dd HH:mm:ss'),
             entry.itemName || '',
@@ -311,6 +379,8 @@ export default function HistoryPage() {
                 ) : paginatedHistory.length > 0 ? (
                 paginatedHistory.map((entry, index) => (
                     <TableRow key={index}>
+                    {entry.type === 'adjustment' ? (
+                       <>
                         <TableCell>
                             <div className="flex items-center gap-4">
                                 {entry.imageUrl ? (
@@ -347,6 +417,35 @@ export default function HistoryPage() {
                         <TableCell>
                             <p className="line-clamp-2">{entry.reason}</p>
                         </TableCell>
+                       </>
+                    ) : (
+                        <>
+                        <TableCell>
+                            <div className="flex items-center gap-4">
+                                <div className="flex h-10 w-10 items-center justify-center rounded-sm bg-muted">
+                                    <ShoppingCart className="h-5 w-5 text-muted-foreground" />
+                                </div>
+                                <div>
+                                    <div className="font-medium text-sm capitalize">Penjualan {entry.channel}</div>
+                                     <Button variant="link" size="sm" className="h-auto p-0 text-xs" onClick={() => handleShowSalesDetail(entry.sales)}>
+                                        Lihat Detail
+                                        <Eye className="ml-1 h-3 w-3" />
+                                    </Button>
+                                </div>
+                            </div>
+                        </TableCell>
+                         <TableCell>{format(new Date(entry.date), 'PP')}</TableCell>
+                         <TableCell>
+                            <Badge variant='destructive' className="bg-red-600 text-white">
+                                -{entry.totalItems}
+                            </Badge>
+                         </TableCell>
+                         <TableCell>-</TableCell>
+                         <TableCell>
+                             <p className="line-clamp-2">Total {entry.totalItems} item terjual dari channel {entry.channel}.</p>
+                         </TableCell>
+                        </>
+                    )}
                     </TableRow>
                 ))
                 ) : (
