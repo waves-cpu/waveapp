@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -53,26 +53,27 @@ export function UpdateStockDialog({ open, onOpenChange, itemId }: UpdateStockDia
       reason: '',
     },
   });
+  
+  const { item, displayName, stock } = React.useMemo(() => {
+    if (!itemId) return { item: undefined, displayName: '', stock: undefined };
 
-  const item: (InventoryItem | InventoryItemVariant) | undefined = itemId ? (() => {
     for (const product of items) {
       if (product.id === itemId) {
-        return product;
+        return { item: product, displayName: product.name, stock: product.stock };
       }
       if (product.variants) {
         const foundVariant = product.variants.find(v => v.id === itemId);
         if (foundVariant) {
-            return {
-                ...foundVariant,
-                parentName: product.name,
-            };
+          return {
+            item: foundVariant,
+            displayName: `${product.name} - ${foundVariant.name}`,
+            stock: foundVariant.stock
+          };
         }
       }
     }
-    return undefined;
-  })() : undefined;
-  
-  const stock = item?.stock;
+    return { item: undefined, displayName: '', stock: undefined };
+  }, [itemId, items]);
 
 
   useEffect(() => {
@@ -94,8 +95,6 @@ export function UpdateStockDialog({ open, onOpenChange, itemId }: UpdateStockDia
 
     onOpenChange(false);
   }
-  
-  const displayName = item && 'parentName' in item ? `${item.parentName} - ${item.name}` : item?.name;
 
 
   return (
@@ -104,7 +103,7 @@ export function UpdateStockDialog({ open, onOpenChange, itemId }: UpdateStockDia
         <DialogHeader>
           <DialogTitle>{t.updateStockDialog.title} {displayName}</DialogTitle>
           <DialogDescription>
-             {t.updateStockDialog.description} {stock}
+             {t.updateStockDialog.description} {stock ?? 0}
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
