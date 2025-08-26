@@ -38,9 +38,9 @@ function AccessoriesPageContent() {
             </div>
             <div className="flex items-center gap-2">
                 <Button asChild size="sm">
-                    <Link href="/add-product">
+                    <Link href="/inventory/add-accessory">
                         <PlusCircle className="mr-2 h-4 w-4" />
-                        {t.dashboard.addItem}
+                        {t.dashboard.addAccessory}
                     </Link>
                 </Button>
             </div>

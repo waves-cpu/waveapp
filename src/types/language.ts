@@ -8,6 +8,7 @@ export const translations = {
         dashboard: {
             inventory: "My Products",
             addItem: "Add Item",
+            addAccessory: "Add Accessory",
             inventoryMenu: "Inventory",
             myProducts: "My Products",
             accessories: "Accessories",
@@ -294,6 +295,7 @@ export const translations = {
         dashboard: {
             inventory: "Produk Saya",
             addItem: "Tambah Barang",
+            addAccessory: "Tambah Aksesoris",
             inventoryMenu: "Inventaris",
             myProducts: "Produk Saya",
             accessories: "Aksesoris",
