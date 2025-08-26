@@ -77,11 +77,11 @@ export const PosReceipt = React.forwardRef<HTMLDivElement, PosReceiptProps>((pro
 
             <section>
                 {receipt.items.map(item => {
-                    const isVariant = item.name !== item.productName;
+                    const isVariant = item.productName !== item.name;
                     return (
                         <div key={item.id} className="mb-1">
                             <p className="font-bold">{item.productName}</p>
-                            <div className="flex justify-between items-center">
+                             <div className="flex justify-between items-center">
                                 <span>
                                     {isVariant ? `${item.name} ` : ''}{item.quantity} x {formatCurrency(item.price)}
                                 </span>
@@ -136,3 +136,4 @@ export const PosReceipt = React.forwardRef<HTMLDivElement, PosReceiptProps>((pro
 });
 
 PosReceipt.displayName = 'PosReceipt';
+
