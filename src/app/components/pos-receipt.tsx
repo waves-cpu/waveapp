@@ -77,7 +77,7 @@ export const PosReceipt = React.forwardRef<HTMLDivElement, PosReceiptProps>((pro
 
             <section>
                 {receipt.items.map(item => {
-                    const isVariant = !!item.variantName && item.variantName !== item.productName;
+                    const isVariant = item.name !== item.productName;
                     return (
                         <div key={item.id} className="mb-1">
                             <p className="font-bold">{item.productName}</p>
