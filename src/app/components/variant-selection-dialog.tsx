@@ -40,9 +40,8 @@ export function VariantSelectionDialog({ open, onOpenChange, item, onSelect, car
   const t = translations[language];
   
   useEffect(() => {
-    if (!open) {
-        onSelect(null);
-    }
+    // Note: We don't automatically call onSelect(null) here anymore
+    // to allow the parent component to handle closure logic.
   }, [open, onSelect]);
 
 

@@ -40,7 +40,7 @@ export function PosSearch({ onProductSelect, searchTerm, setSearchTerm, suggesti
     };
     
     useEffect(() => {
-        setIsPopoverOpen(searchTerm.length > 2 && suggestions.length > 0);
+        setIsPopoverOpen(searchTerm.length >= 3 && suggestions.length > 0);
     }, [searchTerm, suggestions]);
 
     const handleSelectSuggestion = (item: InventoryItem) => {

@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState, useCallback, useEffect, useRef } from 'react';
+import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { useInventory } from '@/hooks/use-inventory';
 import type { InventoryItem, InventoryItemVariant } from '@/types';
 import { PosSearch } from './pos-search';
@@ -306,7 +306,11 @@ export function PosCart() {
              {productForVariantSelection && (
                 <VariantSelectionDialog
                     open={!!productForVariantSelection}
-                    onOpenChange={(isOpen) => !isOpen && setProductForVariantSelection(null)}
+                    onOpenChange={(isOpen) => {
+                        if (!isOpen) {
+                            setProductForVariantSelection(null);
+                        }
+                    }}
                     item={productForVariantSelection}
                     onSelect={handleVariantSelect}
                     cart={cart}

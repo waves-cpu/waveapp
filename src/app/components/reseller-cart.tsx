@@ -313,7 +313,11 @@ export function ResellerCart({ reseller }: ResellerCartProps) {
                 {productForVariantSelection && (
                     <VariantSelectionDialog
                         open={!!productForVariantSelection}
-                        onOpenChange={(isOpen) => !isOpen && setProductForVariantSelection(null)}
+                        onOpenChange={(isOpen) => {
+                            if (!isOpen) {
+                                setProductForVariantSelection(null);
+                            }
+                        }}
                         item={productForVariantSelection}
                         onSelect={handleVariantSelect}
                         cart={cart}
