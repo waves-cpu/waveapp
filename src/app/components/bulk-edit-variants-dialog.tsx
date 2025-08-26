@@ -97,70 +97,70 @@ export function BulkEditVariantsDialog({ open, onOpenChange, item }: BulkEditVar
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <ScrollArea className="h-96">
-            <Table>
-                <TableHeader>
-                    <TableRow>
-                        <TableHead>{t.inventoryTable.name}</TableHead>
-                        <TableHead>SKU</TableHead>
-                        <TableHead>{t.inventoryTable.price}</TableHead>
-                        <TableHead>{t.inventoryTable.currentStock}</TableHead>
-                    </TableRow>
-                </TableHeader>
-                <TableBody>
-                    {fields.map((field, index) => (
-                        <TableRow key={field.id}>
-                            <TableCell>
-                                    <FormField
-                                    control={form.control}
-                                    name={`variants.${index}.name`}
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormControl><Input placeholder="e.g., Large" {...field} /></FormControl>
-                                            <FormMessage/>
-                                        </FormItem>
-                                    )}
-                                />
-                            </TableCell>
-                            <TableCell>
-                                <FormField
-                                    control={form.control}
-                                    name={`variants.${index}.sku`}
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormControl><Input placeholder="e.g., VAR-LG" {...field} /></FormControl>
-                                            <FormMessage/>
-                                        </FormItem>
-                                    )}
-                                />
-                            </TableCell>
-                            <TableCell>
-                                <FormField
-                                    control={form.control}
-                                    name={`variants.${index}.price`}
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormControl><Input type="number" placeholder="50000" {...field} /></FormControl>
-                                            <FormMessage/>
-                                        </FormItem>
-                                    )}
-                                />
-                            </TableCell>
-                            <TableCell>
-                                <FormField
-                                    control={form.control}
-                                    name={`variants.${index}.stock`}
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormControl><Input type="number" placeholder="50" {...field} /></FormControl>
-                                            <FormMessage/>
-                                        </FormItem>
-                                    )}
-                                />
-                            </TableCell>
+            <ScrollArea className="h-96 border rounded-md">
+                <Table>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead>{t.inventoryTable.name}</TableHead>
+                            <TableHead>SKU</TableHead>
+                            <TableHead>{t.inventoryTable.price}</TableHead>
+                            <TableHead>{t.inventoryTable.currentStock}</TableHead>
                         </TableRow>
-                    ))}
-                </TableBody>
+                    </TableHeader>
+                    <TableBody>
+                        {fields.map((field, index) => (
+                            <TableRow key={field.id}>
+                                <TableCell>
+                                        <FormField
+                                        control={form.control}
+                                        name={`variants.${index}.name`}
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormControl><Input placeholder="e.g., Large" {...field} /></FormControl>
+                                                <FormMessage/>
+                                            </FormItem>
+                                        )}
+                                    />
+                                </TableCell>
+                                <TableCell>
+                                    <FormField
+                                        control={form.control}
+                                        name={`variants.${index}.sku`}
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormControl><Input placeholder="e.g., VAR-LG" {...field} /></FormControl>
+                                                <FormMessage/>
+                                            </FormItem>
+                                        )}
+                                    />
+                                </TableCell>
+                                <TableCell>
+                                    <FormField
+                                        control={form.control}
+                                        name={`variants.${index}.price`}
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormControl><Input type="number" placeholder="50000" {...field} /></FormControl>
+                                                <FormMessage/>
+                                            </FormItem>
+                                        )}
+                                    />
+                                </TableCell>
+                                <TableCell>
+                                    <FormField
+                                        control={form.control}
+                                        name={`variants.${index}.stock`}
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormControl><Input type="number" placeholder="50" {...field} /></FormControl>
+                                                <FormMessage/>
+                                            </FormItem>
+                                        )}
+                                    />
+                                </TableCell>
+                            </TableRow>
+                        ))}
+                    </TableBody>
                 </Table>
             </ScrollArea>
 
