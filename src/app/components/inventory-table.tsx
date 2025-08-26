@@ -35,6 +35,7 @@ import {
   Store,
   ShoppingBag,
   Edit,
+  Paperclip,
 } from 'lucide-react';
 import type { InventoryItem, InventoryItemVariant } from '@/types';
 import { categories as allCategories } from '@/types';
@@ -344,13 +345,20 @@ export function InventoryTable({ onUpdateStock, category }: InventoryTableProps)
                             <TableRow className="bg-muted/20 hover:bg-muted/40" noBorder>
                                 <TableCell>
                                     <div className="flex items-center gap-4 group">
-                                        <Image 
-                                            src={item.imageUrl || 'https://placehold.co/40x40.png'} 
-                                            alt={item.name} 
-                                            width={40} height={40} 
-                                            className="rounded-sm" 
-                                            data-ai-hint="product image"
-                                        />
+                                        {category !== 'Accessories' && (
+                                            <Image 
+                                                src={item.imageUrl || 'https://placehold.co/40x40.png'} 
+                                                alt={item.name} 
+                                                width={40} height={40} 
+                                                className="rounded-sm" 
+                                                data-ai-hint="product image"
+                                            />
+                                        )}
+                                        {category === 'Accessories' && (
+                                            <div className="flex h-10 w-10 items-center justify-center rounded-sm shrink-0 bg-muted/50">
+                                                 <Paperclip className="h-5 w-5 text-gray-400" />
+                                            </div>
+                                        )}
                                         <div>
                                             <button onClick={() => handleBulkEdit(item)} className="text-left flex items-center gap-2">
                                                 <div className="font-medium text-primary text-sm hover:underline">{item.name}</div>
@@ -419,6 +427,7 @@ export function InventoryTable({ onUpdateStock, category }: InventoryTableProps)
                         <TableRow key={item.id} noBorder className="border-b">
                             <TableCell>
                                 <div className="flex items-center gap-4">
+                                    {category !== 'Accessories' && (
                                         <Image 
                                             src={item.imageUrl || 'https://placehold.co/40x40.png'} 
                                             alt={item.name} 
@@ -426,6 +435,12 @@ export function InventoryTable({ onUpdateStock, category }: InventoryTableProps)
                                             className="rounded-sm" 
                                             data-ai-hint="product image"
                                         />
+                                    )}
+                                    {category === 'Accessories' && (
+                                        <div className="flex h-10 w-10 items-center justify-center rounded-sm shrink-0 bg-muted/50">
+                                            <Paperclip className="h-5 w-5 text-gray-400" />
+                                        </div>
+                                    )}
                                     <div>
                                         <div className="font-medium text-sm">{item.name}</div>
                                         <div className="text-xs text-muted-foreground">SKU: {item.sku}</div>
@@ -513,3 +528,4 @@ export function InventoryTable({ onUpdateStock, category }: InventoryTableProps)
     </>
   );
 }
+
