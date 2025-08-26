@@ -29,7 +29,6 @@ const formSchema = z.object({
   sku: z.string().optional(),
   price: z.coerce.number().min(0, "Price must be non-negative."),
   stock: z.coerce.number().int().min(0, "Stock must be a non-negative integer."),
-  size: z.string().optional(),
 });
 
 interface EditAccessoryFormProps {
@@ -51,7 +50,6 @@ export function EditAccessoryForm({ existingItem }: EditAccessoryFormProps) {
         sku: existingItem.sku || '',
         price: existingItem.price ?? '',
         stock: existingItem.stock ?? '',
-        size: existingItem.size || '',
     };
   }, [existingItem]);
 
@@ -113,20 +111,7 @@ export function EditAccessoryForm({ existingItem }: EditAccessoryFormProps) {
                   )}
                 />
                 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <FormField
-                    control={form.control}
-                    name="size"
-                    render={({ field }) => (
-                        <FormItem>
-                        <FormLabel>{t.inventoryTable.size}</FormLabel>
-                        <FormControl>
-                            <Input placeholder="e.g., 100 pcs" {...field} value={field.value ?? ''}/>
-                        </FormControl>
-                        <FormMessage />
-                        </FormItem>
-                    )}
-                    />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <FormField
                     control={form.control}
                     name="price"

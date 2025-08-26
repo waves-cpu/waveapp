@@ -94,6 +94,13 @@ const runMigrations = () => {
         db.exec('ALTER TABLE variants ADD COLUMN costPrice REAL');
     }
 
+    // Add costPrice to accessories
+    const accessoryColumns = db.pragma('table_info(accessories)');
+    if (accessoryColumns && !accessoryColumns.some((col: any) => col.name === 'costPrice')) {
+        console.log('Adding costPrice column to accessories table...');
+        db.exec('ALTER TABLE accessories ADD COLUMN costPrice REAL');
+    }
+
   } catch (error) {
     if (error instanceof Error && error.message.includes('no such table:')) {
         // ignore if tables don't exist yet
@@ -139,8 +146,7 @@ const createSchema = () => {
         sku TEXT,
         stock INTEGER NOT NULL,
         price REAL,
-        costPrice REAL,
-        size TEXT
+        costPrice REAL
     );
 
      CREATE TABLE IF NOT EXISTS accessory_history (

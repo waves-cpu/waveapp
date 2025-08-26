@@ -24,6 +24,9 @@ import {
   addManualJournalEntry,
   fetchManualJournalEntries,
   deleteManualJournalEntry as deleteManualJournalEntryDb,
+  addAccessory as addAccessoryDb,
+  updateAccessory as updateAccessoryDb,
+  adjustAccessoryStock as adjustAccessoryStockDb,
 } from '@/lib/inventory-service';
 
 
@@ -55,8 +58,8 @@ interface InventoryContextType {
   deleteManualJournalEntry: (id: string) => Promise<void>;
   // Accessories
   accessories: Accessory[];
-  addAccessory: (accessory: Omit<Accessory, 'id'>) => Promise<void>;
-  updateAccessory: (accessoryId: string, accessoryData: Omit<Accessory, 'id'>) => Promise<void>;
+  addAccessory: (accessory: Omit<Accessory, 'id' | 'history'>) => Promise<void>;
+  updateAccessory: (accessoryId: string, accessoryData: Omit<Accessory, 'id' | 'history'>) => Promise<void>;
   adjustAccessoryStock: (accessoryId: string, change: number, reason: string) => Promise<void>;
 }
 
@@ -82,6 +85,7 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
       ]);
       
       setItems(inventoryData.items);
+      setAccessories(inventoryData.accessories);
       // setCategories(inventoryData.categories); // Now using the static list
       setAllSales(salesData);
       setResellers(resellerData);
@@ -202,18 +206,17 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
     await fetchAllData();
   };
   
-  // Placeholder accessory functions
-  const addAccessory = async (accessory: Omit<Accessory, 'id'>) => {
-    // To be implemented in inventory-service
-    console.log("Adding accessory:", accessory);
+  const addAccessory = async (accessory: Omit<Accessory, 'id' | 'history'>) => {
+    await addAccessoryDb(accessory);
+    await fetchAllData();
   };
-  const updateAccessory = async (accessoryId: string, accessoryData: Omit<Accessory, 'id'>) => {
-    // To be implemented in inventory-service
-    console.log("Updating accessory:", accessoryId, accessoryData);
+  const updateAccessory = async (accessoryId: string, accessoryData: Omit<Accessory, 'id' | 'history'>) => {
+    await updateAccessoryDb(accessoryId, accessoryData);
+    await fetchAllData();
   };
   const adjustAccessoryStock = async (accessoryId: string, change: number, reason: string) => {
-     // To be implemented in inventory-service
-     console.log("Adjusting accessory stock:", accessoryId, change, reason);
+    await adjustAccessoryStockDb(accessoryId, change, reason);
+    await fetchAllData();
   };
 
 

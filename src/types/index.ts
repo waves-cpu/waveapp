@@ -51,7 +51,6 @@ export interface Accessory {
     stock: number;
     price?: number;
     costPrice?: number;
-    size?: string;
     history?: AdjustmentHistory[];
 }
 

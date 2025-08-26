@@ -47,9 +47,11 @@ export async function deleteManualJournalEntry(id: string) {
 
 
 export async function fetchInventoryData() {
-    const fetchedItems = db.prepare("SELECT * FROM products WHERE category != 'Accessories'").all();
+    const fetchedItems = db.prepare("SELECT * FROM products").all();
+    const fetchedAccessories = db.prepare('SELECT * FROM accessories').all();
     const fetchedVariants = db.prepare('SELECT * FROM variants').all();
     const fetchedHistory = db.prepare('SELECT * FROM history ORDER BY date DESC').all();
+    const fetchedAccessoryHistory = db.prepare('SELECT * FROM accessory_history ORDER BY date DESC').all();
     const fetchedChannelPrices = db.prepare('SELECT * FROM channel_prices').all() as any[];
 
     const historyMap = new Map<string, AdjustmentHistory[]>();
@@ -64,6 +66,20 @@ export async function fetchInventoryData() {
             date: new Date(entry.date)
         });
     }
+
+    const accessoryHistoryMap = new Map<string, AdjustmentHistory[]>();
+     for (const entry of fetchedAccessoryHistory as any[]) {
+        const key = entry.accessoryId.toString();
+        if (!accessoryHistoryMap.has(key)) {
+            accessoryHistoryMap.set(key, []);
+        }
+        accessoryHistoryMap.get(key)!.push({
+            ...entry,
+            id: entry.id.toString(),
+            date: new Date(entry.date)
+        });
+    }
+
 
     const channelPriceMap = new Map<string, ChannelPrice[]>();
     for (const cp of fetchedChannelPrices) {
@@ -100,7 +116,7 @@ export async function fetchInventoryData() {
                 ...item,
                 id: itemIdStr,
                 variants: (variantMap.get(itemIdStr) || []).map(v => ({...v, id: v.id.toString()})),
-                imageUrl: item.imageUrl
+                imageUrl: item.imageUrl,
             };
         }
         return {
@@ -110,11 +126,20 @@ export async function fetchInventoryData() {
             channelPrices: channelPriceMap.get(itemIdStr) || [],
             imageUrl: item.imageUrl,
         };
+    }).filter(item => item.category !== 'Accessories');
+
+    const fullAccessories: Accessory[] = (fetchedAccessories as any[]).map(item => {
+        const itemIdStr = item.id.toString();
+        return {
+            ...item,
+            id: itemIdStr,
+            history: accessoryHistoryMap.get(itemIdStr) || [],
+        };
     });
 
     const uniqueCategories = [...new Set(fullItems.map(item => item.category))].sort();
     
-    return { items: fullItems, categories: uniqueCategories };
+    return { items: fullItems, accessories: fullAccessories, categories: uniqueCategories };
 }
 
 export async function addProduct(itemData: any) {
@@ -676,4 +701,66 @@ export async function editReseller(id: number, data: Omit<Reseller, 'id'>) {
 
 export async function deleteReseller(id: number) {
     db.prepare('DELETE FROM resellers WHERE id = ?').run(id);
+}
+
+export async function addAccessory(accessory: Omit<Accessory, 'id' | 'history'>) {
+    const addStmt = db.prepare(`
+        INSERT INTO accessories (name, sku, stock, price, costPrice)
+        VALUES (@name, @sku, @stock, @price, @costPrice)
+    `);
+    const historyStmt = db.prepare(`
+        INSERT INTO accessory_history (accessoryId, date, change, reason, newStockLevel)
+        VALUES (?, ?, ?, ?, ?)
+    `);
+
+    db.transaction(() => {
+        const result = addStmt.run(accessory);
+        const accessoryId = result.lastInsertRowid;
+        if (accessory.stock > 0) {
+            historyStmt.run(accessoryId, new Date().toISOString(), accessory.stock, 'Initial Stock', accessory.stock);
+        }
+    })();
+}
+
+export async function updateAccessory(accessoryId: string, data: Omit<Accessory, 'id'| 'history'>) {
+    const updateStmt = db.prepare(`
+        UPDATE accessories SET name = @name, sku = @sku, stock = @stock, price = @price, costPrice = @costPrice
+        WHERE id = @id
+    `);
+    const historyStmt = db.prepare(`
+        INSERT INTO accessory_history (accessoryId, date, change, reason, newStockLevel)
+        VALUES (?, ?, ?, ?, ?)
+    `);
+    const getAccessoryStmt = db.prepare('SELECT stock FROM accessories WHERE id = ?');
+
+    db.transaction(() => {
+        const existing = getAccessoryStmt.get(accessoryId) as { stock: number };
+        const stockChange = data.stock - existing.stock;
+        
+        updateStmt.run({ ...data, id: accessoryId });
+
+        if (stockChange !== 0) {
+            historyStmt.run(accessoryId, new Date().toISOString(), stockChange, 'Stock adjustment during edit', data.stock);
+        }
+    })();
+}
+
+export async function adjustAccessoryStock(accessoryId: string, change: number, reason: string) {
+    if (change === 0) return;
+
+    db.transaction(() => {
+        const getStmt = db.prepare('SELECT stock FROM accessories WHERE id = ?');
+        const updateStmt = db.prepare('UPDATE accessories SET stock = ? WHERE id = ?');
+        const historyStmt = db.prepare(`
+            INSERT INTO accessory_history (accessoryId, date, change, reason, newStockLevel)
+            VALUES (?, ?, ?, ?, ?)
+        `);
+
+        const accessory = getStmt.get(accessoryId) as { stock: number };
+        if (accessory) {
+            const newStockLevel = accessory.stock + change;
+            updateStmt.run(newStockLevel, accessoryId);
+            historyStmt.run(accessoryId, new Date().toISOString(), change, reason, newStockLevel);
+        }
+    })();
 }
