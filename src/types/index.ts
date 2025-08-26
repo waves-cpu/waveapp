@@ -13,7 +13,6 @@ export const categories = [
     "Short Pants",
     "Boxer",
     "Caps",
-    "Accessories",
     "Sandals",
     "Bag"
 ].sort();
@@ -43,6 +42,17 @@ export interface AdjustmentHistory {
   change: number;
   reason: string;
   newStockLevel: number;
+}
+
+export interface Accessory {
+    id: string;
+    name: string;
+    sku?: string;
+    stock: number;
+    price?: number;
+    costPrice?: number;
+    size?: string;
+    history?: AdjustmentHistory[];
 }
 
 export interface ChannelPrice {
@@ -84,8 +94,9 @@ export interface Sale {
   transactionId?: string;
   paymentMethod?: string;
   resellerName?: string;
-  productId: string;
+  productId?: string;
   variantId?: string;
+  accessoryId?: string;
   channel: string;
   quantity: number;
   priceAtSale: number;

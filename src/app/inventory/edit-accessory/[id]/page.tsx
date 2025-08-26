@@ -9,7 +9,7 @@ import { useInventory } from "@/hooks/use-inventory";
 import { translations } from "@/types/language";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
-import type { InventoryItem } from "@/types";
+import type { Accessory } from "@/types";
 import { Skeleton } from "@/components/ui/skeleton";
 
 function EditAccessoryPageSkeleton() {
@@ -36,19 +36,19 @@ export default function EditAccessoryPage() {
     const { language } = useLanguage();
     const t = translations[language];
     const params = useParams();
-    const { items, loading: inventoryLoading } = useInventory(); 
-    const [item, setItem] = useState<InventoryItem | undefined>(undefined);
+    const { accessories, loading: inventoryLoading } = useInventory(); 
+    const [item, setItem] = useState<Accessory | undefined>(undefined);
     const [pageLoading, setPageLoading] = useState(true);
 
     const id = typeof params.id === 'string' ? params.id : '';
 
     useEffect(() => {
         if (!inventoryLoading && id) {
-            const foundItem = items.find(i => i.id === id);
+            const foundItem = accessories.find(i => i.id === id);
             setItem(foundItem);
             setPageLoading(false);
         }
-    }, [id, items, inventoryLoading]);
+    }, [id, accessories, inventoryLoading]);
 
 
     return (

@@ -2,7 +2,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
-import type { InventoryItem, AdjustmentHistory, InventoryItemVariant, Sale, Reseller, ManualJournalEntry } from '@/types';
+import type { InventoryItem, AdjustmentHistory, InventoryItemVariant, Sale, Reseller, ManualJournalEntry, Accessory } from '@/types';
 import { categories as allCategories } from '@/types';
 import {
   fetchInventoryData,
@@ -53,12 +53,18 @@ interface InventoryContextType {
   manualJournalEntries: ManualJournalEntry[];
   createManualJournalEntry: (entry: Omit<ManualJournalEntry, 'id' | 'type'>) => Promise<void>;
   deleteManualJournalEntry: (id: string) => Promise<void>;
+  // Accessories
+  accessories: Accessory[];
+  addAccessory: (accessory: Omit<Accessory, 'id'>) => Promise<void>;
+  updateAccessory: (accessoryId: string, accessoryData: Omit<Accessory, 'id'>) => Promise<void>;
+  adjustAccessoryStock: (accessoryId: string, change: number, reason: string) => Promise<void>;
 }
 
 const InventoryContext = createContext<InventoryContextType | undefined>(undefined);
 
 export const InventoryProvider = ({ children }: { children: ReactNode }) => {
   const [items, setItems] = useState<InventoryItem[]>([]);
+  const [accessories, setAccessories] = useState<Accessory[]>([]);
   const [categories, setCategories] = useState<string[]>(allCategories);
   const [allSales, setAllSales] = useState<Sale[]>([]);
   const [resellers, setResellers] = useState<Reseller[]>([]);
@@ -195,6 +201,21 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
     await updatePricesDb(updates);
     await fetchAllData();
   };
+  
+  // Placeholder accessory functions
+  const addAccessory = async (accessory: Omit<Accessory, 'id'>) => {
+    // To be implemented in inventory-service
+    console.log("Adding accessory:", accessory);
+  };
+  const updateAccessory = async (accessoryId: string, accessoryData: Omit<Accessory, 'id'>) => {
+    // To be implemented in inventory-service
+    console.log("Updating accessory:", accessoryId, accessoryData);
+  };
+  const adjustAccessoryStock = async (accessoryId: string, change: number, reason: string) => {
+     // To be implemented in inventory-service
+     console.log("Adjusting accessory stock:", accessoryId, change, reason);
+  };
+
 
   return (
     <InventoryContext.Provider value={{ 
@@ -223,6 +244,11 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
         manualJournalEntries,
         createManualJournalEntry,
         deleteManualJournalEntry,
+        // Accessories
+        accessories,
+        addAccessory,
+        updateAccessory,
+        adjustAccessoryStock,
       }}>
       {children}
     </InventoryContext.Provider>

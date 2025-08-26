@@ -133,6 +133,26 @@ const createSchema = () => {
       FOREIGN KEY (productId) REFERENCES products(id) ON DELETE CASCADE
     );
 
+     CREATE TABLE IF NOT EXISTS accessories (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        sku TEXT,
+        stock INTEGER NOT NULL,
+        price REAL,
+        costPrice REAL,
+        size TEXT
+    );
+
+     CREATE TABLE IF NOT EXISTS accessory_history (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        accessoryId INTEGER NOT NULL,
+        date TEXT NOT NULL,
+        change INTEGER NOT NULL,
+        reason TEXT NOT NULL,
+        newStockLevel INTEGER NOT NULL,
+        FOREIGN KEY (accessoryId) REFERENCES accessories(id) ON DELETE CASCADE
+    );
+
      CREATE TABLE IF NOT EXISTS channel_prices (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         product_id INTEGER,
@@ -161,15 +181,17 @@ const createSchema = () => {
         transactionId TEXT,
         paymentMethod TEXT,
         resellerName TEXT,
-        productId INTEGER NOT NULL,
+        productId INTEGER,
         variantId INTEGER,
+        accessoryId INTEGER,
         channel TEXT NOT NULL,
         quantity INTEGER NOT NULL,
         priceAtSale REAL NOT NULL,
         cogsAtSale REAL,
         saleDate TEXT NOT NULL,
         FOREIGN KEY (productId) REFERENCES products(id),
-        FOREIGN KEY (variantId) REFERENCES variants(id)
+        FOREIGN KEY (variantId) REFERENCES variants(id),
+        FOREIGN KEY (accessoryId) REFERENCES accessories(id)
     );
 
      CREATE TABLE IF NOT EXISTS resellers (

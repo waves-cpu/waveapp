@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useForm, useFieldArray } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Button } from '@/components/ui/button';
@@ -23,9 +23,7 @@ import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
 const formSchema = z.object({
-  id: z.string().optional(),
   name: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
-  category: z.string(), // Always "Accessories"
   sku: z.string().optional(),
   price: z.coerce.number().min(0, "Price must be non-negative."),
   stock: z.coerce.number().int().min(0, "Stock must be a non-negative integer."),
@@ -36,7 +34,7 @@ const formSchema = z.object({
 export function AddAccessoryForm() {
   const { language } = useLanguage();
   const t = translations[language];
-  const { addItem } = useInventory();
+  const { addAccessory } = useInventory();
   const { toast } = useToast();
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -45,7 +43,6 @@ export function AddAccessoryForm() {
     resolver: zodResolver(formSchema),
     defaultValues: {
         name: '',
-        category: 'Accessories',
         sku: '',
         price: undefined,
         stock: undefined,
@@ -56,7 +53,7 @@ export function AddAccessoryForm() {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsSubmitting(true);
     try {
-        await addItem({ ...values, hasVariants: false, imageUrl: '' });
+        await addAccessory(values);
         toast({
         title: t.addItemDialog.itemAdded,
         description: `${values.name} ${t.addItemDialog.hasBeenAdded}`,

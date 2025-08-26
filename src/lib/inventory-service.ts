@@ -2,7 +2,7 @@
 'use server';
 
 import { db } from './db';
-import type { InventoryItem, AdjustmentHistory, InventoryItemVariant, Sale, Reseller, ChannelPrice, ManualJournalEntry } from '@/types';
+import type { InventoryItem, AdjustmentHistory, InventoryItemVariant, Sale, Reseller, ChannelPrice, ManualJournalEntry, Accessory } from '@/types';
 import { format as formatDate, parseISO } from 'date-fns';
 
 // Settings Functions
@@ -47,7 +47,7 @@ export async function deleteManualJournalEntry(id: string) {
 
 
 export async function fetchInventoryData() {
-    const fetchedItems = db.prepare('SELECT * FROM products').all();
+    const fetchedItems = db.prepare("SELECT * FROM products WHERE category != 'Accessories'").all();
     const fetchedVariants = db.prepare('SELECT * FROM variants').all();
     const fetchedHistory = db.prepare('SELECT * FROM history ORDER BY date DESC').all();
     const fetchedChannelPrices = db.prepare('SELECT * FROM channel_prices').all() as any[];
@@ -454,7 +454,7 @@ export async function fetchAllSales(): Promise<Sale[]> {
             v.name as variantName,
             COALESCE(v.sku, p.sku) as sku
         FROM sales s
-        JOIN products p ON s.productId = p.id
+        LEFT JOIN products p ON s.productId = p.id
         LEFT JOIN variants v ON s.variantId = v.id
         ORDER BY s.saleDate DESC, s.id DESC
     `);

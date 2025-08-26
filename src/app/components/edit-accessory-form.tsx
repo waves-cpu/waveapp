@@ -21,12 +21,11 @@ import { translations } from '@/types/language';
 import { Card, CardContent } from '@/components/ui/card';
 import { useRouter } from 'next/navigation';
 import { useState, useMemo } from 'react';
-import type { InventoryItem } from '@/types';
+import type { Accessory } from '@/types';
 
 const formSchema = z.object({
   id: z.string(),
   name: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
-  category: z.string(), // Always "Accessories"
   sku: z.string().optional(),
   price: z.coerce.number().min(0, "Price must be non-negative."),
   stock: z.coerce.number().int().min(0, "Stock must be a non-negative integer."),
@@ -34,13 +33,13 @@ const formSchema = z.object({
 });
 
 interface EditAccessoryFormProps {
-    existingItem: InventoryItem;
+    existingItem: Accessory;
 }
 
 export function EditAccessoryForm({ existingItem }: EditAccessoryFormProps) {
   const { language } = useLanguage();
   const t = translations[language];
-  const { updateItem } = useInventory();
+  const { updateAccessory } = useInventory();
   const { toast } = useToast();
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -49,7 +48,6 @@ export function EditAccessoryForm({ existingItem }: EditAccessoryFormProps) {
     return {
         id: existingItem.id,
         name: existingItem.name,
-        category: existingItem.category,
         sku: existingItem.sku || '',
         price: existingItem.price ?? '',
         stock: existingItem.stock ?? '',
@@ -65,7 +63,7 @@ export function EditAccessoryForm({ existingItem }: EditAccessoryFormProps) {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsSubmitting(true);
     try {
-        await updateItem(values.id, { ...values, hasVariants: false, imageUrl: '' });
+        await updateAccessory(values.id, values);
         toast({
         title: "Aksesoris Diperbarui",
         description: `${values.name} telah berhasil diperbarui.`,
