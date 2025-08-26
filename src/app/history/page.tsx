@@ -85,8 +85,10 @@ export default function HistoryPage() {
       const processHistory = (history: AdjustmentHistory[], parentItem: InventoryItem, variant?: InventoryItemVariant) => {
         history.forEach(entry => {
             const reasonLower = entry.reason.toLowerCase();
-            const isSaleAdjustment = allSaleChannels.some(ch => reasonLower.startsWith(`sale (${ch})`) || reasonLower.startsWith(`cancelled sale (${ch})`));
+            // A more robust check for sales-related entries
+            const isSaleAdjustment = allSaleChannels.some(ch => reasonLower.startsWith(`sale (${ch})`) || reasonLower.startsWith(`cancelled sale (${ch})`) || reasonLower.startsWith(`cancelled transaction #${ch}`));
             const isInitialStock = reasonLower === 'initial stock';
+            
             if (!isSaleAdjustment && !isInitialStock && (entry.change !== 0 || reasonLower !== 'no change')) {
                  historyList.push({
                     type: 'adjustment',
@@ -515,4 +517,3 @@ export default function HistoryPage() {
     </AppLayout>
   );
 }
-
