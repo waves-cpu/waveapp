@@ -28,7 +28,7 @@ import { translations } from '@/types/language';
 import type { InventoryItem } from '@/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 
 const variantSchema = z.object({
   id: z.string(),
@@ -85,6 +85,13 @@ export function BulkEditVariantsDialog({ open, onOpenChange, item }: BulkEditVar
     onOpenChange(false);
   }
 
+  const handleCellClick = (e: React.MouseEvent<HTMLTableCellElement>) => {
+    const input = e.currentTarget.querySelector('input');
+    if (input) {
+      input.focus();
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl">
@@ -110,7 +117,7 @@ export function BulkEditVariantsDialog({ open, onOpenChange, item }: BulkEditVar
                     <TableBody>
                         {fields.map((field, index) => (
                             <TableRow key={field.id}>
-                                <TableCell>
+                                <TableCell onClick={handleCellClick}>
                                         <FormField
                                         control={form.control}
                                         name={`variants.${index}.name`}
@@ -122,7 +129,7 @@ export function BulkEditVariantsDialog({ open, onOpenChange, item }: BulkEditVar
                                         )}
                                     />
                                 </TableCell>
-                                <TableCell>
+                                <TableCell onClick={handleCellClick}>
                                     <FormField
                                         control={form.control}
                                         name={`variants.${index}.sku`}
@@ -134,7 +141,7 @@ export function BulkEditVariantsDialog({ open, onOpenChange, item }: BulkEditVar
                                         )}
                                     />
                                 </TableCell>
-                                <TableCell>
+                                <TableCell onClick={handleCellClick}>
                                     <FormField
                                         control={form.control}
                                         name={`variants.${index}.price`}
@@ -146,7 +153,7 @@ export function BulkEditVariantsDialog({ open, onOpenChange, item }: BulkEditVar
                                         )}
                                     />
                                 </TableCell>
-                                <TableCell>
+                                <TableCell onClick={handleCellClick}>
                                     <FormField
                                         control={form.control}
                                         name={`variants.${index}.stock`}
