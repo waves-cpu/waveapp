@@ -13,8 +13,6 @@ import { translations } from '@/types/language';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import Link from 'next/link';
 import { AppLayout } from '@/app/components/app-layout';
-import { useInventory } from '@/hooks/use-inventory';
-import type { InventoryItem } from '@/types';
 
 function AccessoriesPageContent() {
   const { language } = useLanguage();
@@ -22,12 +20,6 @@ function AccessoriesPageContent() {
 
   const [isUpdateStockOpen, setUpdateStockOpen] = useState(false);
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
-
-  const { items, loading } = useInventory();
-
-  const accessoriesItems = useMemo(() => {
-    return items.filter(item => item.category === 'Accessories');
-  }, [items]);
 
   const handleUpdateStock = (itemId: string) => {
     setSelectedItemId(itemId);
@@ -56,17 +48,7 @@ function AccessoriesPageContent() {
         <div className="flex-grow">
             <InventoryTable
                 onUpdateStock={handleUpdateStock}
-                // We pass the filtered items to the table
-                // This assumes we add a prop to InventoryTable to accept items
-                // For now, let's assume InventoryTable is modified or we create a new one
-                // To keep it simple, I will modify InventoryTable to accept an optional `items` prop
-                // But InventoryTable uses useInventory hook internally, so I need to refactor it.
-                // A better approach is to not reuse InventoryTable if it's not designed for it.
-                // Let's create a new component or just render the table here.
-                // The InventoryTable component already has filtering logic,
-                // it would be better to pass a filter prop to it.
-                // Let's check InventoryTable.
-                // It filters internally. I can add a new prop `category` to filter by.
+                category="Accessories"
             />
         </div>
       </main>

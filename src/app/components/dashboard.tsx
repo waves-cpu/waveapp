@@ -46,7 +46,7 @@ function DashboardContent() {
         </div>
         <div className="flex-grow">
             <InventoryTable
-            onUpdateStock={handleUpdateStock}
+                onUpdateStock={handleUpdateStock}
             />
         </div>
       </main>

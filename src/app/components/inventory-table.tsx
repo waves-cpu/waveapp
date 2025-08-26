@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useInventory } from '@/hooks/use-inventory';
 import {
   Table,
@@ -54,6 +54,7 @@ import Dashboard from './dashboard';
 
 interface InventoryTableProps {
   onUpdateStock: (itemId: string) => void;
+  category?: string;
 }
 
 function InventoryTableSkeleton() {
@@ -178,10 +179,10 @@ const PriceWithDetails = ({ item }: { item: InventoryItem | InventoryItemVariant
 };
 
 
-export function InventoryTable({ onUpdateStock }: InventoryTableProps) {
+export function InventoryTable({ onUpdateStock, category }: InventoryTableProps) {
   const { items, loading } = useInventory();
   const [searchTerm, setSearchTerm] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
+  const [categoryFilter, setCategoryFilter] = useState<string | null>(category || null);
   const [stockFilter, setStockFilter] = useState<'all' | 'low' | 'empty'>('all');
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
@@ -190,6 +191,10 @@ export function InventoryTable({ onUpdateStock }: InventoryTableProps) {
   const [isBulkEditDialogOpen, setBulkEditDialogOpen] = useState(false);
   const [selectedBulkEditItem, setSelectedBulkEditItem] = useState<InventoryItem | null>(null);
   const router = useRouter();
+
+  useEffect(() => {
+    setCategoryFilter(category || null);
+  }, [category]);
 
   const handleBulkEdit = (item: InventoryItem) => {
     setSelectedBulkEditItem(item);
@@ -245,8 +250,9 @@ export function InventoryTable({ onUpdateStock }: InventoryTableProps) {
   }, [filteredItems, currentPage, itemsPerPage]);
 
   const stockFilterCounts = useMemo(() => {
+    const sourceItems = categoryFilter ? items.filter(i => i.category === categoryFilter) : items;
     const counts = { all: 0, low: 0, empty: 0 };
-    items.forEach(item => {
+    sourceItems.forEach(item => {
       counts.all++;
       if (item.variants && item.variants.length > 0) {
         if (item.variants.some(v => v.stock === 0)) counts.empty++;
@@ -257,7 +263,7 @@ export function InventoryTable({ onUpdateStock }: InventoryTableProps) {
       }
     });
     return counts;
-  }, [items]);
+  }, [items, categoryFilter]);
 
   if (loading) {
       return <InventoryTableSkeleton />;
@@ -278,19 +284,21 @@ export function InventoryTable({ onUpdateStock }: InventoryTableProps) {
                     className="pl-10 w-full md:w-96"
                     />
                 </div>
-                <Select onValueChange={(value) => setCategoryFilter(value === 'all' ? null : value)} defaultValue="all">
-                    <SelectTrigger className="w-full md:w-[180px]">
-                    <SelectValue placeholder={t.inventoryTable.selectCategoryPlaceholder} />
-                    </SelectTrigger>
-                    <SelectContent>
-                    <SelectItem value="all">{t.inventoryTable.allCategories}</SelectItem>
-                    {allCategories.map((category) => (
-                        <SelectItem key={category} value={category}>
-                        {category}
-                        </SelectItem>
-                    ))}
-                    </SelectContent>
-                </Select>
+                {!category && (
+                    <Select onValueChange={(value) => setCategoryFilter(value === 'all' ? null : value)} defaultValue="all">
+                        <SelectTrigger className="w-full md:w-[180px]">
+                        <SelectValue placeholder={t.inventoryTable.selectCategoryPlaceholder} />
+                        </SelectTrigger>
+                        <SelectContent>
+                        <SelectItem value="all">{t.inventoryTable.allCategories}</SelectItem>
+                        {allCategories.map((category) => (
+                            <SelectItem key={category} value={category}>
+                            {category}
+                            </SelectItem>
+                        ))}
+                        </SelectContent>
+                    </Select>
+                )}
             </div>
         </div>
         <div className="px-4 py-2 flex items-center gap-2 border-b border-dashed">
@@ -505,8 +513,3 @@ export function InventoryTable({ onUpdateStock }: InventoryTableProps) {
     </>
   );
 }
-
-    
-
-    
-
