@@ -304,13 +304,13 @@ export function InventoryTable({ onUpdateStock, category }: InventoryTableProps)
         </div>
         <div className="px-4 py-2 flex items-center gap-2 border-b border-dashed">
             <Button variant={stockFilter === 'all' ? 'secondary' : 'ghost'} size="sm" onClick={() => setStockFilter('all')}>
-                Semua <Badge variant="secondary" className="ml-2">{stockFilterCounts.all}</Badge>
+                {t.inventoryTable.allStock} <Badge variant="secondary" className="ml-2">{stockFilterCounts.all}</Badge>
             </Button>
             <Button variant={stockFilter === 'low' ? 'secondary' : 'ghost'} size="sm" onClick={() => setStockFilter('low')}>
-                Stok Menipis <Badge variant="secondary" className="ml-2">{stockFilterCounts.low}</Badge>
+                {t.inventoryTable.lowStock} <Badge variant="secondary" className="ml-2">{stockFilterCounts.low}</Badge>
             </Button>
             <Button variant={stockFilter === 'empty' ? 'secondary' : 'ghost'} size="sm" onClick={() => setStockFilter('empty')}>
-                Stok Kosong <Badge variant="secondary" className="ml-2">{stockFilterCounts.empty}</Badge>
+                {t.inventoryTable.emptyStock} <Badge variant="secondary" className="ml-2">{stockFilterCounts.empty}</Badge>
             </Button>
         </div>
       </div>

@@ -79,6 +79,9 @@ export const translations = {
             viewHistory: "View History",
             noItems: "No items found.",
             editProduct: "Edit Product",
+            allStock: "All",
+            lowStock: "Low Stock",
+            emptyStock: "Empty Stock",
         },
         addItemDialog: {
             title: "Add New Item",
@@ -366,6 +369,9 @@ export const translations = {
             viewHistory: "Lihat Riwayat",
             noItems: "Tidak ada barang ditemukan.",
             editProduct: "Ubah Produk",
+            allStock: "Semua",
+            lowStock: "Stok Menipis",
+            emptyStock: "Stok Kosong",
         },
         addItemDialog: {
             title: "Tambah Barang Baru",
