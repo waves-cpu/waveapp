@@ -35,7 +35,7 @@ import {
   Store,
   ShoppingBag,
   Edit,
-  Paperclip,
+  Tags,
 } from 'lucide-react';
 import type { InventoryItem, InventoryItemVariant } from '@/types';
 import { categories as allCategories } from '@/types';
@@ -356,7 +356,7 @@ export function InventoryTable({ onUpdateStock, category }: InventoryTableProps)
                                         )}
                                         {category === 'Accessories' && (
                                             <div className="flex h-10 w-10 items-center justify-center rounded-sm shrink-0 bg-muted/50">
-                                                 <Paperclip className="h-5 w-5 text-gray-400" />
+                                                 <Tags className="h-5 w-5 text-gray-400" />
                                             </div>
                                         )}
                                         <div>
@@ -438,7 +438,7 @@ export function InventoryTable({ onUpdateStock, category }: InventoryTableProps)
                                     )}
                                     {category === 'Accessories' && (
                                         <div className="flex h-10 w-10 items-center justify-center rounded-sm shrink-0 bg-muted/50">
-                                            <Paperclip className="h-5 w-5 text-gray-400" />
+                                            <Tags className="h-5 w-5 text-gray-400" />
                                         </div>
                                     )}
                                     <div>
@@ -528,4 +528,5 @@ export function InventoryTable({ onUpdateStock, category }: InventoryTableProps)
     </>
   );
 }
+
 

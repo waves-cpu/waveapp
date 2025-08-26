@@ -38,7 +38,7 @@ import {
   Scale,
   ArchiveIcon,
   Sheet,
-  Paperclip,
+  Tags,
 } from 'lucide-react';
 import { Logo } from './logo';
 import { Separator } from '@/components/ui/separator';
@@ -85,7 +85,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                                <SidebarMenuItem>
                                   <Link href="/inventory/accessories">
                                       <SidebarMenuButton variant="ghost" size="sm" isActive={pathname === '/inventory/accessories'}>
-                                          <Paperclip />
+                                          <Tags />
                                           {t.dashboard.accessories}
                                       </SidebarMenuButton>
                                   </Link>
