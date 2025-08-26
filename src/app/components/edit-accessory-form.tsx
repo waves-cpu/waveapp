@@ -160,7 +160,7 @@ export function EditAccessoryForm({ existingItem }: EditAccessoryFormProps) {
                 <div className="flex justify-end gap-2 border-t pt-6">
                     <Button type="button" variant="ghost" onClick={() => router.push('/inventory/accessories')} disabled={isSubmitting}>{t.common.cancel}</Button>
                     <Button type="submit" disabled={isSubmitting}>
-                        {isSubmitting ? 'Menyimpan...' : t.common.saveChanges}
+                        {isSubmitting ? t.common.saving : t.common.saveChanges}
                     </Button>
                 </div>
             </form>

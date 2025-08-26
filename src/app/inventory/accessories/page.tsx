@@ -41,7 +41,7 @@ function AccessoriesPageContent() {
                  <Button asChild size="sm" variant="outline">
                     <Link href="/inventory/accessories/history">
                         <History className="mr-2 h-4 w-4" />
-                        Riwayat
+                        {t.stockHistory.title}
                     </Link>
                 </Button>
                 <Button asChild size="sm">

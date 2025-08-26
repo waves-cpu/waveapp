@@ -57,7 +57,7 @@ export default function EditAccessoryPage() {
                 <div className="w-full max-w-4xl">
                     <div className="flex items-center gap-4 mb-6">
                         <SidebarTrigger className="md:hidden" />
-                        <h1 className="text-lg font-bold">Ubah Aksesoris</h1>
+                        <h1 className="text-lg font-bold">{t.inventoryTable.editProduct}</h1>
                     </div>
                     {pageLoading ? (
                         <EditAccessoryPageSkeleton />

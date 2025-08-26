@@ -202,7 +202,7 @@ export default function AccessoryHistoryPage() {
         <div className="flex items-center gap-4">
           <SidebarTrigger className="md:hidden" />
           <h1 className="text-lg md:text-xl font-bold font-headline text-foreground">
-            Riwayat Stok Aksesoris
+            {t.stockHistory.title} ({t.dashboard.accessories})
           </h1>
         </div>
         <div className="bg-card rounded-lg border shadow-sm">
@@ -381,4 +381,3 @@ export default function AccessoryHistoryPage() {
     </AppLayout>
   );
 }
-
