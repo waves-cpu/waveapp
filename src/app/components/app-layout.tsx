@@ -38,6 +38,7 @@ import {
   Scale,
   ArchiveIcon,
   Sheet,
+  Paperclip,
 } from 'lucide-react';
 import { Logo } from './logo';
 import { Separator } from '@/components/ui/separator';
@@ -78,6 +79,14 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                                       <SidebarMenuButton variant="ghost" size="sm" isActive={pathname === '/'}>
                                           <Home />
                                           {t.dashboard.myProducts}
+                                      </SidebarMenuButton>
+                                  </Link>
+                              </SidebarMenuItem>
+                               <SidebarMenuItem>
+                                  <Link href="/inventory/accessories">
+                                      <SidebarMenuButton variant="ghost" size="sm" isActive={pathname === '/inventory/accessories'}>
+                                          <Paperclip />
+                                          {t.dashboard.accessories}
                                       </SidebarMenuButton>
                                   </Link>
                               </SidebarMenuItem>

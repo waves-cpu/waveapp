@@ -13,10 +13,10 @@ export const categories = [
     "Short Pants",
     "Boxer",
     "Caps",
-    "Accecoris",
+    "Accessories",
     "Sandals",
     "Bag"
-];
+].sort();
 
 export const chartOfAccounts = [
     "Piutang Usaha / Kas",
