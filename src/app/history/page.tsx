@@ -82,7 +82,7 @@ export default function HistoryPage() {
       const processHistory = (history: AdjustmentHistory[], parentItem: InventoryItem, variant?: InventoryItemVariant) => {
         history.forEach(entry => {
             const reasonLower = entry.reason.toLowerCase();
-            const isSaleAdjustment = allSaleChannels.some(ch => reasonLower.startsWith(`sale (${ch})`) || reasonLower.startsWith(`cancelled sale (${ch})`) || reasonLower.startsWith(`cancelled transaction #${ch}`));
+            const isSaleAdjustment = allSaleChannels.some(ch => reasonLower.startsWith(`sale (${ch})`) || reasonLower.startsWith(`cancelled sale (${ch})`) || reasonLower.startsWith(`cancelled transaction #${id}`));
             const isInitialStock = reasonLower === 'initial stock';
             
             if (!isSaleAdjustment && !isInitialStock && (entry.change !== 0 || reasonLower !== 'no change')) {
@@ -151,8 +151,8 @@ export default function HistoryPage() {
   }, [allHistory]);
 
 
-  const filteredHistory = useMemo(() => {
-    const filtered = allHistory
+  const baseFilteredHistory = useMemo(() => {
+    return allHistory
       .filter(entry => {
         if (!categoryFilter) return true;
         if (entry.type === 'sales') return true; 
@@ -173,8 +173,24 @@ export default function HistoryPage() {
       .filter(entry => {
           const entryDate = new Date(entry.date);
           return entryDate.getFullYear() === selectedYear && entryDate.getMonth() === selectedMonth;
-      })
-      .filter(entry => {
+      });
+  }, [allHistory, categoryFilter, searchTerm, selectedMonth, selectedYear]);
+
+  const adjustmentCounts = useMemo(() => {
+    const counts = { all: baseFilteredHistory.length, in: 0, out: 0 };
+    baseFilteredHistory.forEach(entry => {
+      if (entry.type === 'adjustment') {
+        if (entry.change > 0) counts.in++;
+        else if (entry.change < 0) counts.out++;
+      } else if (entry.type === 'sales') {
+        counts.out++;
+      }
+    });
+    return counts;
+  }, [baseFilteredHistory]);
+  
+  const filteredHistory = useMemo(() => {
+    const filtered = baseFilteredHistory.filter(entry => {
         if (adjustmentTypeFilter === 'all') return true;
         const change = entry.type === 'adjustment' ? entry.change : -entry.totalItems;
         if (adjustmentTypeFilter === 'in') return change > 0;
@@ -184,7 +200,7 @@ export default function HistoryPage() {
 
       setCurrentPage(1);
       return filtered;
-  }, [allHistory, categoryFilter, searchTerm, selectedMonth, selectedYear, adjustmentTypeFilter]);
+  }, [baseFilteredHistory, adjustmentTypeFilter]);
 
   const totalPages = Math.ceil(filteredHistory.length / itemsPerPage);
   
@@ -328,13 +344,13 @@ export default function HistoryPage() {
             </div>
              <div className="px-1 py-2 flex items-center gap-2 border-b border-dashed">
                 <Button variant={adjustmentTypeFilter === 'all' ? 'secondary' : 'ghost'} size="sm" onClick={() => setAdjustmentTypeFilter('all')}>
-                    Semua
+                    Semua <Badge variant="secondary" className="ml-2">{adjustmentCounts.all}</Badge>
                 </Button>
                 <Button variant={adjustmentTypeFilter === 'in' ? 'secondary' : 'ghost'} size="sm" onClick={() => setAdjustmentTypeFilter('in')}>
-                    Stok Masuk
+                    Stok Masuk <Badge variant="secondary" className="ml-2">{adjustmentCounts.in}</Badge>
                 </Button>
                 <Button variant={adjustmentTypeFilter === 'out' ? 'secondary' : 'ghost'} size="sm" onClick={() => setAdjustmentTypeFilter('out')}>
-                    Stok Keluar
+                    Stok Keluar <Badge variant="secondary" className="ml-2">{adjustmentCounts.out}</Badge>
                 </Button>
             </div>
           </div>
