@@ -84,7 +84,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                               </SidebarMenuItem>
                                <SidebarMenuItem>
                                   <Link href="/inventory/accessories">
-                                      <SidebarMenuButton variant="ghost" size="sm" isActive={pathname === '/inventory/accessories'}>
+                                      <SidebarMenuButton variant="ghost" size="sm" isActive={pathname.startsWith('/inventory/accessories')}>
                                           <Tags />
                                           {t.dashboard.accessories}
                                       </SidebarMenuButton>
