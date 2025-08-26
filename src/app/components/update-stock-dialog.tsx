@@ -36,7 +36,7 @@ interface UpdateStockDialogProps {
 }
 
 export function UpdateStockDialog({ open, onOpenChange, itemId }: UpdateStockDialogProps) {
-  const { updateStock, getItem } = useInventory();
+  const { updateStock, items } = useInventory();
   const { toast } = useToast();
   const { language } = useLanguage();
   const t = translations[language];
@@ -54,10 +54,24 @@ export function UpdateStockDialog({ open, onOpenChange, itemId }: UpdateStockDia
     },
   });
 
-  const parentItem = itemId ? getItem(itemId) : null;
-  const item = parentItem
-    ? (parentItem.variants?.find(v => v.id === itemId) || (parentItem.id === itemId ? parentItem : undefined))
-    : null;
+  const item: (InventoryItem | InventoryItemVariant) | undefined = itemId ? (() => {
+    for (const product of items) {
+      if (product.id === itemId) {
+        return product;
+      }
+      if (product.variants) {
+        const foundVariant = product.variants.find(v => v.id === itemId);
+        if (foundVariant) {
+            return {
+                ...foundVariant,
+                parentName: product.name,
+            };
+        }
+      }
+    }
+    return undefined;
+  })() : undefined;
+  
   const stock = item?.stock;
 
 
@@ -80,12 +94,15 @@ export function UpdateStockDialog({ open, onOpenChange, itemId }: UpdateStockDia
 
     onOpenChange(false);
   }
+  
+  const displayName = item && 'parentName' in item ? `${item.parentName} - ${item.name}` : item?.name;
+
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>{t.updateStockDialog.title} {item?.name}</DialogTitle>
+          <DialogTitle>{t.updateStockDialog.title} {displayName}</DialogTitle>
           <DialogDescription>
              {t.updateStockDialog.description} {stock}
           </DialogDescription>
