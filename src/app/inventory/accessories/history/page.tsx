@@ -21,7 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Search, Calendar as CalendarIcon, Eye, ShoppingCart, ShoppingBag, FileDown } from 'lucide-react';
+import { Search, Calendar as CalendarIcon, Eye, ShoppingCart, ShoppingBag, FileDown, Tags } from 'lucide-react';
 import type { InventoryItem, AdjustmentHistory, InventoryItemVariant, Sale } from '@/types';
 import { useLanguage } from '@/hooks/use-language';
 import { translations } from '@/types/language';
@@ -293,19 +293,9 @@ export default function AccessoryHistoryPage() {
                     <TableRow key={index}>
                         <TableCell>
                             <div className="flex items-center gap-4">
-                                {entry.imageUrl ? (
-                                <Image 
-                                    src={entry.imageUrl} 
-                                    alt={entry.itemName!} 
-                                    width={40} height={40} 
-                                    className="rounded-sm" 
-                                    data-ai-hint="product image"
-                                />
-                                ) : (
                                 <div className="flex h-10 w-10 items-center justify-center rounded-sm bg-muted">
-                                    <ShoppingBag className="h-5 w-5 text-muted-foreground" />
+                                    <Tags className="h-5 w-5 text-muted-foreground" />
                                 </div>
-                                )}
                                 <div>
                                     <div className="font-medium text-sm">{entry.itemName}</div>
                                     {entry.variantName && (
@@ -391,3 +381,4 @@ export default function AccessoryHistoryPage() {
     </AppLayout>
   );
 }
+
