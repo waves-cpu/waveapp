@@ -57,22 +57,31 @@ export function UpdateStockDialog({ open, onOpenChange, itemId }: UpdateStockDia
   const { item, displayName, stock } = React.useMemo(() => {
     if (!itemId) return { item: undefined, displayName: '', stock: undefined };
 
+    let foundItem: InventoryItem | InventoryItemVariant | undefined;
+    let foundDisplayName = '';
+    let foundStock: number | undefined;
+
     for (const product of items) {
-      if (product.id === itemId) {
-        return { item: product, displayName: product.name, stock: product.stock };
-      }
-      if (product.variants) {
-        const foundVariant = product.variants.find(v => v.id === itemId);
-        if (foundVariant) {
-          return {
-            item: foundVariant,
-            displayName: `${product.name} - ${foundVariant.name}`,
-            stock: foundVariant.stock
-          };
+        // Check if the item is a simple product
+        if (product.id === itemId) {
+            foundItem = product;
+            foundDisplayName = product.name;
+            foundStock = product.stock;
+            break;
         }
-      }
+        // Check if the item is a variant
+        if (product.variants) {
+            const variant = product.variants.find(v => v.id === itemId);
+            if (variant) {
+                foundItem = variant;
+                foundDisplayName = `${product.name} - ${variant.name}`;
+                foundStock = variant.stock;
+                break;
+            }
+        }
     }
-    return { item: undefined, displayName: '', stock: undefined };
+    
+    return { item: foundItem, displayName: foundDisplayName, stock: foundStock };
   }, [itemId, items]);
 
 
@@ -90,7 +99,7 @@ export function UpdateStockDialog({ open, onOpenChange, itemId }: UpdateStockDia
     updateStock(itemId, change, values.reason);
     toast({
     title: t.updateStockDialog.stockUpdated,
-    description: `${t.updateStockDialog.stockFor} ${item?.name} ${t.updateStockDialog.hasBeenAdjusted}`,
+    description: `${t.updateStockDialog.stockFor} ${displayName} ${t.updateStockDialog.hasBeenAdjusted}`,
     });
 
     onOpenChange(false);
