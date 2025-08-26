@@ -78,14 +78,14 @@ export default function HistoryPage() {
 
   const allHistory = useMemo((): HistoryEntry[] => {
     const historyList: HistoryEntry[] = [];
-    const onlineSaleChannels = ['shopee', 'tiktok', 'lazada'];
+    const allSaleChannels = ['shopee', 'tiktok', 'lazada', 'pos', 'reseller'];
 
-    // Process adjustments first
+    // Process adjustments first, filtering out sales-related adjustments
     items.forEach(item => {
       const processHistory = (history: AdjustmentHistory[], parentItem: InventoryItem, variant?: InventoryItemVariant) => {
         history.forEach(entry => {
-            const isOnlineSale = onlineSaleChannels.some(ch => entry.reason.toLowerCase().includes(`sale (${ch})`));
-            if (!isOnlineSale && (entry.change !== 0 || entry.reason.toLowerCase() !== 'no change')) {
+            const isSaleAdjustment = allSaleChannels.some(ch => entry.reason.toLowerCase().startsWith(`sale (${ch})`));
+            if (!isSaleAdjustment && (entry.change !== 0 || entry.reason.toLowerCase() !== 'no change')) {
                  historyList.push({
                     type: 'adjustment',
                     date: new Date(entry.date),
@@ -111,27 +111,25 @@ export default function HistoryPage() {
       }
     });
 
-    // Group and aggregate online sales
+    // Group and aggregate all sales
     const groupedSales = new Map<string, { date: Date; channel: string; totalItems: number; sales: Sale[] }>();
     
-    allSales
-        .filter(sale => onlineSaleChannels.includes(sale.channel))
-        .forEach(sale => {
-            const saleDate = parseISO(sale.saleDate);
-            const key = `${format(saleDate, 'yyyy-MM-dd')}-${sale.channel}`;
-            
-            if (!groupedSales.has(key)) {
-                groupedSales.set(key, {
-                    date: saleDate,
-                    channel: sale.channel,
-                    totalItems: 0,
-                    sales: [],
-                });
-            }
-            const group = groupedSales.get(key)!;
-            group.totalItems += sale.quantity;
-            group.sales.push(sale);
-        });
+    allSales.forEach(sale => {
+        const saleDate = parseISO(sale.saleDate);
+        const key = `${format(saleDate, 'yyyy-MM-dd')}-${sale.channel}`;
+        
+        if (!groupedSales.has(key)) {
+            groupedSales.set(key, {
+                date: saleDate,
+                channel: sale.channel,
+                totalItems: 0,
+                sales: [],
+            });
+        }
+        const group = groupedSales.get(key)!;
+        group.totalItems += sale.quantity;
+        group.sales.push(sale);
+    });
 
     groupedSales.forEach(group => {
         historyList.push({
