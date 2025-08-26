@@ -84,9 +84,10 @@ export default function HistoryPage() {
     items.forEach(item => {
       const processHistory = (history: AdjustmentHistory[], parentItem: InventoryItem, variant?: InventoryItemVariant) => {
         history.forEach(entry => {
-            const isSaleAdjustment = allSaleChannels.some(ch => entry.reason.toLowerCase().startsWith(`sale (${ch})`));
-            const isInitialStock = entry.reason.toLowerCase() === 'initial stock';
-            if (!isSaleAdjustment && !isInitialStock && (entry.change !== 0 || entry.reason.toLowerCase() !== 'no change')) {
+            const reasonLower = entry.reason.toLowerCase();
+            const isSaleAdjustment = allSaleChannels.some(ch => reasonLower.startsWith(`sale (${ch})`) || reasonLower.startsWith(`cancelled sale (${ch})`));
+            const isInitialStock = reasonLower === 'initial stock';
+            if (!isSaleAdjustment && !isInitialStock && (entry.change !== 0 || reasonLower !== 'no change')) {
                  historyList.push({
                     type: 'adjustment',
                     date: new Date(entry.date),
@@ -199,11 +200,14 @@ export default function HistoryPage() {
     let totalIn = 0;
     let totalOut = 0;
     filteredHistory.forEach(entry => {
-        const change = entry.type === 'adjustment' ? entry.change : -entry.totalItems;
-        if (change > 0) {
-            totalIn += change;
-        } else {
-            totalOut += Math.abs(change);
+        if (entry.type === 'adjustment') {
+            if (entry.change > 0) {
+                totalIn += entry.change;
+            } else {
+                totalOut += Math.abs(entry.change);
+            }
+        } else if (entry.type === 'sales') {
+            totalOut += entry.totalItems;
         }
     });
     const netChange = totalIn - totalOut;
