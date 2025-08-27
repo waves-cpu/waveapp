@@ -155,7 +155,7 @@ export function BulkEditVariantsDialog({ open, onOpenChange, item }: BulkEditVar
                     <ScrollArea className="h-64">
                     <div className="divide-y">
                     {fields.map((field, index) => (
-                        <div key={field.id} className="flex items-center justify-between p-3 py-4">
+                        <div key={field.id} className="flex items-center justify-between p-3 py-5">
                             <div className="w-[60%]">
                                 <p className="font-medium text-sm">{field.name}</p>
                                 {field.sku && <p className="text-xs text-muted-foreground">SKU: {field.sku}</p>}
