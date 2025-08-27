@@ -180,10 +180,10 @@ export default function HistoryPage() {
     const counts = { all: baseFilteredHistory.length, in: 0, out: 0 };
     baseFilteredHistory.forEach(entry => {
       if (entry.type === 'adjustment') {
-        if (entry.change > 0) counts.in++;
-        else if (entry.change < 0) counts.out++;
+        if (entry.change > 0) counts.in += entry.change;
+        else if (entry.change < 0) counts.out += Math.abs(entry.change);
       } else if (entry.type === 'sales') {
-        counts.out++;
+        counts.out += entry.totalItems;
       }
     });
     return counts;
@@ -458,7 +458,7 @@ export default function HistoryPage() {
             </TableBody>
             <TableFooter>
                 <TableRow>
-                    <TableCell colSpan={3} className="font-semibold">Total Perubahan:</TableCell>
+                    <TableCell colSpan={3} className="font-semibold text-left">Total Perubahan:</TableCell>
                     <TableCell colSpan={2} className="font-semibold">
                         <div className="flex items-center justify-between flex-wrap gap-y-1">
                             <span className="text-green-600">Masuk: {historyTotals.totalIn}</span>
