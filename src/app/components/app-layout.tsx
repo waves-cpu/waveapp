@@ -164,7 +164,6 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                                       </SidebarMenuButton>
                                   </Link>
                               </SidebarMenuItem>
-                               {hasArchivedItems && (
                                 <SidebarMenuItem>
                                     <Link href="/inventory/archived">
                                         <SidebarMenuButton variant="ghost" size="sm" isActive={pathname === '/inventory/archived'}>
@@ -173,7 +172,6 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                                         </SidebarMenuButton>
                                     </Link>
                                 </SidebarMenuItem>
-                               )}
                               <SidebarMenuItem>
                                   <Link href="/history">
                                       <SidebarMenuButton variant="ghost" size="sm" isActive={pathname === '/history'}>
