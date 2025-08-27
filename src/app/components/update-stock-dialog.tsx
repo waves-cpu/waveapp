@@ -155,3 +155,4 @@ export function UpdateStockDialog({ open, onOpenChange, itemId }: UpdateStockDia
     </Dialog>
   );
 }
+
