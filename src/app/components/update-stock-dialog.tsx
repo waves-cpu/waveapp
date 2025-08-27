@@ -100,11 +100,11 @@ export function UpdateStockDialog({ open, onOpenChange, itemId }: UpdateStockDia
         <DialogHeader>
           <DialogTitle>{t.updateStockDialog.title}</DialogTitle>
           <DialogDescription>
-            <p className='font-semibold text-foreground'>{parentName}</p>
-            <p>
+            <div className='font-semibold text-foreground'>{parentName}</div>
+            <div>
               {variantName ? `${variantName}: ` : ''}
               {t.updateStockDialog.description} {stock ?? 0}
-            </p>
+            </div>
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
