@@ -110,8 +110,10 @@ export function UpdateStockDialog({ open, onOpenChange, itemId }: UpdateStockDia
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>{t.updateStockDialog.title} {displayName}</DialogTitle>
+          <DialogTitle>{t.updateStockDialog.title}</DialogTitle>
           <DialogDescription>
+             {displayName}
+             <br />
              {t.updateStockDialog.description} {stock ?? 0}
           </DialogDescription>
         </DialogHeader>

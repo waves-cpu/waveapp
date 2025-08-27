@@ -36,7 +36,7 @@ interface UpdateStockDialogAccessoriesProps {
 }
 
 export function UpdateStockDialogAccessories({ open, onOpenChange, itemId }: UpdateStockDialogAccessoriesProps) {
-  const { updateStock, items } = useInventory();
+  const { adjustAccessoryStock, accessories } = useInventory();
   const { toast } = useToast();
   const { language } = useLanguage();
   const t = translations[language];
@@ -56,9 +56,9 @@ export function UpdateStockDialogAccessories({ open, onOpenChange, itemId }: Upd
   
   const { item, stock } = React.useMemo(() => {
     if (!itemId) return { item: undefined, stock: undefined };
-    const foundItem = items.find(i => i.id === itemId && i.category === 'Accessories');
+    const foundItem = accessories.find(i => i.id === itemId);
     return { item: foundItem, stock: foundItem?.stock };
-  }, [itemId, items]);
+  }, [itemId, accessories]);
 
 
   useEffect(() => {
@@ -72,7 +72,7 @@ export function UpdateStockDialogAccessories({ open, onOpenChange, itemId }: Upd
     
     const change = values.stockChange;
     
-    updateStock(itemId, change, values.reason);
+    adjustAccessoryStock(itemId, change, values.reason);
     toast({
       title: t.updateStockDialog.stockUpdated,
       description: `${t.updateStockDialog.stockFor} ${item?.name} ${t.updateStockDialog.hasBeenAdjusted}`,

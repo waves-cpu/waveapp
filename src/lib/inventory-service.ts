@@ -765,3 +765,7 @@ export async function adjustAccessoryStock(accessoryId: string, change: number, 
         }
     })();
 }
+
+export async function archiveProduct(itemId: string, isArchived: boolean) {
+    db.prepare('UPDATE products SET isArchived = ? WHERE id = ?').run(isArchived ? 1 : 0, itemId);
+}

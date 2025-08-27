@@ -27,6 +27,7 @@ import {
   addAccessory as addAccessoryDb,
   updateAccessory as updateAccessoryDb,
   adjustAccessoryStock as adjustAccessoryStockDb,
+  archiveProduct as archiveProductDb,
 } from '@/lib/inventory-service';
 
 
@@ -53,6 +54,7 @@ interface InventoryContextType {
   deleteReseller: (id: number) => Promise<void>;
   fetchResellers: () => Promise<void>;
   updatePrices: (updates: any[]) => Promise<void>;
+  archiveProduct: (itemId: string, isArchived: boolean) => Promise<void>;
   manualJournalEntries: ManualJournalEntry[];
   createManualJournalEntry: (entry: Omit<ManualJournalEntry, 'id' | 'type'>) => Promise<void>;
   deleteManualJournalEntry: (id: string) => Promise<void>;
@@ -207,6 +209,11 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
     await updatePricesDb(updates);
     await fetchAllData();
   };
+
+  const archiveProduct = async (itemId: string, isArchived: boolean) => {
+    await archiveProductDb(itemId, isArchived);
+    await fetchAllData();
+  };
   
   const addAccessory = async (accessory: Omit<Accessory, 'id' | 'history'>) => {
     await addAccessoryDb(accessory);
@@ -246,6 +253,7 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
         deleteReseller,
         fetchResellers,
         updatePrices,
+        archiveProduct,
         manualJournalEntries,
         createManualJournalEntry,
         deleteManualJournalEntry,
