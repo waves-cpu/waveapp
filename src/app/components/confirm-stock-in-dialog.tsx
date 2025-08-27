@@ -24,7 +24,7 @@ import {
 import { useLanguage } from '@/hooks/use-language';
 import { translations } from '@/types/language';
 import { useEffect, useState } from 'react';
-import { Textarea } from './textarea';
+import { Textarea } from '@/components/ui/textarea';
 
 const formSchema = z.object({
   reason: z.string().min(2, { message: 'Reason must be at least 2 characters.' }),
