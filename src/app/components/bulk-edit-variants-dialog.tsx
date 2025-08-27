@@ -112,7 +112,7 @@ export function BulkEditVariantsDialog({ open, onOpenChange, item }: BulkEditVar
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg p-0">
+      <DialogContent className="max-w-lg p-0" onOpenAutoFocus={(e) => e.preventDefault()}>
         <DialogHeader className="p-6 pb-2">
             <DialogTitle>Atur Stok</DialogTitle>
             <div className="flex items-center gap-4 pt-2">
@@ -149,7 +149,7 @@ export function BulkEditVariantsDialog({ open, onOpenChange, item }: BulkEditVar
                         render={({ field }) => (
                             <FormItem>
                                 <FormControl>
-                                    <Textarea placeholder="Alasan penyesuaian stok..." {...field} rows={2} />
+                                    <Input placeholder="Alasan penyesuaian stok..." {...field} />
                                 </FormControl>
                                 <FormMessage />
                             </FormItem>
@@ -162,10 +162,10 @@ export function BulkEditVariantsDialog({ open, onOpenChange, item }: BulkEditVar
                         <h4 className="text-sm font-semibold w-[60%]">Variasi</h4>
                         <h4 className="text-sm font-semibold w-[40%] text-left pl-1">Total Stok</h4>
                     </div>
-                    <ScrollArea className="h-64">
+                    <ScrollArea className="h-56">
                     <div className="divide-y">
                     {fields.map((field, index) => (
-                        <div key={field.id} className="flex items-center justify-between p-3 py-4">
+                        <div key={field.id} className="flex items-center justify-between p-3 py-3">
                             <div className="w-[60%]">
                                 <p className="font-medium text-sm">{field.name}</p>
                                 {field.sku && <p className="text-xs text-muted-foreground">SKU: {field.sku}</p>}
@@ -199,3 +199,4 @@ export function BulkEditVariantsDialog({ open, onOpenChange, item }: BulkEditVar
     </Dialog>
   );
 }
+
