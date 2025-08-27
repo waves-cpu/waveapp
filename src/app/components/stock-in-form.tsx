@@ -121,6 +121,7 @@ export function StockInForm({
   
   const availableItems = useMemo(() => {
     return items.filter(item => {
+      if (item.isArchived) return false;
       if (item.variants && item.variants.length > 0) {
         return item.variants.some(v => !existingItemIds.has(v.id));
       }

@@ -79,6 +79,7 @@ export interface InventoryItem {
   category: string;
   sku?: string;
   imageUrl?: string;
+  isArchived?: boolean;
   variants?: InventoryItemVariant[];
   stock?: number;
   price?: number;

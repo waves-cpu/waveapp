@@ -87,6 +87,11 @@ const runMigrations = () => {
         console.log('Adding costPrice column to products table...');
         db.exec('ALTER TABLE products ADD COLUMN costPrice REAL');
     }
+     if (!productColumns.some((col: any) => col.name === 'isArchived')) {
+        console.log('Adding isArchived column to products table...');
+        db.exec('ALTER TABLE products ADD COLUMN isArchived INTEGER DEFAULT 0');
+    }
+
 
     const variantColumns = db.pragma('table_info(variants)');
     if (!variantColumns.some((col: any) => col.name === 'costPrice')) {
@@ -122,6 +127,7 @@ const createSchema = () => {
       sku TEXT,
       imageUrl TEXT,
       hasVariants BOOLEAN NOT NULL DEFAULT 0,
+      isArchived INTEGER DEFAULT 0,
       -- For non-variant items
       stock INTEGER,
       price REAL,

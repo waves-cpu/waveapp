@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
@@ -46,14 +46,18 @@ import { useLanguage } from '@/hooks/use-language';
 import { translations } from '@/types/language';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { cn } from '@/lib/utils';
+import { useInventory } from '@/hooks/use-inventory';
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
     const { language } = useLanguage();
     const t = translations[language];
     const pathname = usePathname();
+    const { items } = useInventory();
     const [isInventoryOpen, setInventoryOpen] = useState(true);
     const [isSalesOpen, setSalesOpen] = useState(true);
     const [isFinanceOpen, setFinanceOpen] = useState(true);
+    
+    const hasArchivedItems = useMemo(() => items.some(item => item.isArchived), [items]);
 
   return (
     <div className="flex h-full">
@@ -114,6 +118,16 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                                       </SidebarMenuButton>
                                   </Link>
                               </SidebarMenuItem>
+                               {hasArchivedItems && (
+                                <SidebarMenuItem>
+                                    <Link href="/inventory/archived">
+                                        <SidebarMenuButton variant="ghost" size="sm" isActive={pathname === '/inventory/archived'}>
+                                            <Archive />
+                                            Produk Arsip
+                                        </SidebarMenuButton>
+                                    </Link>
+                                </SidebarMenuItem>
+                               )}
                           </SidebarMenu>
                       </CollapsibleContent>
                   </Collapsible>

@@ -36,6 +36,7 @@ import {
   ShoppingBag,
   Edit,
   Tags,
+  Archive,
 } from 'lucide-react';
 import type { InventoryItem, InventoryItemVariant } from '@/types';
 import { categories as allCategories } from '@/types';
@@ -52,6 +53,18 @@ import { Badge } from '@/components/ui/badge';
 import { Pagination } from '@/components/ui/pagination';
 import { AppLayout } from '../app-layout';
 import Dashboard from './dashboard';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { useToast } from '@/hooks/use-toast';
 
 interface InventoryTableProps {
   onUpdateStock: (itemId: string) => void;
@@ -181,7 +194,8 @@ const PriceWithDetails = ({ item }: { item: InventoryItem | InventoryItemVariant
 
 
 export function InventoryTable({ onUpdateStock, category }: InventoryTableProps) {
-  const { items, loading } = useInventory();
+  const { items, loading, archiveProduct } = useInventory();
+  const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string | null>(category || null);
   const [stockFilter, setStockFilter] = useState<'all' | 'low' | 'empty'>('all');
@@ -201,9 +215,26 @@ export function InventoryTable({ onUpdateStock, category }: InventoryTableProps)
     setSelectedBulkEditItem(item);
     setBulkEditDialogOpen(true);
   };
+  
+  const handleArchive = async (itemId: string) => {
+    try {
+        await archiveProduct(itemId, true);
+        toast({
+            title: "Produk Diarsipkan",
+            description: "Produk telah berhasil diarsipkan dan disembunyikan dari daftar utama.",
+        });
+    } catch(error) {
+         toast({
+            variant: 'destructive',
+            title: "Gagal Mengarsipkan",
+            description: "Terjadi kesalahan saat mengarsipkan produk.",
+        });
+    }
+  }
 
   const filteredItems = useMemo(() => {
-    const filtered = items
+    const activeItems = items.filter(item => !item.isArchived);
+    const filtered = activeItems
       .filter((item) =>
         categoryFilter ? item.category === categoryFilter : true
       )
@@ -251,7 +282,7 @@ export function InventoryTable({ onUpdateStock, category }: InventoryTableProps)
   }, [filteredItems, currentPage, itemsPerPage]);
 
   const stockFilterCounts = useMemo(() => {
-    const sourceItems = categoryFilter ? items.filter(i => i.category === categoryFilter) : items;
+    const sourceItems = categoryFilter ? items.filter(i => i.category === categoryFilter && !i.isArchived) : items.filter(i => !i.isArchived);
     const counts = { all: 0, low: 0, empty: 0 };
     sourceItems.forEach(item => {
       counts.all++;
@@ -386,6 +417,26 @@ export function InventoryTable({ onUpdateStock, category }: InventoryTableProps)
                                                     <span>{t.inventoryTable.editProduct}</span>
                                                 </Link>
                                             </DropdownMenuItem>
+                                             <AlertDialog>
+                                                <AlertDialogTrigger asChild>
+                                                    <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                                                        <Archive className="mr-2 h-4 w-4" />
+                                                        <span>Arsipkan</span>
+                                                    </DropdownMenuItem>
+                                                </AlertDialogTrigger>
+                                                <AlertDialogContent>
+                                                    <AlertDialogHeader>
+                                                        <AlertDialogTitle>Arsipkan Produk Ini?</AlertDialogTitle>
+                                                        <AlertDialogDescription>
+                                                            Produk yang diarsipkan akan disembunyikan dari daftar utama dan tidak bisa dijual. Anda bisa mengaktifkannya kembali nanti.
+                                                        </AlertDialogDescription>
+                                                    </AlertDialogHeader>
+                                                    <AlertDialogFooter>
+                                                        <AlertDialogCancel>Batal</AlertDialogCancel>
+                                                        <AlertDialogAction onClick={() => handleArchive(item.id)}>Ya, Arsipkan</AlertDialogAction>
+                                                    </AlertDialogFooter>
+                                                </AlertDialogContent>
+                                            </AlertDialog>
                                         </DropdownMenuContent>
                                     </DropdownMenu>
                                 </TableCell>
@@ -467,6 +518,26 @@ export function InventoryTable({ onUpdateStock, category }: InventoryTableProps)
                                                 <span>{t.inventoryTable.editProduct}</span>
                                             </Link>
                                         </DropdownMenuItem>
+                                         <AlertDialog>
+                                            <AlertDialogTrigger asChild>
+                                                <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                                                    <Archive className="mr-2 h-4 w-4" />
+                                                    <span>Arsipkan</span>
+                                                </DropdownMenuItem>
+                                            </AlertDialogTrigger>
+                                            <AlertDialogContent>
+                                                <AlertDialogHeader>
+                                                    <AlertDialogTitle>Arsipkan Produk Ini?</AlertDialogTitle>
+                                                    <AlertDialogDescription>
+                                                        Produk yang diarsipkan akan disembunyikan dari daftar utama dan tidak bisa dijual. Anda bisa mengaktifkannya kembali nanti.
+                                                    </AlertDialogDescription>
+                                                </AlertDialogHeader>
+                                                <AlertDialogFooter>
+                                                    <AlertDialogCancel>Batal</AlertDialogCancel>
+                                                    <AlertDialogAction onClick={() => handleArchive(item.id)}>Ya, Arsipkan</AlertDialogAction>
+                                                </AlertDialogFooter>
+                                            </AlertDialogContent>
+                                        </AlertDialog>
                                     </DropdownMenuContent>
                                 </DropdownMenu>
                             </TableCell>

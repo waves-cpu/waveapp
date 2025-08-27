@@ -45,6 +45,7 @@ export function ProductSelectionDialog({ open, onOpenChange, onSelect, available
 
   const filteredItems = useMemo(() => {
     return availableItems
+      .filter((item) => !item.isArchived)
       .filter((item) =>
         categoryFilter ? item.category === categoryFilter : true
       )
@@ -310,22 +311,3 @@ export function ProductSelectionDialog({ open, onOpenChange, onSelect, available
   );
 }
  
-
-    
-
-    
-
-    
-
-    
-
-
-
-
-    
-
-
-
-
-
-
