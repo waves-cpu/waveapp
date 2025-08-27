@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -54,34 +54,22 @@ export function UpdateStockDialog({ open, onOpenChange, itemId }: UpdateStockDia
     },
   });
   
-  const { item, displayName, stock } = React.useMemo(() => {
-    if (!itemId) return { item: undefined, displayName: '', stock: undefined };
-
-    let foundItem: InventoryItem | InventoryItemVariant | undefined;
-    let foundDisplayName = '';
-    let foundStock: number | undefined;
+  const { parentName, variantName, stock } = useMemo(() => {
+    if (!itemId) return { parentName: '', variantName: '', stock: undefined };
 
     for (const product of items) {
-        // Check if the item is a simple product
         if (product.id === itemId) {
-            foundItem = product;
-            foundDisplayName = product.name;
-            foundStock = product.stock;
-            break;
+            return { parentName: product.name, variantName: '', stock: product.stock };
         }
-        // Check if the item is a variant
         if (product.variants) {
             const variant = product.variants.find(v => v.id === itemId);
             if (variant) {
-                foundItem = variant;
-                foundDisplayName = `${product.name} - ${variant.name}`;
-                foundStock = variant.stock;
-                break;
+                return { parentName: product.name, variantName: variant.name, stock: variant.stock };
             }
         }
     }
     
-    return { item: foundItem, displayName: foundDisplayName, stock: foundStock };
+    return { parentName: '', variantName: '', stock: undefined };
   }, [itemId, items]);
 
 
@@ -98,8 +86,8 @@ export function UpdateStockDialog({ open, onOpenChange, itemId }: UpdateStockDia
     
     updateStock(itemId, change, values.reason);
     toast({
-    title: t.updateStockDialog.stockUpdated,
-    description: `${t.updateStockDialog.stockFor} ${displayName} ${t.updateStockDialog.hasBeenAdjusted}`,
+      title: t.updateStockDialog.stockUpdated,
+      description: `${t.updateStockDialog.stockFor} ${parentName} ${variantName} ${t.updateStockDialog.hasBeenAdjusted}`,
     });
 
     onOpenChange(false);
@@ -112,9 +100,11 @@ export function UpdateStockDialog({ open, onOpenChange, itemId }: UpdateStockDia
         <DialogHeader>
           <DialogTitle>{t.updateStockDialog.title}</DialogTitle>
           <DialogDescription>
-             {displayName}
-             <br />
-             {t.updateStockDialog.description} {stock ?? 0}
+            <p className='font-semibold text-foreground'>{parentName}</p>
+            <p>
+              {variantName ? `${variantName}: ` : ''}
+              {t.updateStockDialog.description} {stock ?? 0}
+            </p>
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -155,5 +145,3 @@ export function UpdateStockDialog({ open, onOpenChange, itemId }: UpdateStockDia
     </Dialog>
   );
 }
-
-
