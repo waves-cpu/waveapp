@@ -112,49 +112,35 @@ export function BulkEditVariantsDialog({ open, onOpenChange, item }: BulkEditVar
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg p-0" onOpenAutoFocus={(e) => e.preventDefault()}>
-        <DialogHeader className="p-6 pb-2">
-            <DialogTitle>Atur Stok</DialogTitle>
-            <div className="flex items-center gap-4 pt-2">
+      <DialogContent className="max-w-lg p-0">
+        <DialogHeader className="p-6 pb-4">
+            <div className="flex items-center gap-4">
                 <Image 
                     src={item.imageUrl || 'https://placehold.co/40x40.png'} 
                     alt={item.name} 
                     width={40} 
                     height={40} 
-                    className="rounded-md"
+                    className="rounded-md shrink-0"
                     data-ai-hint="product image"
                 />
                 <div className="pt-1">
-                    <p className="font-semibold text-base">{item.name}</p>
-                    <p className="text-sm text-muted-foreground">SKU Induk: {item.sku}</p>
+                    <DialogTitle className="text-base">Atur Stok</DialogTitle>
+                    <p className="font-semibold text-sm">{item.name}</p>
+                    <p className="text-xs text-muted-foreground">SKU Induk: {item.sku}</p>
                 </div>
             </div>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)}>
-            <div className="px-6 py-4 space-y-4">
-                <div className="space-y-3">
-                    <div className="flex items-center gap-2">
-                        <Input 
-                            type="number" 
-                            placeholder="Stok" 
-                            className="h-9" 
-                            {...form.register("bulkStock")}
-                        />
-                        <Button type="button" variant="outline" onClick={handleApplyBulkStock}>Terapkan semua</Button>
-                    </div>
-                     <FormField
-                        control={form.control}
-                        name="reason"
-                        render={({ field }) => (
-                            <FormItem>
-                                <FormControl>
-                                    <Input placeholder="Alasan penyesuaian stok..." {...field} />
-                                </FormControl>
-                                <FormMessage />
-                            </FormItem>
-                        )}
+            <div className="px-6 pb-4 space-y-4">
+                <div className="flex items-center gap-2">
+                    <Input 
+                        type="number" 
+                        placeholder="Stok" 
+                        className="h-9" 
+                        {...form.register("bulkStock")}
                     />
+                    <Button type="button" variant="outline" onClick={handleApplyBulkStock}>Terapkan semua</Button>
                 </div>
 
                 <div className="border rounded-md">
@@ -187,6 +173,19 @@ export function BulkEditVariantsDialog({ open, onOpenChange, item }: BulkEditVar
                     </div>
                     </ScrollArea>
                 </div>
+                 <FormField
+                    control={form.control}
+                    name="reason"
+                    render={({ field }) => (
+                        <FormItem>
+                            <FormLabel className="text-xs">Alasan Penyesuaian</FormLabel>
+                            <FormControl>
+                                <Input placeholder="Alasan penyesuaian stok..." {...field} />
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                />
             </div>
 
             <DialogFooter className="bg-muted p-4">
@@ -199,4 +198,3 @@ export function BulkEditVariantsDialog({ open, onOpenChange, item }: BulkEditVar
     </Dialog>
   );
 }
-
