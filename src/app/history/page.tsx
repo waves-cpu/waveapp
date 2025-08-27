@@ -355,7 +355,7 @@ export default function HistoryPage() {
             </div>
           </div>
           <div className='flex-grow overflow-y-auto'>
-          <Table>
+          <Table className='table-fixed'>
             <TableHeader>
                 <TableRow>
                     <TableHead className="w-[30%]">{t.inventoryTable.name}</TableHead>
@@ -391,9 +391,9 @@ export default function HistoryPage() {
                                 </div>
                                 )}
                                 <div>
-                                    <div className="font-medium text-sm">{entry.itemName}</div>
+                                    <div className="font-medium text-sm truncate">{entry.itemName}</div>
                                     {entry.variantName && (
-                                        <div className="text-xs text-muted-foreground">
+                                        <div className="text-xs text-muted-foreground truncate">
                                             {entry.variantName}
                                             {entry.variantSku && ` (SKU: ${entry.variantSku})`}
                                         </div>
@@ -409,7 +409,7 @@ export default function HistoryPage() {
                         </TableCell>
                         <TableCell className="text-center">{entry.newStockLevel ?? '-'}</TableCell>
                         <TableCell>
-                            <p className="line-clamp-2">{entry.reason}</p>
+                            <p className="truncate">{entry.reason}</p>
                         </TableCell>
                        </>
                     ) : (
@@ -436,7 +436,7 @@ export default function HistoryPage() {
                          </TableCell>
                          <TableCell className="text-center">-</TableCell>
                          <TableCell>
-                             <p className="line-clamp-2">Total {entry.totalItems} item terjual dari channel {entry.channel}.</p>
+                             <p className="truncate">Total {entry.totalItems} item terjual dari channel {entry.channel}.</p>
                          </TableCell>
                         </>
                     )}
@@ -460,7 +460,7 @@ export default function HistoryPage() {
                 <TableRow>
                     <TableCell colSpan={3} className="font-semibold text-left">Total Perubahan:</TableCell>
                     <TableCell colSpan={2} className="font-semibold">
-                        <div className="flex items-center justify-between flex-wrap gap-y-1">
+                         <div className="flex items-center justify-between flex-wrap gap-y-1">
                             <span className="text-green-600">Masuk: {historyTotals.totalIn}</span>
                             <span className="text-red-600">Keluar: {historyTotals.totalOut}</span>
                             <span>Net: 
