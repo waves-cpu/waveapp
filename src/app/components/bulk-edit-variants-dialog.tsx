@@ -118,7 +118,6 @@ export function BulkEditVariantsDialog({ open, onOpenChange, item }: BulkEditVar
           <form onSubmit={form.handleSubmit(onSubmit)}>
             <div className="px-6 py-4 space-y-4">
                 <div className="flex items-center gap-2 rounded-md border p-3">
-                    <p className="text-sm font-medium whitespace-nowrap">Ubah Massal:</p>
                      <FormField
                         control={form.control}
                         name="bulkStock"
@@ -138,12 +137,12 @@ export function BulkEditVariantsDialog({ open, onOpenChange, item }: BulkEditVar
                 <div className="border rounded-md">
                      <div className="flex justify-between items-center p-3 border-b">
                         <h4 className="text-sm font-semibold w-[60%]">Variasi</h4>
-                        <h4 className="text-sm font-semibold w-[40%]">Total Stok</h4>
+                        <h4 className="text-sm font-semibold w-[40%] text-left pl-1">Total Stok</h4>
                     </div>
                     <ScrollArea className="h-64">
                     <div className="divide-y">
                     {fields.map((field, index) => (
-                        <div key={field.id} className="flex items-center justify-between p-3">
+                        <div key={field.id} className="flex items-center justify-between p-3 py-4">
                             <div className="w-[60%]">
                                 <p className="font-medium text-sm">{field.name}</p>
                                 {field.sku && <p className="text-xs text-muted-foreground">SKU: {field.sku}</p>}
@@ -154,7 +153,7 @@ export function BulkEditVariantsDialog({ open, onOpenChange, item }: BulkEditVar
                                     name={`variants.${index}.stock`}
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormControl><Input type="number" placeholder="0" {...field} className="h-9 w-24" /></FormControl>
+                                            <FormControl><Input type="number" placeholder="0" {...field} className="h-9 w-28" /></FormControl>
                                             <FormMessage className="text-xs"/>
                                         </FormItem>
                                     )}
