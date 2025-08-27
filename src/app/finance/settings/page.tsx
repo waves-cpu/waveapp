@@ -2,7 +2,7 @@
 
 'use client';
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useForm, useFieldArray, Control, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -57,6 +57,7 @@ const formSchema = z.object({
 
 const CHANNELS = ['pos', 'reseller', 'shopee', 'tiktok', 'lazada'];
 const ONLINE_CHANNELS = ['shopee', 'tiktok', 'lazada'];
+const PRICE_FIELDS = ['costPrice', 'price', 'pos', 'reseller', 'online'];
 
 const getOnlinePrice = (item: InventoryItem | InventoryItemVariant) => {
     return item.channelPrices?.find(p => ONLINE_CHANNELS.includes(p.channel))?.price;
@@ -70,6 +71,7 @@ export default function PriceSettingsPage() {
     const TSales = t.sales;
     const { items: allInventoryItems, categories, updatePrices, loading } = useInventory();
     const { toast } = useToast();
+    const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
     
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isProductSelectionOpen, setProductSelectionOpen] = useState(false);
@@ -93,6 +95,10 @@ export default function PriceSettingsPage() {
         control: form.control,
         name: "items"
     });
+
+    useEffect(() => {
+        inputRefs.current = [];
+    }, [fields]);
 
     const existingItemIds = useMemo(() => new Set(fields.map(field => field.id)), [fields]);
 
@@ -313,6 +319,27 @@ export default function PriceSettingsPage() {
             setIsSubmitting(false);
         }
     };
+    
+    const handleKeyDown = (e: React.KeyboardEvent, flatIndex: number) => {
+        const numCols = PRICE_FIELDS.length;
+        if (e.key === 'Tab' && !e.shiftKey) {
+            e.preventDefault();
+            const nextInput = inputRefs.current[flatIndex + 1];
+            if (nextInput) nextInput.focus();
+        } else if (e.key === 'Tab' && e.shiftKey) {
+            e.preventDefault();
+            const prevInput = inputRefs.current[flatIndex - 1];
+            if (prevInput) prevInput.focus();
+        } else if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            const nextRowInput = inputRefs.current[flatIndex + numCols];
+            if (nextRowInput) nextRowInput.focus();
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            const prevRowInput = inputRefs.current[flatIndex - numCols];
+            if (prevRowInput) prevRowInput.focus();
+        }
+    };
 
     return (
         <AppLayout>
@@ -424,7 +451,7 @@ export default function PriceSettingsPage() {
                                                 </TableRow>
                                             ) : (
                                                 <>
-                                                    {groupedAndFilteredItems.simpleItems.map((field) => (
+                                                    {groupedAndFilteredItems.simpleItems.map((field, rowIndex) => (
                                                         <TableRow key={field.id}>
                                                             <TableCell>
                                                                 <Checkbox
@@ -445,10 +472,13 @@ export default function PriceSettingsPage() {
                                                                 control={form.control}
                                                                 index={field.originalIndex}
                                                                 onRemove={() => remove(field.originalIndex)}
+                                                                rowIndex={rowIndex}
+                                                                inputRefs={inputRefs}
+                                                                onKeyDown={handleKeyDown}
                                                             />
                                                         </TableRow>
                                                     ))}
-                                                     {groupedAndFilteredItems.groups.map(({ header, variants }) => (
+                                                     {groupedAndFilteredItems.groups.map(({ header, variants }, groupIndex) => (
                                                         <React.Fragment key={header.id}>
                                                             <TableRow className="bg-muted/20 hover:bg-muted/40">
                                                                  <TableCell>
@@ -481,7 +511,9 @@ export default function PriceSettingsPage() {
                                                                     </Button>
                                                                 </TableCell>
                                                             </TableRow>
-                                                            {variants.map((field) => (
+                                                            {variants.map((field, variantRowIndex) => {
+                                                                const rowIndex = groupedAndFilteredItems.simpleItems.length + groupIndex + variantRowIndex;
+                                                                return (
                                                                 <TableRow key={field.id} className="hover:bg-muted/50">
                                                                     <TableCell>
                                                                         <Checkbox
@@ -504,9 +536,12 @@ export default function PriceSettingsPage() {
                                                                         control={form.control}
                                                                         index={field.originalIndex}
                                                                         onRemove={() => remove(field.originalIndex)}
+                                                                        rowIndex={rowIndex}
+                                                                        inputRefs={inputRefs}
+                                                                        onKeyDown={handleKeyDown}
                                                                     />
                                                                 </TableRow>
-                                                            ))}
+                                                            )})}
                                                         </React.Fragment>
                                                      ))}
                                                 </>
@@ -537,7 +572,16 @@ export default function PriceSettingsPage() {
     );
 }
 
-const PriceRowFields = ({ control, index, onRemove }: { control: Control<z.infer<typeof formSchema>>, index: number, onRemove: () => void }) => {
+const PriceRowFields = ({ 
+    control, index, onRemove, rowIndex, inputRefs, onKeyDown 
+}: { 
+    control: Control<z.infer<typeof formSchema>>, 
+    index: number, 
+    onRemove: () => void,
+    rowIndex: number,
+    inputRefs: React.MutableRefObject<(HTMLInputElement | null)[]>,
+    onKeyDown: (e: React.KeyboardEvent, flatIndex: number) => void
+}) => {
     const { language } = useLanguage();
     const TPrice = translations[language].finance.priceSettingsPage;
     
@@ -546,19 +590,16 @@ const PriceRowFields = ({ control, index, onRemove }: { control: Control<z.infer
         name: `items.${index}.channelPrices`,
     });
 
-    const getChannelPriceComponent = (channel: string) => {
-        // Ensure channelPrices is an array before finding index
+    const getChannelPriceComponent = (channel: string, colIndex: number) => {
+        const flatIndex = rowIndex * PRICE_FIELDS.length + colIndex;
         const cPrices = Array.isArray(channelPrices) ? channelPrices : [];
         const channelIndex = cPrices.findIndex(p => p.channel === channel);
-
-        // For online channels, they all share one input, so we point to the first one (e.g., shopee)
+        
         const effectiveChannelIndex = ONLINE_CHANNELS.includes(channel) 
             ? cPrices.findIndex(p => p.channel === ONLINE_CHANNELS[0])
             : channelIndex;
         
         if (effectiveChannelIndex === -1) {
-             // If channel doesn't exist in the array, render an empty cell.
-             // This can happen if an item is added before the channel price structure is fully initialized.
              return <TableCell key={channel}></TableCell>;
         }
 
@@ -572,7 +613,15 @@ const PriceRowFields = ({ control, index, onRemove }: { control: Control<z.infer
                     render={({ field: formField }) => (
                         <FormItem>
                             <FormControl>
-                                <Input type="number" placeholder="0" {...formField} value={formField.value ?? ''} className="h-8 w-24 text-center" />
+                                <Input 
+                                    type="number" 
+                                    placeholder="0" 
+                                    {...formField} 
+                                    value={formField.value ?? ''} 
+                                    className="h-8 w-24 text-center"
+                                    ref={el => inputRefs.current[flatIndex] = el}
+                                    onKeyDown={e => onKeyDown(e, flatIndex)}
+                                />
                             </FormControl>
                             <FormMessage/>
                         </FormItem>
@@ -589,7 +638,15 @@ const PriceRowFields = ({ control, index, onRemove }: { control: Control<z.infer
                     control={control}
                     name={`items.${index}.costPrice`}
                     render={({ field: formField }) => (
-                        <FormItem><FormControl><Input type="number" placeholder={TPrice.costPrice} {...formField} value={formField.value ?? ''} className="h-8 w-24 text-center" /></FormControl><FormMessage/></FormItem>
+                        <FormItem><FormControl><Input 
+                            type="number" 
+                            placeholder={TPrice.costPrice} 
+                            {...formField} 
+                            value={formField.value ?? ''} 
+                            className="h-8 w-24 text-center"
+                            ref={el => inputRefs.current[rowIndex * PRICE_FIELDS.length + 0] = el}
+                            onKeyDown={e => onKeyDown(e, rowIndex * PRICE_FIELDS.length + 0)}
+                        /></FormControl><FormMessage/></FormItem>
                     )}
                 />
             </TableCell>
@@ -598,13 +655,21 @@ const PriceRowFields = ({ control, index, onRemove }: { control: Control<z.infer
                     control={control}
                     name={`items.${index}.price`}
                     render={({ field: formField }) => (
-                        <FormItem><FormControl><Input type="number" placeholder={TPrice.defaultPrice} {...formField} value={formField.value ?? ''} className="h-8 w-24 text-center" /></FormControl><FormMessage/></FormItem>
+                        <FormItem><FormControl><Input 
+                            type="number" 
+                            placeholder={TPrice.defaultPrice} 
+                            {...formField} 
+                            value={formField.value ?? ''} 
+                            className="h-8 w-24 text-center"
+                            ref={el => inputRefs.current[rowIndex * PRICE_FIELDS.length + 1] = el}
+                            onKeyDown={e => onKeyDown(e, rowIndex * PRICE_FIELDS.length + 1)}
+                        /></FormControl><FormMessage/></FormItem>
                     )}
                 />
             </TableCell>
-            {getChannelPriceComponent('pos')}
-            {getChannelPriceComponent('reseller')}
-            {getChannelPriceComponent('shopee')}
+            {getChannelPriceComponent('pos', 2)}
+            {getChannelPriceComponent('reseller', 3)}
+            {getChannelPriceComponent('shopee', 4)}
             <TableCell className="p-1.5">
                 <Button type="button" variant="ghost" size="icon" className="text-destructive hover:text-destructive-foreground hover:bg-destructive h-8 w-8" onClick={onRemove}>
                     <Trash2 className="h-4 w-4" />
@@ -613,5 +678,3 @@ const PriceRowFields = ({ control, index, onRemove }: { control: Control<z.infer
         </>
     )
 }
-
-
