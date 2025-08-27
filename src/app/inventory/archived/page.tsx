@@ -16,13 +16,24 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { ArchiveRestore, ArchiveX } from 'lucide-react';
+import { ArchiveRestore, ArchiveX, Trash2 } from 'lucide-react';
 import Image from 'next/image';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 export default function ArchivedProductsPage() {
-  const { items, archiveProduct, loading } = useInventory();
+  const { items, archiveProduct, loading, deleteProductPermanently } = useInventory();
   const { language } = useLanguage();
   const t = translations[language];
   const TArchived = t.archived;
@@ -50,6 +61,22 @@ export default function ArchivedProductsPage() {
             variant: 'destructive',
             title: TArchived.unarchiveErrorTitle,
             description: TArchived.unarchiveErrorDesc,
+        })
+    }
+  }
+
+  const handleDelete = async (itemId: string, itemName: string) => {
+    try {
+        await deleteProductPermanently(itemId);
+        toast({
+            title: TArchived.deleteSuccessTitle,
+            description: TArchived.deleteSuccessDesc.replace('{name}', itemName),
+        })
+    } catch(error) {
+         toast({
+            variant: 'destructive',
+            title: TArchived.deleteErrorTitle,
+            description: TArchived.deleteErrorDesc,
         })
     }
   }
@@ -110,6 +137,28 @@ export default function ArchivedProductsPage() {
                                         <ArchiveRestore className="mr-2 h-4 w-4" />
                                         {TArchived.unarchiveButton}
                                     </Button>
+                                    <AlertDialog>
+                                        <AlertDialogTrigger asChild>
+                                             <Button variant="destructive" size="sm" className="ml-2">
+                                                <Trash2 className="mr-2 h-4 w-4" />
+                                                {TArchived.deleteButton}
+                                             </Button>
+                                        </AlertDialogTrigger>
+                                        <AlertDialogContent>
+                                            <AlertDialogHeader>
+                                                <AlertDialogTitle>{TArchived.deleteDialogTitle}</AlertDialogTitle>
+                                                <AlertDialogDescription>
+                                                    {TArchived.deleteDialogDesc.replace('{name}', item.name)}
+                                                </AlertDialogDescription>
+                                            </AlertDialogHeader>
+                                            <AlertDialogFooter>
+                                                <AlertDialogCancel>{t.common.cancel}</AlertDialogCancel>
+                                                <AlertDialogAction onClick={() => handleDelete(item.id, item.name)} className="bg-destructive hover:bg-destructive/90">
+                                                    {TArchived.deleteDialogConfirm}
+                                                </AlertDialogAction>
+                                            </AlertDialogFooter>
+                                        </AlertDialogContent>
+                                    </AlertDialog>
                                 </TableCell>
                             </TableRow>
                         ))

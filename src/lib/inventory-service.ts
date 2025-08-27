@@ -769,3 +769,8 @@ export async function adjustAccessoryStock(accessoryId: string, change: number, 
 export async function archiveProduct(itemId: string, isArchived: boolean) {
     db.prepare('UPDATE products SET isArchived = ? WHERE id = ?').run(isArchived ? 1 : 0, itemId);
 }
+
+export async function deleteProductPermanently(itemId: string) {
+    // ON DELETE CASCADE will handle variants, history, and channel_prices
+    db.prepare('DELETE FROM products WHERE id = ?').run(itemId);
+}

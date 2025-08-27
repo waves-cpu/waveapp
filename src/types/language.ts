@@ -87,6 +87,7 @@ export const translations = {
             searchPlaceholder: "Search archived products...",
             archiveButton: "Archive",
             unarchiveButton: "Reactivate",
+            deleteButton: "Delete",
             table: {
                 product: "Product",
                 category: "Category",
@@ -104,7 +105,14 @@ export const translations = {
             unarchiveErrorDesc: "An error occurred while reactivating the product.",
             archiveDialogTitle: "Archive This Product?",
             archiveDialogDesc: "Archived products will be hidden from the main list and cannot be sold. You can reactivate them later.",
-            archiveDialogConfirm: "Yes, Archive"
+            archiveDialogConfirm: "Yes, Archive",
+            deleteDialogTitle: "Delete Product Permanently?",
+            deleteDialogDesc: "This will permanently delete '{name}' and all its data. This action cannot be undone.",
+            deleteDialogConfirm: "Yes, Delete Permanently",
+            deleteSuccessTitle: "Product Deleted",
+            deleteSuccessDesc: "{name} has been permanently deleted.",
+            deleteErrorTitle: "Deletion Failed",
+            deleteErrorDesc: "An error occurred while deleting the product."
         },
         addItemDialog: {
             title: "Add New Item",
@@ -413,6 +421,7 @@ export const translations = {
             searchPlaceholder: "Cari produk di arsip...",
             archiveButton: "Arsipkan",
             unarchiveButton: "Aktifkan Kembali",
+            deleteButton: "Hapus",
             table: {
                 product: "Produk",
                 category: "Kategori",
@@ -430,7 +439,14 @@ export const translations = {
             unarchiveErrorDesc: "Terjadi kesalahan saat mengaktifkan kembali produk.",
             archiveDialogTitle: "Arsipkan Produk Ini?",
             archiveDialogDesc: "Produk yang diarsipkan akan disembunyikan dari daftar utama dan tidak bisa dijual. Anda bisa mengaktifkannya kembali nanti.",
-            archiveDialogConfirm: "Ya, Arsipkan"
+            archiveDialogConfirm: "Ya, Arsipkan",
+            deleteDialogTitle: "Hapus Produk Secara Permanen?",
+            deleteDialogDesc: "Tindakan ini akan menghapus '{name}' dan semua datanya secara permanen. Tindakan ini tidak dapat diurungkan.",
+            deleteDialogConfirm: "Ya, Hapus Permanen",
+            deleteSuccessTitle: "Produk Dihapus",
+            deleteSuccessDesc: "{name} telah berhasil dihapus secara permanen.",
+            deleteErrorTitle: "Gagal Menghapus",
+            deleteErrorDesc: "Terjadi kesalahan saat menghapus produk."
         },
         addItemDialog: {
             title: "Tambah Barang Baru",
