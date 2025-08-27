@@ -358,11 +358,11 @@ export default function HistoryPage() {
           <Table className='table-fixed'>
             <TableHeader>
                 <TableRow>
-                    <TableHead className="w-[30%]">{t.inventoryTable.name}</TableHead>
+                    <TableHead className="w-[40%]">{t.inventoryTable.name}</TableHead>
                     <TableHead className="w-[15%]">{t.stockHistory.date}</TableHead>
                     <TableHead className="w-[10%] text-center">{t.stockHistory.change}</TableHead>
                     <TableHead className="w-[10%] text-center">{t.stockHistory.newTotal}</TableHead>
-                    <TableHead className="w-[35%]">{t.stockHistory.reason}</TableHead>
+                    <TableHead className="w-[25%]">{t.stockHistory.reason}</TableHead>
                 </TableRow>
             </TableHeader>
             <TableBody>
