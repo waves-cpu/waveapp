@@ -30,7 +30,6 @@ import type { InventoryItem } from '@/types';
 import { useEffect } from 'react';
 import Image from 'next/image';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Textarea } from '@/components/ui/textarea';
 
 const variantSchema = z.object({
   id: z.string(),
