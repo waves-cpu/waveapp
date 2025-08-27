@@ -358,11 +358,11 @@ export default function HistoryPage() {
           <Table>
             <TableHeader>
                 <TableRow>
-                <TableHead className="w-[35%]">{t.inventoryTable.name}</TableHead>
-                <TableHead>{t.stockHistory.date}</TableHead>
-                <TableHead>{t.stockHistory.change}</TableHead>
-                <TableHead>{t.stockHistory.newTotal}</TableHead>
-                <TableHead className="w-[25%]">{t.stockHistory.reason}</TableHead>
+                    <TableHead className="w-[30%]">{t.inventoryTable.name}</TableHead>
+                    <TableHead className="w-[15%]">{t.stockHistory.date}</TableHead>
+                    <TableHead className="w-[10%] text-center">{t.stockHistory.change}</TableHead>
+                    <TableHead className="w-[10%] text-center">{t.stockHistory.newTotal}</TableHead>
+                    <TableHead className="w-[35%]">{t.stockHistory.reason}</TableHead>
                 </TableRow>
             </TableHeader>
             <TableBody>
@@ -402,12 +402,12 @@ export default function HistoryPage() {
                             </div>
                         </TableCell>
                         <TableCell>{format(new Date(entry.date), 'PP')}</TableCell>
-                        <TableCell>
+                        <TableCell className="text-center">
                             <Badge variant={entry.change >= 0 ? 'default' : 'destructive'} className={cn(entry.change >= 0 ? 'bg-green-600' : 'bg-red-600', 'text-white')}>
                             {entry.change > 0 ? `+${entry.change}` : entry.change}
                             </Badge>
                         </TableCell>
-                        <TableCell>{entry.newStockLevel ?? '-'}</TableCell>
+                        <TableCell className="text-center">{entry.newStockLevel ?? '-'}</TableCell>
                         <TableCell>
                             <p className="line-clamp-2">{entry.reason}</p>
                         </TableCell>
@@ -429,12 +429,12 @@ export default function HistoryPage() {
                             </div>
                         </TableCell>
                          <TableCell>{format(new Date(entry.date), 'PP')}</TableCell>
-                         <TableCell>
+                         <TableCell className="text-center">
                             <Badge variant='destructive' className="bg-red-600 text-white">
                                 -{entry.totalItems}
                             </Badge>
                          </TableCell>
-                         <TableCell>-</TableCell>
+                         <TableCell className="text-center">-</TableCell>
                          <TableCell>
                              <p className="line-clamp-2">Total {entry.totalItems} item terjual dari channel {entry.channel}.</p>
                          </TableCell>
