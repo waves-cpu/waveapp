@@ -14,9 +14,18 @@ const dbPath = path.join(dbDir, 'inventory.db');
 // One-time fix: Delete the potentially corrupt database file.
 // This will be removed in the next interaction.
 if (fs.existsSync(dbPath)) {
-    console.log('Corrupt database file found. Deleting and recreating...');
-    fs.unlinkSync(dbPath);
-    console.log('Old database file deleted.');
+    try {
+        console.log('Potentially corrupt database file found. Attempting to delete...');
+        // Verify permissions before deleting
+        fs.accessSync(dbPath, fs.constants.W_OK);
+        fs.unlinkSync(dbPath);
+        console.log('Old database file deleted successfully.');
+    } catch (e) {
+        console.error('Failed to delete database file. Please check file permissions.', e);
+        // If deletion fails, we probably can't proceed anyway, but let's re-throw
+        // to make the problem visible.
+        throw new Error(`Could not delete the corrupt database file at ${dbPath}. Please check file system permissions.`);
+    }
 }
 
 
