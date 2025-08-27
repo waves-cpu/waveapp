@@ -58,9 +58,11 @@ export function UpdateStockDialog({ open, onOpenChange, itemId }: UpdateStockDia
     if (!itemId) return { parentName: '', variantName: '', stock: undefined };
 
     for (const product of items) {
-        if (product.id === itemId) {
-            return { parentName: product.name, variantName: '', stock: product.stock };
+        // If the ID matches a product without variants, it's a simple product
+        if (product.id === itemId && (!product.variants || product.variants.length === 0)) {
+             return { parentName: product.name, variantName: '', stock: product.stock };
         }
+        // If the product has variants, check if the ID matches one of them
         if (product.variants) {
             const variant = product.variants.find(v => v.id === itemId);
             if (variant) {
@@ -69,6 +71,7 @@ export function UpdateStockDialog({ open, onOpenChange, itemId }: UpdateStockDia
         }
     }
     
+    // Fallback if no match is found (shouldn't happen with valid itemId)
     return { parentName: '', variantName: '', stock: undefined };
   }, [itemId, items]);
 
@@ -99,13 +102,13 @@ export function UpdateStockDialog({ open, onOpenChange, itemId }: UpdateStockDia
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>{t.updateStockDialog.title}</DialogTitle>
-          <DialogDescription>
-            <div className='font-semibold text-foreground'>{parentName}</div>
-            <div>
-              {variantName ? `${variantName}: ` : ''}
-              {t.updateStockDialog.description} {stock ?? 0}
-            </div>
-          </DialogDescription>
+           <div className="pt-2 text-sm text-muted-foreground">
+             <div className='font-semibold text-foreground'>{parentName}</div>
+             <div>
+               {variantName ? `${variantName}: ` : ''}
+               {t.updateStockDialog.description} {stock ?? 0}
+             </div>
+           </div>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
