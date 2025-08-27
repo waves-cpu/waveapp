@@ -111,7 +111,7 @@ export function BulkEditVariantsDialog({ open, onOpenChange, item }: BulkEditVar
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-xl p-0">
+      <DialogContent className="max-w-xl p-0" onOpenAutoFocus={(e) => e.preventDefault()}>
         <DialogHeader className="p-6 pb-4">
             <div className="flex items-center gap-4">
                 <Image 
