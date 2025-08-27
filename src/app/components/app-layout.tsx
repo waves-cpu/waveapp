@@ -68,6 +68,60 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           </SidebarHeader>
           <SidebarContent>
               <SidebarMenu>
+                  <Collapsible open={isSalesOpen} onOpenChange={setSalesOpen}>
+                      <CollapsibleTrigger asChild>
+                          <SidebarMenuButton>
+                              <ShoppingCart />
+                              <span>{t.sales.title}</span>
+                              <ChevronDown className={cn("ml-auto transition-transform", isSalesOpen && "rotate-180")} />
+                          </SidebarMenuButton>
+                      </CollapsibleTrigger>
+                      <CollapsibleContent>
+                          <SidebarMenu className="ml-4 mt-2 border-l border-muted-foreground/20 pl-4">
+                               <SidebarMenuItem>
+                                  <Link href="/sales/shopee">
+                                      <SidebarMenuButton variant="ghost" size="sm" isActive={pathname.startsWith('/sales/shopee')}>
+                                          <ShoppingBag />
+                                          {t.sales.shopee}
+                                      </SidebarMenuButton>
+                                  </Link>
+                              </SidebarMenuItem>
+                              <SidebarMenuItem>
+                                  <Link href="/sales/tiktok">
+                                      <SidebarMenuButton variant="ghost" size="sm" isActive={pathname.startsWith('/sales/tiktok')}>
+                                          <ShoppingBag />
+                                          {t.sales.tiktok}
+                                      </SidebarMenuButton>
+                                  </Link>
+                              </SidebarMenuItem>
+                              <SidebarMenuItem>
+                                  <Link href="/sales/lazada">
+                                      <SidebarMenuButton variant="ghost" size="sm" isActive={pathname.startsWith('/sales/lazada')}>
+                                          <ShoppingBag />
+                                          {t.sales.lazada}
+                                      </SidebarMenuButton>
+                                  </Link>
+                              </SidebarMenuItem>
+                                <SidebarMenuItem>
+                                   <Link href="/sales/pos">
+                                       <SidebarMenuButton variant="ghost" size="sm" isActive={pathname.startsWith('/sales/pos')}>
+                                           <Store />
+                                           {t.sales.pos}
+                                       </SidebarMenuButton>
+                                   </Link>
+                                </SidebarMenuItem>
+                               <SidebarMenuItem>
+                                  <Link href="/sales/reseller">
+                                      <SidebarMenuButton variant="ghost" size="sm" isActive={pathname.startsWith('/sales/reseller')}>
+                                          <Users />
+                                          {t.sales.reseller}
+                                      </SidebarMenuButton>
+                                  </Link>
+                              </SidebarMenuItem>
+                          </SidebarMenu>
+                      </CollapsibleContent>
+                  </Collapsible>
+                  
                   <Collapsible open={isInventoryOpen} onOpenChange={setInventoryOpen}>
                       <CollapsibleTrigger asChild>
                           <SidebarMenuButton>
@@ -125,60 +179,6 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                                       <SidebarMenuButton variant="ghost" size="sm" isActive={pathname === '/history'}>
                                           <History />
                                           {t.stockHistory.title}
-                                      </SidebarMenuButton>
-                                  </Link>
-                              </SidebarMenuItem>
-                          </SidebarMenu>
-                      </CollapsibleContent>
-                  </Collapsible>
-
-                  <Collapsible open={isSalesOpen} onOpenChange={setSalesOpen}>
-                      <CollapsibleTrigger asChild>
-                          <SidebarMenuButton>
-                              <ShoppingCart />
-                              <span>{t.sales.title}</span>
-                              <ChevronDown className={cn("ml-auto transition-transform", isSalesOpen && "rotate-180")} />
-                          </SidebarMenuButton>
-                      </CollapsibleTrigger>
-                      <CollapsibleContent>
-                          <SidebarMenu className="ml-4 mt-2 border-l border-muted-foreground/20 pl-4">
-                               <SidebarMenuItem>
-                                  <Link href="/sales/shopee">
-                                      <SidebarMenuButton variant="ghost" size="sm" isActive={pathname.startsWith('/sales/shopee')}>
-                                          <ShoppingBag />
-                                          {t.sales.shopee}
-                                      </SidebarMenuButton>
-                                  </Link>
-                              </SidebarMenuItem>
-                              <SidebarMenuItem>
-                                  <Link href="/sales/tiktok">
-                                      <SidebarMenuButton variant="ghost" size="sm" isActive={pathname.startsWith('/sales/tiktok')}>
-                                          <ShoppingBag />
-                                          {t.sales.tiktok}
-                                      </SidebarMenuButton>
-                                  </Link>
-                              </SidebarMenuItem>
-                              <SidebarMenuItem>
-                                  <Link href="/sales/lazada">
-                                      <SidebarMenuButton variant="ghost" size="sm" isActive={pathname.startsWith('/sales/lazada')}>
-                                          <ShoppingBag />
-                                          {t.sales.lazada}
-                                      </SidebarMenuButton>
-                                  </Link>
-                              </SidebarMenuItem>
-                                <SidebarMenuItem>
-                                   <Link href="/sales/pos">
-                                       <SidebarMenuButton variant="ghost" size="sm" isActive={pathname.startsWith('/sales/pos')}>
-                                           <Store />
-                                           {t.sales.pos}
-                                       </SidebarMenuButton>
-                                   </Link>
-                                </SidebarMenuItem>
-                               <SidebarMenuItem>
-                                  <Link href="/sales/reseller">
-                                      <SidebarMenuButton variant="ghost" size="sm" isActive={pathname.startsWith('/sales/reseller')}>
-                                          <Users />
-                                          {t.sales.reseller}
                                       </SidebarMenuButton>
                                   </Link>
                               </SidebarMenuItem>
