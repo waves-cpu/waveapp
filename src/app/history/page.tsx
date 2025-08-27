@@ -21,7 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Search, Calendar as CalendarIcon, Eye, ShoppingCart, ShoppingBag, FileDown } from 'lucide-react';
+import { Search, Calendar as CalendarIcon, Eye, ShoppingCart, ShoppingBag, FileDown, History } from 'lucide-react';
 import type { InventoryItem, AdjustmentHistory, InventoryItemVariant, Sale } from '@/types';
 import { useLanguage } from '@/hooks/use-language';
 import { translations } from '@/types/language';
@@ -444,8 +444,14 @@ export default function HistoryPage() {
                 ))
                 ) : (
                 <TableRow>
-                    <TableCell colSpan={5} className="h-24 text-center">
-                    {t.inventoryTable.noItems}
+                    <TableCell colSpan={5} className="h-48 text-center">
+                        <div className="flex flex-col items-center justify-center gap-4 text-muted-foreground">
+                            <History className="h-16 w-16" />
+                            <div className="text-center">
+                                <p className="font-semibold">Tidak Ada Riwayat</p>
+                                <p className="text-sm">Coba ubah filter atau periode tanggal.</p>
+                            </div>
+                        </div>
                     </TableCell>
                 </TableRow>
                 )}
