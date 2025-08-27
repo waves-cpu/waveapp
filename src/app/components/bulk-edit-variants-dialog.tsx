@@ -80,7 +80,7 @@ export function BulkEditVariantsDialog({ open, onOpenChange, item }: BulkEditVar
             reason: 'Penyesuaian Stok Massal',
         });
     }
-  }, [open, item, form.reset]);
+  }, [open, item]);
 
 
   function onSubmit(values: z.infer<typeof formSchema>) {
