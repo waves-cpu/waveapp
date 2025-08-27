@@ -16,7 +16,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { ArchiveRestore, ArchiveX, ShoppingBag } from 'lucide-react';
+import { ArchiveRestore, ArchiveX } from 'lucide-react';
 import Image from 'next/image';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
@@ -25,6 +25,7 @@ export default function ArchivedProductsPage() {
   const { items, archiveProduct, loading } = useInventory();
   const { language } = useLanguage();
   const t = translations[language];
+  const TArchived = t.archived;
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -41,14 +42,14 @@ export default function ArchivedProductsPage() {
     try {
         await archiveProduct(itemId, false);
         toast({
-            title: "Produk Diaktifkan Kembali",
-            description: "Produk telah berhasil dikembalikan ke daftar aktif.",
+            title: TArchived.unarchiveSuccessTitle,
+            description: TArchived.unarchiveSuccessDesc,
         });
     } catch (error) {
         toast({
             variant: 'destructive',
-            title: "Gagal Mengaktifkan Produk",
-            description: "Terjadi kesalahan saat mengaktifkan kembali produk.",
+            title: TArchived.unarchiveErrorTitle,
+            description: TArchived.unarchiveErrorDesc,
         })
     }
   }
@@ -60,12 +61,12 @@ export default function ArchivedProductsPage() {
           <div className="flex items-center gap-4">
             <SidebarTrigger className="md:hidden" />
             <h1 className="text-lg md:text-xl font-bold font-headline text-foreground">
-              Produk yang Diarsipkan
+              {TArchived.title}
             </h1>
           </div>
           <div className="w-full max-w-sm">
             <Input 
-                placeholder="Cari produk di arsip..."
+                placeholder={TArchived.searchPlaceholder}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
             />
@@ -75,15 +76,15 @@ export default function ArchivedProductsPage() {
             <Table>
                 <TableHeader>
                     <TableRow>
-                        <TableHead className="w-[60%]">Produk</TableHead>
-                        <TableHead>Kategori</TableHead>
-                        <TableHead className="text-center">Aksi</TableHead>
+                        <TableHead className="w-[60%]">{TArchived.table.product}</TableHead>
+                        <TableHead>{TArchived.table.category}</TableHead>
+                        <TableHead className="text-center">{TArchived.table.actions}</TableHead>
                     </TableRow>
                 </TableHeader>
                 <TableBody>
                     {loading ? (
                         <TableRow>
-                            <TableCell colSpan={3} className="h-24 text-center">Memuat produk arsip...</TableCell>
+                            <TableCell colSpan={3} className="h-24 text-center">{TArchived.loading}</TableCell>
                         </TableRow>
                     ) : archivedItems.length > 0 ? (
                         archivedItems.map(item => (
@@ -107,7 +108,7 @@ export default function ArchivedProductsPage() {
                                 <TableCell className="text-center">
                                     <Button variant="outline" size="sm" onClick={() => handleUnarchive(item.id)}>
                                         <ArchiveRestore className="mr-2 h-4 w-4" />
-                                        Aktifkan Kembali
+                                        {TArchived.unarchiveButton}
                                     </Button>
                                 </TableCell>
                             </TableRow>
@@ -117,7 +118,7 @@ export default function ArchivedProductsPage() {
                             <TableCell colSpan={3} className="h-48 text-center">
                                 <div className="flex flex-col items-center justify-center gap-4 text-muted-foreground">
                                     <ArchiveX className="h-16 w-16" />
-                                    <p className="font-semibold">Tidak Ada Produk yang Diarsipkan</p>
+                                    <p className="font-semibold">{TArchived.empty}</p>
                                 </div>
                             </TableCell>
                         </TableRow>
