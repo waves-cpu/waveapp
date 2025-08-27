@@ -29,6 +29,7 @@ import type { InventoryItem } from '@/types';
 import { useEffect } from 'react';
 import Image from 'next/image';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { cn } from '@/lib/utils';
 
 const variantSchema = z.object({
   id: z.string(),
@@ -66,6 +67,11 @@ export function BulkEditVariantsDialog({ open, onOpenChange, item }: BulkEditVar
     },
   });
 
+  const { fields } = useFieldArray({
+    control: form.control,
+    name: "variants"
+  });
+  
   useEffect(() => {
     if (open && item) {
         form.reset({
@@ -76,11 +82,6 @@ export function BulkEditVariantsDialog({ open, onOpenChange, item }: BulkEditVar
     }
   }, [open, item, form]);
 
-
-  const { fields } = useFieldArray({
-    control: form.control,
-    name: "variants"
-  });
 
   function onSubmit(values: z.infer<typeof formSchema>) {
     const stockOnlyUpdates = values.variants.map(v => ({ id: v.id, stock: v.stock, name: v.name, price: v.price, sku: v.sku }));
@@ -146,10 +147,10 @@ export function BulkEditVariantsDialog({ open, onOpenChange, item }: BulkEditVar
                         <h4 className="text-sm font-semibold w-[60%]">Variasi</h4>
                         <h4 className="text-sm font-semibold w-[40%] text-left pl-1">Total Stok</h4>
                     </div>
-                    <ScrollArea className="max-h-56">
+                    <ScrollArea className={cn(fields.length > 5 ? "h-64" : "h-auto")}>
                     <div className="divide-y">
                     {fields.map((field, index) => (
-                        <div key={field.id} className="flex items-center justify-between p-3 py-3">
+                        <div key={field.id} className="flex items-center justify-between p-3 py-3.5">
                             <div className="w-[60%]">
                                 <p className="font-medium text-sm">{field.name}</p>
                                 {field.sku && <p className="text-xs text-muted-foreground">SKU: {field.sku}</p>}
