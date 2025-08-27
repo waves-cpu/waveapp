@@ -114,10 +114,10 @@ export function BulkEditVariantsDialog({ open, onOpenChange, item }: BulkEditVar
             <DialogTitle>Atur Stok</DialogTitle>
             <div className="flex items-start gap-4 pt-2">
                 <Image 
-                    src={item.imageUrl || 'https://placehold.co/48x48.png'} 
+                    src={item.imageUrl || 'https://placehold.co/40x40.png'} 
                     alt={item.name} 
-                    width={48} 
-                    height={48} 
+                    width={40} 
+                    height={40} 
                     className="rounded-md"
                     data-ai-hint="product image"
                 />
