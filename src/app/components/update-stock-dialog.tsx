@@ -9,7 +9,6 @@ import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -106,7 +105,7 @@ export function UpdateStockDialog({ open, onOpenChange, itemId }: UpdateStockDia
              <div className='font-semibold text-foreground'>{parentName}</div>
              <div>
                {variantName ? `${variantName}: ` : ''}
-               {t.updateStockDialog.description} {stock ?? 0}
+               {stock ?? 0}
              </div>
            </div>
         </DialogHeader>
