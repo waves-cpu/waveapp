@@ -355,126 +355,129 @@ export default function HistoryPage() {
                 </Button>
             </div>
           </div>
-          <div className='flex-grow overflow-y-auto'>
-          <Table className='table-fixed'>
-            <TableHeader>
-                <TableRow>
-                    <TableHead className="w-[30%]">{t.inventoryTable.name}</TableHead>
-                    <TableHead className="w-[15%]">{t.stockHistory.date}</TableHead>
-                    <TableHead className="w-[10%] text-center">{t.stockHistory.change}</TableHead>
-                    <TableHead className="w-[10%] text-center">{t.stockHistory.newTotal}</TableHead>
-                    <TableHead className="w-[25%]">{t.stockHistory.reason}</TableHead>
-                </TableRow>
-            </TableHeader>
-            <TableBody>
-                {loading ? (
-                    <TableRow>
-                        <TableCell colSpan={5} className="h-24 text-center">Memuat riwayat...</TableCell>
-                    </TableRow>
-                ) : paginatedHistory.length > 0 ? (
-                paginatedHistory.map((entry, index) => (
-                    <TableRow key={index}>
-                    {entry.type === 'adjustment' ? (
-                       <>
-                        <TableCell>
-                            <div className="flex items-center gap-4">
-                                {entry.imageUrl ? (
-                                <Image 
-                                    src={entry.imageUrl} 
-                                    alt={entry.itemName!} 
-                                    width={40} height={40} 
-                                    className="rounded-sm" 
-                                    data-ai-hint="product image"
-                                />
-                                ) : (
-                                <div className="flex h-10 w-10 items-center justify-center rounded-sm bg-muted">
-                                    <ShoppingBag className="h-5 w-5 text-muted-foreground" />
-                                </div>
-                                )}
-                                <div>
-                                    <div className="font-medium text-sm truncate">{entry.itemName}</div>
-                                    {entry.variantName && (
-                                        <div className="text-xs text-muted-foreground truncate">
-                                            {entry.variantName}
-                                            {entry.variantSku && ` (SKU: ${entry.variantSku})`}
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                        </TableCell>
-                        <TableCell>{format(new Date(entry.date), 'PP')}</TableCell>
-                        <TableCell className="text-center">
-                            <Badge variant={entry.change >= 0 ? 'default' : 'destructive'} className={cn(entry.change >= 0 ? 'bg-green-600' : 'bg-red-600', 'text-white')}>
-                            {entry.change > 0 ? `+${entry.change}` : entry.change}
-                            </Badge>
-                        </TableCell>
-                        <TableCell className="text-center">{entry.newStockLevel ?? '-'}</TableCell>
-                        <TableCell>
-                            <p className="truncate">{entry.reason}</p>
-                        </TableCell>
-                       </>
-                    ) : (
+          <div className={cn("flex-grow", paginatedHistory.length === 0 && "flex flex-col")}>
+            <Table className={cn("table-fixed", paginatedHistory.length === 0 && "h-full")}>
+              <TableHeader>
+                  <TableRow>
+                      <TableHead className="w-[30%]">{t.inventoryTable.name}</TableHead>
+                      <TableHead className="w-[15%]">{t.stockHistory.date}</TableHead>
+                      <TableHead className="w-[10%] text-center">{t.stockHistory.change}</TableHead>
+                      <TableHead className="w-[10%] text-center">{t.stockHistory.newTotal}</TableHead>
+                      <TableHead className="w-[25%]">{t.stockHistory.reason}</TableHead>
+                  </TableRow>
+              </TableHeader>
+              <TableBody>
+                  {loading ? (
+                      <TableRow>
+                          <TableCell colSpan={5} className="h-24 text-center">Memuat riwayat...</TableCell>
+                      </TableRow>
+                  ) : paginatedHistory.length > 0 ? (
+                  paginatedHistory.map((entry, index) => (
+                      <TableRow key={index}>
+                      {entry.type === 'adjustment' ? (
                         <>
-                        <TableCell>
-                            <div className="flex items-center gap-4">
-                                <div className="flex h-10 w-10 items-center justify-center rounded-sm bg-muted">
-                                    <ShoppingCart className="h-5 w-5 text-muted-foreground" />
-                                </div>
-                                <div>
-                                    <div className="font-medium text-sm capitalize">Penjualan {entry.channel}</div>
-                                     <Button variant="link" size="sm" className="h-auto p-0 text-xs" onClick={() => handleShowSalesDetail(entry.sales)}>
-                                        Lihat Detail
-                                        <Eye className="ml-1 h-3 w-3" />
-                                    </Button>
-                                </div>
+                          <TableCell>
+                              <div className="flex items-center gap-4">
+                                  {entry.imageUrl ? (
+                                  <Image 
+                                      src={entry.imageUrl} 
+                                      alt={entry.itemName!} 
+                                      width={40} height={40} 
+                                      className="rounded-sm" 
+                                      data-ai-hint="product image"
+                                  />
+                                  ) : (
+                                  <div className="flex h-10 w-10 items-center justify-center rounded-sm bg-muted">
+                                      <ShoppingBag className="h-5 w-5 text-muted-foreground" />
+                                  </div>
+                                  )}
+                                  <div>
+                                      <div className="font-medium text-sm truncate">{entry.itemName}</div>
+                                      {entry.variantName && (
+                                          <div className="text-xs text-muted-foreground truncate">
+                                              {entry.variantName}
+                                              {entry.variantSku && ` (SKU: ${entry.variantSku})`}
+                                          </div>
+                                      )}
+                                  </div>
+                              </div>
+                          </TableCell>
+                          <TableCell>{format(new Date(entry.date), 'PP')}</TableCell>
+                          <TableCell className="text-center">
+                              <Badge variant={entry.change >= 0 ? 'default' : 'destructive'} className={cn(entry.change >= 0 ? 'bg-green-600' : 'bg-red-600', 'text-white')}>
+                              {entry.change > 0 ? `+${entry.change}` : entry.change}
+                              </Badge>
+                          </TableCell>
+                          <TableCell className="text-center">{entry.newStockLevel ?? '-'}</TableCell>
+                          <TableCell>
+                              <p className="truncate">{entry.reason}</p>
+                          </TableCell>
+                        </>
+                      ) : (
+                          <>
+                          <TableCell>
+                              <div className="flex items-center gap-4">
+                                  <div className="flex h-10 w-10 items-center justify-center rounded-sm bg-muted">
+                                      <ShoppingCart className="h-5 w-5 text-muted-foreground" />
+                                  </div>
+                                  <div>
+                                      <div className="font-medium text-sm capitalize">Penjualan {entry.channel}</div>
+                                      <Button variant="link" size="sm" className="h-auto p-0 text-xs" onClick={() => handleShowSalesDetail(entry.sales)}>
+                                          Lihat Detail
+                                          <Eye className="ml-1 h-3 w-3" />
+                                      </Button>
+                                  </div>
+                              </div>
+                          </TableCell>
+                          <TableCell>{format(new Date(entry.date), 'PP')}</TableCell>
+                          <TableCell className="text-center">
+                              <Badge variant='destructive' className="bg-red-600 text-white">
+                                  -{entry.totalItems}
+                              </Badge>
+                          </TableCell>
+                          <TableCell className="text-center">-</TableCell>
+                          <TableCell>
+                              <p className="truncate">Total {entry.totalItems} item terjual dari channel {entry.channel}.</p>
+                          </TableCell>
+                          </>
+                      )}
+                      </TableRow>
+                  ))
+                  ) : (
+                  <TableRow className='h-full'>
+                      <TableCell colSpan={5} className="h-full text-center">
+                          <div className="flex flex-col items-center justify-center gap-4 text-muted-foreground h-full">
+                              <History className="h-16 w-16" />
+                              <div className="text-center">
+                                  <p className="font-semibold">Tidak Ada Riwayat</p>
+                                  <p className="text-sm">Coba ubah filter atau periode tanggal.</p>
+                              </div>
+                          </div>
+                      </TableCell>
+                  </TableRow>
+                  )}
+              </TableBody>
+              {paginatedHistory.length > 0 && (
+                <TableFooter>
+                    <TableRow>
+                        <TableCell colSpan={3} className="font-semibold text-left">Total Perubahan:</TableCell>
+                        <TableCell colSpan={2} className="font-semibold">
+                            <div className="flex items-center justify-between flex-wrap gap-y-1">
+                                <span className="text-green-600">Masuk: {historyTotals.totalIn}</span>
+                                <span className="text-red-600">Keluar: {historyTotals.totalOut}</span>
+                                <span>Net: 
+                                    <span className={cn(historyTotals.netChange >= 0 ? "text-green-600" : "text-red-600", "ml-1")}>
+                                        {historyTotals.netChange > 0 && '+'}{historyTotals.netChange}
+                                    </span>
+                                </span>
                             </div>
                         </TableCell>
-                         <TableCell>{format(new Date(entry.date), 'PP')}</TableCell>
-                         <TableCell className="text-center">
-                            <Badge variant='destructive' className="bg-red-600 text-white">
-                                -{entry.totalItems}
-                            </Badge>
-                         </TableCell>
-                         <TableCell className="text-center">-</TableCell>
-                         <TableCell>
-                             <p className="truncate">Total {entry.totalItems} item terjual dari channel {entry.channel}.</p>
-                         </TableCell>
-                        </>
-                    )}
                     </TableRow>
-                ))
-                ) : (
-                <TableRow>
-                    <TableCell colSpan={5} className="h-48 text-center">
-                        <div className="flex flex-col items-center justify-center gap-4 text-muted-foreground">
-                            <History className="h-16 w-16" />
-                            <div className="text-center">
-                                <p className="font-semibold">Tidak Ada Riwayat</p>
-                                <p className="text-sm">Coba ubah filter atau periode tanggal.</p>
-                            </div>
-                        </div>
-                    </TableCell>
-                </TableRow>
-                )}
-            </TableBody>
-            <TableFooter>
-                <TableRow>
-                    <TableCell colSpan={3} className="font-semibold text-left">Total Perubahan:</TableCell>
-                    <TableCell colSpan={2} className="font-semibold">
-                         <div className="flex items-center justify-between flex-wrap gap-y-1">
-                            <span className="text-green-600">Masuk: {historyTotals.totalIn}</span>
-                            <span className="text-red-600">Keluar: {historyTotals.totalOut}</span>
-                            <span>Net: 
-                                <span className={cn(historyTotals.netChange >= 0 ? "text-green-600" : "text-red-600", "ml-1")}>
-                                    {historyTotals.netChange > 0 && '+'}{historyTotals.netChange}
-                                </span>
-                            </span>
-                        </div>
-                    </TableCell>
-                </TableRow>
-            </TableFooter>
+                </TableFooter>
+              )}
             </Table>
-            </div>
+          </div>
+          {paginatedHistory.length > 0 && (
             <div className="flex items-center justify-end p-4 border-t">
                 <div className="flex items-center gap-4">
                     <Pagination
@@ -502,6 +505,7 @@ export default function HistoryPage() {
                     </Select>
                 </div>
             </div>
+          )}
         </div>
       </main>
       <DailySalesDetailDialog 
