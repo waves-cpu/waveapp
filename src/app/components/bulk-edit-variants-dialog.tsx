@@ -26,11 +26,10 @@ import { useToast } from '@/hooks/use-toast';
 import { useLanguage } from '@/hooks/use-language';
 import { translations } from '@/types/language';
 import type { InventoryItem } from '@/types';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import Image from 'next/image';
-import { Store } from 'lucide-react';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Separator } from '@/components/ui/separator';
 
 const variantSchema = z.object({
   id: z.string(),
@@ -42,6 +41,7 @@ const variantSchema = z.object({
 
 const formSchema = z.object({
   variants: z.array(variantSchema),
+  bulkStock: z.coerce.number().optional(),
 });
 
 
@@ -61,13 +61,15 @@ export function BulkEditVariantsDialog({ open, onOpenChange, item }: BulkEditVar
     resolver: zodResolver(formSchema),
     defaultValues: {
       variants: item.variants || [],
+      bulkStock: undefined,
     },
   });
 
   useEffect(() => {
     if (open && item) {
         form.reset({
-            variants: item.variants || []
+            variants: item.variants || [],
+            bulkStock: undefined,
         });
     }
   }, [open, item, form]);
@@ -89,68 +91,85 @@ export function BulkEditVariantsDialog({ open, onOpenChange, item }: BulkEditVar
     onOpenChange(false);
   }
 
-  const handleCellClick = (e: React.MouseEvent<HTMLTableCellElement>) => {
-    const input = e.currentTarget.querySelector('input');
-    if (input) {
-      input.focus();
+  const handleApplyBulkStock = () => {
+    const bulkValue = form.getValues("bulkStock");
+    if (bulkValue !== undefined && bulkValue >= 0) {
+        fields.forEach((_, index) => {
+            form.setValue(`variants.${index}.stock`, bulkValue, { shouldDirty: true, shouldValidate: true });
+        });
+    } else {
+        toast({
+            variant: 'destructive',
+            title: "Nilai Tidak Valid",
+            description: "Harap masukkan jumlah stok yang valid (angka non-negatif)."
+        });
     }
-  };
+  }
+
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
-        <DialogHeader>
-          <div className="flex items-center gap-4">
-              <Image 
-                  src={item.imageUrl || 'https://placehold.co/60x60.png'}
-                  alt={item.name}
-                  width={60}
-                  height={60}
-                  className="rounded-md"
-                  data-ai-hint="product image"
-              />
-              <div>
-                 <DialogTitle>{item.name}</DialogTitle>
-                 {item.sku && <p className="text-sm text-muted-foreground mt-1">SKU Induk: {item.sku}</p>}
-              </div>
-          </div>
+      <DialogContent className="max-w-lg p-0">
+        <DialogHeader className="p-6 pb-2">
+            <DialogTitle>Atur Stok</DialogTitle>
+            <p className="text-sm text-muted-foreground">{item.name}</p>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <ScrollArea className="h-80 pr-3">
-                <Table>
-                    <TableBody>
-                        {fields.map((field, index) => (
-                            <TableRow key={field.id} className="border-b">
-                                <TableCell className="w-[60px]">
-                                     <div className="flex h-10 w-10 items-center justify-center rounded-sm shrink-0">
-                                        <Store className="h-5 w-5 text-gray-400" />
-                                    </div>
-                                </TableCell>
-                                <TableCell className="font-medium text-sm w-full">
-                                    {field.name}
-                                </TableCell>
-                                <TableCell onClick={handleCellClick} className="w-[120px]">
-                                    <FormField
-                                        control={form.control}
-                                        name={`variants.${index}.stock`}
-                                        render={({ field }) => (
-                                            <FormItem>
-                                                <FormControl><Input type="number" placeholder="0" {...field} className="h-9 w-24 text-center" /></FormControl>
-                                                <FormMessage/>
-                                            </FormItem>
-                                        )}
-                                    />
-                                </TableCell>
-                            </TableRow>
-                        ))}
-                    </TableBody>
-                </Table>
-            </ScrollArea>
+          <form onSubmit={form.handleSubmit(onSubmit)}>
+            <div className="px-6 py-4 space-y-4">
+                <div className="flex items-center gap-4 rounded-md border p-3">
+                    <p className="text-sm font-medium">Ubah Massal</p>
+                     <FormField
+                        control={form.control}
+                        name="bulkStock"
+                        render={({ field }) => (
+                           <Input 
+                            type="number" 
+                            placeholder="Stok" 
+                            className="h-9" 
+                            {...field}
+                            value={field.value ?? ''}
+                           />
+                        )}
+                    />
+                    <Button type="button" variant="outline" onClick={handleApplyBulkStock}>Terapkan ke Semua</Button>
+                </div>
 
-            <DialogFooter>
+                <div className="border rounded-md">
+                     <div className="flex justify-between items-center p-3 border-b">
+                        <h4 className="text-sm font-semibold">Variasi</h4>
+                        <h4 className="text-sm font-semibold">Total Stok</h4>
+                    </div>
+                    <ScrollArea className="h-64">
+                    <div className="divide-y">
+                    {fields.map((field, index) => (
+                        <div key={field.id} className="flex items-center justify-between p-3">
+                            <div>
+                                <p className="font-medium text-sm">{field.name}</p>
+                                {field.sku && <p className="text-xs text-muted-foreground">SKU: {field.sku}</p>}
+                            </div>
+                            <div className="w-24">
+                                <FormField
+                                    control={form.control}
+                                    name={`variants.${index}.stock`}
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormControl><Input type="number" placeholder="0" {...field} className="h-9 w-24 text-center" /></FormControl>
+                                            <FormMessage className="text-xs"/>
+                                        </FormItem>
+                                    )}
+                                />
+                            </div>
+                        </div>
+                    ))}
+                    </div>
+                    </ScrollArea>
+                </div>
+            </div>
+
+            <DialogFooter className="bg-muted p-4">
                 <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>{t.common.cancel}</Button>
-                <Button type="submit">{t.common.saveChanges}</Button>
+                <Button type="submit">Update</Button>
             </DialogFooter>
           </form>
         </Form>
