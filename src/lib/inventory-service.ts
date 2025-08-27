@@ -126,7 +126,7 @@ export async function fetchInventoryData() {
             channelPrices: channelPriceMap.get(itemIdStr) || [],
             imageUrl: item.imageUrl,
         };
-    }).filter(item => item.category !== 'Accessories');
+    });
 
     const fullAccessories: Accessory[] = (fetchedAccessories as any[]).map(item => {
         const itemIdStr = item.id.toString();
@@ -774,3 +774,4 @@ export async function deleteProductPermanently(itemId: string) {
     // ON DELETE CASCADE will handle variants, history, and channel_prices
     db.prepare('DELETE FROM products WHERE id = ?').run(itemId);
 }
+
