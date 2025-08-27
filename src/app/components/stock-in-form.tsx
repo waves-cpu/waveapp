@@ -15,7 +15,6 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { useInventory } from '@/hooks/use-inventory';
-import { useToast } from '@/hooks/use-toast';
 import { useLanguage } from '@/hooks/use-language';
 import { translations } from '@/types/language';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
@@ -32,7 +31,6 @@ const stockInItemSchema = z.object({
     itemId: z.string(),
     itemName: z.string(),
     quantity: z.coerce.number().int().min(0, "Quantity must be at least 0."),
-    reason: z.string().min(2, "Reason is required."),
     parentName: z.string().optional(),
     parentSku: z.string().optional(),
     parentImageUrl: z.string().optional(),
@@ -48,6 +46,8 @@ const formSchema = z.object({
   masterQuantities: z.record(z.coerce.number().int().optional())
 });
 
+export type StockInSubmitData = z.infer<typeof formSchema>;
+
 interface StockInFormProps {
     isProductSelectionOpen: boolean;
     setProductSelectionOpen: (open: boolean) => void;
@@ -55,6 +55,7 @@ interface StockInFormProps {
     setBulkStockInOpen: (open: boolean) => void;
     bulkSelectedIds: Set<string>;
     setBulkSelectedIds: React.Dispatch<React.SetStateAction<Set<string>>>;
+    onFinalSubmit: (data: StockInSubmitData) => void;
 }
 
 export function StockInForm({
@@ -64,13 +65,12 @@ export function StockInForm({
     setBulkStockInOpen,
     bulkSelectedIds,
     setBulkSelectedIds,
+    onFinalSubmit,
 }: StockInFormProps) {
   const { language } = useLanguage();
   const t = translations[language];
-  const { items, updateStock, categories } = useInventory();
-  const { toast } = useToast();
+  const { items, categories } = useInventory();
   const router = useRouter();
-  const [isSubmitting, setIsSubmitting] = useState(false);
   
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -149,7 +149,6 @@ export function StockInForm({
                 itemId: id,
                 itemName: itemDetail.name,
                 quantity: 1,
-                reason: 'Stock In',
                 parentName: itemDetail.parentName,
                 parentSku: itemDetail.parentSku,
                 parentImageUrl: itemDetail.parentImageUrl,
@@ -157,7 +156,7 @@ export function StockInForm({
                 variantSku: itemDetail.variantSku,
                 isVariant: itemDetail.isVariant,
             };
-        }).filter((item): item is StockInItem => item !== null);
+        }).filter((item): item is Omit<StockInItem, 'reason'> => item !== null);
     
     append(newItems);
   };
@@ -179,7 +178,6 @@ export function StockInForm({
         const fieldItemId = form.getValues(`stockInItems.${index}.itemId`);
         if (bulkSelectedIds.has(fieldItemId)) {
             form.setValue(`stockInItems.${index}.quantity`, quantity, { shouldDirty: true });
-            form.setValue(`stockInItems.${index}.reason`, reason, { shouldDirty: true });
         }
     });
     form.trigger('stockInItems');
@@ -242,30 +240,8 @@ export function StockInForm({
     sortedIndices.forEach(index => remove(index));
   }
 
-  const onSubmit = async (values: z.infer<typeof formSchema>) => {
-    setIsSubmitting(true);
-    const stockUpdates = values.stockInItems
-        .filter(item => item.quantity > 0)
-        .map(item => updateStock(item.itemId, item.quantity, item.reason));
-
-    try {
-        await Promise.all(stockUpdates);
-        toast({
-            title: t.stockInForm.successTitle,
-            description: t.stockInForm.successDescription.replace('{count}', stockUpdates.length.toString()),
-        });
-        form.reset();
-        router.push('/');
-    } catch (error) {
-        console.error("Failed to stock in:", error);
-        toast({
-            title: "Error",
-            description: "Failed to update stock. Please try again.",
-            variant: "destructive"
-        });
-    } finally {
-        setIsSubmitting(false);
-    }
+  const onSubmit = (values: z.infer<typeof formSchema>) => {
+    onFinalSubmit(values);
   };
 
 
@@ -287,16 +263,15 @@ export function StockInForm({
                                             disabled={fields.length === 0}
                                         />
                                     </TableHead>
-                                    <TableHead className="w-[45%]">{t.inventoryTable.name}</TableHead>
-                                    <TableHead className="w-[15%]">{t.stockInForm.quantity}</TableHead>
-                                    <TableHead>{t.stockInForm.reason}</TableHead>
+                                    <TableHead className="w-[65%]">{t.inventoryTable.name}</TableHead>
+                                    <TableHead className="w-[25%]">{t.stockInForm.quantity}</TableHead>
                                     <TableHead className="w-[50px]"></TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
                                 {fields.length === 0 ? (
                                     <TableRow>
-                                        <TableCell colSpan={5} className="text-center h-48">
+                                        <TableCell colSpan={4} className="text-center h-48">
                                             <div className="flex flex-col items-center justify-center gap-4 text-muted-foreground">
                                                 <ShoppingBag className="h-16 w-16" />
                                                 <div className="text-center">
@@ -342,15 +317,6 @@ export function StockInForm({
                                                 />
                                             </TableCell>
                                             <TableCell>
-                                                <FormField
-                                                    control={form.control}
-                                                    name={`stockInItems.${field.originalIndex}.reason`}
-                                                    render={({ field: formField }) => (
-                                                        <FormItem><FormControl><Input placeholder={t.updateStockDialog.reasonPlaceholder} {...formField} /></FormControl><FormMessage/></FormItem>
-                                                    )}
-                                                />
-                                            </TableCell>
-                                            <TableCell>
                                                 <Button type="button" variant="ghost" size="icon" className="text-destructive hover:text-destructive-foreground hover:bg-destructive" onClick={() => handleRemove([field.originalIndex])}>
                                                     <Trash2 className="h-4 w-4" />
                                                 </Button>
@@ -389,7 +355,7 @@ export function StockInForm({
                                                         </div>
                                                     </div>
                                                 </TableCell>
-                                                <TableCell colSpan={2}>
+                                                <TableCell>
                                                     <div className="flex items-center gap-2">
                                                         <FormField
                                                             control={form.control}
@@ -441,15 +407,6 @@ export function StockInForm({
                                                         />
                                                     </TableCell>
                                                     <TableCell>
-                                                        <FormField
-                                                            control={form.control}
-                                                            name={`stockInItems.${field.originalIndex}.reason`}
-                                                            render={({ field: formField }) => (
-                                                                <FormItem><FormControl><Input placeholder={t.updateStockDialog.reasonPlaceholder} {...formField} /></FormControl><FormMessage/></FormItem>
-                                                    )}
-                                                        />
-                                                    </TableCell>
-                                                    <TableCell>
                                                         <Button type="button" variant="ghost" size="icon" className="text-destructive hover:text-destructive-foreground hover:bg-destructive" onClick={() => handleRemove([field.originalIndex])}>
                                                             <Trash2 className="h-4 w-4" />
                                                         </Button>
@@ -470,9 +427,9 @@ export function StockInForm({
                 </CardContent>
                 {fields.length > 0 && (
                     <CardFooter className="justify-end gap-2 pt-6">
-                        <Button type="button" variant="ghost" onClick={() => router.push('/')} disabled={isSubmitting}>{t.common.cancel}</Button>
-                        <Button type="submit" disabled={isSubmitting}>
-                            {isSubmitting ? 'Submitting...' : t.stockInForm.submit}
+                        <Button type="button" variant="ghost" onClick={() => router.push('/')}>{t.common.cancel}</Button>
+                        <Button type="submit">
+                            {t.stockInForm.submit}
                         </Button>
                     </CardFooter>
                 )}

@@ -1,5 +1,4 @@
 
-
 export const translations = {
     en: {
         sidebar: {
@@ -89,7 +88,7 @@ export const translations = {
             itemName: "Item Name",
             itemNamePlaceholder: "e.g., Organic Green Tea",
             category: "Category",
-            categoryPlaceholder: "e.g., Beverages",
+            categoryPlaceholder: "Pilih Kategori",
             price: "Price",
             pricePlaceholder: "e.g., 50000",
             initialStock: "Initial Stock",
