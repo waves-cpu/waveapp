@@ -9,7 +9,18 @@ if (!fs.existsSync(dbDir)) {
   fs.mkdirSync(dbDir, { recursive: true });
 }
 
-export const db = new Database(path.join(dbDir, 'inventory.db'));
+const dbPath = path.join(dbDir, 'inventory.db');
+
+// One-time fix: Delete the potentially corrupt database file.
+// This will be removed in the next interaction.
+if (fs.existsSync(dbPath)) {
+    console.log('Corrupt database file found. Deleting and recreating...');
+    fs.unlinkSync(dbPath);
+    console.log('Old database file deleted.');
+}
+
+
+export const db = new Database(dbPath);
 db.pragma('journal_mode = WAL');
 
 // Simple migration logic
