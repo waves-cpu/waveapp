@@ -9,7 +9,6 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
@@ -114,10 +113,10 @@ export function BulkEditVariantsDialog({ open, onOpenChange, item }: BulkEditVar
             <DialogTitle>Atur Stok</DialogTitle>
             <div className="flex items-start gap-4 pt-2">
                 <Image 
-                    src={item.imageUrl || 'https://placehold.co/64x64.png'} 
+                    src={item.imageUrl || 'https://placehold.co/48x48.png'} 
                     alt={item.name} 
-                    width={64} 
-                    height={64} 
+                    width={48} 
+                    height={48} 
                     className="rounded-md"
                     data-ai-hint="product image"
                 />
