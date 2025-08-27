@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -71,6 +71,7 @@ export function StockInForm({
   const t = translations[language];
   const { items, categories } = useInventory();
   const router = useRouter();
+  const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
   
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -84,6 +85,10 @@ export function StockInForm({
     control: form.control,
     name: "stockInItems"
   });
+  
+  useEffect(() => {
+    inputRefs.current = inputRefs.current.slice(0, fields.length);
+  }, [fields.length]);
 
   useEffect(() => {
     // Clear selections when fields change
@@ -244,6 +249,19 @@ export function StockInForm({
     onFinalSubmit(values);
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent, currentIndex: number) => {
+    if (e.key === 'Tab' && !e.shiftKey) {
+        e.preventDefault();
+        const nextInput = inputRefs.current[currentIndex + 1];
+        if (nextInput) {
+            nextInput.focus();
+        } else {
+            // Optional: focus on the first input if at the end
+            inputRefs.current[0]?.focus();
+        }
+    }
+  };
+
 
   return (
     <>
@@ -312,7 +330,18 @@ export function StockInForm({
                                                     control={form.control}
                                                     name={`stockInItems.${field.originalIndex}.quantity`}
                                                     render={({ field: formField }) => (
-                                                        <FormItem><FormControl><Input type="number" placeholder="10" {...formField} /></FormControl><FormMessage/></FormItem>
+                                                        <FormItem>
+                                                            <FormControl>
+                                                                <Input 
+                                                                    type="number" 
+                                                                    placeholder="10" 
+                                                                    {...formField} 
+                                                                    ref={el => inputRefs.current[field.originalIndex] = el}
+                                                                    onKeyDown={(e) => handleKeyDown(e, field.originalIndex)}
+                                                                />
+                                                            </FormControl>
+                                                            <FormMessage/>
+                                                        </FormItem>
                                                     )}
                                                 />
                                             </TableCell>
@@ -402,7 +431,18 @@ export function StockInForm({
                                                             control={form.control}
                                                             name={`stockInItems.${field.originalIndex}.quantity`}
                                                             render={({ field: formField }) => (
-                                                                <FormItem><FormControl><Input type="number" placeholder="10" {...formField} /></FormControl><FormMessage/></FormItem>
+                                                                <FormItem>
+                                                                    <FormControl>
+                                                                        <Input 
+                                                                            type="number" 
+                                                                            placeholder="10" 
+                                                                            {...formField} 
+                                                                            ref={el => inputRefs.current[field.originalIndex] = el}
+                                                                            onKeyDown={(e) => handleKeyDown(e, field.originalIndex)}
+                                                                        />
+                                                                    </FormControl>
+                                                                    <FormMessage/>
+                                                                </FormItem>
                                                             )}
                                                         />
                                                     </TableCell>
