@@ -8,9 +8,9 @@ import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
+  DialogFooter,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import {
@@ -80,7 +80,7 @@ export function BulkEditVariantsDialog({ open, onOpenChange, item }: BulkEditVar
             reason: 'Penyesuaian Stok Massal',
         });
     }
-  }, [open, item, form]);
+  }, [open, item, form.reset]);
 
 
   function onSubmit(values: z.infer<typeof formSchema>) {
@@ -147,7 +147,7 @@ export function BulkEditVariantsDialog({ open, onOpenChange, item }: BulkEditVar
                         <h4 className="text-sm font-semibold w-[60%]">Variasi</h4>
                         <h4 className="text-sm font-semibold w-[40%] text-left pl-1">Total Stok</h4>
                     </div>
-                    <ScrollArea className={cn(fields.length > 5 ? "h-64" : "h-auto")}>
+                    <ScrollArea className={cn("h-auto", { "h-64": fields.length > 5 })}>
                     <div className="divide-y">
                     {fields.map((field, index) => (
                         <div key={field.id} className="flex items-center justify-between p-3 py-3.5">
