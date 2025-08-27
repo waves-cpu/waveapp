@@ -110,6 +110,16 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                                       </SidebarMenuButton>
                                   </Link>
                               </SidebarMenuItem>
+                               {hasArchivedItems && (
+                                <SidebarMenuItem>
+                                    <Link href="/inventory/archived">
+                                        <SidebarMenuButton variant="ghost" size="sm" isActive={pathname === '/inventory/archived'}>
+                                            <Archive />
+                                            {t.archived.title}
+                                        </SidebarMenuButton>
+                                    </Link>
+                                </SidebarMenuItem>
+                               )}
                               <SidebarMenuItem>
                                   <Link href="/history">
                                       <SidebarMenuButton variant="ghost" size="sm" isActive={pathname === '/history'}>
@@ -118,16 +128,6 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                                       </SidebarMenuButton>
                                   </Link>
                               </SidebarMenuItem>
-                               {hasArchivedItems && (
-                                <SidebarMenuItem>
-                                    <Link href="/inventory/archived">
-                                        <SidebarMenuButton variant="ghost" size="sm" isActive={pathname === '/inventory/archived'}>
-                                            <Archive />
-                                            Produk Arsip
-                                        </SidebarMenuButton>
-                                    </Link>
-                                </SidebarMenuItem>
-                               )}
                           </SidebarMenu>
                       </CollapsibleContent>
                   </Collapsible>

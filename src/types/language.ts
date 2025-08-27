@@ -85,6 +85,7 @@ export const translations = {
         archived: {
             title: "Archived Products",
             searchPlaceholder: "Search archived products...",
+            archiveButton: "Archive",
             unarchiveButton: "Reactivate",
             table: {
                 product: "Product",
@@ -93,10 +94,17 @@ export const translations = {
             },
             loading: "Loading archived products...",
             empty: "No Archived Products",
+            archiveSuccessTitle: "Product Archived",
+            archiveSuccessDesc: "The product has been successfully archived.",
+            archiveErrorTitle: "Failed to Archive",
+            archiveErrorDesc: "An error occurred while archiving the product.",
             unarchiveSuccessTitle: "Product Reactivated",
             unarchiveSuccessDesc: "The product has been successfully returned to the active list.",
             unarchiveErrorTitle: "Failed to Reactivate Product",
             unarchiveErrorDesc: "An error occurred while reactivating the product.",
+            archiveDialogTitle: "Archive This Product?",
+            archiveDialogDesc: "Archived products will be hidden from the main list and cannot be sold. You can reactivate them later.",
+            archiveDialogConfirm: "Yes, Archive"
         },
         addItemDialog: {
             title: "Add New Item",
@@ -285,8 +293,19 @@ export const translations = {
             selectLanguagePlaceholder: "Select language",
         },
         bulkEditDialog: {
-            title: "Edit Variants for",
-            description: "Quickly edit all variants for this product below."
+            title: "Adjust Stock",
+            parentSkuLabel: "Parent SKU",
+            bulkStockPlaceholder: "Set All Stock",
+            applyToAll: "Apply All",
+            variationColumn: "Variation",
+            totalStockColumn: "Total Stock",
+            reasonLabel: "Adjustment Reason",
+            reasonPlaceholder: "e.g., Stock Opname, Correction...",
+            defaultReason: "Mass Stock Adjustment",
+            successToastTitle: "Variants Updated",
+            successToastDesc: "Stock for {name} variants has been updated.",
+            invalidValueToastTitle: "Invalid Value",
+            invalidValueToastDesc: "Please enter a valid stock amount (non-negative number)."
         },
         bulkStockInDialog: {
             title: "Bulk Stock In",
@@ -304,6 +323,7 @@ export const translations = {
             saveChanges: "Save Changes",
             apply: "Apply",
             saving: "Saving...",
+            update: "Update",
         }
     },
     id: {
@@ -389,8 +409,9 @@ export const translations = {
             emptyStock: "Stok Kosong",
         },
         archived: {
-            title: "Produk yang Diarsipkan",
+            title: "Produk Arsip",
             searchPlaceholder: "Cari produk di arsip...",
+            archiveButton: "Arsipkan",
             unarchiveButton: "Aktifkan Kembali",
             table: {
                 product: "Produk",
@@ -399,10 +420,17 @@ export const translations = {
             },
             loading: "Memuat produk arsip...",
             empty: "Tidak Ada Produk yang Diarsipkan",
+            archiveSuccessTitle: "Produk Diarsipkan",
+            archiveSuccessDesc: "Produk telah berhasil diarsipkan.",
+            archiveErrorTitle: "Gagal Mengarsipkan",
+            archiveErrorDesc: "Terjadi kesalahan saat mengarsipkan produk.",
             unarchiveSuccessTitle: "Produk Diaktifkan Kembali",
             unarchiveSuccessDesc: "Produk telah berhasil dikembalikan ke daftar aktif.",
             unarchiveErrorTitle: "Gagal Mengaktifkan Produk",
             unarchiveErrorDesc: "Terjadi kesalahan saat mengaktifkan kembali produk.",
+            archiveDialogTitle: "Arsipkan Produk Ini?",
+            archiveDialogDesc: "Produk yang diarsipkan akan disembunyikan dari daftar utama dan tidak bisa dijual. Anda bisa mengaktifkannya kembali nanti.",
+            archiveDialogConfirm: "Ya, Arsipkan"
         },
         addItemDialog: {
             title: "Tambah Barang Baru",
@@ -591,8 +619,19 @@ export const translations = {
             selectLanguagePlaceholder: "Pilih bahasa",
         },
         bulkEditDialog: {
-            title: "Ubah Varian untuk",
-            description: "Ubah semua varian untuk produk ini dengan cepat di bawah."
+            title: "Atur Stok",
+            parentSkuLabel: "SKU Induk",
+            bulkStockPlaceholder: "Atur Stok Massal",
+            applyToAll: "Terapkan semua",
+            variationColumn: "Variasi",
+            totalStockColumn: "Total Stok",
+            reasonLabel: "Alasan Penyesuaian",
+            reasonPlaceholder: "cth., Stok Opname, Koreksi...",
+            defaultReason: "Penyesuaian Stok Massal",
+            successToastTitle: "Varian Diperbarui",
+            successToastDesc: "Stok untuk varian {name} telah diperbarui.",
+            invalidValueToastTitle: "Nilai Tidak Valid",
+            invalidValueToastDesc: "Harap masukkan jumlah stok yang valid (angka non-negatif)."
         },
         bulkStockInDialog: {
             title: "Stok Masuk Massal",
@@ -610,6 +649,7 @@ export const translations = {
             saveChanges: "Simpan Perubahan",
             apply: "Terapkan",
             saving: 'Menyimpan...',
+            update: "Perbarui",
         }
     }
 }

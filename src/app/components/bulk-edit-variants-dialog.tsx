@@ -55,6 +55,7 @@ interface BulkEditVariantsDialogProps {
 export function BulkEditVariantsDialog({ open, onOpenChange, item }: BulkEditVariantsDialogProps) {
   const { language } = useLanguage();
   const t = translations[language];
+  const TBulk = t.bulkEditDialog;
   const { bulkUpdateVariants } = useInventory();
   const { toast } = useToast();
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
@@ -64,7 +65,7 @@ export function BulkEditVariantsDialog({ open, onOpenChange, item }: BulkEditVar
     defaultValues: {
       variants: [],
       bulkStock: undefined,
-      reason: 'Penyesuaian Stok Massal',
+      reason: TBulk.defaultReason,
     },
   });
 
@@ -78,10 +79,11 @@ export function BulkEditVariantsDialog({ open, onOpenChange, item }: BulkEditVar
         form.reset({
             variants: item.variants || [],
             bulkStock: undefined,
-            reason: 'Penyesuaian Stok Massal',
+            reason: TBulk.defaultReason,
         });
     }
-  }, [open, item]);
+  }, [open, item, TBulk.defaultReason, form]);
+
 
   useEffect(() => {
     inputRefs.current = inputRefs.current.slice(0, fields.length);
@@ -92,8 +94,8 @@ export function BulkEditVariantsDialog({ open, onOpenChange, item }: BulkEditVar
     const stockOnlyUpdates = values.variants.map(v => ({ id: v.id, stock: v.stock, name: v.name, price: v.price, sku: v.sku }));
     bulkUpdateVariants(item.id, stockOnlyUpdates, values.reason);
     toast({
-      title: "Varian Diperbarui",
-      description: `Stok untuk varian ${item.name} telah diperbarui.`,
+      title: TBulk.successToastTitle,
+      description: TBulk.successToastDesc.replace('{name}', item.name),
     });
     onOpenChange(false);
   }
@@ -107,8 +109,8 @@ export function BulkEditVariantsDialog({ open, onOpenChange, item }: BulkEditVar
     } else {
         toast({
             variant: 'destructive',
-            title: "Nilai Tidak Valid",
-            description: "Harap masukkan jumlah stok yang valid (angka non-negatif)."
+            title: TBulk.invalidValueToastTitle,
+            description: TBulk.invalidValueToastDesc,
         });
     }
   }
@@ -144,9 +146,9 @@ export function BulkEditVariantsDialog({ open, onOpenChange, item }: BulkEditVar
                     data-ai-hint="product image"
                 />
                 <div className="pt-1">
-                    <DialogTitle className="text-base">Atur Stok</DialogTitle>
+                    <DialogTitle className="text-base">{TBulk.title}</DialogTitle>
                     <p className="font-semibold text-sm">{item.name}</p>
-                    <p className="text-xs text-muted-foreground">SKU Induk: {item.sku}</p>
+                    <p className="text-xs text-muted-foreground">{TBulk.parentSkuLabel}: {item.sku}</p>
                 </div>
             </div>
         </DialogHeader>
@@ -156,17 +158,17 @@ export function BulkEditVariantsDialog({ open, onOpenChange, item }: BulkEditVar
                 <div className="flex items-center gap-2">
                     <Input 
                         type="number" 
-                        placeholder="Ubah Stok Massal" 
+                        placeholder={TBulk.bulkStockPlaceholder} 
                         className="h-9" 
                         {...form.register("bulkStock")}
                     />
-                    <Button type="button" variant="outline" onClick={handleApplyBulkStock}>Terapkan semua</Button>
+                    <Button type="button" variant="outline" onClick={handleApplyBulkStock}>{TBulk.applyToAll}</Button>
                 </div>
 
                 <div className="border rounded-md">
                      <div className="flex justify-between items-center p-3 border-b bg-muted/50">
-                        <h4 className="text-sm font-semibold w-[60%]">Variasi</h4>
-                        <h4 className="text-sm font-semibold w-[40%] text-left pl-1">Total Stok</h4>
+                        <h4 className="text-sm font-semibold w-[60%]">{TBulk.variationColumn}</h4>
+                        <h4 className="text-sm font-semibold w-[40%] text-left pl-1">{TBulk.totalStockColumn}</h4>
                     </div>
                     <ScrollArea className={cn("h-auto", { "h-64": fields.length > 5 })}>
                     <div className="divide-y">
@@ -207,9 +209,9 @@ export function BulkEditVariantsDialog({ open, onOpenChange, item }: BulkEditVar
                     name="reason"
                     render={({ field }) => (
                         <FormItem>
-                            <FormLabel className="text-xs">Alasan Penyesuaian</FormLabel>
+                            <FormLabel className="text-xs">{TBulk.reasonLabel}</FormLabel>
                             <FormControl>
-                                <Input placeholder="Alasan penyesuaian stok..." {...field} />
+                                <Input placeholder={TBulk.reasonPlaceholder} {...field} />
                             </FormControl>
                             <FormMessage />
                         </FormItem>
@@ -219,7 +221,7 @@ export function BulkEditVariantsDialog({ open, onOpenChange, item }: BulkEditVar
 
             <DialogFooter className="bg-muted p-4">
                 <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>{t.common.cancel}</Button>
-                <Button type="submit">Update</Button>
+                <Button type="submit">{t.common.update}</Button>
             </DialogFooter>
           </form>
         </Form>

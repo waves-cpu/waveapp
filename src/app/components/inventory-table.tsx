@@ -203,6 +203,7 @@ export function InventoryTable({ onUpdateStock, category }: InventoryTableProps)
   const [currentPage, setCurrentPage] = useState(1);
   const { language } = useLanguage();
   const t = translations[language];
+  const TArchived = t.archived;
   const [isBulkEditDialogOpen, setBulkEditDialogOpen] = useState(false);
   const [selectedBulkEditItem, setSelectedBulkEditItem] = useState<InventoryItem | null>(null);
   const router = useRouter();
@@ -220,14 +221,14 @@ export function InventoryTable({ onUpdateStock, category }: InventoryTableProps)
     try {
         await archiveProduct(itemId, true);
         toast({
-            title: "Produk Diarsipkan",
-            description: "Produk telah berhasil diarsipkan dan disembunyikan dari daftar utama.",
+            title: TArchived.archiveSuccessTitle,
+            description: TArchived.archiveSuccessDesc,
         });
     } catch(error) {
          toast({
             variant: 'destructive',
-            title: "Gagal Mengarsipkan",
-            description: "Terjadi kesalahan saat mengarsipkan produk.",
+            title: TArchived.archiveErrorTitle,
+            description: TArchived.archiveErrorDesc,
         });
     }
   }
@@ -421,19 +422,19 @@ export function InventoryTable({ onUpdateStock, category }: InventoryTableProps)
                                                 <AlertDialogTrigger asChild>
                                                     <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
                                                         <Archive className="mr-2 h-4 w-4" />
-                                                        <span>Arsipkan</span>
+                                                        <span>{TArchived.archiveButton}</span>
                                                     </DropdownMenuItem>
                                                 </AlertDialogTrigger>
                                                 <AlertDialogContent>
                                                     <AlertDialogHeader>
-                                                        <AlertDialogTitle>Arsipkan Produk Ini?</AlertDialogTitle>
+                                                        <AlertDialogTitle>{TArchived.archiveDialogTitle}</AlertDialogTitle>
                                                         <AlertDialogDescription>
-                                                            Produk yang diarsipkan akan disembunyikan dari daftar utama dan tidak bisa dijual. Anda bisa mengaktifkannya kembali nanti.
+                                                            {TArchived.archiveDialogDesc}
                                                         </AlertDialogDescription>
                                                     </AlertDialogHeader>
                                                     <AlertDialogFooter>
-                                                        <AlertDialogCancel>Batal</AlertDialogCancel>
-                                                        <AlertDialogAction onClick={() => handleArchive(item.id)}>Ya, Arsipkan</AlertDialogAction>
+                                                        <AlertDialogCancel>{t.common.cancel}</AlertDialogCancel>
+                                                        <AlertDialogAction onClick={() => handleArchive(item.id)}>{TArchived.archiveDialogConfirm}</AlertDialogAction>
                                                     </AlertDialogFooter>
                                                 </AlertDialogContent>
                                             </AlertDialog>
@@ -522,19 +523,19 @@ export function InventoryTable({ onUpdateStock, category }: InventoryTableProps)
                                             <AlertDialogTrigger asChild>
                                                 <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
                                                     <Archive className="mr-2 h-4 w-4" />
-                                                    <span>Arsipkan</span>
+                                                    <span>{TArchived.archiveButton}</span>
                                                 </DropdownMenuItem>
                                             </AlertDialogTrigger>
                                             <AlertDialogContent>
                                                 <AlertDialogHeader>
-                                                    <AlertDialogTitle>Arsipkan Produk Ini?</AlertDialogTitle>
+                                                    <AlertDialogTitle>{TArchived.archiveDialogTitle}</AlertDialogTitle>
                                                     <AlertDialogDescription>
-                                                        Produk yang diarsipkan akan disembunyikan dari daftar utama dan tidak bisa dijual. Anda bisa mengaktifkannya kembali nanti.
+                                                        {TArchived.archiveDialogDesc}
                                                     </AlertDialogDescription>
                                                 </AlertDialogHeader>
                                                 <AlertDialogFooter>
-                                                    <AlertDialogCancel>Batal</AlertDialogCancel>
-                                                    <AlertDialogAction onClick={() => handleArchive(item.id)}>Ya, Arsipkan</AlertDialogAction>
+                                                    <AlertDialogCancel>{t.common.cancel}</AlertDialogCancel>
+                                                    <AlertDialogAction onClick={() => handleArchive(item.id)}>{TArchived.archiveDialogConfirm}</AlertDialogAction>
                                                 </AlertDialogFooter>
                                             </AlertDialogContent>
                                         </AlertDialog>
