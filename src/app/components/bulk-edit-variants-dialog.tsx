@@ -26,7 +26,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useLanguage } from '@/hooks/use-language';
 import { translations } from '@/types/language';
 import type { InventoryItem } from '@/types';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import Image from 'next/image';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
@@ -57,6 +57,7 @@ export function BulkEditVariantsDialog({ open, onOpenChange, item }: BulkEditVar
   const t = translations[language];
   const { bulkUpdateVariants } = useInventory();
   const { toast } = useToast();
+  const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
   
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -73,7 +74,7 @@ export function BulkEditVariantsDialog({ open, onOpenChange, item }: BulkEditVar
   });
   
   useEffect(() => {
-    if (open && item) {
+    if (open) {
         form.reset({
             variants: item.variants || [],
             bulkStock: undefined,
@@ -81,6 +82,10 @@ export function BulkEditVariantsDialog({ open, onOpenChange, item }: BulkEditVar
         });
     }
   }, [open, item]);
+
+  useEffect(() => {
+    inputRefs.current = inputRefs.current.slice(0, fields.length);
+  }, [fields.length]);
 
 
   function onSubmit(values: z.infer<typeof formSchema>) {
@@ -107,6 +112,22 @@ export function BulkEditVariantsDialog({ open, onOpenChange, item }: BulkEditVar
         });
     }
   }
+
+  const handleKeyDown = (e: React.KeyboardEvent, currentIndex: number) => {
+    if (e.key === 'Tab' && !e.shiftKey) {
+        e.preventDefault();
+        const nextInput = inputRefs.current[currentIndex + 1];
+        if (nextInput) {
+            nextInput.focus();
+        } else {
+            // Focus on the reason input after the last stock input
+            const reasonInput = (e.target as HTMLElement).form?.elements.namedItem('reason');
+            if (reasonInput instanceof HTMLInputElement) {
+                reasonInput.focus();
+            }
+        }
+    }
+  };
 
 
   return (
@@ -159,9 +180,18 @@ export function BulkEditVariantsDialog({ open, onOpenChange, item }: BulkEditVar
                                 <FormField
                                     control={form.control}
                                     name={`variants.${index}.stock`}
-                                    render={({ field }) => (
+                                    render={({ field: formField }) => (
                                         <FormItem>
-                                            <FormControl><Input type="number" placeholder="0" {...field} className="h-9 w-32" /></FormControl>
+                                            <FormControl>
+                                                <Input 
+                                                    type="number" 
+                                                    placeholder="0" 
+                                                    {...formField} 
+                                                    className="h-9 w-32" 
+                                                    ref={el => inputRefs.current[index] = el}
+                                                    onKeyDown={(e) => handleKeyDown(e, index)}
+                                                />
+                                            </FormControl>
                                             <FormMessage className="text-xs"/>
                                         </FormItem>
                                     )}
