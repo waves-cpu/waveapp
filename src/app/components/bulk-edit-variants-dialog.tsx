@@ -29,12 +29,14 @@ import type { InventoryItem } from '@/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useEffect } from 'react';
+import Image from 'next/image';
+import { Store } from 'lucide-react';
 
 const variantSchema = z.object({
   id: z.string(),
-  name: z.string().min(1, "Variant name is required."),
-  sku: z.string().optional(),
-  price: z.coerce.number().min(0, "Price must be non-negative."),
+  name: z.string(), // Keep for display
+  sku: z.string().optional(), // Keep for display
+  price: z.coerce.number(), // Keep for context if needed, but not editable
   stock: z.coerce.number().int().min(0, "Stock must be a non-negative integer."),
 });
 
@@ -77,10 +79,12 @@ export function BulkEditVariantsDialog({ open, onOpenChange, item }: BulkEditVar
   });
 
   function onSubmit(values: z.infer<typeof formSchema>) {
-    bulkUpdateVariants(item.id, values.variants);
+    // We only send stock updates, but the form holds other data for display
+    const stockOnlyUpdates = values.variants.map(v => ({ id: v.id, stock: v.stock, name: v.name, price: v.price, sku: v.sku }));
+    bulkUpdateVariants(item.id, stockOnlyUpdates);
     toast({
-      title: "Variants Updated",
-      description: `Variants for ${item.name} have been updated.`,
+      title: "Varian Diperbarui",
+      description: `Stok untuk varian ${item.name} telah diperbarui.`,
     });
     onOpenChange(false);
   }
@@ -94,72 +98,45 @@ export function BulkEditVariantsDialog({ open, onOpenChange, item }: BulkEditVar
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl">
+      <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>{t.bulkEditDialog.title}</DialogTitle>
-           <div className="-mt-2">
-              <h4 className="font-medium text-lg leading-tight">{item.name}</h4>
-              {item.sku && <p className="text-sm text-muted-foreground">SKU Induk: {item.sku}</p>}
+          <div className="flex items-center gap-4">
+              <Image 
+                  src={item.imageUrl || 'https://placehold.co/60x60.png'}
+                  alt={item.name}
+                  width={60}
+                  height={60}
+                  className="rounded-md"
+                  data-ai-hint="product image"
+              />
+              <div>
+                 <DialogTitle>{item.name}</DialogTitle>
+                 {item.sku && <p className="text-sm text-muted-foreground mt-1">SKU Induk: {item.sku}</p>}
+              </div>
           </div>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <ScrollArea className="h-96">
+            <ScrollArea className="h-80 pr-3">
                 <Table>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead>{t.inventoryTable.name}</TableHead>
-                            <TableHead>SKU</TableHead>
-                            <TableHead>{t.inventoryTable.price}</TableHead>
-                            <TableHead>{t.inventoryTable.currentStock}</TableHead>
-                        </TableRow>
-                    </TableHeader>
                     <TableBody>
                         {fields.map((field, index) => (
-                            <TableRow key={field.id}>
-                                <TableCell onClick={handleCellClick}>
-                                        <FormField
-                                        control={form.control}
-                                        name={`variants.${index}.name`}
-                                        render={({ field }) => (
-                                            <FormItem>
-                                                <FormControl><Input placeholder="e.g., Large" {...field} /></FormControl>
-                                                <FormMessage/>
-                                            </FormItem>
-                                        )}
-                                    />
+                            <TableRow key={field.id} className="border-b">
+                                <TableCell className="w-[60px]">
+                                     <div className="flex h-10 w-10 items-center justify-center rounded-sm shrink-0">
+                                        <Store className="h-5 w-5 text-gray-400" />
+                                    </div>
                                 </TableCell>
-                                <TableCell onClick={handleCellClick}>
-                                    <FormField
-                                        control={form.control}
-                                        name={`variants.${index}.sku`}
-                                        render={({ field }) => (
-                                            <FormItem>
-                                                <FormControl><Input placeholder="e.g., VAR-LG" {...field} /></FormControl>
-                                                <FormMessage/>
-                                            </FormItem>
-                                        )}
-                                    />
+                                <TableCell className="font-medium text-sm w-full">
+                                    {field.name}
                                 </TableCell>
-                                <TableCell onClick={handleCellClick}>
-                                    <FormField
-                                        control={form.control}
-                                        name={`variants.${index}.price`}
-                                        render={({ field }) => (
-                                            <FormItem>
-                                                <FormControl><Input type="number" placeholder="50000" {...field} /></FormControl>
-                                                <FormMessage/>
-                                            </FormItem>
-                                        )}
-                                    />
-                                </TableCell>
-                                <TableCell onClick={handleCellClick}>
+                                <TableCell onClick={handleCellClick} className="w-[120px]">
                                     <FormField
                                         control={form.control}
                                         name={`variants.${index}.stock`}
                                         render={({ field }) => (
                                             <FormItem>
-                                                <FormControl><Input type="number" placeholder="50" {...field} /></FormControl>
+                                                <FormControl><Input type="number" placeholder="0" {...field} className="h-9 w-24 text-center" /></FormControl>
                                                 <FormMessage/>
                                             </FormItem>
                                         )}
@@ -181,4 +158,3 @@ export function BulkEditVariantsDialog({ open, onOpenChange, item }: BulkEditVar
     </Dialog>
   );
 }
-
