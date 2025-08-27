@@ -301,7 +301,7 @@ export async function editProduct(itemId: string, itemData: any) {
     })();
 }
 
-export async function editVariantsBulk(itemId: string, variants: InventoryItemVariant[]) {
+export async function editVariantsBulk(itemId: string, variants: InventoryItemVariant[], reason: string) {
      db.transaction(() => {
         const updateVariantStmt = db.prepare('UPDATE variants SET name = @name, sku = @sku, price = @price, stock = @stock WHERE id = @id');
         const getVariantStockStmt = db.prepare('SELECT stock FROM variants WHERE id = ?');
@@ -319,7 +319,7 @@ export async function editVariantsBulk(itemId: string, variants: InventoryItemVa
                     productId: itemId,
                     variantId: variant.id,
                     change: stockChange,
-                    reason: 'Bulk Update',
+                    reason: reason,
                     newStockLevel: variant.stock,
                     date: new Date().toISOString()
                 });

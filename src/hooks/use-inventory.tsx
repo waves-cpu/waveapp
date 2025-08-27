@@ -39,7 +39,7 @@ interface InventoryContextType {
   getItem: (itemId: string) => InventoryItem | undefined;
   getHistory: (itemId: string) => Promise<AdjustmentHistory[]>;
   categories: string[];
-  bulkUpdateVariants: (itemId: string, variants: InventoryItemVariant[]) => Promise<void>;
+  bulkUpdateVariants: (itemId: string, variants: InventoryItemVariant[], reason: string) => Promise<void>;
   fetchItems: () => Promise<void>;
   loading: boolean;
   recordSale: (sku: string, channel: string, quantity: number, options?: { saleDate?: Date; transactionId?: string; paymentMethod?: string; resellerName?: string; }) => Promise<void>;
@@ -149,8 +149,8 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
     await fetchAllData();
   };
 
-  const bulkUpdateVariants = async (itemId: string, variants: InventoryItemVariant[]) => {
-    await editVariantsBulk(itemId, variants);
+  const bulkUpdateVariants = async (itemId: string, variants: InventoryItemVariant[], reason: string) => {
+    await editVariantsBulk(itemId, variants, reason);
     await fetchAllData();
   };
 
