@@ -112,7 +112,20 @@ export function BulkEditVariantsDialog({ open, onOpenChange, item }: BulkEditVar
       <DialogContent className="max-w-lg p-0">
         <DialogHeader className="p-6 pb-2">
             <DialogTitle>Atur Stok</DialogTitle>
-            <p className="text-sm text-muted-foreground">{item.name}</p>
+            <div className="flex items-start gap-4 pt-2">
+                <Image 
+                    src={item.imageUrl || 'https://placehold.co/64x64.png'} 
+                    alt={item.name} 
+                    width={64} 
+                    height={64} 
+                    className="rounded-md"
+                    data-ai-hint="product image"
+                />
+                <div className="pt-1">
+                    <p className="font-semibold text-base">{item.name}</p>
+                    <p className="text-sm text-muted-foreground">SKU Induk: {item.sku}</p>
+                </div>
+            </div>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)}>
@@ -153,7 +166,7 @@ export function BulkEditVariantsDialog({ open, onOpenChange, item }: BulkEditVar
                                     name={`variants.${index}.stock`}
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormControl><Input type="number" placeholder="0" {...field} className="h-9 w-28" /></FormControl>
+                                            <FormControl><Input type="number" placeholder="0" {...field} className="h-9 w-32" /></FormControl>
                                             <FormMessage className="text-xs"/>
                                         </FormItem>
                                     )}
