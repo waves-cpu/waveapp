@@ -115,6 +115,7 @@ export default function HistoryPage() {
     const groupedSales = new Map<string, { date: Date; channel: string; totalItems: number; sales: Sale[] }>();
     
     allSales.forEach(sale => {
+        // Use parseISO because the date from DB is an ISO string.
         const saleDate = parseISO(sale.saleDate);
         const key = `${format(saleDate, 'yyyy-MM-dd')}-${sale.channel}`;
         
@@ -358,7 +359,7 @@ export default function HistoryPage() {
           <Table className='table-fixed'>
             <TableHeader>
                 <TableRow>
-                    <TableHead className="w-[40%]">{t.inventoryTable.name}</TableHead>
+                    <TableHead className="w-[30%]">{t.inventoryTable.name}</TableHead>
                     <TableHead className="w-[15%]">{t.stockHistory.date}</TableHead>
                     <TableHead className="w-[10%] text-center">{t.stockHistory.change}</TableHead>
                     <TableHead className="w-[10%] text-center">{t.stockHistory.newTotal}</TableHead>

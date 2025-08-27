@@ -423,7 +423,8 @@ export async function performSale(
     
     db.transaction(() => {
         const saleDate = options?.saleDate || new Date();
-        const saleDateString = formatDate(saleDate, 'yyyy-MM-dd HH:mm:ss');
+        // Use toISOString() to get a timezone-neutral UTC timestamp string.
+        const saleDateString = saleDate.toISOString();
         const saleReason = `Sale (${channel})` + (options?.resellerName ? ` - ${options.resellerName}` : '');
 
         let priceAtSale;
