@@ -741,7 +741,14 @@ export async function updateAccessory(accessoryId: string, data: Omit<Accessory,
         const existing = getAccessoryStmt.get(accessoryId) as { stock: number };
         const stockChange = data.stock - existing.stock;
         
-        updateStmt.run({ ...data, id: accessoryId });
+        updateStmt.run({
+             id: accessoryId,
+             name: data.name,
+             sku: data.sku,
+             stock: data.stock,
+             price: data.price,
+             costPrice: 'costPrice' in data ? data.costPrice : null
+        });
 
         if (stockChange !== 0) {
             historyStmt.run(accessoryId, new Date().toISOString(), stockChange, 'Stock adjustment during edit', data.stock);
