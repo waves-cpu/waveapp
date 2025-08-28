@@ -37,10 +37,12 @@ export default function MobileScanReceiptPage() {
     }, [initializeAudio]);
 
     useEffect(() => {
-        if (isCameraOpen) {
-            const getCameraPermission = async () => {
+        let stream: MediaStream | null = null;
+
+        const getCameraPermission = async () => {
+            if (isCameraOpen) {
                 try {
-                    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+                    stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
                     setHasCameraPermission(true);
                     if (videoRef.current) {
                         videoRef.current.srcObject = stream;
@@ -55,14 +57,15 @@ export default function MobileScanReceiptPage() {
                     });
                     setIsCameraOpen(false); // Close camera view if permission denied
                 }
-            };
-            getCameraPermission();
-        } else {
-             // Turn off the camera when not in use
-            if (videoRef.current?.srcObject) {
-                const stream = videoRef.current.srcObject as MediaStream;
+            }
+        };
+
+        getCameraPermission();
+        
+        return () => {
+             // Turn off the camera when not in use or on component unmount
+            if (stream) {
                 stream.getTracks().forEach(track => track.stop());
-                videoRef.current.srcObject = null;
             }
         }
     }, [isCameraOpen, toast]);
@@ -127,10 +130,7 @@ export default function MobileScanReceiptPage() {
     return (
         <div className="min-h-screen bg-muted flex flex-col p-4">
             <header className="flex items-center mb-4">
-                <Button variant="ghost" size="icon" onClick={() => router.push('/shipping/receipt')}>
-                    <ArrowLeft className="h-5 w-5" />
-                </Button>
-                <h1 className="text-lg font-bold ml-2">Scan Resi</h1>
+                <h1 className="text-lg font-bold">Scan Resi</h1>
             </header>
 
             <main className="flex-grow flex flex-col gap-4">
