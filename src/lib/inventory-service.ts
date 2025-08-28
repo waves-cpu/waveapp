@@ -1,5 +1,4 @@
 
-
 'use server';
 
 import { db } from './db';
@@ -27,8 +26,9 @@ export async function fetchShippingReceipts(options: {
     channel?: string;
     date?: Date;
     status?: string[];
+    awb?: string;
 }): Promise<{ receipts: ShippingReceipt[]; total: number }> {
-    const { page, limit, channel, date, status } = options;
+    const { page, limit, channel, date, status, awb } = options;
     const offset = (page - 1) * limit;
 
     let whereClauses: string[] = [];
@@ -47,6 +47,10 @@ export async function fetchShippingReceipts(options: {
         status.forEach((s, i) => {
             params[`status${i}`] = s;
         });
+    }
+    if (awb) {
+        whereClauses.push("awb LIKE @awb");
+        params.awb = `%${awb}%`;
     }
 
     const whereString = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
@@ -846,5 +850,3 @@ export async function deleteProductPermanently(itemId: string) {
     // ON DELETE CASCADE will handle variants, history, and channel_prices
     db.prepare('DELETE FROM products WHERE id = ?').run(itemId);
 }
-
-

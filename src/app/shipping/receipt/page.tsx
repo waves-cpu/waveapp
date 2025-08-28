@@ -7,7 +7,7 @@ import { SidebarTrigger } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Calendar as CalendarIcon, FileDown, Trash2, Truck, ScanLine } from 'lucide-react';
+import { Calendar as CalendarIcon, FileDown, Trash2, Truck, ScanLine, Search } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
@@ -31,8 +31,9 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { Input } from '@/components/ui/input';
 
-type ShippingProvider = 'all' | 'Shopee' | 'Tiktok' | 'Lazada' | 'Instant';
+type ShippingProvider = 'Shopee' | 'Tiktok' | 'Lazada' | 'Instant';
 
 const getStatusVariant = (status: string) => {
     switch (status.toLowerCase()) {
@@ -48,8 +49,9 @@ export default function ReceiptPage() {
     const [receipts, setReceipts] = useState<ShippingReceipt[]>([]);
     const [totalReceipts, setTotalReceipts] = useState(0);
     const [loading, setLoading] = useState(true);
-    const [activeTab, setActiveTab] = useState<ShippingProvider>('all');
+    const [activeTab, setActiveTab] = useState<ShippingProvider>('Shopee');
     const [date, setDate] = useState<Date | undefined>(new Date());
+    const [searchTerm, setSearchTerm] = useState('');
     const [isDatePickerOpen, setDatePickerOpen] = useState(false);
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(25);
@@ -64,8 +66,9 @@ export default function ReceiptPage() {
             const { receipts, total } = await fetchShippingReceipts({
                 page: currentPage,
                 limit: itemsPerPage,
-                channel: activeTab === 'all' ? undefined : activeTab,
+                channel: activeTab,
                 date: date,
+                awb: searchTerm,
             });
             setReceipts(receipts);
             setTotalReceipts(total);
@@ -75,7 +78,7 @@ export default function ReceiptPage() {
         } finally {
             setLoading(false);
         }
-    }, [currentPage, itemsPerPage, activeTab, date, toast]);
+    }, [currentPage, itemsPerPage, activeTab, date, searchTerm, toast]);
 
     useEffect(() => {
         fetchReceipts();
@@ -118,6 +121,15 @@ export default function ReceiptPage() {
                         </h1>
                     </div>
                      <div className="flex items-center gap-2">
+                         <div className="relative">
+                            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                            <Input
+                                placeholder="Cari No. Resi..."
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                className="pl-8 h-9"
+                            />
+                         </div>
                          <Popover open={isDatePickerOpen} onOpenChange={setDatePickerOpen}>
                             <PopoverTrigger asChild>
                             <Button
@@ -147,7 +159,7 @@ export default function ReceiptPage() {
 
                 <div className="flex flex-col gap-4">
                     <div className="flex items-center gap-2 overflow-x-auto no-scrollbar border-b pb-2">
-                        {(['all', 'Shopee', 'Tiktok', 'Lazada', 'Instant'] as ShippingProvider[]).map(tab => (
+                        {(['Shopee', 'Tiktok', 'Lazada', 'Instant'] as ShippingProvider[]).map(tab => (
                             <Button 
                                 key={tab}
                                 variant={activeTab === tab ? 'secondary' : 'ghost'}
@@ -155,7 +167,7 @@ export default function ReceiptPage() {
                                 onClick={() => handleTabChange(tab)}
                                 className="shrink-0"
                             >
-                                {tab === 'all' ? 'Semua' : tab}
+                                {tab}
                             </Button>
                         ))}
                     </div>
