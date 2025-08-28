@@ -715,7 +715,10 @@ export async function addAccessory(accessory: Omit<Accessory, 'id' | 'history'>)
     `);
 
     db.transaction(() => {
-        const result = addStmt.run(accessory);
+        const result = addStmt.run({
+            ...accessory,
+            costPrice: accessory.costPrice ?? null
+        });
         const accessoryId = result.lastInsertRowid;
         if (accessory.stock > 0) {
             historyStmt.run(accessoryId, new Date().toISOString(), accessory.stock, 'Initial Stock', accessory.stock);
