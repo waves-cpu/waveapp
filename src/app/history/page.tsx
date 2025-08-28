@@ -437,12 +437,10 @@ export default function HistoryPage() {
                                   </div>
                                   <div>
                                       <div className="font-medium text-sm capitalize">Penjualan {entry.channel}</div>
-                                       <Link href={getSaleDetailLink(entry)} passHref legacyBehavior>
-                                            <a className="flex items-center text-xs text-primary hover:underline">
-                                                Lihat Detail
-                                                <ExternalLink className="ml-1 h-3 w-3" />
-                                            </a>
-                                        </Link>
+                                      <Link href={getSaleDetailLink(entry)} className="flex items-center text-xs text-primary hover:underline">
+                                          Lihat Detail
+                                          <ExternalLink className="ml-1 h-3 w-3" />
+                                      </Link>
                                   </div>
                               </div>
                           </TableCell>
