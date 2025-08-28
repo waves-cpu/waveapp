@@ -65,10 +65,11 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { useToast } from '@/hooks/use-toast';
+import { UpdateStockDialogAccessories } from './update-stock-dialog-accessories';
 
 interface InventoryTableProps {
   onUpdateStock: (itemId: string) => void;
-  category?: string;
+  isAccessoryTable?: boolean;
 }
 
 function InventoryTableSkeleton() {
@@ -193,11 +194,11 @@ const PriceWithDetails = ({ item }: { item: InventoryItem | InventoryItemVariant
 };
 
 
-export function InventoryTable({ onUpdateStock, category }: InventoryTableProps) {
-  const { items, loading, archiveProduct } = useInventory();
+export function InventoryTable({ onUpdateStock, isAccessoryTable = false }: InventoryTableProps) {
+  const { items, accessories, loading, archiveProduct } = useInventory();
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState<string | null>(category || null);
+  const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
   const [stockFilter, setStockFilter] = useState<'all' | 'low' | 'empty'>('all');
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
@@ -208,9 +209,7 @@ export function InventoryTable({ onUpdateStock, category }: InventoryTableProps)
   const [selectedBulkEditItem, setSelectedBulkEditItem] = useState<InventoryItem | null>(null);
   const router = useRouter();
 
-  useEffect(() => {
-    setCategoryFilter(category || null);
-  }, [category]);
+  const inventorySource = isAccessoryTable ? accessories : items;
 
   const handleBulkEdit = (item: InventoryItem) => {
     setSelectedBulkEditItem(item);
@@ -234,19 +233,19 @@ export function InventoryTable({ onUpdateStock, category }: InventoryTableProps)
   }
 
   const filteredItems = useMemo(() => {
-    const activeItems = items.filter(item => !item.isArchived);
+    const activeItems = (inventorySource as InventoryItem[]).filter(item => !item.isArchived);
     const filtered = activeItems
       .filter((item) =>
-        categoryFilter ? item.category === categoryFilter : true
+        isAccessoryTable ? true : (categoryFilter ? item.category === categoryFilter : true)
       )
       .filter((item) => {
         const lowerSearchTerm = searchTerm.toLowerCase();
         if (
           item.name.toLowerCase().includes(lowerSearchTerm) ||
-          item.sku?.toLowerCase().includes(lowerSearchTerm)
+          (item.sku && item.sku.toLowerCase().includes(lowerSearchTerm))
         ) return true;
 
-        if (item.variants?.some(v => v.name.toLowerCase().includes(lowerSearchTerm) || v.sku?.toLowerCase().includes(lowerSearchTerm))) {
+        if (item.variants?.some(v => v.name.toLowerCase().includes(lowerSearchTerm) || (v.sku && v.sku.toLowerCase().includes(lowerSearchTerm)))) {
           return true;
         }
 
@@ -273,7 +272,7 @@ export function InventoryTable({ onUpdateStock, category }: InventoryTableProps)
       setCurrentPage(1); // Reset to first page on filter change
       return filtered;
 
-  }, [items, categoryFilter, searchTerm, stockFilter]);
+  }, [inventorySource, categoryFilter, searchTerm, stockFilter, isAccessoryTable]);
 
   const totalPages = Math.ceil(filteredItems.length / itemsPerPage);
 
@@ -283,9 +282,9 @@ export function InventoryTable({ onUpdateStock, category }: InventoryTableProps)
   }, [filteredItems, currentPage, itemsPerPage]);
 
   const stockFilterCounts = useMemo(() => {
-    const sourceItems = categoryFilter ? items.filter(i => i.category === categoryFilter && !i.isArchived) : items.filter(i => !i.isArchived);
+    const source = isAccessoryTable ? accessories : (categoryFilter ? items.filter(i => i.category === categoryFilter && !i.isArchived) : items.filter(i => !i.isArchived));
     const counts = { all: 0, low: 0, empty: 0 };
-    sourceItems.forEach(item => {
+    (source as InventoryItem[]).forEach(item => {
       counts.all++;
       if (item.variants && item.variants.length > 0) {
         if (item.variants.some(v => v.stock === 0)) counts.empty++;
@@ -296,7 +295,7 @@ export function InventoryTable({ onUpdateStock, category }: InventoryTableProps)
       }
     });
     return counts;
-  }, [items, categoryFilter]);
+  }, [items, accessories, categoryFilter, isAccessoryTable]);
 
   if (loading) {
       return <InventoryTableSkeleton />;
@@ -317,7 +316,7 @@ export function InventoryTable({ onUpdateStock, category }: InventoryTableProps)
                     className="pl-10 w-full md:w-96"
                     />
                 </div>
-                {!category && (
+                {!isAccessoryTable && (
                     <Select onValueChange={(value) => setCategoryFilter(value === 'all' ? null : value)} defaultValue="all">
                         <SelectTrigger className="w-full md:w-[180px]">
                         <SelectValue placeholder={t.inventoryTable.selectCategoryPlaceholder} />
@@ -358,9 +357,7 @@ export function InventoryTable({ onUpdateStock, category }: InventoryTableProps)
           </TableHeader>
           <TableBody>
             {paginatedItems.length > 0 ? (
-              paginatedItems.flatMap((item, itemIndex) => {
-                const totalStock = item.variants?.reduce((sum, v) => sum + v.stock, 0) ?? item.stock ?? 0;
-
+              paginatedItems.flatMap((item) => {
                 if (item.variants && item.variants.length > 0) {
                     const prices = item.variants.map(v => v.price).filter(p => p != null) as number[];
                     const minPrice = Math.min(...prices);
@@ -377,20 +374,13 @@ export function InventoryTable({ onUpdateStock, category }: InventoryTableProps)
                             <TableRow className="bg-muted/20 hover:bg-muted/40" noBorder>
                                 <TableCell>
                                     <div className="flex items-center gap-4 group">
-                                        {category !== 'Accessories' && (
-                                            <Image 
-                                                src={item.imageUrl || 'https://placehold.co/40x40.png'} 
-                                                alt={item.name} 
-                                                width={40} height={40} 
-                                                className="rounded-sm" 
-                                                data-ai-hint="product image"
-                                            />
-                                        )}
-                                        {category === 'Accessories' && (
-                                            <div className="flex h-10 w-10 items-center justify-center rounded-sm shrink-0 bg-muted/50">
-                                                 <Tags className="h-5 w-5 text-gray-400" />
-                                            </div>
-                                        )}
+                                        <Image 
+                                            src={item.imageUrl || 'https://placehold.co/40x40.png'} 
+                                            alt={item.name} 
+                                            width={40} height={40} 
+                                            className="rounded-sm" 
+                                            data-ai-hint="product image"
+                                        />
                                         <div>
                                             <button onClick={() => handleBulkEdit(item)} className="text-left flex items-center gap-2">
                                                 <div className="font-medium text-primary text-sm hover:underline">{item.name}</div>
@@ -479,7 +469,11 @@ export function InventoryTable({ onUpdateStock, category }: InventoryTableProps)
                         <TableRow key={item.id} noBorder className="border-b">
                             <TableCell>
                                 <div className="flex items-center gap-4">
-                                    {category !== 'Accessories' && (
+                                    {isAccessoryTable ? (
+                                        <div className="flex h-10 w-10 items-center justify-center rounded-sm shrink-0 bg-muted/50">
+                                             <Tags className="h-5 w-5 text-gray-400" />
+                                        </div>
+                                    ) : (
                                         <Image 
                                             src={item.imageUrl || 'https://placehold.co/40x40.png'} 
                                             alt={item.name} 
@@ -487,11 +481,6 @@ export function InventoryTable({ onUpdateStock, category }: InventoryTableProps)
                                             className="rounded-sm" 
                                             data-ai-hint="product image"
                                         />
-                                    )}
-                                    {category === 'Accessories' && (
-                                        <div className="flex h-10 w-10 items-center justify-center rounded-sm shrink-0 bg-muted/50">
-                                            <Tags className="h-5 w-5 text-gray-400" />
-                                        </div>
                                     )}
                                     <div>
                                         <div className="font-medium text-sm">{item.name}</div>
@@ -514,7 +503,7 @@ export function InventoryTable({ onUpdateStock, category }: InventoryTableProps)
                                     </DropdownMenuTrigger>
                                     <DropdownMenuContent align="end">
                                         <DropdownMenuItem asChild>
-                                             <Link href={category === 'Accessories' ? `/inventory/edit-accessory/${item.id}` : `/edit-product/${item.id}`}>
+                                             <Link href={isAccessoryTable ? `/inventory/edit-accessory/${item.id}` : `/edit-product/${item.id}`}>
                                                 <Pencil className="mr-2 h-4 w-4" />
                                                 <span>{t.inventoryTable.editProduct}</span>
                                             </Link>

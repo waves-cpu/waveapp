@@ -55,7 +55,7 @@ function AccessoriesPageContent() {
         <div className="flex-grow">
             <InventoryTable
                 onUpdateStock={handleUpdateStock}
-                category="Accessories"
+                isAccessoryTable={true}
             />
         </div>
       </main>
