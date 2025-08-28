@@ -9,28 +9,23 @@ if (!fs.existsSync(dbDir)) {
   fs.mkdirSync(dbDir, { recursive: true });
 }
 
-const dbPath = path.join(dbDir, 'inventory.db');
+// Change database filename as requested by the user
+const dbPath = path.join(dbDir, 'waves.db');
 
-// One-time fix: Delete the potentially corrupt database file.
-// This will be removed in the next interaction.
-if (fs.existsSync(dbPath)) {
-    try {
-        console.log('Potentially corrupt database file found. Attempting to delete...');
-        // Verify permissions before deleting
-        fs.accessSync(dbPath, fs.constants.W_OK);
+let db: Database.Database;
+
+try {
+    db = new Database(dbPath);
+    db.pragma('journal_mode = WAL');
+} catch (error) {
+    console.error('Failed to open database, possibly corrupt. Deleting and recreating.', error);
+    if (fs.existsSync(dbPath)) {
         fs.unlinkSync(dbPath);
-        console.log('Old database file deleted successfully.');
-    } catch (e) {
-        console.error('Failed to delete database file. Please check file permissions.', e);
-        // If deletion fails, we probably can't proceed anyway, but let's re-throw
-        // to make the problem visible.
-        throw new Error(`Could not delete the corrupt database file at ${dbPath}. Please check file system permissions.`);
     }
+    db = new Database(dbPath);
+    db.pragma('journal_mode = WAL');
 }
 
-
-export const db = new Database(dbPath);
-db.pragma('journal_mode = WAL');
 
 // Simple migration logic
 const runMigrations = () => {
@@ -138,7 +133,6 @@ const runMigrations = () => {
 
 // Create tables if they don't exist
 const createSchema = () => {
-  db.exec('DROP TABLE IF EXISTS shipping_receipts');
   db.exec(`
     CREATE TABLE IF NOT EXISTS products (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -262,3 +256,5 @@ const seedData = () => {
 };
 
 seedData();
+
+export { db };
