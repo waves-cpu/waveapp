@@ -5,7 +5,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowLeft, ScanLine } from 'lucide-react';
+import { ArrowLeft, ScanLine, Camera } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useInventory } from '@/hooks/use-inventory';
 import { useToast } from '@/hooks/use-toast';
@@ -13,7 +13,7 @@ import { useScanSounds } from '@/hooks/use-scan-sounds';
 import type { ShippingReceipt } from '@/types';
 import { format } from 'date-fns';
 
-type ShippingProvider = 'Shopee' | 'Tokopedia' | 'Lazada' | 'Tiktok Shop' | 'Manual';
+type ShippingProvider = 'Shopee' | 'Tiktok' | 'Lazada' | 'Instant';
 
 export default function MobileScanReceiptPage() {
     const router = useRouter();
@@ -75,19 +75,24 @@ export default function MobileScanReceiptPage() {
 
             <main className="flex-grow flex flex-col gap-4">
                 <form onSubmit={handleSubmit} className="space-y-4">
-                    <div className="relative">
-                        <ScanLine className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                        <Input
-                            ref={inputRef}
-                            placeholder="Scan atau ketik No. Resi (AWB)"
-                            className="pl-10 text-base h-12"
-                            value={awb}
-                            onChange={(e) => setAwb(e.target.value)}
-                            disabled={isSubmitting}
-                        />
+                    <div className="flex items-center gap-2">
+                        <div className="relative flex-grow">
+                            <ScanLine className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                            <Input
+                                ref={inputRef}
+                                placeholder="Scan atau ketik No. Resi (AWB)"
+                                className="pl-10 text-base h-12"
+                                value={awb}
+                                onChange={(e) => setAwb(e.target.value)}
+                                disabled={isSubmitting}
+                            />
+                        </div>
+                        <Button type="button" size="icon" className="h-12 w-12 shrink-0">
+                            <Camera className="h-6 w-6" />
+                        </Button>
                     </div>
-                    <div className="grid grid-cols-3 gap-2">
-                        {(['Shopee', 'Tokopedia', 'Lazada', 'Tiktok Shop', 'Manual'] as ShippingProvider[]).map(c => (
+                    <div className="grid grid-cols-4 gap-2">
+                        {(['Shopee', 'Tiktok', 'Lazada', 'Instant'] as ShippingProvider[]).map(c => (
                              <Button
                                 key={c}
                                 type="button"

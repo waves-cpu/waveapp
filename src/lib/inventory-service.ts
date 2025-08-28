@@ -39,7 +39,7 @@ export async function fetchShippingReceipts(options: {
         params.channel = channel;
     }
     if (date) {
-        whereClauses.push("date = @date");
+        whereClauses.push("strftime('%Y-%m-%d', date) = @date");
         params.date = formatDate(date, 'yyyy-MM-dd');
     }
     if (status && status.length > 0) {
@@ -846,4 +846,5 @@ export async function deleteProductPermanently(itemId: string) {
     // ON DELETE CASCADE will handle variants, history, and channel_prices
     db.prepare('DELETE FROM products WHERE id = ?').run(itemId);
 }
+
 

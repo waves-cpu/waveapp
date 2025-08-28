@@ -7,7 +7,7 @@ import { SidebarTrigger } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Calendar as CalendarIcon, Printer, Trash2, Truck, ScanLine } from 'lucide-react';
+import { Calendar as CalendarIcon, FileDown, Trash2, Truck, ScanLine } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
@@ -21,7 +21,7 @@ import { useLanguage } from '@/hooks/use-language';
 import { translations } from '@/types/language';
 import Link from 'next/link';
 
-type ShippingProvider = 'all' | 'Shopee' | 'Tokopedia' | 'Lazada' | 'Tiktok Shop';
+type ShippingProvider = 'all' | 'Shopee' | 'Tokopedia' | 'Lazada' | 'Tiktok Shop' | 'Instant';
 
 const getStatusVariant = (status: string) => {
     switch (status.toLowerCase()) {
@@ -139,7 +139,7 @@ export default function ReceiptPage() {
 
                 <div className="flex flex-col gap-4">
                     <div className="flex items-center gap-2 overflow-x-auto no-scrollbar border-b pb-2">
-                        {(['all', 'Shopee', 'Tokopedia', 'Lazada', 'Tiktok Shop'] as ShippingProvider[]).map(tab => (
+                        {(['all', 'Shopee', 'Tiktok', 'Lazada', 'Instant'] as ShippingProvider[]).map(tab => (
                             <Button 
                                 key={tab}
                                 variant={activeTab === tab ? 'secondary' : 'ghost'}
@@ -170,7 +170,7 @@ export default function ReceiptPage() {
                                     ) : receipts.length > 0 ? receipts.map(item => (
                                         <TableRow key={item.id}>
                                             <TableCell className="font-medium">{item.awb}</TableCell>
-                                            <TableCell>{format(new Date(item.date), 'dd MMM yyyy')}</TableCell>
+                                            <TableCell>{format(new Date(item.date), 'dd MMM yyyy HH:mm')}</TableCell>
                                             <TableCell>{item.channel}</TableCell>
                                             <TableCell>
                                                 <Badge variant={getStatusVariant(item.status)}>{item.status}</Badge>

@@ -273,8 +273,6 @@ const seedData = () => {
           { awb: 'SPXID0123456789A', date: '2024-08-01', channel: 'Shopee', status: 'Dikirim' },
           { awb: 'SPXID0123456789B', date: '2024-08-01', channel: 'Shopee', status: 'Perlu Diproses' },
           { awb: 'JP1234567890', date: '2024-07-31', channel: 'Tokopedia', status: 'Selesai' },
-          { awb: '005432109876', date: '2024-07-31', channel: 'Lazada', status: 'Dikirim' },
-          { awb: 'JP0987654321', date: '2024-08-01', channel: 'Tokopedia', status: 'Selesai' },
         ];
 
         const insert = db.prepare('INSERT INTO shipping_receipts (awb, date, channel, status) VALUES (@awb, @date, @channel, @status)');
