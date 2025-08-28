@@ -21,7 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Search, Calendar as CalendarIcon, Eye, ShoppingCart, ShoppingBag, FileDown, History } from 'lucide-react';
+import { Search, Calendar as CalendarIcon, Eye, ShoppingCart, ShoppingBag, FileDown, History, ExternalLink } from 'lucide-react';
 import type { InventoryItem, AdjustmentHistory, InventoryItemVariant, Sale } from '@/types';
 import { useLanguage } from '@/hooks/use-language';
 import { translations } from '@/types/language';
@@ -34,6 +34,7 @@ import Image from 'next/image';
 import { DailySalesDetailDialog } from '@/app/components/daily-sales-detail-dialog';
 import { AppLayout } from '../components/app-layout';
 import { Pagination } from '@/components/ui/pagination';
+import Link from 'next/link';
 
 type AdjustmentEntry = {
     type: 'adjustment';
@@ -236,6 +237,20 @@ export default function HistoryPage() {
     setSelectedSales(sales);
     setSalesDetailOpen(true);
   };
+  
+  const getSaleDetailLink = (entry: AggregatedSalesEntry): string => {
+      const onlineChannels = ['shopee', 'tiktok', 'lazada'];
+      const historyChannels = ['pos', 'reseller'];
+      const formattedDate = format(entry.date, 'MM-dd-yyyy');
+      
+      if (onlineChannels.includes(entry.channel)) {
+          return `/sales/${entry.channel}/${formattedDate}`;
+      }
+      if (historyChannels.includes(entry.channel)) {
+          return `/sales/${entry.channel}/history`;
+      }
+      return '#';
+  }
 
   const downloadCSV = () => {
     const headers = ['Tanggal', 'Nama Produk', 'Varian', 'SKU', 'Kategori', 'Alasan', 'Perubahan', 'Stok Akhir'];
@@ -422,10 +437,12 @@ export default function HistoryPage() {
                                   </div>
                                   <div>
                                       <div className="font-medium text-sm capitalize">Penjualan {entry.channel}</div>
-                                      <Button variant="link" size="sm" className="h-auto p-0 text-xs" onClick={() => handleShowSalesDetail(entry.sales)}>
-                                          Lihat Detail
-                                          <Eye className="ml-1 h-3 w-3" />
-                                      </Button>
+                                       <Link href={getSaleDetailLink(entry)} passHref legacyBehavior>
+                                            <a className="flex items-center text-xs text-primary hover:underline">
+                                                Lihat Detail
+                                                <ExternalLink className="ml-1 h-3 w-3" />
+                                            </a>
+                                        </Link>
                                   </div>
                               </div>
                           </TableCell>
