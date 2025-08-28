@@ -142,12 +142,6 @@ export default function ReceiptPage() {
                             />
                             </PopoverContent>
                         </Popover>
-                        <Link href="/mobile">
-                            <Button size="sm" variant="outline">
-                                <ScanLine className="mr-2 h-4 w-4" />
-                                Scan Resi
-                            </Button>
-                        </Link>
                     </div>
                 </div>
 
