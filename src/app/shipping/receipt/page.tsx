@@ -7,13 +7,13 @@ import { SidebarTrigger } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Calendar as CalendarIcon, FileDown, Trash2, Truck, ScanLine, Search, Send } from 'lucide-react';
+import { Calendar as CalendarIcon, FileDown, Trash2, Truck, ScanLine, Search, Send, Ban } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
-import { fetchShippingReceipts, deleteShippingReceipt, updateShippingReceiptsStatus } from '@/lib/inventory-service';
+import { fetchShippingReceipts, deleteShippingReceipt, updateShippingReceiptsStatus, updateShippingReceiptStatus } from '@/lib/inventory-service';
 import type { ShippingReceipt } from '@/types';
 import { Pagination } from '@/components/ui/pagination';
 import { useToast } from '@/hooks/use-toast';
@@ -60,6 +60,7 @@ export default function ReceiptPage() {
     const { language } = useLanguage();
     const t = translations[language];
     const [receiptToDelete, setReceiptToDelete] = useState<ShippingReceipt | null>(null);
+    const [receiptToCancel, setReceiptToCancel] = useState<ShippingReceipt | null>(null);
     const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
     const [isProcessing, setIsProcessing] = useState(false);
 
@@ -102,6 +103,19 @@ export default function ReceiptPage() {
         } catch (error) {
             console.error("Failed to delete receipt:", error);
             toast({ variant: 'destructive', title: 'Gagal menghapus resi.' });
+        }
+    };
+    
+    const handleCancelShipment = async () => {
+        if (!receiptToCancel) return;
+        try {
+            await updateShippingReceiptStatus(receiptToCancel.id, 'Dibatalkan');
+            toast({ title: 'Pengiriman Dibatalkan', description: `Resi ${receiptToCancel.awb} telah berhasil dibatalkan.` });
+            setReceiptToCancel(null);
+            fetchReceipts();
+        } catch (error) {
+            console.error("Failed to cancel shipment:", error);
+            toast({ variant: 'destructive', title: 'Gagal Membatalkan', description: 'Terjadi kesalahan saat membatalkan pengiriman.' });
         }
     };
 
@@ -260,6 +274,29 @@ export default function ReceiptPage() {
                                                 <Badge variant={getStatusVariant(item.status)}>{item.status}</Badge>
                                             </TableCell>
                                             <TableCell className="text-center">
+                                                {item.status === 'Perlu Diproses' && (
+                                                    <AlertDialog>
+                                                        <AlertDialogTrigger asChild>
+                                                            <Button variant="ghost" size="icon" className="text-destructive h-8 w-8" onClick={() => setReceiptToCancel(item)}>
+                                                                <Ban className="h-4 w-4" />
+                                                            </Button>
+                                                        </AlertDialogTrigger>
+                                                        <AlertDialogContent>
+                                                            <AlertDialogHeader>
+                                                                <AlertDialogTitle>Batalkan Pengiriman Ini?</AlertDialogTitle>
+                                                                <AlertDialogDescription>
+                                                                    Anda yakin ingin membatalkan resi {receiptToCancel?.awb}? Status akan diubah menjadi "Dibatalkan".
+                                                                </AlertDialogDescription>
+                                                            </AlertDialogHeader>
+                                                            <AlertDialogFooter>
+                                                                <AlertDialogCancel onClick={() => setReceiptToCancel(null)}>Tidak</AlertDialogCancel>
+                                                                <AlertDialogAction onClick={handleCancelShipment} className="bg-destructive hover:bg-destructive/90">
+                                                                    Ya, Batalkan
+                                                                </AlertDialogAction>
+                                                            </AlertDialogFooter>
+                                                        </AlertDialogContent>
+                                                    </AlertDialog>
+                                                )}
                                                 <AlertDialog>
                                                     <AlertDialogTrigger asChild>
                                                          <Button variant="ghost" size="icon" className="text-destructive h-8 w-8" onClick={() => setReceiptToDelete(item)}>
@@ -312,3 +349,4 @@ export default function ReceiptPage() {
         </AppLayout>
     );
 }
+

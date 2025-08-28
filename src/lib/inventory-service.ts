@@ -86,6 +86,11 @@ export async function updateShippingReceiptsStatus(ids: number[], status: string
     stmt.run(status, ...ids);
 }
 
+export async function updateShippingReceiptStatus(id: number, status: string) {
+    const stmt = db.prepare(`UPDATE shipping_receipts SET status = ? WHERE id = ?`);
+    stmt.run(status, id);
+}
+
 
 // Manual Journal Entry Functions
 export async function addManualJournalEntry(entry: Omit<ManualJournalEntry, 'id' | 'type'>) {
