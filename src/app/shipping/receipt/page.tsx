@@ -22,11 +22,11 @@ import { Badge } from '@/components/ui/badge';
 
 // Mock data representing data scanned/inputted from a mobile device
 const mockReceipts = [
-  { awb: 'SPXID0123456789A', customer: 'Budi Santoso', channel: 'Shopee', status: 'Dikirim' },
-  { awb: 'SPXID0123456789B', customer: 'Citra Lestari', channel: 'Shopee', status: 'Perlu Diproses' },
-  { awb: 'JP1234567890', customer: 'Agus Wijaya', channel: 'Tokopedia', status: 'Selesai' },
-  { awb: '005432109876', customer: 'Siti Aminah', channel: 'Lazada', status: 'Dikirim' },
-  { awb: 'TIKTOK-XYZ123', customer: 'Rina Marlina', channel: 'Tiktok Shop', status: 'Dibatalkan' },
+  { awb: 'SPXID0123456789A', date: '2024-08-01', channel: 'Shopee', status: 'Dikirim' },
+  { awb: 'SPXID0123456789B', date: '2024-08-01', channel: 'Shopee', status: 'Perlu Diproses' },
+  { awb: 'JP1234567890', date: '2024-07-31', channel: 'Tokopedia', status: 'Selesai' },
+  { awb: '005432109876', date: '2024-07-31', channel: 'Lazada', status: 'Dikirim' },
+  { awb: 'TIKTOK-XYZ123', date: '2024-07-30', channel: 'Tiktok Shop', status: 'Dibatalkan' },
 ];
 
 type ShippingProvider = 'all' | 'shopee' | 'tokopedia' | 'lazada' | 'tiktok';
@@ -37,7 +37,7 @@ const ShippingTable = ({ data, serviceName }: { data: ReceiptData[], serviceName
         <TableHeader>
             <TableRow>
                 <TableHead>No. Resi (AWB)</TableHead>
-                <TableHead>Pelanggan</TableHead>
+                <TableHead>Tanggal</TableHead>
                 <TableHead>Status</TableHead>
             </TableRow>
         </TableHeader>
@@ -45,7 +45,7 @@ const ShippingTable = ({ data, serviceName }: { data: ReceiptData[], serviceName
             {data.length > 0 ? data.map(item => (
                 <TableRow key={item.awb}>
                     <TableCell className="font-medium">{item.awb}</TableCell>
-                    <TableCell>{item.customer}</TableCell>
+                    <TableCell>{item.date}</TableCell>
                     <TableCell>
                         <Badge variant={item.status === 'Selesai' ? 'default' : item.status === 'Dibatalkan' ? 'destructive' : 'secondary'}>{item.status}</Badge>
                     </TableCell>
