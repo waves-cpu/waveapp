@@ -12,6 +12,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useScanSounds } from '@/hooks/use-scan-sounds';
 import type { ShippingReceipt } from '@/types';
 import { format } from 'date-fns';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 
 type ShippingProvider = 'Shopee' | 'Tiktok' | 'Lazada' | 'Instant';
 
@@ -26,11 +27,45 @@ export default function MobileScanReceiptPage() {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [recentlyAdded, setRecentlyAdded] = useState<ShippingReceipt[]>([]);
     const inputRef = useRef<HTMLInputElement>(null);
+    const videoRef = useRef<HTMLVideoElement>(null);
+    const [isCameraOpen, setIsCameraOpen] = useState(false);
+    const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
 
     useEffect(() => {
         initializeAudio();
         inputRef.current?.focus();
     }, [initializeAudio]);
+
+    useEffect(() => {
+        if (isCameraOpen) {
+            const getCameraPermission = async () => {
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+                    setHasCameraPermission(true);
+                    if (videoRef.current) {
+                        videoRef.current.srcObject = stream;
+                    }
+                } catch (error) {
+                    console.error('Error accessing camera:', error);
+                    setHasCameraPermission(false);
+                    toast({
+                        variant: 'destructive',
+                        title: 'Akses Kamera Ditolak',
+                        description: 'Mohon izinkan akses kamera di pengaturan browser Anda.',
+                    });
+                    setIsCameraOpen(false); // Close camera view if permission denied
+                }
+            };
+            getCameraPermission();
+        } else {
+             // Turn off the camera when not in use
+            if (videoRef.current?.srcObject) {
+                const stream = videoRef.current.srcObject as MediaStream;
+                stream.getTracks().forEach(track => track.stop());
+                videoRef.current.srcObject = null;
+            }
+        }
+    }, [isCameraOpen, toast]);
 
     const handleSubmit = useCallback(async (e: React.FormEvent) => {
         e.preventDefault();
@@ -64,6 +99,31 @@ export default function MobileScanReceiptPage() {
         }
     }, [awb, channel, isSubmitting, addShippingReceipt, playSuccessSound, playErrorSound, toast]);
 
+    if (isCameraOpen) {
+        return (
+             <div className="min-h-screen bg-black text-white flex flex-col p-4">
+                <header className="flex items-center mb-4">
+                     <Button variant="ghost" size="icon" onClick={() => setIsCameraOpen(false)}>
+                        <ArrowLeft className="h-5 w-5" />
+                    </Button>
+                    <h1 className="text-lg font-bold ml-2">Scan Barcode</h1>
+                </header>
+                 <main className="flex-grow flex flex-col justify-center items-center gap-4">
+                    <video ref={videoRef} className="w-full aspect-video rounded-md" autoPlay muted playsInline />
+                    {hasCameraPermission === false && (
+                         <Alert variant="destructive">
+                            <AlertTitle>Akses Kamera Dibutuhkan</AlertTitle>
+                            <AlertDescription>
+                                Izinkan akses kamera untuk menggunakan fitur ini.
+                            </AlertDescription>
+                        </Alert>
+                    )}
+                     <p className="text-sm text-muted-foreground mt-2">Posisikan barcode di dalam frame</p>
+                </main>
+            </div>
+        )
+    }
+
     return (
         <div className="min-h-screen bg-muted flex flex-col p-4">
             <header className="flex items-center mb-4">
@@ -87,7 +147,7 @@ export default function MobileScanReceiptPage() {
                                 disabled={isSubmitting}
                             />
                         </div>
-                        <Button type="button" size="icon" className="h-12 w-12 shrink-0">
+                        <Button type="button" size="icon" className="h-12 w-12 shrink-0" onClick={() => setIsCameraOpen(true)}>
                             <Camera className="h-6 w-6" />
                         </Button>
                     </div>
