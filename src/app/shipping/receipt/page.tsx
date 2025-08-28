@@ -17,8 +17,16 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { FileDown, Printer, RefreshCw, Trash2, Truck } from 'lucide-react';
+import { Calendar as CalendarIcon, Printer, Trash2, Truck } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { format } from 'date-fns';
+import { cn } from '@/lib/utils';
 
 // Mock data representing data scanned/inputted from a mobile device
 const mockReceipts = [
@@ -74,11 +82,19 @@ const ShippingTable = ({ data, serviceName }: { data: ReceiptData[], serviceName
 
 export default function ReceiptPage() {
     const [activeTab, setActiveTab] = useState<ShippingProvider>('all');
+    const [date, setDate] = useState<Date | undefined>(new Date());
     
     const filteredData = useMemo(() => {
-        if (activeTab === 'all') return mockReceipts;
-        return mockReceipts.filter(r => r.channel.toLowerCase().replace(' shop', '') === activeTab);
-    }, [activeTab]);
+        let data = mockReceipts;
+        if (activeTab !== 'all') {
+            data = data.filter(r => r.channel.toLowerCase().replace(' shop', '') === activeTab);
+        }
+        if (date) {
+            const selectedDateString = format(date, 'yyyy-MM-dd');
+            data = data.filter(r => r.date === selectedDateString);
+        }
+        return data;
+    }, [activeTab, date]);
     
     const getTabName = (tab: ShippingProvider) => {
         if(tab === 'all') return 'Semua';
@@ -97,10 +113,30 @@ export default function ReceiptPage() {
                         </h1>
                     </div>
                      <div className="flex items-center gap-2">
-                        <Button variant="outline" size="sm">
-                            <RefreshCw className="mr-2 h-4 w-4" />
-                            Sinkronisasi
-                        </Button>
+                         <Popover>
+                            <PopoverTrigger asChild>
+                            <Button
+                                id="date"
+                                variant={'outline'}
+                                size="sm"
+                                className={cn(
+                                "w-[240px] justify-start text-left font-normal",
+                                !date && "text-muted-foreground"
+                                )}
+                            >
+                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                {date ? format(date, 'PPP') : <span>Pilih tanggal</span>}
+                            </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="end">
+                            <Calendar
+                                mode="single"
+                                selected={date}
+                                onSelect={setDate}
+                                initialFocus
+                            />
+                            </PopoverContent>
+                        </Popover>
                         <Button size="sm">
                             <Printer className="mr-2 h-4 w-4" />
                             Cetak Massal
