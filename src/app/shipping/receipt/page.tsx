@@ -20,8 +20,18 @@ import { useToast } from '@/hooks/use-toast';
 import { useLanguage } from '@/hooks/use-language';
 import { translations } from '@/types/language';
 import Link from 'next/link';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
-type ShippingProvider = 'all' | 'Shopee' | 'Tokopedia' | 'Lazada' | 'Tiktok Shop' | 'Instant';
+type ShippingProvider = 'all' | 'Shopee' | 'Tiktok' | 'Lazada' | 'Instant';
 
 const getStatusVariant = (status: string) => {
     switch (status.toLowerCase()) {
@@ -45,6 +55,7 @@ export default function ReceiptPage() {
     const { toast } = useToast();
     const { language } = useLanguage();
     const t = translations[language];
+    const [receiptToDelete, setReceiptToDelete] = useState<ShippingReceipt | null>(null);
 
     const fetchReceipts = useCallback(async () => {
         setLoading(true);
@@ -69,10 +80,12 @@ export default function ReceiptPage() {
         fetchReceipts();
     }, [fetchReceipts]);
 
-    const handleDelete = async (id: number) => {
+    const handleDelete = async () => {
+        if (!receiptToDelete) return;
         try {
-            await deleteShippingReceipt(id);
-            toast({ title: 'Resi dihapus', description: 'Data resi telah berhasil dihapus.' });
+            await deleteShippingReceipt(receiptToDelete.id);
+            toast({ title: 'Resi dihapus', description: `Resi ${receiptToDelete.awb} telah berhasil dihapus.` });
+            setReceiptToDelete(null);
             fetchReceipts(); // Refresh data
         } catch (error) {
             console.error("Failed to delete receipt:", error);
@@ -176,9 +189,27 @@ export default function ReceiptPage() {
                                                 <Badge variant={getStatusVariant(item.status)}>{item.status}</Badge>
                                             </TableCell>
                                             <TableCell className="text-center">
-                                                <Button variant="ghost" size="icon" className="text-destructive h-8 w-8" onClick={() => handleDelete(item.id)}>
-                                                    <Trash2 className="h-4 w-4" />
-                                                </Button>
+                                                <AlertDialog>
+                                                    <AlertDialogTrigger asChild>
+                                                         <Button variant="ghost" size="icon" className="text-destructive h-8 w-8" onClick={() => setReceiptToDelete(item)}>
+                                                            <Trash2 className="h-4 w-4" />
+                                                         </Button>
+                                                    </AlertDialogTrigger>
+                                                    <AlertDialogContent>
+                                                        <AlertDialogHeader>
+                                                            <AlertDialogTitle>Hapus Resi Ini?</AlertDialogTitle>
+                                                            <AlertDialogDescription>
+                                                                Anda yakin ingin menghapus resi {receiptToDelete?.awb}? Tindakan ini tidak dapat diurungkan.
+                                                            </AlertDialogDescription>
+                                                        </AlertDialogHeader>
+                                                        <AlertDialogFooter>
+                                                            <AlertDialogCancel onClick={() => setReceiptToDelete(null)}>Batal</AlertDialogCancel>
+                                                            <AlertDialogAction onClick={handleDelete} className="bg-destructive hover:bg-destructive/90">
+                                                                Ya, Hapus
+                                                            </AlertDialogAction>
+                                                        </AlertDialogFooter>
+                                                    </AlertDialogContent>
+                                                </AlertDialog>
                                             </TableCell>
                                         </TableRow>
                                     )) : (
