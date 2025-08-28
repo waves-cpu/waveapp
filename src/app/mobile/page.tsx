@@ -73,15 +73,15 @@ export default function MobileScanReceiptPage() {
 
     if (isCameraOpen) {
         return (
-             <div className="min-h-screen bg-black text-white flex flex-col p-4">
-                <header className="flex items-center mb-4">
-                     <Button variant="ghost" size="icon" onClick={() => setIsCameraOpen(false)}>
+             <div className="min-h-screen bg-black text-white flex flex-col">
+                <header className="absolute top-0 left-0 right-0 z-10 flex items-center p-4 bg-gradient-to-b from-black/60 to-transparent">
+                     <Button variant="ghost" size="icon" onClick={() => setIsCameraOpen(false)} className="rounded-full hover:bg-white/10">
                         <ArrowLeft className="h-5 w-5" />
                     </Button>
                     <h1 className="text-lg font-bold ml-2">Scan Barcode</h1>
                 </header>
-                 <main className="flex-grow flex flex-col justify-center items-center gap-4">
-                    <div className="w-full aspect-video rounded-md overflow-hidden">
+                 <main className="flex-grow flex flex-col justify-center items-center relative">
+                    <div className="absolute inset-0">
                         <QrScanner
                             onDecode={(result) => {
                                 setAwb(result);
@@ -91,9 +91,11 @@ export default function MobileScanReceiptPage() {
                             }}
                             onError={(error) => console.log(error?.message)}
                             constraints={{ facingMode: 'environment' }}
+                            containerStyle={{ width: '100%', height: '100%', paddingTop: '0' }}
+                            videoStyle={{ width: '100%', height: '100%', objectFit: 'cover' }}
                         />
                     </div>
-                     <p className="text-sm text-muted-foreground mt-2">Posisikan barcode di dalam frame</p>
+                     <p className="absolute bottom-8 text-sm bg-black/50 px-3 py-1.5 rounded-md">Posisikan barcode di dalam frame</p>
                 </main>
             </div>
         )
