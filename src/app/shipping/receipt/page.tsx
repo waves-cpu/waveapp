@@ -17,7 +17,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { FileDown, Printer, RefreshCw, Truck } from 'lucide-react';
+import { FileDown, Printer, RefreshCw, Trash2, Truck } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 
 // Mock data representing data scanned/inputted from a mobile device
@@ -39,6 +39,7 @@ const ShippingTable = ({ data, serviceName }: { data: ReceiptData[], serviceName
                 <TableHead>No. Resi (AWB)</TableHead>
                 <TableHead>Tanggal</TableHead>
                 <TableHead>Status</TableHead>
+                <TableHead className="text-center">Aksi</TableHead>
             </TableRow>
         </TableHeader>
         <TableBody>
@@ -49,10 +50,15 @@ const ShippingTable = ({ data, serviceName }: { data: ReceiptData[], serviceName
                     <TableCell>
                         <Badge variant={item.status === 'Selesai' ? 'default' : item.status === 'Dibatalkan' ? 'destructive' : 'secondary'}>{item.status}</Badge>
                     </TableCell>
+                    <TableCell className="text-center">
+                        <Button variant="ghost" size="icon" className="text-destructive h-8 w-8">
+                            <Trash2 className="h-4 w-4" />
+                        </Button>
+                    </TableCell>
                 </TableRow>
             )) : (
                 <TableRow>
-                    <TableCell colSpan={3} className="h-48 text-center">
+                    <TableCell colSpan={4} className="h-48 text-center">
                         <div className="flex flex-col items-center justify-center gap-4 text-muted-foreground">
                             <Truck className="h-16 w-16" />
                             <p className="font-semibold">Tidak ada resi untuk {serviceName}</p>
