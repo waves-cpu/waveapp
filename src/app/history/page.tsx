@@ -371,14 +371,14 @@ export default function HistoryPage() {
             </div>
           </div>
           <div className={cn("flex-grow", paginatedHistory.length === 0 && "flex flex-col")}>
-            <Table className={cn("table-fixed", paginatedHistory.length === 0 && "h-full")}>
+            <Table className={cn(paginatedHistory.length === 0 && "h-full")}>
               <TableHeader>
                   <TableRow>
-                      <TableHead className="w-[30%]">{t.inventoryTable.name}</TableHead>
-                      <TableHead className="w-[15%]">{t.stockHistory.date}</TableHead>
-                      <TableHead className="w-[10%] text-center">{t.stockHistory.change}</TableHead>
-                      <TableHead className="w-[10%] text-center">{t.stockHistory.newTotal}</TableHead>
-                      <TableHead className="w-[30%]">{t.stockHistory.reason}</TableHead>
+                      <TableHead className="min-w-[250px]">{t.inventoryTable.name}</TableHead>
+                      <TableHead>{t.stockHistory.date}</TableHead>
+                      <TableHead className="text-center">{t.stockHistory.change}</TableHead>
+                      <TableHead className="text-center">{t.stockHistory.newTotal}</TableHead>
+                      <TableHead>{t.stockHistory.reason}</TableHead>
                   </TableRow>
               </TableHeader>
               <TableBody>
@@ -397,7 +397,7 @@ export default function HistoryPage() {
                                   <Image 
                                       src={entry.imageUrl} 
                                       alt={entry.itemName!} 
-                                      width={40} height={40} 
+                                      width={36} height={36} 
                                       className="rounded-sm" 
                                       data-ai-hint="product image"
                                   />
