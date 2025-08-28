@@ -22,11 +22,11 @@ import { Badge } from '@/components/ui/badge';
 
 // Mock data representing data scanned/inputted from a mobile device
 const mockReceipts = [
-  { awb: 'SPXID0123456789A', orderId: '240828ABCDEFGH', customer: 'Budi Santoso', channel: 'Shopee', status: 'Dikirim' },
-  { awb: 'SPXID0123456789B', orderId: '240828IJKLMNOP', customer: 'Citra Lestari', channel: 'Shopee', status: 'Perlu Diproses' },
-  { awb: 'JP1234567890', orderId: 'INV/20240828/001', customer: 'Agus Wijaya', channel: 'Tokopedia', status: 'Selesai' },
-  { awb: '005432109876', orderId: 'LZD-987654321', customer: 'Siti Aminah', channel: 'Lazada', status: 'Dikirim' },
-  { awb: 'TIKTOK-XYZ123', orderId: 'TK-123456789', customer: 'Rina Marlina', channel: 'Tiktok Shop', status: 'Dibatalkan' },
+  { awb: 'SPXID0123456789A', customer: 'Budi Santoso', channel: 'Shopee', status: 'Dikirim' },
+  { awb: 'SPXID0123456789B', customer: 'Citra Lestari', channel: 'Shopee', status: 'Perlu Diproses' },
+  { awb: 'JP1234567890', customer: 'Agus Wijaya', channel: 'Tokopedia', status: 'Selesai' },
+  { awb: '005432109876', customer: 'Siti Aminah', channel: 'Lazada', status: 'Dikirim' },
+  { awb: 'TIKTOK-XYZ123', customer: 'Rina Marlina', channel: 'Tiktok Shop', status: 'Dibatalkan' },
 ];
 
 type ShippingProvider = 'all' | 'shopee' | 'tokopedia' | 'lazada' | 'tiktok';
@@ -37,8 +37,7 @@ const ShippingTable = ({ data, serviceName }: { data: ReceiptData[], serviceName
         <TableHeader>
             <TableRow>
                 <TableHead>No. Resi (AWB)</TableHead>
-                <TableHead>ID Pesanan</TableHead>
-                <TableHead className="hidden md:table-cell">Pelanggan</TableHead>
+                <TableHead>Pelanggan</TableHead>
                 <TableHead>Status</TableHead>
             </TableRow>
         </TableHeader>
@@ -46,15 +45,14 @@ const ShippingTable = ({ data, serviceName }: { data: ReceiptData[], serviceName
             {data.length > 0 ? data.map(item => (
                 <TableRow key={item.awb}>
                     <TableCell className="font-medium">{item.awb}</TableCell>
-                    <TableCell>{item.orderId}</TableCell>
-                    <TableCell className="hidden md:table-cell">{item.customer}</TableCell>
+                    <TableCell>{item.customer}</TableCell>
                     <TableCell>
                         <Badge variant={item.status === 'Selesai' ? 'default' : item.status === 'Dibatalkan' ? 'destructive' : 'secondary'}>{item.status}</Badge>
                     </TableCell>
                 </TableRow>
             )) : (
                 <TableRow>
-                    <TableCell colSpan={4} className="h-48 text-center">
+                    <TableCell colSpan={3} className="h-48 text-center">
                         <div className="flex flex-col items-center justify-center gap-4 text-muted-foreground">
                             <Truck className="h-16 w-16" />
                             <p className="font-semibold">Tidak ada resi untuk {serviceName}</p>
