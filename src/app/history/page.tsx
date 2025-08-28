@@ -35,6 +35,7 @@ import { DailySalesDetailDialog } from '@/app/components/daily-sales-detail-dial
 import { AppLayout } from '../components/app-layout';
 import { Pagination } from '@/components/ui/pagination';
 import Link from 'next/link';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 
 type AdjustmentEntry = {
     type: 'adjustment';
@@ -302,196 +303,196 @@ export default function HistoryPage() {
             {t.stockHistory.title}
           </h1>
         </div>
-        <div className="bg-card rounded-lg border shadow-sm flex flex-col flex-grow">
-          <div className="p-4 flex flex-col gap-4 border-b">
-            <div className="flex flex-col md:flex-row gap-4 justify-between items-start">
-                <div className="flex flex-col md:flex-row gap-4 w-full flex-1">
-                    <div className="relative w-full md:w-auto md:flex-grow">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                        <Input
-                        placeholder={t.stockHistory.searchPlaceholder}
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="pl-10 w-full"
-                        />
+        <Card className="flex-grow flex flex-col">
+            <CardHeader className="p-4 flex flex-col gap-4 border-b">
+                <div className="flex flex-col md:flex-row gap-4 justify-between items-start">
+                    <div className="flex flex-col md:flex-row gap-4 w-full flex-1">
+                        <div className="relative w-full md:w-auto md:flex-grow">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                            <Input
+                            placeholder={t.stockHistory.searchPlaceholder}
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="pl-10 w-full"
+                            />
+                        </div>
+                        <Select onValueChange={(value) => setCategoryFilter(value === 'all' ? null : value)} defaultValue="all">
+                            <SelectTrigger className="w-full md:w-[200px]">
+                            <SelectValue placeholder={t.inventoryTable.selectCategoryPlaceholder} />
+                            </SelectTrigger>
+                            <SelectContent>
+                            <SelectItem value="all">{t.inventoryTable.allCategories}</SelectItem>
+                            {uniqueCategoriesWithSales.map((category) => (
+                                <SelectItem key={category} value={category}>
+                                {category}
+                                </SelectItem>
+                            ))}
+                            </SelectContent>
+                        </Select>
+                        <Select value={selectedMonth.toString()} onValueChange={(value) => setSelectedMonth(parseInt(value))}>
+                            <SelectTrigger className="w-full md:w-[180px]">
+                                <SelectValue placeholder="Pilih Bulan" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {Array.from({ length: 12 }).map((_, i) => (
+                                    <SelectItem key={i} value={i.toString()}>
+                                        {format(new Date(0, i), 'MMMM', { locale: localeId })}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                        <Select value={selectedYear.toString()} onValueChange={(value) => setSelectedYear(parseInt(value))}>
+                            <SelectTrigger className="w-full md:w-[120px]">
+                                <SelectValue placeholder="Pilih Tahun" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {years.map(year => (
+                                    <SelectItem key={year} value={year.toString()}>
+                                        {year}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                        <Button onClick={downloadCSV} variant="outline" size="sm">
+                            <FileDown className="mr-2 h-4 w-4" />
+                            {t.inventoryTable.exportCsv.replace('Excel', 'CSV')}
+                        </Button>
                     </div>
-                    <Select onValueChange={(value) => setCategoryFilter(value === 'all' ? null : value)} defaultValue="all">
-                        <SelectTrigger className="w-full md:w-[200px]">
-                        <SelectValue placeholder={t.inventoryTable.selectCategoryPlaceholder} />
-                        </SelectTrigger>
-                        <SelectContent>
-                        <SelectItem value="all">{t.inventoryTable.allCategories}</SelectItem>
-                        {uniqueCategoriesWithSales.map((category) => (
-                            <SelectItem key={category} value={category}>
-                            {category}
-                            </SelectItem>
-                        ))}
-                        </SelectContent>
-                    </Select>
-                    <Select value={selectedMonth.toString()} onValueChange={(value) => setSelectedMonth(parseInt(value))}>
-                        <SelectTrigger className="w-full md:w-[180px]">
-                            <SelectValue placeholder="Pilih Bulan" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {Array.from({ length: 12 }).map((_, i) => (
-                                <SelectItem key={i} value={i.toString()}>
-                                    {format(new Date(0, i), 'MMMM', { locale: localeId })}
-                                </SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-                    <Select value={selectedYear.toString()} onValueChange={(value) => setSelectedYear(parseInt(value))}>
-                        <SelectTrigger className="w-full md:w-[120px]">
-                            <SelectValue placeholder="Pilih Tahun" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {years.map(year => (
-                                <SelectItem key={year} value={year.toString()}>
-                                    {year}
-                                </SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-                    <Button onClick={downloadCSV} variant="outline" size="sm">
-                        <FileDown className="mr-2 h-4 w-4" />
-                        {t.inventoryTable.exportCsv.replace('Excel', 'CSV')}
+                </div>
+                <div className="px-1 py-2 flex items-center gap-2 border-b border-dashed -mb-4">
+                    <Button variant={adjustmentTypeFilter === 'all' ? 'secondary' : 'ghost'} size="sm" onClick={() => setAdjustmentTypeFilter('all')}>
+                        Semua <Badge variant="secondary" className="ml-2">{adjustmentCounts.all}</Badge>
+                    </Button>
+                    <Button variant={adjustmentTypeFilter === 'in' ? 'secondary' : 'ghost'} size="sm" onClick={() => setAdjustmentTypeFilter('in')}>
+                        Stok Masuk <Badge variant="secondary" className="ml-2">{adjustmentCounts.in}</Badge>
+                    </Button>
+                    <Button variant={adjustmentTypeFilter === 'out' ? 'secondary' : 'ghost'} size="sm" onClick={() => setAdjustmentTypeFilter('out')}>
+                        Stok Keluar <Badge variant="secondary" className="ml-2">{adjustmentCounts.out}</Badge>
                     </Button>
                 </div>
-            </div>
-             <div className="px-1 py-2 flex items-center gap-2 border-b border-dashed">
-                <Button variant={adjustmentTypeFilter === 'all' ? 'secondary' : 'ghost'} size="sm" onClick={() => setAdjustmentTypeFilter('all')}>
-                    Semua <Badge variant="secondary" className="ml-2">{adjustmentCounts.all}</Badge>
-                </Button>
-                <Button variant={adjustmentTypeFilter === 'in' ? 'secondary' : 'ghost'} size="sm" onClick={() => setAdjustmentTypeFilter('in')}>
-                    Stok Masuk <Badge variant="secondary" className="ml-2">{adjustmentCounts.in}</Badge>
-                </Button>
-                <Button variant={adjustmentTypeFilter === 'out' ? 'secondary' : 'ghost'} size="sm" onClick={() => setAdjustmentTypeFilter('out')}>
-                    Stok Keluar <Badge variant="secondary" className="ml-2">{adjustmentCounts.out}</Badge>
-                </Button>
-            </div>
-          </div>
-          <div className={cn("flex-grow", paginatedHistory.length === 0 && "flex flex-col")}>
-            <Table className={cn(paginatedHistory.length === 0 && "h-full")}>
-              <TableHeader>
-                  <TableRow>
-                      <TableHead className="min-w-[250px]">{t.inventoryTable.name}</TableHead>
-                      <TableHead>{t.stockHistory.date}</TableHead>
-                      <TableHead className="text-center">{t.stockHistory.change}</TableHead>
-                      <TableHead className="text-center">{t.stockHistory.newTotal}</TableHead>
-                      <TableHead>{t.stockHistory.reason}</TableHead>
-                  </TableRow>
-              </TableHeader>
-              <TableBody>
-                  {loading ? (
-                      <TableRow>
-                          <TableCell colSpan={5} className="h-24 text-center">Memuat riwayat...</TableCell>
-                      </TableRow>
-                  ) : paginatedHistory.length > 0 ? (
-                  paginatedHistory.map((entry, index) => (
-                      <TableRow key={index}>
-                      {entry.type === 'adjustment' ? (
-                        <>
-                          <TableCell>
-                              <div className="flex items-center gap-4">
-                                  {entry.imageUrl ? (
-                                  <Image 
-                                      src={entry.imageUrl} 
-                                      alt={entry.itemName!} 
-                                      width={36} height={36} 
-                                      className="rounded-sm" 
-                                      data-ai-hint="product image"
-                                  />
-                                  ) : (
-                                  <div className="flex h-10 w-10 items-center justify-center rounded-sm bg-muted">
-                                      <ShoppingBag className="h-5 w-5 text-muted-foreground" />
-                                  </div>
-                                  )}
-                                  <div>
-                                      <div className="font-medium text-sm truncate">{entry.itemName}</div>
-                                      {entry.variantName && (
-                                          <div className="text-xs text-muted-foreground truncate">
-                                              {entry.variantName}
-                                              {entry.variantSku && ` (SKU: ${entry.variantSku})`}
-                                          </div>
-                                      )}
-                                  </div>
-                              </div>
-                          </TableCell>
-                          <TableCell>{format(new Date(entry.date), 'PP')}</TableCell>
-                          <TableCell className="text-center">
-                              <Badge variant={entry.change >= 0 ? 'default' : 'destructive'} className={cn(entry.change >= 0 ? 'bg-green-600' : 'bg-red-600', 'text-white')}>
-                              {entry.change > 0 ? `+${entry.change}` : entry.change}
-                              </Badge>
-                          </TableCell>
-                          <TableCell className="text-center">{entry.newStockLevel ?? '-'}</TableCell>
-                          <TableCell>
-                              <p className="truncate">{entry.reason}</p>
-                          </TableCell>
-                        </>
-                      ) : (
-                          <>
-                          <TableCell>
-                              <div className="flex items-center gap-4">
-                                  <div className="flex h-10 w-10 items-center justify-center rounded-sm bg-muted">
-                                      <ShoppingCart className="h-5 w-5 text-muted-foreground" />
-                                  </div>
-                                  <div>
-                                      <div className="font-medium text-sm capitalize">Penjualan {entry.channel}</div>
-                                      <Link href={getSaleDetailLink(entry)} className="flex items-center text-xs text-primary hover:underline">
-                                          Lihat Detail
-                                          <ExternalLink className="ml-1 h-3 w-3" />
-                                      </Link>
-                                  </div>
-                              </div>
-                          </TableCell>
-                          <TableCell>{format(new Date(entry.date), 'PP')}</TableCell>
-                          <TableCell className="text-center">
-                              <Badge variant='destructive' className="bg-red-600 text-white">
-                                  -{entry.totalItems}
-                              </Badge>
-                          </TableCell>
-                          <TableCell className="text-center">-</TableCell>
-                          <TableCell>
-                              <p className="truncate">Total {entry.totalItems} item terjual dari channel {entry.channel}.</p>
-                          </TableCell>
-                          </>
-                      )}
-                      </TableRow>
-                  ))
-                  ) : (
-                  <TableRow className='h-full'>
-                      <TableCell colSpan={5} className="h-full text-center">
-                          <div className="flex flex-col items-center justify-center gap-4 text-muted-foreground h-full">
-                              <History className="h-16 w-16" />
-                              <div className="text-center">
-                                  <p className="font-semibold">Tidak Ada Riwayat</p>
-                                  <p className="text-sm">Coba ubah filter atau periode tanggal.</p>
-                              </div>
-                          </div>
-                      </TableCell>
-                  </TableRow>
-                  )}
-              </TableBody>
-              {paginatedHistory.length > 0 && (
-                <TableFooter>
+            </CardHeader>
+            <CardContent className="p-0 flex-grow">
+                <Table>
+                <TableHeader>
                     <TableRow>
-                        <TableCell colSpan={3} className="font-semibold text-left">Total Perubahan:</TableCell>
-                        <TableCell colSpan={2} className="font-semibold">
-                            <div className="flex items-center justify-between flex-wrap gap-y-1">
-                                <span className="text-green-600">Masuk: {historyTotals.totalIn}</span>
-                                <span className="text-red-600">Keluar: {historyTotals.totalOut}</span>
-                                <span>Net: 
-                                    <span className={cn(historyTotals.netChange >= 0 ? "text-green-600" : "text-red-600", "ml-1")}>
-                                        {historyTotals.netChange > 0 && '+'}{historyTotals.netChange}
-                                    </span>
-                                </span>
+                        <TableHead className="min-w-[250px]">{t.inventoryTable.name}</TableHead>
+                        <TableHead>{t.stockHistory.date}</TableHead>
+                        <TableHead className="text-center">{t.stockHistory.change}</TableHead>
+                        <TableHead className="text-center">{t.stockHistory.newTotal}</TableHead>
+                        <TableHead>{t.stockHistory.reason}</TableHead>
+                    </TableRow>
+                </TableHeader>
+                <TableBody>
+                    {loading ? (
+                        <TableRow>
+                            <TableCell colSpan={5} className="h-24 text-center">Memuat riwayat...</TableCell>
+                        </TableRow>
+                    ) : paginatedHistory.length > 0 ? (
+                    paginatedHistory.map((entry, index) => (
+                        <TableRow key={index}>
+                        {entry.type === 'adjustment' ? (
+                            <>
+                            <TableCell>
+                                <div className="flex items-center gap-4">
+                                    {entry.imageUrl ? (
+                                    <Image 
+                                        src={entry.imageUrl} 
+                                        alt={entry.itemName!} 
+                                        width={36} height={36} 
+                                        className="rounded-sm" 
+                                        data-ai-hint="product image"
+                                    />
+                                    ) : (
+                                    <div className="flex h-10 w-10 items-center justify-center rounded-sm bg-muted">
+                                        <ShoppingBag className="h-5 w-5 text-muted-foreground" />
+                                    </div>
+                                    )}
+                                    <div>
+                                        <div className="font-medium text-sm truncate">{entry.itemName}</div>
+                                        {entry.variantName && (
+                                            <div className="text-xs text-muted-foreground truncate">
+                                                {entry.variantName}
+                                                {entry.variantSku && ` (SKU: ${entry.variantSku})`}
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            </TableCell>
+                            <TableCell>{format(new Date(entry.date), 'PP')}</TableCell>
+                            <TableCell className="text-center">
+                                <Badge variant={entry.change >= 0 ? 'default' : 'destructive'} className={cn(entry.change >= 0 ? 'bg-green-600' : 'bg-red-600', 'text-white')}>
+                                {entry.change > 0 ? `+${entry.change}` : entry.change}
+                                </Badge>
+                            </TableCell>
+                            <TableCell className="text-center">{entry.newStockLevel ?? '-'}</TableCell>
+                            <TableCell>
+                                <p className="truncate">{entry.reason}</p>
+                            </TableCell>
+                            </>
+                        ) : (
+                            <>
+                            <TableCell>
+                                <div className="flex items-center gap-4">
+                                    <div className="flex h-10 w-10 items-center justify-center rounded-sm bg-muted">
+                                        <ShoppingCart className="h-5 w-5 text-muted-foreground" />
+                                    </div>
+                                    <div>
+                                        <div className="font-medium text-sm capitalize">Penjualan {entry.channel}</div>
+                                        <Link href={getSaleDetailLink(entry)} className="flex items-center text-xs text-primary hover:underline">
+                                            Lihat Detail
+                                            <ExternalLink className="ml-1 h-3 w-3" />
+                                        </Link>
+                                    </div>
+                                </div>
+                            </TableCell>
+                            <TableCell>{format(new Date(entry.date), 'PP')}</TableCell>
+                            <TableCell className="text-center">
+                                <Badge variant='destructive' className="bg-red-600 text-white">
+                                    -{entry.totalItems}
+                                </Badge>
+                            </TableCell>
+                            <TableCell className="text-center">-</TableCell>
+                            <TableCell>
+                                <p className="truncate">Total {entry.totalItems} item terjual dari channel {entry.channel}.</p>
+                            </TableCell>
+                            </>
+                        )}
+                        </TableRow>
+                    ))
+                    ) : (
+                    <TableRow className='h-full'>
+                        <TableCell colSpan={5} className="h-full text-center">
+                            <div className="flex flex-col items-center justify-center gap-4 text-muted-foreground h-full">
+                                <History className="h-16 w-16" />
+                                <div className="text-center">
+                                    <p className="font-semibold">Tidak Ada Riwayat</p>
+                                    <p className="text-sm">Coba ubah filter atau periode tanggal.</p>
+                                </div>
                             </div>
                         </TableCell>
                     </TableRow>
-                </TableFooter>
-              )}
-            </Table>
-          </div>
+                    )}
+                </TableBody>
+                {paginatedHistory.length > 0 && (
+                    <TableFooter>
+                        <TableRow>
+                            <TableCell colSpan={3} className="font-semibold text-left">Total Perubahan:</TableCell>
+                            <TableCell colSpan={2} className="font-semibold">
+                                <div className="flex items-center justify-between flex-wrap gap-y-1">
+                                    <span className="text-green-600">Masuk: {historyTotals.totalIn}</span>
+                                    <span className="text-red-600">Keluar: {historyTotals.totalOut}</span>
+                                    <span>Net: 
+                                        <span className={cn(historyTotals.netChange >= 0 ? "text-green-600" : "text-red-600", "ml-1")}>
+                                            {historyTotals.netChange > 0 && '+'}{historyTotals.netChange}
+                                        </span>
+                                    </span>
+                                </div>
+                            </TableCell>
+                        </TableRow>
+                    </TableFooter>
+                )}
+                </Table>
+            </CardContent>
           {paginatedHistory.length > 0 && (
             <div className="flex items-center justify-end p-4 border-t">
                 <div className="flex items-center gap-4">
@@ -521,7 +522,7 @@ export default function HistoryPage() {
                 </div>
             </div>
           )}
-        </div>
+        </Card>
       </main>
       <DailySalesDetailDialog 
           open={isSalesDetailOpen}
