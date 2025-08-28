@@ -111,9 +111,10 @@ function InventoryTableSkeleton() {
 
 function getAccessoryLowStockThreshold(name: string): number {
     const lowerCaseName = name.toLowerCase();
-    if (lowerCaseName.includes('label')) return 500;
-    if (lowerCaseName.includes('kertas hangtag')) return 5000;
-    if (lowerCaseName.includes('plastik')) return 1000;
+    if (lowerCaseName.includes('label')) return 5000;
+    if (lowerCaseName.includes('kertas hangtag')) return 50000;
+    if (lowerCaseName.includes('stiker')) return 50000;
+    if (lowerCaseName.includes('plastik')) return 10000;
     return LOW_STOCK_THRESHOLD; // Default
 }
 
@@ -609,4 +610,5 @@ export function InventoryTable({ onUpdateStock, isAccessoryTable = false }: Inve
 
 
 
+    
     
