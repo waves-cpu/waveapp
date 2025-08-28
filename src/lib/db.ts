@@ -275,8 +275,6 @@ const seedData = () => {
           { awb: 'JP1234567890', date: '2024-07-31', channel: 'Tokopedia', status: 'Selesai' },
           { awb: '005432109876', date: '2024-07-31', channel: 'Lazada', status: 'Dikirim' },
           { awb: 'TIKTOK-XYZ123', date: '2024-07-30', channel: 'Tiktok Shop', status: 'Dibatalkan' },
-          { awb: 'SPXID0123456789C', date: '2024-08-02', channel: 'Shopee', status: 'Return' },
-          { awb: 'SPXID0123456789D', date: '2024-08-01', channel: 'Shopee', status: 'Return' },
           { awb: 'JP0987654321', date: '2024-08-01', channel: 'Tokopedia', status: 'Selesai' },
         ];
 
@@ -300,4 +298,5 @@ const seedData = () => {
 seedData();
 
 export { db };
+
 
