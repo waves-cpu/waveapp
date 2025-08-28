@@ -706,8 +706,8 @@ export async function deleteReseller(id: number) {
 
 export async function addAccessory(accessory: Omit<Accessory, 'id' | 'history'>) {
     const addStmt = db.prepare(`
-        INSERT INTO accessories (name, sku, stock, price, costPrice)
-        VALUES (@name, @sku, @stock, @price, @costPrice)
+        INSERT INTO accessories (name, sku, category, stock, price, costPrice)
+        VALUES (@name, @sku, @category, @stock, @price, @costPrice)
     `);
     const historyStmt = db.prepare(`
         INSERT INTO accessory_history (accessoryId, date, change, reason, newStockLevel)
@@ -716,8 +716,12 @@ export async function addAccessory(accessory: Omit<Accessory, 'id' | 'history'>)
 
     db.transaction(() => {
         const result = addStmt.run({
-            ...accessory,
-            costPrice: accessory.costPrice ?? null
+            name: accessory.name,
+            sku: accessory.sku,
+            category: accessory.category,
+            stock: accessory.stock,
+            price: accessory.price,
+            costPrice: accessory.costPrice ?? null,
         });
         const accessoryId = result.lastInsertRowid;
         if (accessory.stock > 0) {
@@ -728,7 +732,7 @@ export async function addAccessory(accessory: Omit<Accessory, 'id' | 'history'>)
 
 export async function updateAccessory(accessoryId: string, data: Omit<Accessory, 'id'| 'history'>) {
     const updateStmt = db.prepare(`
-        UPDATE accessories SET name = @name, sku = @sku, stock = @stock, price = @price, costPrice = @costPrice
+        UPDATE accessories SET name = @name, sku = @sku, category = @category, stock = @stock, price = @price, costPrice = @costPrice
         WHERE id = @id
     `);
     const historyStmt = db.prepare(`
@@ -745,9 +749,10 @@ export async function updateAccessory(accessoryId: string, data: Omit<Accessory,
              id: accessoryId,
              name: data.name,
              sku: data.sku,
+             category: data.category,
              stock: data.stock,
              price: data.price,
-             costPrice: 'costPrice' in data ? data.costPrice : null
+             costPrice: data.costPrice ?? null,
         });
 
         if (stockChange !== 0) {
@@ -784,7 +789,3 @@ export async function deleteProductPermanently(itemId: string) {
     // ON DELETE CASCADE will handle variants, history, and channel_prices
     db.prepare('DELETE FROM products WHERE id = ?').run(itemId);
 }
-
-
-
-    

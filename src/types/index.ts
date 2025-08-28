@@ -17,6 +17,15 @@ export const categories = [
     "Bag"
 ].sort();
 
+export const accessoryCategories = [
+    "Label",
+    "Hangtag",
+    "Sticker",
+    "Packaging",
+    "Other"
+].sort();
+
+
 export const chartOfAccounts = [
     "Piutang Usaha / Kas",
     "Pendapatan Penjualan",
@@ -48,6 +57,7 @@ export interface Accessory {
     id: string;
     name: string;
     sku?: string;
+    category?: string;
     stock: number;
     price?: number;
     costPrice?: number;
@@ -123,4 +133,3 @@ export interface ManualJournalEntry {
     amount: number;
     type: 'manual';
 }
-    

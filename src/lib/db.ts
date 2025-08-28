@@ -114,12 +114,17 @@ const runMigrations = () => {
         db.exec('ALTER TABLE variants ADD COLUMN costPrice REAL');
     }
 
-    // Add costPrice to accessories
+    // Add costPrice and category to accessories
     const accessoryColumns = db.pragma('table_info(accessories)');
     if (accessoryColumns && !accessoryColumns.some((col: any) => col.name === 'costPrice')) {
         console.log('Adding costPrice column to accessories table...');
         db.exec('ALTER TABLE accessories ADD COLUMN costPrice REAL');
     }
+    if (accessoryColumns && !accessoryColumns.some((col: any) => col.name === 'category')) {
+        console.log('Adding category column to accessories table...');
+        db.exec('ALTER TABLE accessories ADD COLUMN category TEXT');
+    }
+
 
   } catch (error) {
     if (error instanceof Error && error.message.includes('no such table:')) {
@@ -164,6 +169,7 @@ const createSchema = () => {
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT NOT NULL,
         sku TEXT,
+        category TEXT,
         stock INTEGER NOT NULL,
         price REAL,
         costPrice REAL

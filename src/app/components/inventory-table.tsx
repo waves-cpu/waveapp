@@ -109,6 +109,8 @@ function InventoryTableSkeleton() {
     )
 }
 
+const LOW_STOCK_THRESHOLD = 10;
+
 function getAccessoryLowStockThreshold(name: string): number {
     const lowerCaseName = name.toLowerCase();
     if (lowerCaseName.includes('label')) return 5000;
@@ -125,12 +127,11 @@ function StockBar({ stock, onUpdateClick, itemName }: { stock: number; onUpdateC
     const lowStockThreshold = itemName ? getAccessoryLowStockThreshold(itemName) : LOW_STOCK_THRESHOLD;
     
     const getStockColor = (stock: number) => {
-        if (stock > lowStockThreshold) return 'bg-green-500';
-        if (stock > 0) return 'bg-yellow-500';
-        return 'bg-red-500';
+        if (stock === 0) return 'bg-red-500';
+        if (stock < lowStockThreshold) return 'bg-yellow-500';
+        return 'bg-green-500';
     };
 
-    // Use a high number for max progress to better visualize large stock quantities
     const maxProgressValue = lowStockThreshold * 5;
 
     return (
@@ -147,8 +148,6 @@ function StockBar({ stock, onUpdateClick, itemName }: { stock: number; onUpdateC
         </div>
     );
 }
-
-const LOW_STOCK_THRESHOLD = 10;
 
 const formatCurrency = (amount: number) => `Rp${Math.round(amount).toLocaleString('id-ID')}`;
 
@@ -606,9 +605,3 @@ export function InventoryTable({ onUpdateStock, isAccessoryTable = false }: Inve
     </>
   );
 }
-
-
-
-
-    
-    

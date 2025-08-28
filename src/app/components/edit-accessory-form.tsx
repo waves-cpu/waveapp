@@ -14,6 +14,13 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+  } from "@/components/ui/select"
 import { useInventory } from '@/hooks/use-inventory';
 import { useToast } from '@/hooks/use-toast';
 import { useLanguage } from '@/hooks/use-language';
@@ -22,10 +29,12 @@ import { Card, CardContent } from '@/components/ui/card';
 import { useRouter } from 'next/navigation';
 import { useState, useMemo } from 'react';
 import type { Accessory } from '@/types';
+import { accessoryCategories } from '@/types';
 
 const formSchema = z.object({
   id: z.string(),
   name: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
+  category: z.string().min(1, { message: 'Category is required.' }),
   sku: z.string().optional(),
   price: z.coerce.number().min(0, "Price must be non-negative."),
   stock: z.coerce.number().int().min(0, "Stock must be a non-negative integer."),
@@ -47,6 +56,7 @@ export function EditAccessoryForm({ existingItem }: EditAccessoryFormProps) {
     return {
         id: existingItem.id,
         name: existingItem.name,
+        category: existingItem.category,
         sku: existingItem.sku || '',
         price: existingItem.price ?? '',
         stock: existingItem.stock ?? '',
@@ -95,6 +105,30 @@ export function EditAccessoryForm({ existingItem }: EditAccessoryFormProps) {
                         </FormControl>
                         <FormMessage />
                         </FormItem>
+                    )}
+                />
+                 <FormField
+                    control={form.control}
+                    name="category"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>{t.addItemDialog.category}</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <FormControl>
+                                <SelectTrigger>
+                                <SelectValue placeholder={t.addItemDialog.categoryPlaceholder} />
+                                </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                                {accessoryCategories.map((category) => (
+                                <SelectItem key={category} value={category}>
+                                    {category}
+                                </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                        <FormMessage />
+                    </FormItem>
                     )}
                 />
                 <FormField
