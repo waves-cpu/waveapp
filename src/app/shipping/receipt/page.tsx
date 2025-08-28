@@ -63,6 +63,7 @@ export default function ReceiptPage() {
     const [receiptToCancel, setReceiptToCancel] = useState<ShippingReceipt | null>(null);
     const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
     const [isProcessing, setIsProcessing] = useState(false);
+    const [channelCounts, setChannelCounts] = useState<Record<ShippingProvider, number> | null>(null);
 
     const fetchReceipts = useCallback(async () => {
         setLoading(true);
@@ -83,10 +84,34 @@ export default function ReceiptPage() {
             setLoading(false);
         }
     }, [currentPage, itemsPerPage, activeTab, date, searchTerm, toast]);
+    
+    const fetchChannelCounts = useCallback(async () => {
+        const providers: ShippingProvider[] = ['Shopee', 'Tiktok', 'Lazada', 'Instant'];
+        const counts: Record<ShippingProvider, number> = { 'Shopee': 0, 'Tiktok': 0, 'Lazada': 0, 'Instant': 0 };
+        try {
+            for (const provider of providers) {
+                const { total } = await fetchShippingReceipts({
+                    page: 1,
+                    limit: 1, // only need the total count
+                    channel: provider,
+                    date: date,
+                });
+                counts[provider] = total;
+            }
+            setChannelCounts(counts);
+        } catch (error) {
+            console.error("Failed to fetch channel counts:", error);
+        }
+    }, [date]);
+
 
     useEffect(() => {
         fetchReceipts();
     }, [fetchReceipts]);
+
+    useEffect(() => {
+        fetchChannelCounts();
+    }, [date, fetchChannelCounts]);
     
     // Clear selection when filters change
     useEffect(() => {
@@ -100,6 +125,7 @@ export default function ReceiptPage() {
             toast({ title: 'Resi dihapus', description: `Resi ${receiptToDelete.awb} telah berhasil dihapus.` });
             setReceiptToDelete(null);
             fetchReceipts(); // Refresh data
+            fetchChannelCounts();
         } catch (error) {
             console.error("Failed to delete receipt:", error);
             toast({ variant: 'destructive', title: 'Gagal menghapus resi.' });
@@ -113,6 +139,7 @@ export default function ReceiptPage() {
             toast({ title: 'Pengiriman Dibatalkan', description: `Resi ${receiptToCancel.awb} telah berhasil dibatalkan.` });
             setReceiptToCancel(null);
             fetchReceipts();
+            fetchChannelCounts();
         } catch (error) {
             console.error("Failed to cancel shipment:", error);
             toast({ variant: 'destructive', title: 'Gagal Membatalkan', description: 'Terjadi kesalahan saat membatalkan pengiriman.' });
@@ -127,6 +154,7 @@ export default function ReceiptPage() {
             toast({ title: 'Resi Diproses', description: `${selectedIds.size} resi telah berhasil diperbarui menjadi "Dikirim".` });
             setSelectedIds(new Set());
             fetchReceipts();
+            fetchChannelCounts();
         } catch (error) {
             console.error("Failed to process shipments:", error);
             toast({ variant: 'destructive', title: 'Gagal Memproses', description: 'Terjadi kesalahan saat memperbarui status resi.' });
@@ -230,6 +258,11 @@ export default function ReceiptPage() {
                                 className="shrink-0"
                             >
                                 {tab}
+                                {channelCounts && (
+                                    <Badge variant={activeTab === tab ? 'default' : 'secondary'} className="ml-2">
+                                        {channelCounts[tab]}
+                                    </Badge>
+                                )}
                             </Button>
                         ))}
                     </div>
@@ -277,7 +310,7 @@ export default function ReceiptPage() {
                                                 {item.status === 'Perlu Diproses' && (
                                                     <AlertDialog>
                                                         <AlertDialogTrigger asChild>
-                                                            <Button variant="ghost" size="icon" className="text-destructive h-8 w-8" onClick={() => setReceiptToCancel(item)}>
+                                                            <Button variant="ghost" size="icon" className="text-destructive h-8 w-8" onClick={(e) => { e.stopPropagation(); setReceiptToCancel(item); }}>
                                                                 <Ban className="h-4 w-4" />
                                                             </Button>
                                                         </AlertDialogTrigger>
@@ -299,7 +332,7 @@ export default function ReceiptPage() {
                                                 )}
                                                 <AlertDialog>
                                                     <AlertDialogTrigger asChild>
-                                                         <Button variant="ghost" size="icon" className="text-destructive h-8 w-8" onClick={() => setReceiptToDelete(item)}>
+                                                         <Button variant="ghost" size="icon" className="text-destructive h-8 w-8" onClick={(e) => { e.stopPropagation(); setReceiptToDelete(item); }}>
                                                             <Trash2 className="h-4 w-4" />
                                                          </Button>
                                                     </AlertDialogTrigger>
@@ -349,4 +382,3 @@ export default function ReceiptPage() {
         </AppLayout>
     );
 }
-
