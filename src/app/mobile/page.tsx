@@ -70,6 +70,11 @@ export default function MobileScanReceiptPage() {
         e.preventDefault();
         handleSubmit(awb);
     }
+    
+    const handleDecode = (result: string) => {
+        setIsCameraOpen(false);
+        handleSubmit(result);
+    };
 
     if (isCameraOpen) {
         return (
@@ -83,12 +88,7 @@ export default function MobileScanReceiptPage() {
                  <main className="flex-grow flex flex-col justify-center items-center relative">
                     <div className="absolute inset-0">
                         <QrScanner
-                            onDecode={(result) => {
-                                setAwb(result);
-                                setIsCameraOpen(false);
-                                playSuccessSound();
-                                handleSubmit(result);
-                            }}
+                            onDecode={handleDecode}
                             onError={(error) => console.log(error?.message)}
                             constraints={{ facingMode: 'environment' }}
                             containerStyle={{ width: '100%', height: '100%', paddingTop: '0' }}
