@@ -133,3 +133,11 @@ export interface ManualJournalEntry {
     amount: number;
     type: 'manual';
 }
+
+export interface ShippingReceipt {
+    id: number;
+    awb: string;
+    date: string;
+    channel: string;
+    status: string;
+}

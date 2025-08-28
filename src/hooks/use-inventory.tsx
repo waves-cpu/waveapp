@@ -2,7 +2,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
-import type { InventoryItem, AdjustmentHistory, InventoryItemVariant, Sale, Reseller, ManualJournalEntry, Accessory } from '@/types';
+import type { InventoryItem, AdjustmentHistory, InventoryItemVariant, Sale, Reseller, ManualJournalEntry, Accessory, ShippingReceipt } from '@/types';
 import { categories as allCategories } from '@/types';
 import {
   fetchInventoryData,
@@ -29,6 +29,9 @@ import {
   adjustAccessoryStock as adjustAccessoryStockDb,
   archiveProduct as archiveProductDb,
   deleteProductPermanently as deleteProductPermanentlyDb,
+  fetchShippingReceipts,
+  addShippingReceipt,
+  deleteShippingReceipt,
 } from '@/lib/inventory-service';
 
 
@@ -65,6 +68,11 @@ interface InventoryContextType {
   addAccessory: (accessory: Omit<Accessory, 'id' | 'history'>) => Promise<void>;
   updateAccessory: (accessoryId: string, accessoryData: Omit<Accessory, 'id' | 'history'>) => Promise<void>;
   adjustAccessoryStock: (accessoryId: string, change: number, reason: string) => Promise<void>;
+  // Shipping
+  shippingReceipts: ShippingReceipt[];
+  fetchShippingReceipts: (options: { page: number; limit: number; channel?: string; date?: Date; }) => Promise<{ receipts: ShippingReceipt[]; total: number; }>;
+  addShippingReceipt: (receipt: Omit<ShippingReceipt, 'id'>) => Promise<any>;
+  deleteShippingReceipt: (id: number) => Promise<any>;
 }
 
 const InventoryContext = createContext<InventoryContextType | undefined>(undefined);
@@ -76,24 +84,26 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
   const [allSales, setAllSales] = useState<Sale[]>([]);
   const [resellers, setResellers] = useState<Reseller[]>([]);
   const [manualJournalEntries, setManualJournalEntries] = useState<ManualJournalEntry[]>([]);
+  const [shippingReceipts, setShippingReceipts] = useState<ShippingReceipt[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchAllData = useCallback(async () => {
     setLoading(true);
     try {
-      const [inventoryData, salesData, resellerData, manualEntries] = await Promise.all([
+      const [inventoryData, salesData, resellerData, manualEntries, shippingData] = await Promise.all([
         fetchInventoryData(),
         fetchAllSales(),
         getResellers(),
         fetchManualJournalEntries(),
+        fetchShippingReceipts({ page: 1, limit: 1000 }), // Fetch initial receipts
       ]);
       
       setItems(inventoryData.items);
       setAccessories(inventoryData.accessories);
-      // setCategories(inventoryData.categories); // Now using the static list
       setAllSales(salesData);
       setResellers(resellerData);
       setManualJournalEntries(manualEntries);
+      setShippingReceipts(shippingData.receipts);
 
     } catch (error) {
       console.error("Failed to fetch data:", error);
@@ -183,7 +193,6 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
 
   const recordSale = async (sku: string, channel: string, quantity: number, options?: { saleDate?: Date, transactionId?: string, paymentMethod?: string, resellerName?: string }) => {
     await performSale(sku, channel, quantity, options);
-    // After a sale, we need fresh data for both inventory and sales history
     await fetchAllData();
   };
 
@@ -202,8 +211,6 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
   }
 
   const getProductBySku = async (sku: string) => {
-    // This function can now be smarter, checking both client and server if needed
-    // For now, it just calls the server-side function
     return await findProductBySku(sku);
   };
 
@@ -265,11 +272,14 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
         manualJournalEntries,
         createManualJournalEntry,
         deleteManualJournalEntry,
-        // Accessories
         accessories,
         addAccessory,
         updateAccessory,
         adjustAccessoryStock,
+        shippingReceipts,
+        fetchShippingReceipts,
+        addShippingReceipt,
+        deleteShippingReceipt,
       }}>
       {children}
     </InventoryContext.Provider>
@@ -283,3 +293,4 @@ export const useInventory = () => {
   }
   return context;
 };
+

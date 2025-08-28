@@ -1,7 +1,8 @@
 
+
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { AppLayout } from '@/app/components/app-layout';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
@@ -20,22 +21,55 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { FilePlus, ScanLine, Undo2 } from 'lucide-react';
+import { FilePlus, Undo2, Truck } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
+import { fetchShippingReceipts } from '@/lib/inventory-service';
+import type { ShippingReceipt } from '@/types';
+import { format } from 'date-fns';
+import { useToast } from '@/hooks/use-toast';
+import { Pagination } from '@/components/ui/pagination';
 
-// Mock data for returned receipts
-const mockReturns = [
-  { awb: 'SPXID0123456789C', date: '2024-08-02', channel: 'Shopee', status: 'Diterima Gudang' },
-  { awb: 'SPXID0123456789D', date: '2024-08-01', channel: 'Shopee', status: 'Perlu Dicek' },
-  { awb: 'JP0987654321', date: '2024-08-01', channel: 'Tokopedia', status: 'Selesai' },
-];
-
-type ReturnData = typeof mockReturns[0];
-
+const getStatusVariant = (status: string) => {
+    switch (status.toLowerCase()) {
+        case 'selesai': return 'default';
+        case 'dikirim': return 'secondary';
+        case 'return':
+        case 'dibatalkan': return 'destructive';
+        default: return 'outline';
+    }
+};
 
 export default function ReturnPage() {
-    const [returns, setReturns] = useState(mockReturns);
+    const [returns, setReturns] = useState<ShippingReceipt[]>([]);
+    const [totalReturns, setTotalReturns] = useState(0);
+    const [loading, setLoading] = useState(true);
+    const [currentPage, setCurrentPage] = useState(1);
+    const [itemsPerPage, setItemsPerPage] = useState(25);
+    const { toast } = useToast();
+
+    const fetchReturns = useCallback(async () => {
+        setLoading(true);
+        try {
+            const { receipts, total } = await fetchShippingReceipts({
+                page: currentPage,
+                limit: itemsPerPage,
+                status: ['Return', 'Dibatalkan']
+            });
+            setReturns(receipts);
+            setTotalReturns(total);
+        } catch (error) {
+            console.error("Failed to fetch return receipts:", error);
+            toast({ variant: 'destructive', title: 'Gagal memuat data return.' });
+        } finally {
+            setLoading(false);
+        }
+    }, [currentPage, itemsPerPage, toast]);
+
+    useEffect(() => {
+        fetchReturns();
+    }, [fetchReturns]);
+    
+    const totalPages = Math.ceil(totalReturns / itemsPerPage);
 
     return (
         <AppLayout>
@@ -44,7 +78,7 @@ export default function ReturnPage() {
                     <div className="flex items-center gap-4">
                         <SidebarTrigger className="md:hidden" />
                         <h1 className="text-lg md:text-xl font-bold font-headline text-foreground">
-                           Kelola Return Pengiriman
+                           Kelola Return & Resi Batal
                         </h1>
                     </div>
                      <div className="flex items-center gap-2">
@@ -57,45 +91,31 @@ export default function ReturnPage() {
 
                 <div className="grid gap-6">
                     <Card>
-                        <CardHeader>
-                            <CardTitle>Scan Resi Return</CardTitle>
-                            <CardDescription>Scan atau masukkan nomor resi yang diretur untuk menambahkannya ke daftar.</CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                             <div className="relative md:max-w-sm">
-                                <ScanLine className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                <Input
-                                    placeholder="Scan atau masukkan No. Resi (AWB)"
-                                    className="pl-10 w-full"
-                                />
-                            </div>
-                        </CardContent>
-                    </Card>
-
-                    <Card>
                          <CardHeader>
-                            <CardTitle>Daftar Return</CardTitle>
-                            <CardDescription>Berikut adalah daftar resi yang telah ditandai sebagai return.</CardDescription>
+                            <CardTitle>Daftar Return & Resi Batal</CardTitle>
+                            <CardDescription>Berikut adalah daftar resi yang telah ditandai sebagai return atau dibatalkan.</CardDescription>
                         </CardHeader>
                         <CardContent>
                             <Table>
                                 <TableHeader>
                                     <TableRow>
                                         <TableHead>No. Resi (AWB)</TableHead>
-                                        <TableHead>Tanggal Return</TableHead>
+                                        <TableHead>Tanggal</TableHead>
                                         <TableHead>Channel</TableHead>
                                         <TableHead>Status</TableHead>
                                         <TableHead className="text-center">Aksi</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {returns.length > 0 ? returns.map(item => (
-                                        <TableRow key={item.awb}>
+                                    {loading ? (
+                                        <TableRow><TableCell colSpan={5} className="h-48 text-center">Memuat data...</TableCell></TableRow>
+                                    ) : returns.length > 0 ? returns.map(item => (
+                                        <TableRow key={item.id}>
                                             <TableCell className="font-medium">{item.awb}</TableCell>
-                                            <TableCell>{item.date}</TableCell>
+                                            <TableCell>{format(new Date(item.date), 'dd MMM yyyy')}</TableCell>
                                             <TableCell>{item.channel}</TableCell>
                                             <TableCell>
-                                                <Badge variant={item.status === 'Selesai' ? 'default' : item.status === 'Perlu Dicek' ? 'destructive' : 'secondary'}>{item.status}</Badge>
+                                                <Badge variant={getStatusVariant(item.status)}>{item.status}</Badge>
                                             </TableCell>
                                             <TableCell className="text-center">
                                                 <Button variant="outline" size="sm">
@@ -110,7 +130,7 @@ export default function ReturnPage() {
                                                 <div className="flex flex-col items-center justify-center gap-4 text-muted-foreground">
                                                     <Undo2 className="h-16 w-16" />
                                                     <p className="font-semibold">Belum ada data return</p>
-                                                    <p className="text-sm">Scan resi return untuk memulainya.</p>
+                                                    <p className="text-sm">Semua resi return/batal akan muncul di sini.</p>
                                                 </div>
                                             </TableCell>
                                         </TableRow>
@@ -118,9 +138,19 @@ export default function ReturnPage() {
                                 </TableBody>
                             </Table>
                         </CardContent>
+                         {totalPages > 1 && (
+                            <div className="flex items-center justify-end p-4 border-t">
+                                <Pagination
+                                    totalPages={totalPages}
+                                    currentPage={currentPage}
+                                    onPageChange={setCurrentPage}
+                                />
+                            </div>
+                        )}
                     </Card>
                 </div>
             </main>
         </AppLayout>
     );
 }
+

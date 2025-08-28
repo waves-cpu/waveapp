@@ -247,6 +247,14 @@ const createSchema = () => {
         amount REAL NOT NULL,
         type TEXT NOT NULL DEFAULT 'manual'
     );
+
+    CREATE TABLE IF NOT EXISTS shipping_receipts (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        awb TEXT NOT NULL UNIQUE,
+        date TEXT NOT NULL,
+        channel TEXT NOT NULL,
+        status TEXT NOT NULL
+    );
   `);
 };
 
@@ -255,12 +263,41 @@ runMigrations();
 
 
 const seedData = () => {
-    const count = db.prepare('SELECT COUNT(*) as count FROM products').get() as { count: number };
-    if (count.count > 0) {
-        return;
+    try {
+        const count = db.prepare('SELECT COUNT(*) as count FROM shipping_receipts').get() as { count: number };
+        if (count.count > 0) {
+            return;
+        }
+
+        const mockReceipts = [
+          { awb: 'SPXID0123456789A', date: '2024-08-01', channel: 'Shopee', status: 'Dikirim' },
+          { awb: 'SPXID0123456789B', date: '2024-08-01', channel: 'Shopee', status: 'Perlu Diproses' },
+          { awb: 'JP1234567890', date: '2024-07-31', channel: 'Tokopedia', status: 'Selesai' },
+          { awb: '005432109876', date: '2024-07-31', channel: 'Lazada', status: 'Dikirim' },
+          { awb: 'TIKTOK-XYZ123', date: '2024-07-30', channel: 'Tiktok Shop', status: 'Dibatalkan' },
+          { awb: 'SPXID0123456789C', date: '2024-08-02', channel: 'Shopee', status: 'Return' },
+          { awb: 'SPXID0123456789D', date: '2024-08-01', channel: 'Shopee', status: 'Return' },
+          { awb: 'JP0987654321', date: '2024-08-01', channel: 'Tokopedia', status: 'Selesai' },
+        ];
+
+        const insert = db.prepare('INSERT INTO shipping_receipts (awb, date, channel, status) VALUES (@awb, @date, @channel, @status)');
+
+        db.transaction(() => {
+            for (const receipt of mockReceipts) {
+                try {
+                    insert.run(receipt);
+                } catch(e) {
+                    // ignore unique constraint errors for seeding
+                }
+            }
+        })();
+
+    } catch (e) {
+        // ignore if table doesn't exist yet
     }
 };
 
 seedData();
 
 export { db };
+

@@ -1,8 +1,9 @@
 
+
 'use server';
 
 import { db } from './db';
-import type { InventoryItem, AdjustmentHistory, InventoryItemVariant, Sale, Reseller, ChannelPrice, ManualJournalEntry, Accessory } from '@/types';
+import type { InventoryItem, AdjustmentHistory, InventoryItemVariant, Sale, Reseller, ChannelPrice, ManualJournalEntry, Accessory, ShippingReceipt } from '@/types';
 import { format as formatDate, parseISO } from 'date-fns';
 
 // Settings Functions
@@ -18,6 +19,62 @@ export async function getSetting<T>(key: string): Promise<T | null> {
     }
     return null;
 }
+
+// Shipping Receipt Functions
+export async function fetchShippingReceipts(options: {
+    page: number;
+    limit: number;
+    channel?: string;
+    date?: Date;
+    status?: string[];
+}): Promise<{ receipts: ShippingReceipt[]; total: number }> {
+    const { page, limit, channel, date, status } = options;
+    const offset = (page - 1) * limit;
+
+    let whereClauses: string[] = [];
+    let params: any = {};
+
+    if (channel && channel !== 'all') {
+        whereClauses.push("channel = @channel");
+        params.channel = channel;
+    }
+    if (date) {
+        whereClauses.push("date = @date");
+        params.date = formatDate(date, 'yyyy-MM-dd');
+    }
+    if (status && status.length > 0) {
+        whereClauses.push(`status IN (${status.map((_, i) => `@status${i}`).join(',')})`);
+        status.forEach((s, i) => {
+            params[`status${i}`] = s;
+        });
+    }
+
+    const whereString = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
+    
+    const countQuery = db.prepare(`SELECT COUNT(*) as count FROM shipping_receipts ${whereString}`);
+    const totalResult = countQuery.get(params) as { count: number };
+    const total = totalResult.count;
+
+    const dataQuery = db.prepare(`
+        SELECT * FROM shipping_receipts
+        ${whereString}
+        ORDER BY date DESC, id DESC
+        LIMIT @limit OFFSET @offset
+    `);
+    
+    const receipts = dataQuery.all({ ...params, limit, offset }) as any[];
+    
+    return { receipts, total };
+}
+
+export async function addShippingReceipt(receipt: Omit<ShippingReceipt, 'id'>) {
+    return db.prepare('INSERT INTO shipping_receipts (awb, date, channel, status) VALUES (@awb, @date, @channel, @status)').run(receipt);
+}
+
+export async function deleteShippingReceipt(id: number) {
+    return db.prepare('DELETE FROM shipping_receipts WHERE id = ?').run(id);
+}
+
 
 // Manual Journal Entry Functions
 export async function addManualJournalEntry(entry: Omit<ManualJournalEntry, 'id' | 'type'>) {
@@ -789,3 +846,4 @@ export async function deleteProductPermanently(itemId: string) {
     // ON DELETE CASCADE will handle variants, history, and channel_prices
     db.prepare('DELETE FROM products WHERE id = ?').run(itemId);
 }
+
