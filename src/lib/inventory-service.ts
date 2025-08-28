@@ -79,6 +79,13 @@ export async function deleteShippingReceipt(id: number) {
     return db.prepare('DELETE FROM shipping_receipts WHERE id = ?').run(id);
 }
 
+export async function updateShippingReceiptsStatus(ids: number[], status: string) {
+    if (ids.length === 0) return;
+    const placeholders = ids.map(() => '?').join(',');
+    const stmt = db.prepare(`UPDATE shipping_receipts SET status = ? WHERE id IN (${placeholders})`);
+    stmt.run(status, ...ids);
+}
+
 
 // Manual Journal Entry Functions
 export async function addManualJournalEntry(entry: Omit<ManualJournalEntry, 'id' | 'type'>) {

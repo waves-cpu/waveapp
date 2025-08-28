@@ -7,13 +7,13 @@ import { SidebarTrigger } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Calendar as CalendarIcon, FileDown, Trash2, Truck, ScanLine, Search } from 'lucide-react';
+import { Calendar as CalendarIcon, FileDown, Trash2, Truck, ScanLine, Search, Send } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
-import { fetchShippingReceipts, deleteShippingReceipt } from '@/lib/inventory-service';
+import { fetchShippingReceipts, deleteShippingReceipt, updateShippingReceiptsStatus } from '@/lib/inventory-service';
 import type { ShippingReceipt } from '@/types';
 import { Pagination } from '@/components/ui/pagination';
 import { useToast } from '@/hooks/use-toast';
@@ -29,9 +29,9 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Input } from '@/components/ui/input';
+import { Checkbox } from '@/components/ui/checkbox';
 
 type ShippingProvider = 'Shopee' | 'Tiktok' | 'Lazada' | 'Instant';
 
@@ -59,6 +59,8 @@ export default function ReceiptPage() {
     const { language } = useLanguage();
     const t = translations[language];
     const [receiptToDelete, setReceiptToDelete] = useState<ShippingReceipt | null>(null);
+    const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+    const [isProcessing, setIsProcessing] = useState(false);
 
     const fetchReceipts = useCallback(async () => {
         setLoading(true);
@@ -83,6 +85,11 @@ export default function ReceiptPage() {
     useEffect(() => {
         fetchReceipts();
     }, [fetchReceipts]);
+    
+    // Clear selection when filters change
+    useEffect(() => {
+        setSelectedIds(new Set());
+    }, [activeTab, date, searchTerm, currentPage]);
 
     const handleDelete = async () => {
         if (!receiptToDelete) return;
@@ -97,6 +104,22 @@ export default function ReceiptPage() {
         }
     };
 
+    const handleProcessShipment = async () => {
+        if (selectedIds.size === 0) return;
+        setIsProcessing(true);
+        try {
+            await updateShippingReceiptsStatus(Array.from(selectedIds), 'Dikirim');
+            toast({ title: 'Resi Diproses', description: `${selectedIds.size} resi telah berhasil diperbarui menjadi "Dikirim".` });
+            setSelectedIds(new Set());
+            fetchReceipts();
+        } catch (error) {
+            console.error("Failed to process shipments:", error);
+            toast({ variant: 'destructive', title: 'Gagal Memproses', description: 'Terjadi kesalahan saat memperbarui status resi.' });
+        } finally {
+            setIsProcessing(false);
+        }
+    };
+
     const handleDateSelect = (selectedDate: Date | undefined) => {
         setDate(selectedDate);
         setDatePickerOpen(false);
@@ -107,8 +130,28 @@ export default function ReceiptPage() {
         setActiveTab(tab);
         setCurrentPage(1); // Reset to first page
     };
+
+    const handleSelectAll = (checked: boolean) => {
+        if (checked) {
+            const processableIds = receipts.filter(r => r.status === 'Perlu Diproses').map(r => r.id);
+            setSelectedIds(new Set(processableIds));
+        } else {
+            setSelectedIds(new Set());
+        }
+    };
+
+    const handleSelectOne = (id: number, isChecked: boolean) => {
+        const newSelectedIds = new Set(selectedIds);
+        if (isChecked) {
+            newSelectedIds.add(id);
+        } else {
+            newSelectedIds.delete(id);
+        }
+        setSelectedIds(newSelectedIds);
+    };
     
     const totalPages = Math.ceil(totalReceipts / itemsPerPage);
+    const isAllSelected = receipts.length > 0 && receipts.filter(r => r.status === 'Perlu Diproses').every(r => selectedIds.has(r.id));
 
     return (
         <AppLayout>
@@ -154,6 +197,10 @@ export default function ReceiptPage() {
                             />
                             </PopoverContent>
                         </Popover>
+                         <Button size="sm" onClick={handleProcessShipment} disabled={selectedIds.size === 0 || isProcessing}>
+                            <Send className="mr-2 h-4 w-4" />
+                            {isProcessing ? 'Memproses...' : `Proses Kirim (${selectedIds.size})`}
+                         </Button>
                     </div>
                 </div>
 
@@ -177,6 +224,14 @@ export default function ReceiptPage() {
                             <Table>
                                 <TableHeader>
                                     <TableRow>
+                                        <TableHead className="w-12">
+                                             <Checkbox
+                                                checked={isAllSelected}
+                                                onCheckedChange={handleSelectAll}
+                                                aria-label="Select all"
+                                                disabled={receipts.filter(r => r.status === 'Perlu Diproses').length === 0}
+                                            />
+                                        </TableHead>
                                         <TableHead>No. Resi (AWB)</TableHead>
                                         <TableHead>Tanggal</TableHead>
                                         <TableHead>Channel</TableHead>
@@ -186,9 +241,17 @@ export default function ReceiptPage() {
                                 </TableHeader>
                                 <TableBody>
                                     {loading ? (
-                                        <TableRow><TableCell colSpan={5} className="h-48 text-center">Memuat data...</TableCell></TableRow>
+                                        <TableRow><TableCell colSpan={6} className="h-48 text-center">Memuat data...</TableCell></TableRow>
                                     ) : receipts.length > 0 ? receipts.map(item => (
-                                        <TableRow key={item.id}>
+                                        <TableRow key={item.id} data-state={selectedIds.has(item.id) && 'selected'}>
+                                            <TableCell>
+                                                <Checkbox
+                                                    checked={selectedIds.has(item.id)}
+                                                    onCheckedChange={(checked) => handleSelectOne(item.id, !!checked)}
+                                                    aria-label={`Select receipt ${item.awb}`}
+                                                    disabled={item.status !== 'Perlu Diproses'}
+                                                />
+                                            </TableCell>
                                             <TableCell className="font-medium">{item.awb}</TableCell>
                                             <TableCell>{format(new Date(item.date), 'dd MMM yyyy HH:mm')}</TableCell>
                                             <TableCell>{item.channel}</TableCell>
@@ -221,7 +284,7 @@ export default function ReceiptPage() {
                                         </TableRow>
                                     )) : (
                                         <TableRow>
-                                            <TableCell colSpan={5} className="h-48 text-center">
+                                            <TableCell colSpan={6} className="h-48 text-center">
                                                 <div className="flex flex-col items-center justify-center gap-4 text-muted-foreground">
                                                     <Truck className="h-16 w-16" />
                                                     <p className="font-semibold">Tidak ada resi</p>
