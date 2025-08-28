@@ -184,11 +184,7 @@ export default function PosHistoryPage() {
                 </div>
 
                 <Card>
-                    <CardHeader>
-                        <CardTitle className="text-base">Transaksi pada {date ? format(date, 'PPPP', { locale: language === 'id' ? aing : undefined }) : ''}</CardTitle>
-                        <CardDescription className="text-xs">Menampilkan semua transaksi dari channel Point of Sale.</CardDescription>
-                    </CardHeader>
-                    <CardContent>
+                    <CardContent className="pt-6">
                        <Table>
                             <TableHeader>
                                 <TableRow>

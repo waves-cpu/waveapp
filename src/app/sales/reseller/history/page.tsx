@@ -186,11 +186,7 @@ export default function ResellerHistoryPage() {
                 </div>
 
                 <Card>
-                    <CardHeader>
-                        <CardTitle className="text-base">{TReseller.transactionsOnDate.replace('{date}', date ? format(date, 'PPPP', { locale: language === 'id' ? localeId : localeEn }) : '')}</CardTitle>
-                        <CardDescription className="text-xs">{TReseller.transactionsDescription}</CardDescription>
-                    </CardHeader>
-                    <CardContent>
+                    <CardContent className="pt-6">
                        <Table>
                             <TableHeader>
                                 <TableRow>
