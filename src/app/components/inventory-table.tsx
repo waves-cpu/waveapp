@@ -111,20 +111,21 @@ function InventoryTableSkeleton() {
 
 const LOW_STOCK_THRESHOLD = 10;
 
-function getAccessoryLowStockThreshold(name: string): number {
-    const lowerCaseName = name.toLowerCase();
-    if (lowerCaseName.includes('label')) return 5000;
+function getAccessoryLowStockThreshold(category?: string, name?: string): number {
+    const lowerCaseName = name?.toLowerCase() || '';
+    if (category === 'Label') return 5000;
     if (lowerCaseName.includes('kertas hangtag')) return 50000;
-    if (lowerCaseName.includes('stiker')) return 50000;
-    if (lowerCaseName.includes('plastik')) return 10000;
+    if (category === 'Sticker') return 50000;
+    if (category === 'Packaging') return 10000;
     return LOW_STOCK_THRESHOLD; // Default
 }
 
-function StockBar({ stock, onUpdateClick, itemName }: { stock: number; onUpdateClick: () => void, itemName?: string }) {
+
+function StockBar({ stock, onUpdateClick, item }: { stock: number; onUpdateClick: () => void, item: InventoryItem }) {
     const { language } = useLanguage();
     const t = translations[language];
 
-    const lowStockThreshold = itemName ? getAccessoryLowStockThreshold(itemName) : LOW_STOCK_THRESHOLD;
+    const lowStockThreshold = item.variants ? LOW_STOCK_THRESHOLD : getAccessoryLowStockThreshold(item.category, item.name);
     
     const getStockColor = (stock: number) => {
         if (stock === 0) return 'bg-red-500';
@@ -267,7 +268,7 @@ export function InventoryTable({ onUpdateStock, isAccessoryTable = false }: Inve
       .map(item => {
         if (stockFilter === 'all') return item;
 
-        const lowStockThreshold = isAccessoryTable ? getAccessoryLowStockThreshold(item.name) : LOW_STOCK_THRESHOLD;
+        const lowStockThreshold = isAccessoryTable ? getAccessoryLowStockThreshold(item.category, item.name) : LOW_STOCK_THRESHOLD;
 
         if (item.variants && item.variants.length > 0) {
             const filteredVariants = item.variants.filter(v => {
@@ -301,7 +302,7 @@ export function InventoryTable({ onUpdateStock, isAccessoryTable = false }: Inve
     const counts = { all: 0, low: 0, empty: 0 };
     (source as InventoryItem[]).forEach(item => {
       counts.all++;
-      const lowStockThreshold = isAccessoryTable ? getAccessoryLowStockThreshold(item.name) : LOW_STOCK_THRESHOLD;
+      const lowStockThreshold = isAccessoryTable ? getAccessoryLowStockThreshold(item.category, item.name) : LOW_STOCK_THRESHOLD;
       if (item.variants && item.variants.length > 0) {
         if (item.variants.some(v => v.stock === 0)) counts.empty++;
         if (item.variants.some(v => v.stock > 0 && v.stock <= LOW_STOCK_THRESHOLD)) counts.low++;
@@ -408,7 +409,7 @@ export function InventoryTable({ onUpdateStock, isAccessoryTable = false }: Inve
                                 </TableCell>
                                 <TableCell>{priceDisplay}</TableCell>
                                 <TableCell>
-                                    <StockBar stock={totalStock} onUpdateClick={() => handleBulkEdit(item)} itemName={item.name} />
+                                    <StockBar stock={totalStock} onUpdateClick={() => handleBulkEdit(item)} item={item} />
                                 </TableCell>
                                 <TableCell className="text-center">
                                     <DropdownMenu>
@@ -472,7 +473,7 @@ export function InventoryTable({ onUpdateStock, isAccessoryTable = false }: Inve
                                         <PriceWithDetails item={variant} />
                                     </TableCell>
                                     <TableCell>
-                                        <StockBar stock={variant.stock} onUpdateClick={() => onUpdateStock(variant.id)} itemName={variant.name} />
+                                        <StockBar stock={variant.stock} onUpdateClick={() => onUpdateStock(variant.id)} item={item} />
                                     </TableCell>
                                     <TableCell className="text-center">
                                     </TableCell>
@@ -508,7 +509,7 @@ export function InventoryTable({ onUpdateStock, isAccessoryTable = false }: Inve
                                 <PriceWithDetails item={item} />
                              </TableCell>
                             <TableCell>
-                               <StockBar stock={item.stock ?? 0} onUpdateClick={() => onUpdateStock(item.id)} itemName={item.name} />
+                               <StockBar stock={item.stock ?? 0} onUpdateClick={() => onUpdateStock(item.id)} item={item} />
                             </TableCell>
                              <TableCell className="text-center">
                                 <DropdownMenu>
