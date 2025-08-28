@@ -30,8 +30,8 @@ import {
   archiveProduct as archiveProductDb,
   deleteProductPermanently as deleteProductPermanentlyDb,
   fetchShippingReceipts,
-  addShippingReceipt,
-  deleteShippingReceipt,
+  addShippingReceipt as addShippingReceiptDb,
+  deleteShippingReceipt as deleteShippingReceiptDb,
 } from '@/lib/inventory-service';
 
 
@@ -71,8 +71,8 @@ interface InventoryContextType {
   // Shipping
   shippingReceipts: ShippingReceipt[];
   fetchShippingReceipts: (options: { page: number; limit: number; channel?: string; date?: Date; }) => Promise<{ receipts: ShippingReceipt[]; total: number; }>;
-  addShippingReceipt: (receipt: Omit<ShippingReceipt, 'id'>) => Promise<any>;
-  deleteShippingReceipt: (id: number) => Promise<any>;
+  addShippingReceipt: (receipt: Omit<ShippingReceipt, 'id'>) => Promise<void>;
+  deleteShippingReceipt: (id: number) => Promise<void>;
 }
 
 const InventoryContext = createContext<InventoryContextType | undefined>(undefined);
@@ -242,6 +242,17 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
     await fetchAllData();
   };
 
+  const addShippingReceipt = async (receipt: Omit<ShippingReceipt, 'id'>) => {
+    await addShippingReceiptDb(receipt);
+    // No need to fetchAllData here, the main page will refetch.
+    // This keeps the scanning UI fast.
+  };
+
+  const deleteShippingReceipt = async (id: number) => {
+    await deleteShippingReceiptDb(id);
+    // Refetching is handled by the page component.
+  };
+
 
   return (
     <InventoryContext.Provider value={{ 
@@ -293,4 +304,3 @@ export const useInventory = () => {
   }
   return context;
 };
-

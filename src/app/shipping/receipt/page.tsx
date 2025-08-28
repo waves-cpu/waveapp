@@ -7,7 +7,7 @@ import { SidebarTrigger } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Calendar as CalendarIcon, Printer, Trash2, Truck } from 'lucide-react';
+import { Calendar as CalendarIcon, Printer, Trash2, Truck, ScanLine } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
@@ -19,6 +19,7 @@ import { Pagination } from '@/components/ui/pagination';
 import { useToast } from '@/hooks/use-toast';
 import { useLanguage } from '@/hooks/use-language';
 import { translations } from '@/types/language';
+import Link from 'next/link';
 
 type ShippingProvider = 'all' | 'Shopee' | 'Tokopedia' | 'Lazada' | 'Tiktok Shop';
 
@@ -127,10 +128,12 @@ export default function ReceiptPage() {
                             />
                             </PopoverContent>
                         </Popover>
-                        <Button size="sm" variant="outline">
-                            <Printer className="mr-2 h-4 w-4" />
-                            Export ke excel
-                        </Button>
+                        <Link href="/shipping/scan">
+                            <Button size="sm" variant="outline">
+                                <ScanLine className="mr-2 h-4 w-4" />
+                                Scan Resi
+                            </Button>
+                        </Link>
                     </div>
                 </div>
 

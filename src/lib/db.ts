@@ -274,7 +274,6 @@ const seedData = () => {
           { awb: 'SPXID0123456789B', date: '2024-08-01', channel: 'Shopee', status: 'Perlu Diproses' },
           { awb: 'JP1234567890', date: '2024-07-31', channel: 'Tokopedia', status: 'Selesai' },
           { awb: '005432109876', date: '2024-07-31', channel: 'Lazada', status: 'Dikirim' },
-          { awb: 'TIKTOK-XYZ123', date: '2024-07-30', channel: 'Tiktok Shop', status: 'Dibatalkan' },
           { awb: 'JP0987654321', date: '2024-08-01', channel: 'Tokopedia', status: 'Selesai' },
         ];
 
