@@ -83,6 +83,7 @@ const ShippingTable = ({ data, serviceName }: { data: ReceiptData[], serviceName
 export default function ReceiptPage() {
     const [activeTab, setActiveTab] = useState<ShippingProvider>('all');
     const [date, setDate] = useState<Date | undefined>(new Date());
+    const [isDatePickerOpen, setDatePickerOpen] = useState(false);
     
     const filteredData = useMemo(() => {
         let data = mockReceipts;
@@ -102,6 +103,11 @@ export default function ReceiptPage() {
         return tab.charAt(0).toUpperCase() + tab.slice(1);
     }
 
+    const handleDateSelect = (selectedDate: Date | undefined) => {
+        setDate(selectedDate);
+        setDatePickerOpen(false);
+    };
+
     return (
         <AppLayout>
             <main className="flex min-h-[calc(100vh_-_theme(spacing.16))] flex-1 flex-col gap-4 bg-muted/40 p-4 md:gap-8 md:p-10">
@@ -113,7 +119,7 @@ export default function ReceiptPage() {
                         </h1>
                     </div>
                      <div className="flex items-center gap-2">
-                         <Popover>
+                         <Popover open={isDatePickerOpen} onOpenChange={setDatePickerOpen}>
                             <PopoverTrigger asChild>
                             <Button
                                 id="date"
@@ -132,7 +138,7 @@ export default function ReceiptPage() {
                             <Calendar
                                 mode="single"
                                 selected={date}
-                                onSelect={setDate}
+                                onSelect={handleDateSelect}
                                 initialFocus
                             />
                             </PopoverContent>
