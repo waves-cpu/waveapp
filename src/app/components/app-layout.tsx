@@ -39,6 +39,9 @@ import {
   ArchiveIcon,
   Sheet,
   Tags,
+  Truck,
+  Receipt,
+  Undo2,
 } from 'lucide-react';
 import { Logo } from './logo';
 import { Separator } from '@/components/ui/separator';
@@ -53,8 +56,9 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     const t = translations[language];
     const pathname = usePathname();
     const { items } = useInventory();
-    const [isInventoryOpen, setInventoryOpen] = useState(true);
     const [isSalesOpen, setSalesOpen] = useState(true);
+    const [isShippingOpen, setShippingOpen] = useState(true);
+    const [isInventoryOpen, setInventoryOpen] = useState(true);
     const [isFinanceOpen, setFinanceOpen] = useState(true);
     
     const hasArchivedItems = useMemo(() => items.some(item => item.isArchived), [items]);
@@ -122,6 +126,44 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                       </CollapsibleContent>
                   </Collapsible>
                   
+                  <Collapsible open={isShippingOpen} onOpenChange={setShippingOpen}>
+                      <CollapsibleTrigger asChild>
+                          <SidebarMenuButton>
+                              <Truck />
+                              <span>Pengiriman</span>
+                              <ChevronDown className={cn("ml-auto transition-transform", isShippingOpen && "rotate-180")} />
+                          </SidebarMenuButton>
+                      </CollapsibleTrigger>
+                      <CollapsibleContent>
+                          <SidebarMenu className="ml-4 mt-2 border-l border-muted-foreground/20 pl-4">
+                               <SidebarMenuItem>
+                                  <Link href="/shipping/receipt">
+                                      <SidebarMenuButton variant="ghost" size="sm" isActive={pathname.startsWith('/shipping/receipt')}>
+                                          <Receipt />
+                                          Resi
+                                      </SidebarMenuButton>
+                                  </Link>
+                              </SidebarMenuItem>
+                              <SidebarMenuItem>
+                                  <Link href="/shipping/return">
+                                      <SidebarMenuButton variant="ghost" size="sm" isActive={pathname.startsWith('/shipping/return')}>
+                                          <Undo2 />
+                                          Return
+                                      </SidebarMenuButton>
+                                  </Link>
+                              </SidebarMenuItem>
+                              <SidebarMenuItem>
+                                  <Link href="/shipping/report">
+                                      <SidebarMenuButton variant="ghost" size="sm" isActive={pathname.startsWith('/shipping/report')}>
+                                          <FileText />
+                                          Laporan Resi
+                                      </SidebarMenuButton>
+                                  </Link>
+                              </SidebarMenuItem>
+                          </SidebarMenu>
+                      </CollapsibleContent>
+                  </Collapsible>
+
                   <Collapsible open={isInventoryOpen} onOpenChange={setInventoryOpen}>
                       <CollapsibleTrigger asChild>
                           <SidebarMenuButton>
