@@ -127,7 +127,7 @@ export default function ReceiptPage() {
                                 placeholder="Cari No. Resi..."
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
-                                className="pl-8 h-9"
+                                className="pl-8 h-9 w-64"
                             />
                          </div>
                          <Popover open={isDatePickerOpen} onOpenChange={setDatePickerOpen}>
