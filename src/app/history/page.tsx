@@ -378,7 +378,7 @@ export default function HistoryPage() {
                       <TableHead className="w-[15%]">{t.stockHistory.date}</TableHead>
                       <TableHead className="w-[10%] text-center">{t.stockHistory.change}</TableHead>
                       <TableHead className="w-[10%] text-center">{t.stockHistory.newTotal}</TableHead>
-                      <TableHead className="w-[25%]">{t.stockHistory.reason}</TableHead>
+                      <TableHead className="w-[30%]">{t.stockHistory.reason}</TableHead>
                   </TableRow>
               </TableHeader>
               <TableBody>
