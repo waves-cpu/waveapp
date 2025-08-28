@@ -775,3 +775,6 @@ export async function deleteProductPermanently(itemId: string) {
     db.prepare('DELETE FROM products WHERE id = ?').run(itemId);
 }
 
+
+
+    
