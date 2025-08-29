@@ -20,7 +20,20 @@ import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
 
 
-type ShippingProvider = 'Shopee' | 'Tiktok' | 'Lazada' | 'Instant';
+type ShippingProvider = 'Shopee' | 'Tiktok' | 'Lazada' | 'Instant' | 'Tokopedia';
+
+const detectChannel = (awb: string): ShippingProvider => {
+    const upperAwb = awb.toUpperCase();
+    if (upperAwb.startsWith('SPXID')) {
+        return 'Shopee';
+    }
+    if (upperAwb.startsWith('JP')) {
+        return 'Tokopedia';
+    }
+    // Default case
+    return 'Lazada';
+};
+
 
 export default function MobileScanReceiptPage() {
     const router = useRouter();
@@ -30,7 +43,6 @@ export default function MobileScanReceiptPage() {
     const isMobile = useIsMobile();
 
     const [awb, setAwb] = useState('');
-    const [channel, setChannel] = useState<ShippingProvider>('Shopee');
     const [scanDate, setScanDate] = useState<Date>(new Date());
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [recentlyAdded, setRecentlyAdded] = useState<ShippingReceipt[]>([]);
@@ -58,10 +70,11 @@ export default function MobileScanReceiptPage() {
         setIsSubmitting(true);
         
         const dateString = format(scanDate, "yyyy-MM-dd");
+        const detectedChannel = detectChannel(scannedAwb);
 
         const newReceipt: Omit<ShippingReceipt, 'id'> = {
             awb: scannedAwb.trim(),
-            channel,
+            channel: detectedChannel,
             date: dateString,
             status: 'Perlu Diproses'
         };
@@ -89,7 +102,7 @@ export default function MobileScanReceiptPage() {
                  inputRef.current?.focus();
             }
         }
-    }, [channel, isSubmitting, addShippingReceipt, playSuccessSound, playErrorSound, toast, isCameraOpen, scanDate]);
+    }, [isSubmitting, addShippingReceipt, playSuccessSound, playErrorSound, toast, isCameraOpen, scanDate]);
 
 
     const handleFormSubmit = (e: React.FormEvent) => {
@@ -172,19 +185,6 @@ export default function MobileScanReceiptPage() {
                         <Button type="button" size="icon" className="h-12 w-12 shrink-0" onClick={() => setIsCameraOpen(true)}>
                             <Camera className="h-6 w-6" />
                         </Button>
-                    </div>
-                    <div className="grid grid-cols-4 gap-2">
-                        {(['Shopee', 'Tiktok', 'Lazada', 'Instant'] as ShippingProvider[]).map(c => (
-                             <Button
-                                key={c}
-                                type="button"
-                                variant={channel === c ? 'default' : 'outline'}
-                                onClick={() => setChannel(c)}
-                                className="h-12 text-xs sm:text-sm"
-                            >
-                                {c}
-                            </Button>
-                        ))}
                     </div>
                 </form>
 
