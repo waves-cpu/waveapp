@@ -72,7 +72,6 @@ export default function MobileScanReceiptPage() {
     }
     
     const handleDecode = (result: string) => {
-        // Camera stays on, just process the result
         handleSubmit(result);
     };
 

@@ -193,10 +193,6 @@ export default function ShippingReportPage() {
                 <div className="grid gap-6">
                     {loading ? <ReportSkeleton /> : (
                         <Card>
-                             <CardHeader>
-                                <CardTitle>Laporan Harian Resi</CardTitle>
-                                <CardDescription>Ringkasan jumlah resi per hari berdasarkan statusnya untuk bulan yang dipilih.</CardDescription>
-                            </CardHeader>
                             <CardContent>
                                 <Table>
                                     <TableHeader>
