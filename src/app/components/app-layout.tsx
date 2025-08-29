@@ -130,7 +130,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                       <CollapsibleTrigger asChild>
                           <SidebarMenuButton>
                               <Truck />
-                              <span>Pengiriman</span>
+                              <span>{t.shipping.title}</span>
                               <ChevronDown className={cn("ml-auto transition-transform", isShippingOpen && "rotate-180")} />
                           </SidebarMenuButton>
                       </CollapsibleTrigger>
@@ -140,7 +140,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                                   <Link href="/shipping/receipt">
                                       <SidebarMenuButton variant="ghost" size="sm" isActive={pathname.startsWith('/shipping/receipt')}>
                                           <Receipt />
-                                          Resi
+                                          {t.shipping.receipt}
                                       </SidebarMenuButton>
                                   </Link>
                               </SidebarMenuItem>
@@ -148,7 +148,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                                   <Link href="/shipping/return">
                                       <SidebarMenuButton variant="ghost" size="sm" isActive={pathname.startsWith('/shipping/return')}>
                                           <Undo2 />
-                                          Return
+                                          {t.shipping.return}
                                       </SidebarMenuButton>
                                   </Link>
                               </SidebarMenuItem>
@@ -156,7 +156,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                                   <Link href="/shipping/report">
                                       <SidebarMenuButton variant="ghost" size="sm" isActive={pathname.startsWith('/shipping/report')}>
                                           <FileText />
-                                          Laporan Resi
+                                          {t.shipping.report}
                                       </SidebarMenuButton>
                                   </Link>
                               </SidebarMenuItem>
