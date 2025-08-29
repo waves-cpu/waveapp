@@ -13,16 +13,14 @@ export default function Home() {
   const router = useRouter();
 
   useEffect(() => {
-    if (isMobile === true) { // Explicitly check for true, as it can be undefined initially
+    // This effect should only run on the client after `isMobile` has been determined.
+    if (isMobile === true) {
       router.replace('/mobile');
     }
   }, [isMobile, router]);
 
-  // While `isMobile` is being determined on the client, show a loader or nothing.
-  // Or, show the desktop layout and let it be replaced on mobile.
-  // Showing a loader prevents a "flash" of the desktop UI on mobile.
   if (isMobile === true) {
-    // This will be shown for a brief moment on mobile before redirection.
+    // While redirecting, show a loader.
     return (
         <div className="flex items-center justify-center h-screen">
            <p>Redirecting to mobile experience...</p>

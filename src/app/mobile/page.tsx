@@ -16,6 +16,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { QrScanner } from '@yudiel/react-qr-scanner';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 
 type ShippingProvider = 'Shopee' | 'Tiktok' | 'Lazada' | 'Instant' | 'Tokopedia';
@@ -32,6 +33,8 @@ export default function MobileScanReceiptPage() {
     const { addShippingReceipt } = useInventory();
     const { toast } = useToast();
     const { playSuccessSound, playErrorSound, initializeAudio } = useScanSounds();
+    const router = useRouter();
+    const isMobile = useIsMobile();
 
     const [selectedChannel, setSelectedChannel] = useState<ShippingProvider | null>(null);
     const [awb, setAwb] = useState('');
@@ -40,6 +43,12 @@ export default function MobileScanReceiptPage() {
     const [recentlyAdded, setRecentlyAdded] = useState<ShippingReceipt[]>([]);
     const inputRef = useRef<HTMLInputElement>(null);
     const [isCameraOpen, setIsCameraOpen] = useState(false);
+
+    useEffect(() => {
+        if (isMobile === false) { // Explicitly check for false
+            router.replace('/');
+        }
+    }, [isMobile, router]);
 
     useEffect(() => {
         initializeAudio();
@@ -100,6 +109,14 @@ export default function MobileScanReceiptPage() {
     const handleDecode = (result: string) => {
         handleSubmit(result);
     };
+
+    if (isMobile === undefined) {
+        return (
+            <div className="flex items-center justify-center h-screen">
+                <p>Loading...</p>
+            </div>
+        );
+    }
 
     if (isCameraOpen) {
         return (
