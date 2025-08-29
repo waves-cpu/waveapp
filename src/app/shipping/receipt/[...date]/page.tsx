@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
@@ -225,6 +226,7 @@ export default function ReceiptPage() {
     const totalPages = Math.ceil(totalReceipts / itemsPerPage);
     const isAllSelected = receipts.length > 0 && receipts.filter(r => r.status === 'Perlu Diproses').every(r => selectedIds.has(r.id));
     const currentDate = parse(currentDateString, 'yyyy-MM-dd', new Date());
+    const finalStatuses = ['Selesai', 'Return', 'Dibatalkan'];
 
     return (
         <AppLayout>
@@ -335,7 +337,7 @@ export default function ReceiptPage() {
                                             <TableCell>{item.channel}</TableCell>
                                             <TableCell>
                                                 <DropdownMenu>
-                                                    <DropdownMenuTrigger asChild>
+                                                    <DropdownMenuTrigger asChild disabled={finalStatuses.includes(item.status)}>
                                                         <Button variant="ghost" className={cn(
                                                             "px-2 py-1 h-auto text-xs",
                                                             getStatusVariant(item.status) === 'default' && "bg-primary text-primary-foreground hover:bg-primary/90",
@@ -414,3 +416,4 @@ export default function ReceiptPage() {
         </AppLayout>
     );
 }
+
