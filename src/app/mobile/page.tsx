@@ -11,7 +11,7 @@ import { useInventory } from '@/hooks/use-inventory';
 import { useToast } from '@/hooks/use-toast';
 import { useScanSounds } from '@/hooks/use-scan-sounds';
 import type { ShippingReceipt } from '@/types';
-import { format } from 'date-fns';
+import { format, startOfDay } from 'date-fns';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { QrScanner } from '@yudiel/react-qr-scanner';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -47,10 +47,11 @@ export default function MobileScanReceiptPage() {
         if (isSubmitting) return;
 
         setIsSubmitting(true);
+        // Ensure the date is treated as a local date by using format
         const newReceipt: Omit<ShippingReceipt, 'id'> = {
             awb: scannedAwb.trim(),
             channel,
-            date: format(scanDate, 'yyyy-MM-dd HH:mm:ss'),
+            date: format(scanDate, "yyyy-MM-dd HH:mm:ss"), // Send as local time string
             status: 'Perlu Diproses'
         };
 

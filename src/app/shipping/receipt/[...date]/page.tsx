@@ -36,7 +36,6 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -94,11 +93,12 @@ export default function ReceiptPage() {
     const fetchReceipts = useCallback(async () => {
         setLoading(true);
         try {
+            const dateString = format(currentDate, 'yyyy-MM-dd');
             const { receipts, total } = await fetchShippingReceipts({
                 page: currentPage,
                 limit: itemsPerPage,
                 channel: activeTab,
-                date: currentDate,
+                dateString: dateString,
                 awb: searchTerm,
             });
             setReceipts(receipts);
@@ -113,7 +113,8 @@ export default function ReceiptPage() {
     
     const fetchCounts = useCallback(async () => {
         try {
-            const counts = await fetchShippingReceiptCountsByChannel(currentDate);
+            const dateString = format(currentDate, 'yyyy-MM-dd');
+            const counts = await fetchShippingReceiptCountsByChannel(dateString);
             setChannelCounts(counts);
         } catch (error) {
              console.error("Failed to fetch channel counts:", error);

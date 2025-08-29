@@ -24,12 +24,12 @@ export async function fetchShippingReceipts(options: {
     page: number;
     limit: number;
     channel?: string;
-    date?: Date;
+    dateString?: string;
     date_range?: { from: Date, to: Date };
     status?: string[];
     awb?: string;
 }): Promise<{ receipts: ShippingReceipt[]; total: number }> {
-    const { page, limit, channel, date, date_range, status, awb } = options;
+    const { page, limit, channel, dateString, date_range, status, awb } = options;
     const offset = (page - 1) * limit;
 
     let whereClauses: string[] = [];
@@ -39,10 +39,9 @@ export async function fetchShippingReceipts(options: {
         whereClauses.push("channel = @channel");
         params.channel = channel;
     }
-    if (date) {
-        const dayStart = formatDate(date, 'yyyy-MM-dd');
-        whereClauses.push("DATE(date) = @dayStart");
-        params.dayStart = dayStart;
+    if (dateString) {
+        whereClauses.push("DATE(date) = @dateString");
+        params.dateString = dateString;
     }
     if (date_range) {
         whereClauses.push("date BETWEEN @from AND @to");
@@ -78,8 +77,7 @@ export async function fetchShippingReceipts(options: {
     return { receipts, total };
 }
 
-export async function fetchShippingReceiptCountsByChannel(date: Date): Promise<Record<string, number>> {
-    const dateString = formatDate(date, 'yyyy-MM-dd');
+export async function fetchShippingReceiptCountsByChannel(dateString: string): Promise<Record<string, number>> {
     const query = db.prepare(`
         SELECT channel, COUNT(*) as count 
         FROM shipping_receipts 
@@ -524,9 +522,9 @@ export async function performSale(
     const ONLINE_CHANNELS = ['shopee', 'tiktok', 'lazada'];
     
     db.transaction(() => {
-        const saleDate = options?.saleDate || new Date();
-        // Use toISOString() to get a timezone-neutral UTC timestamp string.
-        const saleDateString = saleDate.toISOString();
+        // If saleDate is provided, use it. Otherwise, use the current server time.
+        // Format it consistently.
+        const saleDateString = options?.saleDate ? formatDate(options.saleDate, 'yyyy-MM-dd HH:mm:ss') : formatDate(new Date(), 'yyyy-MM-dd HH:mm:ss');
         const saleReason = `Sale (${channel})` + (options?.resellerName ? ` - ${options.resellerName}` : '');
 
         let priceAtSale;
@@ -891,6 +889,7 @@ export async function deleteProductPermanently(itemId: string) {
     // ON DELETE CASCADE will handle variants, history, and channel_prices
     db.prepare('DELETE FROM products WHERE id = ?').run(itemId);
 }
+
 
 
 
