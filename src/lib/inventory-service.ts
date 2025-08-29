@@ -97,12 +97,14 @@ export async function fetchShippingReceiptCountsByChannel(date: Date): Promise<R
 
 
 export async function addShippingReceipt(receipt: Omit<ShippingReceipt, 'id'>): Promise<ShippingReceipt> {
-    // Combine the provided date string (yyyy-MM-dd) with the current time.
-    const finalDate = new Date(`${receipt.date}T${formatDate(new Date(), 'HH:mm:ss.SSS')}`);
+    // Parse the date string 'yyyy-MM-dd' to ensure it's treated as a specific day.
+    // Then convert it to an ISO string. It will be at the beginning of the day in UTC.
+    const date = parseISO(receipt.date);
+    const finalDate = date.toISOString();
 
     const result = db.prepare('INSERT INTO shipping_receipts (awb, date, channel, status) VALUES (@awb, @date, @channel, @status)').run({
         ...receipt,
-        date: finalDate.toISOString(),
+        date: finalDate,
     });
     
     const newReceipt = db.prepare('SELECT * FROM shipping_receipts WHERE id = ?').get(result.lastInsertRowid) as ShippingReceipt;
@@ -896,6 +898,7 @@ export async function deleteProductPermanently(itemId: string) {
     // ON DELETE CASCADE will handle variants, history, and channel_prices
     db.prepare('DELETE FROM products WHERE id = ?').run(itemId);
 }
+
 
 
 
