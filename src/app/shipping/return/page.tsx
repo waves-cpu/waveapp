@@ -17,9 +17,9 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Undo2, Truck, CheckCircle, XCircle, Package } from 'lucide-react';
+import { Undo2, Truck, CheckCircle, XCircle, Package, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { fetchShippingReceipts, updateShippingReceiptStatus } from '@/lib/inventory-service';
+import { updateShippingReceiptStatus } from '@/lib/inventory-service';
 import type { ShippingReceipt, InventoryItemVariant } from '@/types';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
@@ -29,7 +29,18 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { VariantSelectionDialog } from '@/app/components/variant-selection-dialog';
 import { useInventory } from '@/hooks/use-inventory';
 import { useLanguage } from '@/hooks/use-language';
@@ -55,11 +66,13 @@ export default function ReturnPage() {
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(25);
     const { toast } = useToast();
-    const { items, updateStock } = useInventory();
+    const { items, updateStock, fetchShippingReceipts, deleteShippingReceipt } = useInventory();
     const { language } = useLanguage();
     const t = translations[language].shipping.returnPage;
+    const tCommon = translations[language].common;
     
     const [selectedReceipt, setSelectedReceipt] = useState<ShippingReceipt | null>(null);
+    const [receiptToDelete, setReceiptToDelete] = useState<ShippingReceipt | null>(null);
     const [isVariantDialogOpen, setIsVariantDialogOpen] = useState(false);
 
     const productForVariantSelection = useMemo(() => {
@@ -87,7 +100,7 @@ export default function ReturnPage() {
         } finally {
             setLoading(false);
         }
-    }, [currentPage, itemsPerPage, toast, t.fetchError]);
+    }, [currentPage, itemsPerPage, toast, t.fetchError, fetchShippingReceipts]);
 
     useEffect(() => {
         fetchReturns();
@@ -103,6 +116,19 @@ export default function ReturnPage() {
         } catch (error) {
             console.error(`Failed to change status to ${newStatus}:`, error);
             toast({ variant: 'destructive', title: t.statusUpdateError });
+        }
+    };
+    
+    const handleDelete = async () => {
+        if (!receiptToDelete) return;
+        try {
+            await deleteShippingReceipt(receiptToDelete.id);
+            toast({ title: t.deleteSuccess, description: t.deleteSuccessDesc.replace('{awb}', receiptToDelete.awb) });
+            setReceiptToDelete(null);
+            fetchReturns(); // Refresh data
+        } catch (error) {
+            console.error("Failed to delete receipt:", error);
+            toast({ variant: 'destructive', title: t.deleteError });
         }
     };
 
@@ -191,6 +217,29 @@ export default function ReturnPage() {
                                                             <XCircle className="mr-2 h-4 w-4" />
                                                             <span>{t.actions.itemNotArrived}</span>
                                                         </DropdownMenuItem>
+                                                        <DropdownMenuSeparator />
+                                                        <AlertDialog>
+                                                            <AlertDialogTrigger asChild>
+                                                                <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-destructive">
+                                                                     <Trash2 className="mr-2 h-4 w-4" />
+                                                                    <span>{t.actions.delete}</span>
+                                                                </DropdownMenuItem>
+                                                            </AlertDialogTrigger>
+                                                            <AlertDialogContent>
+                                                                <AlertDialogHeader>
+                                                                    <AlertDialogTitle>{t.deleteConfirmTitle}</AlertDialogTitle>
+                                                                    <AlertDialogDescription>
+                                                                        {t.deleteConfirmDesc.replace('{awb}', item.awb)}
+                                                                    </AlertDialogDescription>
+                                                                </AlertDialogHeader>
+                                                                <AlertDialogFooter>
+                                                                    <AlertDialogCancel onClick={() => setReceiptToDelete(null)}>{tCommon.cancel}</AlertDialogCancel>
+                                                                    <AlertDialogAction onClick={() => {setReceiptToDelete(item); handleDelete();}} className="bg-destructive hover:bg-destructive/90">
+                                                                        {t.deleteConfirmAction}
+                                                                    </AlertDialogAction>
+                                                                </AlertDialogFooter>
+                                                            </AlertDialogContent>
+                                                        </AlertDialog>
                                                     </DropdownMenuContent>
                                                 </DropdownMenu>
                                             </TableCell>
