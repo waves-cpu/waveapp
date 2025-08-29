@@ -1,5 +1,4 @@
 
-
 'use server';
 
 import { db } from './db';
@@ -42,7 +41,7 @@ export async function fetchShippingReceipts(options: {
     }
     if (date) {
         const dayStart = formatDate(date, 'yyyy-MM-dd');
-        whereClauses.push("strftime('%Y-%m-%d', date) = @dayStart");
+        whereClauses.push("DATE(date) = @dayStart");
         params.dayStart = dayStart;
     }
     if (date_range) {
@@ -84,7 +83,7 @@ export async function fetchShippingReceiptCountsByChannel(date: Date): Promise<R
     const query = db.prepare(`
         SELECT channel, COUNT(*) as count 
         FROM shipping_receipts 
-        WHERE strftime('%Y-%m-%d', date) = ?
+        WHERE DATE(date) = ?
         GROUP BY channel
     `);
     const results = query.all(dateString) as { channel: string, count: number }[];
@@ -97,14 +96,8 @@ export async function fetchShippingReceiptCountsByChannel(date: Date): Promise<R
 
 
 export async function addShippingReceipt(receipt: Omit<ShippingReceipt, 'id'>): Promise<ShippingReceipt> {
-    // Parse the date string 'yyyy-MM-dd' to ensure it's treated as a specific day.
-    // Then convert it to an ISO string. It will be at the beginning of the day in UTC.
-    const date = parseISO(receipt.date);
-    const finalDate = date.toISOString();
-
     const result = db.prepare('INSERT INTO shipping_receipts (awb, date, channel, status) VALUES (@awb, @date, @channel, @status)').run({
-        ...receipt,
-        date: finalDate,
+        ...receipt
     });
     
     const newReceipt = db.prepare('SELECT * FROM shipping_receipts WHERE id = ?').get(result.lastInsertRowid) as ShippingReceipt;
@@ -898,6 +891,7 @@ export async function deleteProductPermanently(itemId: string) {
     // ON DELETE CASCADE will handle variants, history, and channel_prices
     db.prepare('DELETE FROM products WHERE id = ?').run(itemId);
 }
+
 
 
 

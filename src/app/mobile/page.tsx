@@ -47,11 +47,10 @@ export default function MobileScanReceiptPage() {
         if (isSubmitting) return;
 
         setIsSubmitting(true);
-        // Pass the selected date as a 'yyyy-MM-dd' string to avoid timezone issues.
         const newReceipt: Omit<ShippingReceipt, 'id'> = {
             awb: scannedAwb.trim(),
             channel,
-            date: format(scanDate, 'yyyy-MM-dd'),
+            date: format(scanDate, 'yyyy-MM-dd HH:mm:ss'),
             status: 'Perlu Diproses'
         };
 
