@@ -91,10 +91,6 @@ export default function ReturnPage() {
 
                 <div className="grid gap-6">
                     <Card>
-                         <CardHeader>
-                            <CardTitle>Daftar Return & Resi Batal</CardTitle>
-                            <CardDescription>Berikut adalah daftar resi yang telah ditandai sebagai return atau dibatalkan.</CardDescription>
-                        </CardHeader>
                         <CardContent>
                             <Table>
                                 <TableHeader>

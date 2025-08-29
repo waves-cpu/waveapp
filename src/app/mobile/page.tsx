@@ -5,7 +5,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowLeft, ScanLine, Camera } from 'lucide-react';
+import { ArrowLeft, ScanLine, Camera, Calendar as CalendarIcon } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useInventory } from '@/hooks/use-inventory';
 import { useToast } from '@/hooks/use-toast';
@@ -14,6 +14,10 @@ import type { ShippingReceipt } from '@/types';
 import { format } from 'date-fns';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { QrScanner } from '@yudiel/react-qr-scanner';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { cn } from '@/lib/utils';
+
 
 type ShippingProvider = 'Shopee' | 'Tiktok' | 'Lazada' | 'Instant';
 
@@ -25,6 +29,7 @@ export default function MobileScanReceiptPage() {
 
     const [awb, setAwb] = useState('');
     const [channel, setChannel] = useState<ShippingProvider>('Shopee');
+    const [scanDate, setScanDate] = useState<Date>(new Date());
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [recentlyAdded, setRecentlyAdded] = useState<ShippingReceipt[]>([]);
     const inputRef = useRef<HTMLInputElement>(null);
@@ -36,20 +41,23 @@ export default function MobileScanReceiptPage() {
     }, [initializeAudio]);
 
     const handleSubmit = useCallback(async (scannedAwb: string) => {
-        if (!scannedAwb.trim() || isSubmitting) return;
+        if (!scannedAwb.trim()) return;
+
+        // Prevent rapid re-submission while one is in progress
+        if (isSubmitting) return;
 
         setIsSubmitting(true);
         const newReceipt: Omit<ShippingReceipt, 'id'> = {
             awb: scannedAwb.trim(),
             channel,
-            date: new Date().toISOString(),
+            date: scanDate.toISOString(),
             status: 'Perlu Diproses'
         };
 
         try {
             await addShippingReceipt(newReceipt);
             playSuccessSound();
-            setRecentlyAdded(prev => [{ ...newReceipt, id: Date.now() }, ...prev].slice(0, 10)); // Optimistic update
+            setRecentlyAdded(prev => [{ ...newReceipt, id: Date.now() }, ...prev].slice(0, 10));
             setAwb('');
         } catch (error) {
             playErrorSound();
@@ -63,8 +71,14 @@ export default function MobileScanReceiptPage() {
             });
         } finally {
             setIsSubmitting(false);
+            if (isCameraOpen) {
+                 // Do not close camera, allow for next scan
+            } else {
+                 inputRef.current?.focus();
+            }
         }
-    }, [channel, isSubmitting, addShippingReceipt, playSuccessSound, playErrorSound, toast]);
+    }, [channel, isSubmitting, addShippingReceipt, playSuccessSound, playErrorSound, toast, isCameraOpen, scanDate]);
+
 
     const handleFormSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -102,8 +116,31 @@ export default function MobileScanReceiptPage() {
 
     return (
         <div className="min-h-screen bg-muted flex flex-col p-4">
-            <header className="flex items-center mb-4">
+            <header className="flex items-center justify-between mb-4">
                 <h1 className="text-lg font-bold">Scan Resi</h1>
+                 <Popover>
+                    <PopoverTrigger asChild>
+                    <Button
+                        id="date"
+                        variant={"outline"}
+                        className={cn(
+                        "w-[150px] justify-start text-left font-normal h-9",
+                        !scanDate && "text-muted-foreground"
+                        )}
+                    >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {scanDate ? format(scanDate, "d MMM yyyy") : <span>Pilih tanggal</span>}
+                    </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="end">
+                    <Calendar
+                        mode="single"
+                        selected={scanDate}
+                        onSelect={(date) => setScanDate(date || new Date())}
+                        initialFocus
+                    />
+                    </PopoverContent>
+                </Popover>
             </header>
 
             <main className="flex-grow flex flex-col gap-4">
