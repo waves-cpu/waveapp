@@ -50,10 +50,7 @@ export default function MobileScanReceiptPage() {
     const [isCameraOpen, setIsCameraOpen] = useState(false);
 
     useEffect(() => {
-        // Redirect back to desktop if not mobile
-        if (isMobile === false) {
-            router.replace('/');
-        }
+        // We no longer redirect from here. `page.tsx` handles the initial routing.
     }, [isMobile, router]);
 
     useEffect(() => {
