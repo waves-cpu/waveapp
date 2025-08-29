@@ -17,7 +17,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { FilePlus, Undo2, Truck, CheckCircle, XCircle, Package } from 'lucide-react';
+import { Undo2, Truck, CheckCircle, XCircle, Package } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { fetchShippingReceipts, updateShippingReceiptStatus } from '@/lib/inventory-service';
 import type { ShippingReceipt, InventoryItemVariant } from '@/types';
@@ -32,6 +32,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { VariantSelectionDialog } from '@/app/components/variant-selection-dialog';
 import { useInventory } from '@/hooks/use-inventory';
+import { useLanguage } from '@/hooks/use-language';
+import { translations } from '@/types/language';
 
 
 const getStatusVariant = (status: string) => {
@@ -54,6 +56,8 @@ export default function ReturnPage() {
     const [itemsPerPage, setItemsPerPage] = useState(25);
     const { toast } = useToast();
     const { items, updateStock } = useInventory();
+    const { language } = useLanguage();
+    const t = translations[language].shipping.returnPage;
     
     const [selectedReceipt, setSelectedReceipt] = useState<ShippingReceipt | null>(null);
     const [isVariantDialogOpen, setIsVariantDialogOpen] = useState(false);
@@ -79,11 +83,11 @@ export default function ReturnPage() {
             setTotalReturns(total);
         } catch (error) {
             console.error("Failed to fetch return receipts:", error);
-            toast({ variant: 'destructive', title: 'Gagal memuat data return.' });
+            toast({ variant: 'destructive', title: t.fetchError });
         } finally {
             setLoading(false);
         }
-    }, [currentPage, itemsPerPage, toast]);
+    }, [currentPage, itemsPerPage, toast, t.fetchError]);
 
     useEffect(() => {
         fetchReturns();
@@ -94,11 +98,11 @@ export default function ReturnPage() {
     const handleChangeStatus = async (id: number, newStatus: string) => {
         try {
             await updateShippingReceiptStatus(id, newStatus);
-            toast({ title: 'Status Diperbarui', description: `Status resi telah diubah menjadi "${newStatus}".` });
+            toast({ title: t.statusUpdateSuccess, description: t.statusUpdateSuccessDesc.replace('{status}', newStatus) });
             fetchReturns();
         } catch (error) {
             console.error(`Failed to change status to ${newStatus}:`, error);
-            toast({ variant: 'destructive', title: 'Gagal Memperbarui Status' });
+            toast({ variant: 'destructive', title: t.statusUpdateError });
         }
     };
 
@@ -110,7 +114,7 @@ export default function ReturnPage() {
             setIsVariantDialogOpen(true);
         } else {
             // If no product with variants exists, show a toast or a simpler dialog.
-            toast({ title: "Proses Return", description: "Pilih produk yang dikembalikan untuk ditambahkan ke stok."});
+            toast({ title: t.processReturn, description: t.selectReturnedItem });
         }
     };
     
@@ -122,9 +126,9 @@ export default function ReturnPage() {
                 await updateStock(variant.id, 1, `Return dari resi ${selectedReceipt.awb}`);
                 // Mark receipt as 'Selesai'
                 await handleChangeStatus(selectedReceipt.id, 'Selesai');
-                toast({ title: "Stok Dikembalikan", description: `1 item ${variant.name} telah ditambahkan kembali ke stok.` });
+                toast({ title: t.stockReturnedSuccess, description: t.stockReturnedSuccessDesc.replace('{name}', variant.name) });
             } catch (error) {
-                toast({ variant: 'destructive', title: 'Gagal mengembalikan stok' });
+                toast({ variant: 'destructive', title: t.stockReturnedError });
             }
         }
         setSelectedReceipt(null);
@@ -137,7 +141,7 @@ export default function ReturnPage() {
                     <div className="flex items-center gap-4">
                         <SidebarTrigger className="md:hidden" />
                         <h1 className="text-lg md:text-xl font-bold font-headline text-foreground">
-                           Kelola Return & Resi Batal
+                           {t.title}
                         </h1>
                     </div>
                 </div>
@@ -148,16 +152,16 @@ export default function ReturnPage() {
                             <Table>
                                 <TableHeader>
                                     <TableRow>
-                                        <TableHead>No. Resi (AWB)</TableHead>
-                                        <TableHead>Tanggal</TableHead>
-                                        <TableHead>Channel</TableHead>
-                                        <TableHead>Status</TableHead>
-                                        <TableHead className="text-center">Aksi</TableHead>
+                                        <TableHead>{t.table.awb}</TableHead>
+                                        <TableHead>{t.table.date}</TableHead>
+                                        <TableHead>{t.table.channel}</TableHead>
+                                        <TableHead>{t.table.status}</TableHead>
+                                        <TableHead className="text-center">{t.table.actions}</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
                                     {loading ? (
-                                        <TableRow><TableCell colSpan={5} className="h-48 text-center">Memuat data...</TableCell></TableRow>
+                                        <TableRow><TableCell colSpan={5} className="h-48 text-center">{t.loading}</TableCell></TableRow>
                                     ) : returns.length > 0 ? returns.map(item => (
                                         <TableRow key={item.id}>
                                             <TableCell className="font-medium">{item.awb}</TableCell>
@@ -171,21 +175,21 @@ export default function ReturnPage() {
                                                     <DropdownMenuTrigger asChild>
                                                         <Button variant="outline" size="sm">
                                                             <Undo2 className="mr-2 h-3 w-3" />
-                                                            Proses
+                                                            {t.actions.process}
                                                         </Button>
                                                     </DropdownMenuTrigger>
                                                     <DropdownMenuContent>
                                                         <DropdownMenuItem onClick={() => handleReturnReceived(item)}>
                                                             <CheckCircle className="mr-2 h-4 w-4 text-green-500" />
-                                                            <span>Barang Sampai</span>
+                                                            <span>{t.actions.itemArrived}</span>
                                                         </DropdownMenuItem>
                                                          <DropdownMenuItem onClick={() => handleChangeStatus(item.id, 'Diantar')}>
                                                             <Truck className="mr-2 h-4 w-4" />
-                                                            <span>Diantar</span>
+                                                            <span>{t.actions.itemInTransit}</span>
                                                         </DropdownMenuItem>
                                                         <DropdownMenuItem onClick={() => handleChangeStatus(item.id, 'Tidak Sampai')} className="text-destructive">
                                                             <XCircle className="mr-2 h-4 w-4" />
-                                                            <span>Tidak Sampai</span>
+                                                            <span>{t.actions.itemNotArrived}</span>
                                                         </DropdownMenuItem>
                                                     </DropdownMenuContent>
                                                 </DropdownMenu>
@@ -196,8 +200,8 @@ export default function ReturnPage() {
                                             <TableCell colSpan={5} className="h-48 text-center">
                                                 <div className="flex flex-col items-center justify-center gap-4 text-muted-foreground">
                                                     <Package className="h-16 w-16" />
-                                                    <p className="font-semibold">Belum ada data return</p>
-                                                    <p className="text-sm">Semua resi return/batal akan muncul di sini.</p>
+                                                    <p className="font-semibold">{t.noReturnsTitle}</p>
+                                                    <p className="text-sm">{t.noReturnsDesc}</p>
                                                 </div>
                                             </TableCell>
                                         </TableRow>

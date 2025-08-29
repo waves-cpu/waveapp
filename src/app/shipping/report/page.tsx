@@ -27,6 +27,8 @@ import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { FileText } from 'lucide-react';
+import { useLanguage } from '@/hooks/use-language';
+import { translations } from '@/types/language';
 
 type DailyReport = {
     date: string;
@@ -68,6 +70,8 @@ export default function ShippingReportPage() {
     const [reportData, setReportData] = useState<DailyReport[]>([]);
     const [loading, setLoading] = useState(true);
     const { toast } = useToast();
+    const { language } = useLanguage();
+    const t = translations[language].shipping.reportPage;
     
     const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
     const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
@@ -142,11 +146,11 @@ export default function ShippingReportPage() {
 
         } catch (error) {
             console.error("Failed to fetch report data:", error);
-            toast({ variant: 'destructive', title: 'Gagal memuat data laporan.' });
+            toast({ variant: 'destructive', title: t.fetchError });
         } finally {
             setLoading(false);
         }
-    }, [selectedMonth, selectedYear, toast]);
+    }, [selectedMonth, selectedYear, toast, t.fetchError]);
 
     useEffect(() => {
         fetchReportData();
@@ -159,13 +163,13 @@ export default function ShippingReportPage() {
                     <div className="flex items-center gap-4">
                         <SidebarTrigger className="md:hidden" />
                         <h1 className="text-lg md:text-xl font-bold font-headline text-foreground">
-                           Laporan Resi
+                           {t.title}
                         </h1>
                     </div>
                      <div className="flex items-center gap-2">
                         <Select value={selectedMonth.toString()} onValueChange={(value) => setSelectedMonth(parseInt(value))}>
                             <SelectTrigger className="w-[180px]">
-                                <SelectValue placeholder="Pilih Bulan" />
+                                <SelectValue placeholder={t.selectMonth} />
                             </SelectTrigger>
                             <SelectContent>
                                 {Array.from({ length: 12 }).map((_, i) => (
@@ -177,7 +181,7 @@ export default function ShippingReportPage() {
                         </Select>
                         <Select value={selectedYear.toString()} onValueChange={(value) => setSelectedYear(parseInt(value))}>
                             <SelectTrigger className="w-[120px]">
-                                <SelectValue placeholder="Pilih Tahun" />
+                                <SelectValue placeholder={t.selectYear} />
                             </SelectTrigger>
                             <SelectContent>
                                 {years.map(year => (
@@ -193,16 +197,16 @@ export default function ShippingReportPage() {
                 <div className="grid gap-6">
                     {loading ? <ReportSkeleton /> : (
                         <Card>
-                            <CardContent>
+                            <CardContent className="pt-6">
                                 <Table>
                                     <TableHeader>
                                         <TableRow>
-                                            <TableHead>Tanggal</TableHead>
-                                            <TableHead className="text-center">Perlu Diproses</TableHead>
-                                            <TableHead className="text-center">Dikirim</TableHead>
-                                            <TableHead className="text-center">Batal</TableHead>
-                                            <TableHead className="text-center">Return</TableHead>
-                                            <TableHead className="text-right">Total Resi</TableHead>
+                                            <TableHead>{t.table.date}</TableHead>
+                                            <TableHead className="text-center">{t.table.pending}</TableHead>
+                                            <TableHead className="text-center">{t.table.shipped}</TableHead>
+                                            <TableHead className="text-center">{t.table.cancelled}</TableHead>
+                                            <TableHead className="text-center">{t.table.returned}</TableHead>
+                                            <TableHead className="text-right">{t.table.total}</TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
@@ -220,8 +224,8 @@ export default function ShippingReportPage() {
                                                 <TableCell colSpan={6} className="h-48 text-center">
                                                     <div className="flex flex-col items-center justify-center gap-4 text-muted-foreground">
                                                         <FileText className="h-16 w-16" />
-                                                        <p className="font-semibold">Tidak Ada Data</p>
-                                                        <p className="text-sm">Tidak ada data resi pada bulan yang dipilih.</p>
+                                                        <p className="font-semibold">{t.noDataTitle}</p>
+                                                        <p className="text-sm">{t.noDataDesc}</p>
                                                     </div>
                                                 </TableCell>
                                             </TableRow>

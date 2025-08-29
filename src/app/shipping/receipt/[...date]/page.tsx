@@ -79,7 +79,8 @@ export default function ReceiptPage() {
     const [itemsPerPage, setItemsPerPage] = useState(25);
     const { toast } = useToast();
     const { language } = useLanguage();
-    const t = translations[language];
+    const t = translations[language].shipping.receiptPage;
+    const tCommon = translations[language].common;
     const [receiptToDelete, setReceiptToDelete] = useState<ShippingReceipt | null>(null);
     const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
     const [isProcessing, setIsProcessing] = useState(false);
@@ -104,11 +105,11 @@ export default function ReceiptPage() {
             setTotalReceipts(total);
         } catch (error) {
             console.error("Failed to fetch receipts:", error);
-            toast({ variant: 'destructive', title: 'Gagal memuat data resi.' });
+            toast({ variant: 'destructive', title: t.fetchError });
         } finally {
             setLoading(false);
         }
-    }, [currentPage, itemsPerPage, activeTab, currentDate, searchTerm, toast]);
+    }, [currentPage, itemsPerPage, activeTab, currentDate, searchTerm, toast, t.fetchError]);
     
     const fetchCounts = useCallback(async () => {
         try {
@@ -137,25 +138,25 @@ export default function ReceiptPage() {
         if (!receiptToDelete) return;
         try {
             await deleteShippingReceipt(receiptToDelete.id);
-            toast({ title: 'Resi dihapus', description: `Resi ${receiptToDelete.awb} telah berhasil dihapus.` });
+            toast({ title: t.deleteSuccess, description: t.deleteSuccessDesc.replace('{awb}', receiptToDelete.awb) });
             setReceiptToDelete(null);
             fetchReceipts(); // Refresh data
             fetchCounts();
         } catch (error) {
             console.error("Failed to delete receipt:", error);
-            toast({ variant: 'destructive', title: 'Gagal menghapus resi.' });
+            toast({ variant: 'destructive', title: t.deleteError });
         }
     };
     
     const handleChangeStatus = async (id: number, newStatus: string) => {
         try {
             await updateShippingReceiptStatus(id, newStatus);
-            toast({ title: 'Status Diperbarui', description: `Status resi telah diubah menjadi "${newStatus}".` });
+            toast({ title: t.statusUpdateSuccess, description: t.statusUpdateSuccessDesc.replace('{status}', newStatus) });
             fetchReceipts();
             fetchCounts();
         } catch (error) {
             console.error(`Failed to change status to ${newStatus}:`, error);
-            toast({ variant: 'destructive', title: 'Gagal Memperbarui Status', description: `Terjadi kesalahan saat mengubah status.` });
+            toast({ variant: 'destructive', title: t.statusUpdateError, description: t.statusUpdateErrorDesc });
         }
     };
 
@@ -164,13 +165,13 @@ export default function ReceiptPage() {
         setIsProcessing(true);
         try {
             await updateShippingReceiptsStatus(Array.from(selectedIds), 'Dikirim');
-            toast({ title: 'Resi Diproses', description: `${selectedIds.size} resi telah berhasil diperbarui menjadi "Dikirim".` });
+            toast({ title: t.bulkProcessSuccess, description: t.bulkProcessSuccessDesc.replace('{count}', selectedIds.size.toString()) });
             setSelectedIds(new Set());
             fetchReceipts();
             fetchCounts();
         } catch (error) {
             console.error("Failed to process shipments:", error);
-            toast({ variant: 'destructive', title: 'Gagal Memproses', description: 'Terjadi kesalahan saat memperbarui status resi.' });
+            toast({ variant: 'destructive', title: t.bulkProcessError, description: t.bulkProcessErrorDesc });
         } finally {
             setIsProcessing(false);
         }
@@ -219,14 +220,14 @@ export default function ReceiptPage() {
                     <div className="flex items-center gap-4">
                         <SidebarTrigger className="md:hidden" />
                         <h1 className="text-lg md:text-xl font-bold font-headline text-foreground">
-                           Resi Pengiriman
+                           {t.title}
                         </h1>
                     </div>
                      <div className="flex items-center gap-2">
                          <div className="relative">
                             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                             <Input
-                                placeholder="Cari No. Resi..."
+                                placeholder={t.searchPlaceholder}
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                                 className="pl-8 h-9 w-64"
@@ -244,7 +245,7 @@ export default function ReceiptPage() {
                                 )}
                             >
                                 <CalendarIcon className="mr-2 h-4 w-4" />
-                                {currentDate ? format(currentDate, 'PPP') : <span>Pilih tanggal</span>}
+                                {currentDate ? format(currentDate, 'PPP') : <span>{t.selectDate}</span>}
                             </Button>
                             </PopoverTrigger>
                             <PopoverContent className="w-auto p-0" align="end">
@@ -258,7 +259,7 @@ export default function ReceiptPage() {
                         </Popover>
                          <Button size="sm" onClick={handleProcessShipment} disabled={selectedIds.size === 0 || isProcessing}>
                             <Send className="mr-2 h-4 w-4" />
-                            {isProcessing ? 'Memproses...' : `Proses Kirim (${selectedIds.size})`}
+                            {isProcessing ? t.processing : `${t.processSelected} (${selectedIds.size})`}
                          </Button>
                     </div>
                 </div>
@@ -292,27 +293,27 @@ export default function ReceiptPage() {
                                              <Checkbox
                                                 checked={isAllSelected}
                                                 onCheckedChange={handleSelectAll}
-                                                aria-label="Select all"
+                                                aria-label={t.selectAll}
                                                 disabled={receipts.filter(r => r.status === 'Perlu Diproses').length === 0}
                                             />
                                         </TableHead>
-                                        <TableHead>No. Resi (AWB)</TableHead>
-                                        <TableHead>Tanggal</TableHead>
-                                        <TableHead>Channel</TableHead>
-                                        <TableHead>Status</TableHead>
-                                        <TableHead className="text-center">Aksi</TableHead>
+                                        <TableHead>{t.table.awb}</TableHead>
+                                        <TableHead>{t.table.date}</TableHead>
+                                        <TableHead>{t.table.channel}</TableHead>
+                                        <TableHead>{t.table.status}</TableHead>
+                                        <TableHead className="text-center">{t.table.actions}</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
                                     {loading ? (
-                                        <TableRow><TableCell colSpan={6} className="h-48 text-center">Memuat data...</TableCell></TableRow>
+                                        <TableRow><TableCell colSpan={6} className="h-48 text-center">{t.loading}</TableCell></TableRow>
                                     ) : receipts.length > 0 ? receipts.map(item => (
                                         <TableRow key={item.id} data-state={selectedIds.has(item.id) && 'selected'}>
                                             <TableCell>
                                                 <Checkbox
                                                     checked={selectedIds.has(item.id)}
                                                     onCheckedChange={(checked) => handleSelectOne(item.id, !!checked)}
-                                                    aria-label={`Select receipt ${item.awb}`}
+                                                    aria-label={`${t.select} ${item.awb}`}
                                                     disabled={item.status !== 'Perlu Diproses'}
                                                 />
                                             </TableCell>
@@ -334,14 +335,14 @@ export default function ReceiptPage() {
                                                     <DropdownMenuContent align="end">
                                                          {item.status === 'Perlu Diproses' && (
                                                             <>
-                                                                <DropdownMenuItem onClick={() => handleChangeStatus(item.id, 'Dikirim')}>Proses Kirim</DropdownMenuItem>
-                                                                <DropdownMenuItem onClick={() => handleChangeStatus(item.id, 'Dibatalkan')} className="text-destructive">Batalkan</DropdownMenuItem>
+                                                                <DropdownMenuItem onClick={() => handleChangeStatus(item.id, 'Dikirim')}>{t.actions.processShipment}</DropdownMenuItem>
+                                                                <DropdownMenuItem onClick={() => handleChangeStatus(item.id, 'Dibatalkan')} className="text-destructive">{t.actions.cancel}</DropdownMenuItem>
                                                             </>
                                                          )}
                                                          {item.status === 'Dikirim' && (
                                                             <>
-                                                                <DropdownMenuItem onClick={() => handleChangeStatus(item.id, 'Selesai')}>Selesai</DropdownMenuItem>
-                                                                <DropdownMenuItem onClick={() => handleChangeStatus(item.id, 'Return')} className="text-destructive">Return</DropdownMenuItem>
+                                                                <DropdownMenuItem onClick={() => handleChangeStatus(item.id, 'Selesai')}>{t.actions.markAsDone}</DropdownMenuItem>
+                                                                <DropdownMenuItem onClick={() => handleChangeStatus(item.id, 'Return')} className="text-destructive">{t.actions.markAsReturn}</DropdownMenuItem>
                                                             </>
                                                          )}
                                                     </DropdownMenuContent>
@@ -356,15 +357,15 @@ export default function ReceiptPage() {
                                                     </AlertDialogTrigger>
                                                     <AlertDialogContent>
                                                         <AlertDialogHeader>
-                                                            <AlertDialogTitle>Hapus Resi Ini?</AlertDialogTitle>
+                                                            <AlertDialogTitle>{t.deleteConfirmTitle}</AlertDialogTitle>
                                                             <AlertDialogDescription>
-                                                                Anda yakin ingin menghapus resi {receiptToDelete?.awb}? Tindakan ini tidak dapat diurungkan.
+                                                                {t.deleteConfirmDesc.replace('{awb}', receiptToDelete?.awb || '')}
                                                             </AlertDialogDescription>
                                                         </AlertDialogHeader>
                                                         <AlertDialogFooter>
-                                                            <AlertDialogCancel onClick={() => setReceiptToDelete(null)}>Batal</AlertDialogCancel>
+                                                            <AlertDialogCancel onClick={() => setReceiptToDelete(null)}>{tCommon.cancel}</AlertDialogCancel>
                                                             <AlertDialogAction onClick={handleDelete} className="bg-destructive hover:bg-destructive/90">
-                                                                Ya, Hapus
+                                                                {t.deleteConfirmAction}
                                                             </AlertDialogAction>
                                                         </AlertDialogFooter>
                                                     </AlertDialogContent>
@@ -376,8 +377,8 @@ export default function ReceiptPage() {
                                             <TableCell colSpan={6} className="h-48 text-center">
                                                 <div className="flex flex-col items-center justify-center gap-4 text-muted-foreground">
                                                     <Truck className="h-16 w-16" />
-                                                    <p className="font-semibold">Tidak ada resi</p>
-                                                    <p className="text-sm">Data resi yang di-scan atau diinput dari mobile akan muncul di sini.</p>
+                                                    <p className="font-semibold">{t.noReceiptsTitle}</p>
+                                                    <p className="text-sm">{t.noReceiptsDesc}</p>
                                                 </div>
                                             </TableCell>
                                         </TableRow>
