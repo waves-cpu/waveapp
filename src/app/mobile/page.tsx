@@ -11,12 +11,13 @@ import { useInventory } from '@/hooks/use-inventory';
 import { useToast } from '@/hooks/use-toast';
 import { useScanSounds } from '@/hooks/use-scan-sounds';
 import type { ShippingReceipt } from '@/types';
-import { format, startOfDay } from 'date-fns';
+import { format } from 'date-fns';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { QrScanner } from '@yudiel/react-qr-scanner';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 
 type ShippingProvider = 'Shopee' | 'Tiktok' | 'Lazada' | 'Instant';
@@ -26,6 +27,7 @@ export default function MobileScanReceiptPage() {
     const { addShippingReceipt } = useInventory();
     const { toast } = useToast();
     const { playSuccessSound, playErrorSound, initializeAudio } = useScanSounds();
+    const isMobile = useIsMobile();
 
     const [awb, setAwb] = useState('');
     const [channel, setChannel] = useState<ShippingProvider>('Shopee');
@@ -34,6 +36,13 @@ export default function MobileScanReceiptPage() {
     const [recentlyAdded, setRecentlyAdded] = useState<ShippingReceipt[]>([]);
     const inputRef = useRef<HTMLInputElement>(null);
     const [isCameraOpen, setIsCameraOpen] = useState(false);
+
+    useEffect(() => {
+        // Redirect back to desktop if not mobile
+        if (isMobile === false) {
+            router.replace('/');
+        }
+    }, [isMobile, router]);
 
     useEffect(() => {
         initializeAudio();
@@ -47,11 +56,13 @@ export default function MobileScanReceiptPage() {
         if (isSubmitting) return;
 
         setIsSubmitting(true);
-        // Ensure the date is treated as a local date by using format
+        
+        const dateString = format(scanDate, "yyyy-MM-dd");
+
         const newReceipt: Omit<ShippingReceipt, 'id'> = {
             awb: scannedAwb.trim(),
             channel,
-            date: format(scanDate, "yyyy-MM-dd HH:mm:ss"), // Send as local time string
+            date: dateString,
             status: 'Perlu Diproses'
         };
 
