@@ -1,9 +1,10 @@
 
+
 'use server';
 
 import { db } from './db';
 import type { InventoryItem, AdjustmentHistory, InventoryItemVariant, Sale, Reseller, ChannelPrice, ManualJournalEntry, Accessory, ShippingReceipt } from '@/types';
-import { format as formatDate, parseISO } from 'date-fns';
+import { format as formatDate, parseISO, startOfDay, endOfDay } from 'date-fns';
 
 // Settings Functions
 export async function saveSetting(key: string, value: any) {
@@ -25,10 +26,11 @@ export async function fetchShippingReceipts(options: {
     limit: number;
     channel?: string;
     date?: Date;
+    date_range?: { from: Date, to: Date };
     status?: string[];
     awb?: string;
 }): Promise<{ receipts: ShippingReceipt[]; total: number }> {
-    const { page, limit, channel, date, status, awb } = options;
+    const { page, limit, channel, date, date_range, status, awb } = options;
     const offset = (page - 1) * limit;
 
     let whereClauses: string[] = [];
@@ -39,8 +41,17 @@ export async function fetchShippingReceipts(options: {
         params.channel = channel;
     }
     if (date) {
-        whereClauses.push("strftime('%Y-%m-%d', date) = @date");
-        params.date = formatDate(date, 'yyyy-MM-dd');
+        // Use a date range for the entire day to avoid timezone issues
+        const dayStart = startOfDay(date).toISOString();
+        const dayEnd = endOfDay(date).toISOString();
+        whereClauses.push("date BETWEEN @dayStart AND @dayEnd");
+        params.dayStart = dayStart;
+        params.dayEnd = dayEnd;
+    }
+    if (date_range) {
+        whereClauses.push("date BETWEEN @from AND @to");
+        params.from = date_range.from.toISOString();
+        params.to = date_range.to.toISOString();
     }
     if (status && status.length > 0) {
         whereClauses.push(`status IN (${status.map((_, i) => `@status${i}`).join(',')})`);
@@ -862,3 +873,4 @@ export async function deleteProductPermanently(itemId: string) {
     // ON DELETE CASCADE will handle variants, history, and channel_prices
     db.prepare('DELETE FROM products WHERE id = ?').run(itemId);
 }
+
