@@ -8,7 +8,7 @@ import { SidebarTrigger } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Calendar as CalendarIcon, FileDown, Trash2, Truck, ScanLine, Search, Send, Ban } from 'lucide-react';
+import { Calendar as CalendarIcon, FileDown, Trash2, Truck, ScanLine, Search, Send, Ban, MoreVertical } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
@@ -21,6 +21,12 @@ import { useToast } from '@/hooks/use-toast';
 import { useLanguage } from '@/hooks/use-language';
 import { translations } from '@/types/language';
 import Link from 'next/link';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -75,7 +81,6 @@ export default function ReceiptPage() {
     const { language } = useLanguage();
     const t = translations[language];
     const [receiptToDelete, setReceiptToDelete] = useState<ShippingReceipt | null>(null);
-    const [receiptToCancel, setReceiptToCancel] = useState<ShippingReceipt | null>(null);
     const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
     const [isProcessing, setIsProcessing] = useState(false);
     const [channelCounts, setChannelCounts] = useState<Record<string, number> | null>(null);
@@ -142,17 +147,15 @@ export default function ReceiptPage() {
         }
     };
     
-    const handleCancelShipment = async () => {
-        if (!receiptToCancel) return;
+    const handleChangeStatus = async (id: number, newStatus: string) => {
         try {
-            await updateShippingReceiptStatus(receiptToCancel.id, 'Dibatalkan');
-            toast({ title: 'Pengiriman Dibatalkan', description: `Resi ${receiptToCancel.awb} telah berhasil dibatalkan.` });
-            setReceiptToCancel(null);
+            await updateShippingReceiptStatus(id, newStatus);
+            toast({ title: 'Status Diperbarui', description: `Status resi telah diubah menjadi "${newStatus}".` });
             fetchReceipts();
             fetchCounts();
         } catch (error) {
-            console.error("Failed to cancel shipment:", error);
-            toast({ variant: 'destructive', title: 'Gagal Membatalkan', description: 'Terjadi kesalahan saat membatalkan pengiriman.' });
+            console.error(`Failed to change status to ${newStatus}:`, error);
+            toast({ variant: 'destructive', title: 'Gagal Memperbarui Status', description: `Terjadi kesalahan saat mengubah status.` });
         }
     };
 
@@ -317,32 +320,35 @@ export default function ReceiptPage() {
                                             <TableCell>{format(new Date(item.date), 'dd MMM yyyy HH:mm')}</TableCell>
                                             <TableCell>{item.channel}</TableCell>
                                             <TableCell>
-                                                <Badge variant={getStatusVariant(item.status)}>{item.status}</Badge>
+                                                <DropdownMenu>
+                                                    <DropdownMenuTrigger asChild>
+                                                        <Button variant="ghost" className={cn(
+                                                            "px-2 py-1 h-auto text-xs",
+                                                            getStatusVariant(item.status) === 'default' && "bg-primary text-primary-foreground hover:bg-primary/90",
+                                                            getStatusVariant(item.status) === 'secondary' && "bg-secondary text-secondary-foreground hover:bg-secondary/80",
+                                                            getStatusVariant(item.status) === 'destructive' && "bg-destructive text-destructive-foreground hover:bg-destructive/90",
+                                                        )}>
+                                                            {item.status}
+                                                            <MoreVertical className="ml-2 h-3 w-3" />
+                                                        </Button>
+                                                    </DropdownMenuTrigger>
+                                                    <DropdownMenuContent align="end">
+                                                         {item.status === 'Perlu Diproses' && (
+                                                            <>
+                                                                <DropdownMenuItem onClick={() => handleChangeStatus(item.id, 'Dikirim')}>Proses Kirim</DropdownMenuItem>
+                                                                <DropdownMenuItem onClick={() => handleChangeStatus(item.id, 'Dibatalkan')} className="text-destructive">Batalkan</DropdownMenuItem>
+                                                            </>
+                                                         )}
+                                                         {item.status === 'Dikirim' && (
+                                                            <>
+                                                                <DropdownMenuItem onClick={() => handleChangeStatus(item.id, 'Selesai')}>Selesai</DropdownMenuItem>
+                                                                <DropdownMenuItem onClick={() => handleChangeStatus(item.id, 'Return')} className="text-destructive">Return</DropdownMenuItem>
+                                                            </>
+                                                         )}
+                                                    </DropdownMenuContent>
+                                                </DropdownMenu>
                                             </TableCell>
                                             <TableCell className="text-center">
-                                                {item.status === 'Perlu Diproses' && (
-                                                    <AlertDialog>
-                                                        <AlertDialogTrigger asChild>
-                                                            <Button variant="ghost" size="icon" className="text-destructive h-8 w-8" onClick={(e) => { e.stopPropagation(); setReceiptToCancel(item); }}>
-                                                                <Ban className="h-4 w-4" />
-                                                            </Button>
-                                                        </AlertDialogTrigger>
-                                                        <AlertDialogContent>
-                                                            <AlertDialogHeader>
-                                                                <AlertDialogTitle>Batalkan Pengiriman Ini?</AlertDialogTitle>
-                                                                <AlertDialogDescription>
-                                                                    Anda yakin ingin membatalkan resi {receiptToCancel?.awb}? Status akan diubah menjadi "Dibatalkan".
-                                                                </AlertDialogDescription>
-                                                            </AlertDialogHeader>
-                                                            <AlertDialogFooter>
-                                                                <AlertDialogCancel onClick={() => setReceiptToCancel(null)}>Tidak</AlertDialogCancel>
-                                                                <AlertDialogAction onClick={handleCancelShipment} className="bg-destructive hover:bg-destructive/90">
-                                                                    Ya, Batalkan
-                                                                </AlertDialogAction>
-                                                            </AlertDialogFooter>
-                                                        </AlertDialogContent>
-                                                    </AlertDialog>
-                                                )}
                                                 <AlertDialog>
                                                     <AlertDialogTrigger asChild>
                                                          <Button variant="ghost" size="icon" className="text-destructive h-8 w-8" onClick={(e) => { e.stopPropagation(); setReceiptToDelete(item); }}>
@@ -395,3 +401,4 @@ export default function ReceiptPage() {
         </AppLayout>
     );
 }
+

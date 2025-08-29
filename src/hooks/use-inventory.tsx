@@ -71,7 +71,7 @@ interface InventoryContextType {
   // Shipping
   shippingReceipts: ShippingReceipt[];
   fetchShippingReceipts: (options: { page: number; limit: number; channel?: string; date?: Date; }) => Promise<{ receipts: ShippingReceipt[]; total: number; }>;
-  addShippingReceipt: (receipt: Omit<ShippingReceipt, 'id'>) => Promise<void>;
+  addShippingReceipt: (receipt: Omit<ShippingReceipt, 'id'>) => Promise<ShippingReceipt>;
   deleteShippingReceipt: (id: number) => Promise<void>;
 }
 
@@ -243,9 +243,7 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const addShippingReceipt = async (receipt: Omit<ShippingReceipt, 'id'>) => {
-    await addShippingReceiptDb(receipt);
-    // No need to fetchAllData here, the main page will refetch.
-    // This keeps the scanning UI fast.
+    return await addShippingReceiptDb(receipt);
   };
 
   const deleteShippingReceipt = async (id: number) => {

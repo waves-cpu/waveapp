@@ -47,17 +47,18 @@ export default function MobileScanReceiptPage() {
         if (isSubmitting) return;
 
         setIsSubmitting(true);
+        // Pass the selected date as a 'yyyy-MM-dd' string to avoid timezone issues.
         const newReceipt: Omit<ShippingReceipt, 'id'> = {
             awb: scannedAwb.trim(),
             channel,
-            date: scanDate.toISOString(),
+            date: format(scanDate, 'yyyy-MM-dd'),
             status: 'Perlu Diproses'
         };
 
         try {
-            await addShippingReceipt(newReceipt);
+            const added = await addShippingReceipt(newReceipt);
             playSuccessSound();
-            setRecentlyAdded(prev => [{ ...newReceipt, id: Date.now() }, ...prev].slice(0, 10));
+            setRecentlyAdded(prev => [added, ...prev].slice(0, 10));
             setAwb('');
         } catch (error) {
             playErrorSound();

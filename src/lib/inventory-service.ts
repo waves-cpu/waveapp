@@ -41,8 +41,8 @@ export async function fetchShippingReceipts(options: {
         params.channel = channel;
     }
     if (date) {
-        const dayStart = startOfDay(date).toISOString().split('T')[0];
-        whereClauses.push("date(date) = @dayStart");
+        const dayStart = formatDate(date, 'yyyy-MM-dd');
+        whereClauses.push("strftime('%Y-%m-%d', date) = @dayStart");
         params.dayStart = dayStart;
     }
     if (date_range) {
@@ -80,11 +80,11 @@ export async function fetchShippingReceipts(options: {
 }
 
 export async function fetchShippingReceiptCountsByChannel(date: Date): Promise<Record<string, number>> {
-    const dateString = startOfDay(date).toISOString().split('T')[0];
+    const dateString = formatDate(date, 'yyyy-MM-dd');
     const query = db.prepare(`
         SELECT channel, COUNT(*) as count 
         FROM shipping_receipts 
-        WHERE date(date) = ?
+        WHERE strftime('%Y-%m-%d', date) = ?
         GROUP BY channel
     `);
     const results = query.all(dateString) as { channel: string, count: number }[];
@@ -96,8 +96,17 @@ export async function fetchShippingReceiptCountsByChannel(date: Date): Promise<R
 }
 
 
-export async function addShippingReceipt(receipt: Omit<ShippingReceipt, 'id'>) {
-    return db.prepare('INSERT INTO shipping_receipts (awb, date, channel, status) VALUES (@awb, @date, @channel, @status)').run(receipt);
+export async function addShippingReceipt(receipt: Omit<ShippingReceipt, 'id'>): Promise<ShippingReceipt> {
+    // Combine the provided date string (yyyy-MM-dd) with the current time.
+    const finalDate = new Date(`${receipt.date}T${formatDate(new Date(), 'HH:mm:ss.SSS')}`);
+
+    const result = db.prepare('INSERT INTO shipping_receipts (awb, date, channel, status) VALUES (@awb, @date, @channel, @status)').run({
+        ...receipt,
+        date: finalDate.toISOString(),
+    });
+    
+    const newReceipt = db.prepare('SELECT * FROM shipping_receipts WHERE id = ?').get(result.lastInsertRowid) as ShippingReceipt;
+    return newReceipt;
 }
 
 export async function deleteShippingReceipt(id: number) {
@@ -887,5 +896,7 @@ export async function deleteProductPermanently(itemId: string) {
     // ON DELETE CASCADE will handle variants, history, and channel_prices
     db.prepare('DELETE FROM products WHERE id = ?').run(itemId);
 }
+
+
 
 
