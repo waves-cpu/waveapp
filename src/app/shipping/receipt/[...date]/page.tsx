@@ -329,7 +329,6 @@ export default function ReceiptPage() {
                                                             getStatusVariant(item.status) === 'destructive' && "bg-destructive text-destructive-foreground hover:bg-destructive/90",
                                                         )}>
                                                             {item.status}
-                                                            <MoreVertical className="ml-2 h-3 w-3" />
                                                         </Button>
                                                     </DropdownMenuTrigger>
                                                     <DropdownMenuContent align="end">
@@ -401,4 +400,3 @@ export default function ReceiptPage() {
         </AppLayout>
     );
 }
-
