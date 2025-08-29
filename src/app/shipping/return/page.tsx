@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
@@ -9,9 +8,6 @@ import { Button } from '@/components/ui/button';
 import {
   Card,
   CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
 } from '@/components/ui/card';
 import {
   Table,
@@ -21,20 +17,31 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { FilePlus, Undo2, Truck } from 'lucide-react';
+import { FilePlus, Undo2, Truck, CheckCircle, XCircle, Package } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { fetchShippingReceipts } from '@/lib/inventory-service';
-import type { ShippingReceipt } from '@/types';
+import { fetchShippingReceipts, updateShippingReceiptStatus } from '@/lib/inventory-service';
+import type { ShippingReceipt, InventoryItemVariant } from '@/types';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { Pagination } from '@/components/ui/pagination';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { VariantSelectionDialog } from '@/app/components/variant-selection-dialog';
+import { useInventory } from '@/hooks/use-inventory';
+
 
 const getStatusVariant = (status: string) => {
     switch (status.toLowerCase()) {
         case 'selesai': return 'default';
-        case 'dikirim': return 'secondary';
+        case 'dikirim':
+        case 'diantar': return 'secondary';
         case 'return':
-        case 'dibatalkan': return 'destructive';
+        case 'dibatalkan':
+        case 'tidak sampai': return 'destructive';
         default: return 'outline';
     }
 };
@@ -46,6 +53,19 @@ export default function ReturnPage() {
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(25);
     const { toast } = useToast();
+    const { items, updateStock } = useInventory();
+    
+    const [selectedReceipt, setSelectedReceipt] = useState<ShippingReceipt | null>(null);
+    const [isVariantDialogOpen, setIsVariantDialogOpen] = useState(false);
+
+    const productForVariantSelection = useMemo(() => {
+        if (!selectedReceipt) return null;
+        // This is a simplified logic. A real app might need to fetch order details.
+        // For now, we'll just use the available items for selection.
+        const mockItemForSelection = items.find(item => item.variants && item.variants.length > 0);
+        return mockItemForSelection || null;
+    }, [selectedReceipt, items]);
+
 
     const fetchReturns = useCallback(async () => {
         setLoading(true);
@@ -53,7 +73,7 @@ export default function ReturnPage() {
             const { receipts, total } = await fetchShippingReceipts({
                 page: currentPage,
                 limit: itemsPerPage,
-                status: ['Return', 'Dibatalkan']
+                status: ['Return', 'Dibatalkan', 'Diantar', 'Tidak Sampai']
             });
             setReturns(receipts);
             setTotalReturns(total);
@@ -71,6 +91,45 @@ export default function ReturnPage() {
     
     const totalPages = Math.ceil(totalReturns / itemsPerPage);
 
+    const handleChangeStatus = async (id: number, newStatus: string) => {
+        try {
+            await updateShippingReceiptStatus(id, newStatus);
+            toast({ title: 'Status Diperbarui', description: `Status resi telah diubah menjadi "${newStatus}".` });
+            fetchReturns();
+        } catch (error) {
+            console.error(`Failed to change status to ${newStatus}:`, error);
+            toast({ variant: 'destructive', title: 'Gagal Memperbarui Status' });
+        }
+    };
+
+    const handleReturnReceived = (receipt: ShippingReceipt) => {
+        setSelectedReceipt(receipt);
+        // A real implementation would fetch the order items associated with this receipt.
+        // For demonstration, we'll open a generic variant selector.
+        if (productForVariantSelection) {
+            setIsVariantDialogOpen(true);
+        } else {
+            // If no product with variants exists, show a toast or a simpler dialog.
+            toast({ title: "Proses Return", description: "Pilih produk yang dikembalikan untuk ditambahkan ke stok."});
+        }
+    };
+    
+    const handleVariantReturned = async (variant: InventoryItemVariant | null) => {
+        setIsVariantDialogOpen(false);
+        if (variant && selectedReceipt) {
+            try {
+                // Return 1 item to stock
+                await updateStock(variant.id, 1, `Return dari resi ${selectedReceipt.awb}`);
+                // Mark receipt as 'Selesai'
+                await handleChangeStatus(selectedReceipt.id, 'Selesai');
+                toast({ title: "Stok Dikembalikan", description: `1 item ${variant.name} telah ditambahkan kembali ke stok.` });
+            } catch (error) {
+                toast({ variant: 'destructive', title: 'Gagal mengembalikan stok' });
+            }
+        }
+        setSelectedReceipt(null);
+    };
+
     return (
         <AppLayout>
             <main className="flex min-h-[calc(100vh_-_theme(spacing.16))] flex-1 flex-col gap-4 bg-muted/40 p-4 md:gap-8 md:p-10">
@@ -81,17 +140,11 @@ export default function ReturnPage() {
                            Kelola Return & Resi Batal
                         </h1>
                     </div>
-                     <div className="flex items-center gap-2">
-                        <Button variant="outline" size="sm">
-                            <FilePlus className="mr-2 h-4 w-4" />
-                            Proses Refund
-                        </Button>
-                    </div>
                 </div>
 
                 <div className="grid gap-6">
                     <Card>
-                        <CardContent>
+                        <CardContent className="pt-6">
                             <Table>
                                 <TableHeader>
                                     <TableRow>
@@ -114,17 +167,35 @@ export default function ReturnPage() {
                                                 <Badge variant={getStatusVariant(item.status)}>{item.status}</Badge>
                                             </TableCell>
                                             <TableCell className="text-center">
-                                                <Button variant="outline" size="sm">
-                                                    <Undo2 className="mr-2 h-3 w-3" />
-                                                    Proses
-                                                </Button>
+                                                <DropdownMenu>
+                                                    <DropdownMenuTrigger asChild>
+                                                        <Button variant="outline" size="sm">
+                                                            <Undo2 className="mr-2 h-3 w-3" />
+                                                            Proses
+                                                        </Button>
+                                                    </DropdownMenuTrigger>
+                                                    <DropdownMenuContent>
+                                                        <DropdownMenuItem onClick={() => handleReturnReceived(item)}>
+                                                            <CheckCircle className="mr-2 h-4 w-4 text-green-500" />
+                                                            <span>Barang Sampai</span>
+                                                        </DropdownMenuItem>
+                                                         <DropdownMenuItem onClick={() => handleChangeStatus(item.id, 'Diantar')}>
+                                                            <Truck className="mr-2 h-4 w-4" />
+                                                            <span>Diantar</span>
+                                                        </DropdownMenuItem>
+                                                        <DropdownMenuItem onClick={() => handleChangeStatus(item.id, 'Tidak Sampai')} className="text-destructive">
+                                                            <XCircle className="mr-2 h-4 w-4" />
+                                                            <span>Tidak Sampai</span>
+                                                        </DropdownMenuItem>
+                                                    </DropdownMenuContent>
+                                                </DropdownMenu>
                                             </TableCell>
                                         </TableRow>
                                     )) : (
                                         <TableRow>
                                             <TableCell colSpan={5} className="h-48 text-center">
                                                 <div className="flex flex-col items-center justify-center gap-4 text-muted-foreground">
-                                                    <Undo2 className="h-16 w-16" />
+                                                    <Package className="h-16 w-16" />
                                                     <p className="font-semibold">Belum ada data return</p>
                                                     <p className="text-sm">Semua resi return/batal akan muncul di sini.</p>
                                                 </div>
@@ -146,7 +217,16 @@ export default function ReturnPage() {
                     </Card>
                 </div>
             </main>
+             {productForVariantSelection && (
+                <VariantSelectionDialog
+                    open={isVariantDialogOpen}
+                    onOpenChange={setIsVariantDialogOpen}
+                    item={productForVariantSelection}
+                    onSelect={handleVariantReturned}
+                    cart={[]}
+                    ignoreStockCheck={true}
+                />
+            )}
         </AppLayout>
     );
 }
-
