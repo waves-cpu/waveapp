@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
@@ -18,10 +17,10 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Undo2, Truck, CheckCircle, XCircle, Package, Trash2 } from 'lucide-react';
+import { Undo2, Truck, CheckCircle, XCircle, Package, Trash2, Search } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { updateShippingReceiptStatus } from '@/lib/inventory-service';
-import type { ShippingReceipt, InventoryItemVariant } from '@/types';
+import type { ShippingReceipt, InventoryItem, InventoryItemVariant } from '@/types';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { Pagination } from '@/components/ui/pagination';
@@ -41,12 +40,15 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { VariantSelectionDialog } from '@/app/components/variant-selection-dialog';
 import { useInventory } from '@/hooks/use-inventory';
 import { useLanguage } from '@/hooks/use-language';
 import { translations } from '@/types/language';
+import { Dialog, DialogHeader, DialogTitle, DialogContent, DialogDescription } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { useScanSounds } from '@/hooks/use-scan-sounds';
 
 
 const getStatusVariant = (status: string) => {
@@ -60,6 +62,127 @@ const getStatusVariant = (status: string) => {
         default: return 'outline';
     }
 };
+
+const ReturnProductDialog = ({
+    open,
+    onOpenChange,
+    onProductSelected
+}: {
+    open: boolean;
+    onOpenChange: (open: boolean) => void;
+    onProductSelected: (variant: InventoryItemVariant) => void;
+}) => {
+    const { items, getProductBySku } = useInventory();
+    const [searchTerm, setSearchTerm] = useState('');
+    const [filteredItems, setFilteredItems] = useState<InventoryItem[]>([]);
+    const { playErrorSound } = useScanSounds();
+    const { toast } = useToast();
+    const [productForVariantSelection, setProductForVariantSelection] = useState<InventoryItem | null>(null);
+
+    useEffect(() => {
+        if (!open) {
+            setSearchTerm('');
+            setFilteredItems([]);
+            setProductForVariantSelection(null);
+        }
+    }, [open]);
+
+    const handleSearch = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!searchTerm) {
+            setFilteredItems(items.filter(i => i.variants && i.variants.length > 0));
+            return;
+        }
+
+        const product = await getProductBySku(searchTerm);
+        if (product) {
+            if (product.variants && product.variants.length > 1) {
+                setProductForVariantSelection(product);
+            } else if (product.variants && product.variants.length === 1) {
+                onProductSelected(product.variants[0]);
+            } else {
+                 toast({ variant: "destructive", title: "Produk Tunggal", description: "Produk ini tidak memiliki varian untuk dipilih." });
+            }
+        } else {
+            const searchResults = items.filter(i => 
+                i.name.toLowerCase().includes(searchTerm.toLowerCase()) && 
+                i.variants && i.variants.length > 0
+            );
+            setFilteredItems(searchResults);
+             if (searchResults.length === 0) {
+                 playErrorSound();
+                 toast({ variant: "destructive", title: "Produk Tidak Ditemukan" });
+            }
+        }
+    };
+
+    const handleVariantSelect = (variant: InventoryItemVariant | null) => {
+        setProductForVariantSelection(null);
+        if(variant) {
+            onProductSelected(variant);
+        }
+    }
+
+    return (
+        <>
+            <Dialog open={open} onOpenChange={onOpenChange}>
+                <DialogContent className="sm:max-w-2xl">
+                    <DialogHeader>
+                        <DialogTitle>Pilih Produk yang Dikembalikan</DialogTitle>
+                        <DialogDescription>Cari berdasarkan SKU atau nama produk untuk menemukan item yang dikembalikan.</DialogDescription>
+                    </DialogHeader>
+                    <form onSubmit={handleSearch} className="flex items-center gap-2">
+                        <Input
+                            placeholder="Masukkan SKU atau Nama Produk..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                        />
+                        <Button type="submit">
+                            <Search className="mr-2 h-4 w-4" />
+                            Cari
+                        </Button>
+                    </form>
+                    <ScrollArea className="h-72 border rounded-md">
+                        <Table>
+                             <TableHeader>
+                                <TableRow>
+                                    <TableHead>Produk</TableHead>
+                                    <TableHead>Varian</TableHead>
+                                    <TableHead className="text-center">Stok</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {filteredItems.flatMap(item =>
+                                    item.variants?.map(variant => (
+                                        <TableRow key={variant.id} onClick={() => onProductSelected(variant)} className="cursor-pointer">
+                                            <TableCell className="font-medium">{item.name}</TableCell>
+                                            <TableCell>{variant.name}</TableCell>
+                                            <TableCell className="text-center">{variant.stock}</TableCell>
+                                        </TableRow>
+                                    ))
+                                )}
+                            </TableBody>
+                        </Table>
+                         {filteredItems.length === 0 && !productForVariantSelection && (
+                             <p className="p-4 text-center text-sm text-muted-foreground">Mulai pencarian untuk melihat produk.</p>
+                         )}
+                    </ScrollArea>
+                </DialogContent>
+            </Dialog>
+            {productForVariantSelection && (
+                 <VariantSelectionDialog
+                    open={!!productForVariantSelection}
+                    onOpenChange={(isOpen) => !isOpen && setProductForVariantSelection(null)}
+                    item={productForVariantSelection}
+                    onSelect={handleVariantSelect}
+                    cart={[]}
+                    ignoreStockCheck={true}
+                />
+            )}
+        </>
+    );
+};
+
 
 export default function ReturnPage() {
     const [returns, setReturns] = useState<ShippingReceipt[]>([]);
@@ -75,15 +198,7 @@ export default function ReturnPage() {
     
     const [selectedReceipt, setSelectedReceipt] = useState<ShippingReceipt | null>(null);
     const [receiptToDelete, setReceiptToDelete] = useState<ShippingReceipt | null>(null);
-    const [isVariantDialogOpen, setIsVariantDialogOpen] = useState(false);
-
-    const productForVariantSelection = useMemo(() => {
-        if (!selectedReceipt) return null;
-        // This is a simplified logic. A real app might need to fetch order details.
-        // For now, we'll just use the available items for selection.
-        const mockItemForSelection = items.find(item => item.variants && item.variants.length > 0);
-        return mockItemForSelection || null;
-    }, [selectedReceipt, items]);
+    const [isProductSelectionDialogOpen, setIsProductSelectionDialogOpen] = useState(false);
 
 
     const fetchReturns = useCallback(async () => {
@@ -136,18 +251,11 @@ export default function ReturnPage() {
 
     const handleReturnReceived = (receipt: ShippingReceipt) => {
         setSelectedReceipt(receipt);
-        // A real implementation would fetch the order items associated with this receipt.
-        // For demonstration, we'll open a generic variant selector.
-        if (productForVariantSelection) {
-            setIsVariantDialogOpen(true);
-        } else {
-            // If no product with variants exists, show a toast or a simpler dialog.
-            toast({ title: t.processReturn, description: t.selectReturnedItem });
-        }
+        setIsProductSelectionDialogOpen(true);
     };
     
-    const handleVariantReturned = async (variant: InventoryItemVariant | null) => {
-        setIsVariantDialogOpen(false);
+    const handleVariantReturned = async (variant: InventoryItemVariant) => {
+        setIsProductSelectionDialogOpen(false);
         if (variant && selectedReceipt) {
             try {
                 // Return 1 item to stock
@@ -272,16 +380,12 @@ export default function ReturnPage() {
                     </Card>
                 </div>
             </main>
-             {productForVariantSelection && (
-                <VariantSelectionDialog
-                    open={isVariantDialogOpen}
-                    onOpenChange={setIsVariantDialogOpen}
-                    item={productForVariantSelection}
-                    onSelect={handleVariantReturned}
-                    cart={[]}
-                    ignoreStockCheck={true}
-                />
-            )}
+            <ReturnProductDialog
+                open={isProductSelectionDialogOpen}
+                onOpenChange={setIsProductSelectionDialogOpen}
+                onProductSelected={handleVariantReturned}
+            />
         </AppLayout>
     );
 }
+

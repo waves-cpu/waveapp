@@ -81,7 +81,7 @@ export async function fetchShippingReceiptCountsByChannel(dateString: string): P
     const query = db.prepare(`
         SELECT channel, COUNT(*) as count 
         FROM shipping_receipts 
-        WHERE DATE(date) = ?
+        WHERE DATE(date) = ? AND status = 'Perlu Diproses'
         GROUP BY channel
     `);
     const results = query.all(dateString) as { channel: string, count: number }[];
@@ -889,6 +889,7 @@ export async function deleteProductPermanently(itemId: string) {
     // ON DELETE CASCADE will handle variants, history, and channel_prices
     db.prepare('DELETE FROM products WHERE id = ?').run(itemId);
 }
+
 
 
 
