@@ -41,12 +41,9 @@ export async function fetchShippingReceipts(options: {
         params.channel = channel;
     }
     if (date) {
-        // Use a date range for the entire day to avoid timezone issues
-        const dayStart = startOfDay(date).toISOString();
-        const dayEnd = endOfDay(date).toISOString();
-        whereClauses.push("date BETWEEN @dayStart AND @dayEnd");
+        const dayStart = startOfDay(date).toISOString().split('T')[0];
+        whereClauses.push("date(date) = @dayStart");
         params.dayStart = dayStart;
-        params.dayEnd = dayEnd;
     }
     if (date_range) {
         whereClauses.push("date BETWEEN @from AND @to");
@@ -81,6 +78,23 @@ export async function fetchShippingReceipts(options: {
     
     return { receipts, total };
 }
+
+export async function fetchShippingReceiptCountsByChannel(date: Date): Promise<Record<string, number>> {
+    const dateString = startOfDay(date).toISOString().split('T')[0];
+    const query = db.prepare(`
+        SELECT channel, COUNT(*) as count 
+        FROM shipping_receipts 
+        WHERE date(date) = ?
+        GROUP BY channel
+    `);
+    const results = query.all(dateString) as { channel: string, count: number }[];
+    const counts: Record<string, number> = {};
+    results.forEach(row => {
+        counts[row.channel] = row.count;
+    });
+    return counts;
+}
+
 
 export async function addShippingReceipt(receipt: Omit<ShippingReceipt, 'id'>) {
     return db.prepare('INSERT INTO shipping_receipts (awb, date, channel, status) VALUES (@awb, @date, @channel, @status)').run(receipt);
@@ -873,4 +887,5 @@ export async function deleteProductPermanently(itemId: string) {
     // ON DELETE CASCADE will handle variants, history, and channel_prices
     db.prepare('DELETE FROM products WHERE id = ?').run(itemId);
 }
+
 

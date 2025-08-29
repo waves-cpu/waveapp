@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
@@ -13,7 +14,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { format, parse, isValid } from 'date-fns';
 import { cn } from '@/lib/utils';
-import { fetchShippingReceipts, deleteShippingReceipt, updateShippingReceiptsStatus, updateShippingReceiptStatus } from '@/lib/inventory-service';
+import { fetchShippingReceipts, deleteShippingReceipt, updateShippingReceiptsStatus, updateShippingReceiptStatus, fetchShippingReceiptCountsByChannel } from '@/lib/inventory-service';
 import type { ShippingReceipt } from '@/types';
 import { Pagination } from '@/components/ui/pagination';
 import { useToast } from '@/hooks/use-toast';
@@ -77,7 +78,7 @@ export default function ReceiptPage() {
     const [receiptToCancel, setReceiptToCancel] = useState<ShippingReceipt | null>(null);
     const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
     const [isProcessing, setIsProcessing] = useState(false);
-    const [channelCounts, setChannelCounts] = useState<Record<ShippingProvider, number> | null>(null);
+    const [channelCounts, setChannelCounts] = useState<Record<string, number> | null>(null);
     const router = useRouter();
     const params = useParams();
 
@@ -104,22 +105,12 @@ export default function ReceiptPage() {
         }
     }, [currentPage, itemsPerPage, activeTab, currentDate, searchTerm, toast]);
     
-    const fetchChannelCounts = useCallback(async () => {
-        const providers: ShippingProvider[] = ['Shopee', 'Tiktok', 'Lazada', 'Instant'];
-        const counts: Record<ShippingProvider, number> = { 'Shopee': 0, 'Tiktok': 0, 'Lazada': 0, 'Instant': 0 };
+    const fetchCounts = useCallback(async () => {
         try {
-            for (const provider of providers) {
-                const { total } = await fetchShippingReceipts({
-                    page: 1,
-                    limit: 1, // only need the total count
-                    channel: provider,
-                    date: currentDate,
-                });
-                counts[provider] = total;
-            }
+            const counts = await fetchShippingReceiptCountsByChannel(currentDate);
             setChannelCounts(counts);
         } catch (error) {
-            console.error("Failed to fetch channel counts:", error);
+             console.error("Failed to fetch channel counts:", error);
         }
     }, [currentDate]);
 
@@ -129,8 +120,8 @@ export default function ReceiptPage() {
     }, [fetchReceipts]);
 
     useEffect(() => {
-        fetchChannelCounts();
-    }, [currentDate, fetchChannelCounts]);
+        fetchCounts();
+    }, [currentDate, fetchCounts]);
     
     // Clear selection when filters change
     useEffect(() => {
@@ -144,7 +135,7 @@ export default function ReceiptPage() {
             toast({ title: 'Resi dihapus', description: `Resi ${receiptToDelete.awb} telah berhasil dihapus.` });
             setReceiptToDelete(null);
             fetchReceipts(); // Refresh data
-            fetchChannelCounts();
+            fetchCounts();
         } catch (error) {
             console.error("Failed to delete receipt:", error);
             toast({ variant: 'destructive', title: 'Gagal menghapus resi.' });
@@ -158,7 +149,7 @@ export default function ReceiptPage() {
             toast({ title: 'Pengiriman Dibatalkan', description: `Resi ${receiptToCancel.awb} telah berhasil dibatalkan.` });
             setReceiptToCancel(null);
             fetchReceipts();
-            fetchChannelCounts();
+            fetchCounts();
         } catch (error) {
             console.error("Failed to cancel shipment:", error);
             toast({ variant: 'destructive', title: 'Gagal Membatalkan', description: 'Terjadi kesalahan saat membatalkan pengiriman.' });
@@ -173,7 +164,7 @@ export default function ReceiptPage() {
             toast({ title: 'Resi Diproses', description: `${selectedIds.size} resi telah berhasil diperbarui menjadi "Dikirim".` });
             setSelectedIds(new Set());
             fetchReceipts();
-            fetchChannelCounts();
+            fetchCounts();
         } catch (error) {
             console.error("Failed to process shipments:", error);
             toast({ variant: 'destructive', title: 'Gagal Memproses', description: 'Terjadi kesalahan saat memperbarui status resi.' });
@@ -282,7 +273,7 @@ export default function ReceiptPage() {
                                 {tab}
                                 {channelCounts && (
                                     <Badge variant={activeTab === tab ? 'default' : 'secondary'} className="ml-2">
-                                        {channelCounts[tab]}
+                                        {channelCounts[tab] || 0}
                                     </Badge>
                                 )}
                             </Button>
