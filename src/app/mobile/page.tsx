@@ -11,7 +11,7 @@ import { useInventory } from '@/hooks/use-inventory';
 import { useToast } from '@/hooks/use-toast';
 import { useScanSounds } from '@/hooks/use-scan-sounds';
 import type { ShippingReceipt } from '@/types';
-import { format } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
@@ -57,7 +57,7 @@ export default function MobileScanReceiptPage() {
 
         setIsSubmitting(true);
         
-        const dateString = format(scanDate, 'yyyy-MM-dd');
+        const dateString = format(scanDate, 'yyyy-MM-dd HH:mm:ss');
 
         const newReceipt: Omit<ShippingReceipt, 'id'> = {
             awb: scannedAwb.trim(),
