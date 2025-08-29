@@ -19,28 +19,30 @@ export default function Home() {
     }
   }, [isMobile, router]);
 
+  // If isMobile is still undefined, it means we are either on the server or in the initial client render.
+  // Show a loader to prevent a flash of the wrong content.
+  if (isMobile === undefined) {
+    return (
+        <div className="flex h-screen items-center justify-center">
+            <Skeleton className="h-full w-full" />
+        </div>
+    );
+  }
+
+  // If it's mobile, we show a loader while the redirect is happening.
+  // The redirect itself is triggered by the useEffect.
   if (isMobile === true) {
-    // While redirecting, show a loader.
     return (
         <div className="flex items-center justify-center h-screen">
            <p>Redirecting to mobile experience...</p>
         </div>
-    )
-  }
-  
-  if (isMobile === false) {
-    // Desktop view
-    return (
-        <AppLayout>
-            <Dashboard />
-        </AppLayout>
     );
   }
-
-  // Fallback for when isMobile is undefined (during server-side render and initial client-side mount)
+  
+  // If it's not mobile (and not undefined), show the full desktop dashboard.
   return (
-    <div className="flex h-screen items-center justify-center">
-        <Skeleton className="h-full w-full" />
-    </div>
-  )
+    <AppLayout>
+        <Dashboard />
+    </AppLayout>
+  );
 }
