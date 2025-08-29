@@ -5,43 +5,35 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowLeft, ScanLine, Camera, Calendar as CalendarIcon } from 'lucide-react';
+import { ArrowLeft, ScanLine, Camera, Calendar as CalendarIcon, ShoppingBag, Truck } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useInventory } from '@/hooks/use-inventory';
 import { useToast } from '@/hooks/use-toast';
 import { useScanSounds } from '@/hooks/use-scan-sounds';
 import type { ShippingReceipt } from '@/types';
 import { format } from 'date-fns';
-import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
-import { QrScanner } from '@yudiel/react-qr-scanner';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
-import { useIsMobile } from '@/hooks/use-mobile';
+import { QrScanner } from '@yudiel/react-qr-scanner';
 
 
 type ShippingProvider = 'Shopee' | 'Tiktok' | 'Lazada' | 'Instant' | 'Tokopedia';
 
-const detectChannel = (awb: string): ShippingProvider => {
-    const upperAwb = awb.toUpperCase();
-    if (upperAwb.startsWith('SPXID')) {
-        return 'Shopee';
-    }
-    if (upperAwb.startsWith('JP')) {
-        return 'Tokopedia';
-    }
-    // Default case
-    return 'Lazada';
-};
-
+const shippingProviders: { name: ShippingProvider, icon: React.ElementType }[] = [
+    { name: 'Shopee', icon: ShoppingBag },
+    { name: 'Tiktok', icon: ShoppingBag },
+    { name: 'Lazada', icon: ShoppingBag },
+    { name: 'Tokopedia', icon: ShoppingBag },
+    { name: 'Instant', icon: Truck },
+];
 
 export default function MobileScanReceiptPage() {
-    const router = useRouter();
     const { addShippingReceipt } = useInventory();
     const { toast } = useToast();
     const { playSuccessSound, playErrorSound, initializeAudio } = useScanSounds();
-    const isMobile = useIsMobile();
 
+    const [selectedChannel, setSelectedChannel] = useState<ShippingProvider | null>(null);
     const [awb, setAwb] = useState('');
     const [scanDate, setScanDate] = useState<Date>(new Date());
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -50,28 +42,26 @@ export default function MobileScanReceiptPage() {
     const [isCameraOpen, setIsCameraOpen] = useState(false);
 
     useEffect(() => {
-        // We no longer redirect from here. `page.tsx` handles the initial routing.
-    }, [isMobile, router]);
-
-    useEffect(() => {
         initializeAudio();
-        inputRef.current?.focus();
     }, [initializeAudio]);
+    
+    useEffect(() => {
+        if(selectedChannel && !isCameraOpen) {
+            inputRef.current?.focus();
+        }
+    }, [selectedChannel, isCameraOpen]);
 
     const handleSubmit = useCallback(async (scannedAwb: string) => {
-        if (!scannedAwb.trim()) return;
-
-        // Prevent rapid re-submission while one is in progress
+        if (!scannedAwb.trim() || !selectedChannel) return;
         if (isSubmitting) return;
 
         setIsSubmitting(true);
         
-        const dateString = format(scanDate, "yyyy-MM-dd");
-        const detectedChannel = detectChannel(scannedAwb);
+        const dateString = format(scanDate, 'yyyy-MM-dd');
 
         const newReceipt: Omit<ShippingReceipt, 'id'> = {
             awb: scannedAwb.trim(),
-            channel: detectedChannel,
+            channel: selectedChannel,
             date: dateString,
             status: 'Perlu Diproses'
         };
@@ -99,7 +89,7 @@ export default function MobileScanReceiptPage() {
                  inputRef.current?.focus();
             }
         }
-    }, [isSubmitting, addShippingReceipt, playSuccessSound, playErrorSound, toast, isCameraOpen, scanDate]);
+    }, [isSubmitting, selectedChannel, scanDate, addShippingReceipt, playSuccessSound, playErrorSound, toast, isCameraOpen]);
 
 
     const handleFormSubmit = (e: React.FormEvent) => {
@@ -118,7 +108,7 @@ export default function MobileScanReceiptPage() {
                      <Button variant="ghost" size="icon" onClick={() => setIsCameraOpen(false)} className="rounded-full hover:bg-white/10">
                         <ArrowLeft className="h-5 w-5" />
                     </Button>
-                    <h1 className="text-lg font-bold ml-2">Scan Barcode</h1>
+                    <h1 className="text-lg font-bold ml-2">Scan Barcode - {selectedChannel}</h1>
                 </header>
                  <main className="flex-grow flex flex-col justify-center items-center relative">
                     <div className="absolute inset-0">
@@ -135,34 +125,61 @@ export default function MobileScanReceiptPage() {
             </div>
         )
     }
+    
+    if (!selectedChannel) {
+        return (
+            <div className="min-h-screen bg-muted flex flex-col p-4">
+                 <header className="flex items-center justify-between mb-4">
+                    <h1 className="text-lg font-bold">Pilih Jasa Kirim</h1>
+                     <Popover>
+                        <PopoverTrigger asChild>
+                        <Button
+                            id="date"
+                            variant={"outline"}
+                            className={cn(
+                            "w-[150px] justify-start text-left font-normal h-9",
+                            !scanDate && "text-muted-foreground"
+                            )}
+                        >
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {scanDate ? format(scanDate, "d MMM yyyy") : <span>Pilih tanggal</span>}
+                        </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="end">
+                        <Calendar
+                            mode="single"
+                            selected={scanDate}
+                            onSelect={(date) => setScanDate(date || new Date())}
+                            initialFocus
+                        />
+                        </PopoverContent>
+                    </Popover>
+                </header>
+                <main className="flex-grow grid grid-cols-2 gap-4">
+                    {shippingProviders.map(provider => (
+                        <Button 
+                            key={provider.name} 
+                            variant="outline" 
+                            className="h-full bg-card flex-col gap-2 text-base font-semibold"
+                            onClick={() => setSelectedChannel(provider.name)}
+                        >
+                            <provider.icon className="h-8 w-8 text-muted-foreground" />
+                            {provider.name}
+                        </Button>
+                    ))}
+                </main>
+            </div>
+        )
+    }
 
     return (
         <div className="min-h-screen bg-muted flex flex-col p-4">
             <header className="flex items-center justify-between mb-4">
-                <h1 className="text-lg font-bold">Scan Resi</h1>
-                 <Popover>
-                    <PopoverTrigger asChild>
-                    <Button
-                        id="date"
-                        variant={"outline"}
-                        className={cn(
-                        "w-[150px] justify-start text-left font-normal h-9",
-                        !scanDate && "text-muted-foreground"
-                        )}
-                    >
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {scanDate ? format(scanDate, "d MMM yyyy") : <span>Pilih tanggal</span>}
-                    </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="end">
-                    <Calendar
-                        mode="single"
-                        selected={scanDate}
-                        onSelect={(date) => setScanDate(date || new Date())}
-                        initialFocus
-                    />
-                    </PopoverContent>
-                </Popover>
+                 <Button variant="ghost" size="icon" onClick={() => setSelectedChannel(null)}>
+                    <ArrowLeft className="h-5 w-5" />
+                </Button>
+                <h1 className="text-lg font-bold">Scan Resi {selectedChannel}</h1>
+                 <div className="w-9 h-9" />
             </header>
 
             <main className="flex-grow flex flex-col gap-4">
@@ -187,22 +204,22 @@ export default function MobileScanReceiptPage() {
 
                 <Card className="flex-grow">
                     <CardHeader>
-                        <CardTitle className="text-base">Baru Saja Di-scan</CardTitle>
+                        <CardTitle className="text-base">Baru Saja Di-scan ({selectedChannel})</CardTitle>
                     </CardHeader>
                     <CardContent>
                         {recentlyAdded.length === 0 ? (
                              <div className="text-center py-10 text-muted-foreground">
-                                <p>Belum ada resi yang di-scan hari ini.</p>
+                                <p>Belum ada resi yang di-scan untuk channel ini.</p>
                             </div>
                         ) : (
                             <ul className="space-y-2">
-                                {recentlyAdded.map(item => (
+                                {recentlyAdded.filter(r => r.channel === selectedChannel).map(item => (
                                     <li key={item.id} className="flex justify-between items-center bg-secondary/50 p-2 rounded-md text-sm">
                                         <div>
                                             <p className="font-semibold">{item.awb}</p>
                                             <p className="text-xs text-muted-foreground">{item.channel}</p>
                                         </div>
-                                        <p className="text-xs text-muted-foreground">{format(new Date(item.date), 'HH:mm:ss')}</p>
+                                        <p className="text-xs text-muted-foreground">{format(parseISO(item.date), 'HH:mm:ss')}</p>
                                     </li>
                                 ))}
                             </ul>
