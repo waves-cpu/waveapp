@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
@@ -36,6 +35,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
+  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -87,18 +87,30 @@ export default function ReceiptPage() {
     const router = useRouter();
     const params = useParams();
 
-    const currentDate = useMemo(() => parseDateFromParams(Array.isArray(params.date) ? params.date : undefined), [params.date]);
+    const currentDateString = useMemo(() => {
+        if (Array.isArray(params.date) && params.date.length > 0) {
+            // Validate the date format MM-dd-yyyy
+            const dateParts = params.date[0].split('-');
+            if (dateParts.length === 3) {
+                const [month, day, year] = dateParts;
+                const parsedDate = parse(`${year}-${month}-${day}`, 'yyyy-MM-dd', new Date());
+                if (isValid(parsedDate)) {
+                    return format(parsedDate, 'yyyy-MM-dd');
+                }
+            }
+        }
+        return format(new Date(), 'yyyy-MM-dd');
+    }, [params.date]);
 
 
     const fetchReceipts = useCallback(async () => {
         setLoading(true);
         try {
-            const dateString = format(currentDate, 'yyyy-MM-dd');
             const { receipts, total } = await fetchShippingReceipts({
                 page: currentPage,
                 limit: itemsPerPage,
                 channel: activeTab,
-                dateString: dateString,
+                dateString: currentDateString,
                 awb: searchTerm,
             });
             setReceipts(receipts);
@@ -109,17 +121,16 @@ export default function ReceiptPage() {
         } finally {
             setLoading(false);
         }
-    }, [currentPage, itemsPerPage, activeTab, currentDate, searchTerm, toast, t.fetchError]);
+    }, [currentPage, itemsPerPage, activeTab, currentDateString, searchTerm, toast, t.fetchError]);
     
     const fetchCounts = useCallback(async () => {
         try {
-            const dateString = format(currentDate, 'yyyy-MM-dd');
-            const counts = await fetchShippingReceiptCountsByChannel(dateString);
+            const counts = await fetchShippingReceiptCountsByChannel(currentDateString);
             setChannelCounts(counts);
         } catch (error) {
              console.error("Failed to fetch channel counts:", error);
         }
-    }, [currentDate]);
+    }, [currentDateString]);
 
 
     useEffect(() => {
@@ -128,12 +139,12 @@ export default function ReceiptPage() {
 
     useEffect(() => {
         fetchCounts();
-    }, [currentDate, fetchCounts]);
+    }, [currentDateString, fetchCounts]);
     
     // Clear selection when filters change
     useEffect(() => {
         setSelectedIds(new Set());
-    }, [activeTab, currentDate, searchTerm, currentPage]);
+    }, [activeTab, currentDateString, searchTerm, currentPage]);
 
     const handleDelete = async () => {
         if (!receiptToDelete) return;
@@ -213,6 +224,7 @@ export default function ReceiptPage() {
     
     const totalPages = Math.ceil(totalReceipts / itemsPerPage);
     const isAllSelected = receipts.length > 0 && receipts.filter(r => r.status === 'Perlu Diproses').every(r => selectedIds.has(r.id));
+    const currentDate = parse(currentDateString, 'yyyy-MM-dd', new Date());
 
     return (
         <AppLayout>
