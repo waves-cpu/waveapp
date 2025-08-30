@@ -40,6 +40,7 @@ import { translations } from '@/types/language';
 import { format } from 'date-fns';
 import type { BulkImportHistory } from '@/types';
 import { Progress } from '@/components/ui/progress';
+import { Badge } from '@/components/ui/badge';
 
 type ProductRow = {
   parent_sku: string;
