@@ -131,7 +131,8 @@ export default function BulkAddProductsPage() {
 
     setIsSubmitting(true);
     try {
-      const result = await bulkAddProducts(data);
+      const plainData = JSON.parse(JSON.stringify(data));
+      const result = await bulkAddProducts(plainData);
       toast({
         title: TBulk.importSuccess,
         description: `${result.addedCount} ${TBulk.importSuccessDesc}`,
@@ -173,7 +174,7 @@ export default function BulkAddProductsPage() {
               <div className="flex flex-col items-center justify-center p-6 border-2 border-dashed rounded-lg text-center">
                 <Download className="h-10 w-10 text-muted-foreground mb-2" />
                 <h3 className="font-semibold">{TBulk.step1}</h3>
-                <Button onClick={handleDownloadTemplate} variant="outline" className="mt-2">
+                <Button onClick={handleDownloadTemplate} variant="outline" className="mt-4">
                   {TBulk.downloadTemplate}
                 </Button>
               </div>
@@ -181,7 +182,7 @@ export default function BulkAddProductsPage() {
               <div className="flex flex-col items-center justify-center p-6 border-2 border-dashed rounded-lg text-center">
                  <UploadCloud className="h-10 w-10 text-muted-foreground mb-2" />
                 <h3 className="font-semibold">{TBulk.step2}</h3>
-                <Button asChild variant="outline" className="mt-2">
+                <Button asChild variant="outline" className="mt-4">
                     <label htmlFor="file-upload">
                         {TBulk.chooseFile}
                         <input id="file-upload" type="file" className="sr-only" onChange={handleFileUpload} accept=".xlsx, .xls, .csv" />
@@ -193,7 +194,7 @@ export default function BulkAddProductsPage() {
               <div className="flex flex-col items-center justify-center p-6 border-2 border-dashed rounded-lg text-center">
                  <PackageCheck className="h-10 w-10 text-muted-foreground mb-2" />
                 <h3 className="font-semibold">{TBulk.step3}</h3>
-                 <Button onClick={handleImport} disabled={data.length === 0 || isSubmitting} className="mt-2">
+                 <Button onClick={handleImport} disabled={data.length === 0 || isSubmitting} className="mt-4">
                     {isSubmitting ? TBulk.importing : `${TBulk.import} ${data.length} ${TBulk.rows}`}
                 </Button>
               </div>
@@ -206,26 +207,26 @@ export default function BulkAddProductsPage() {
                   <Table>
                     <TableHeader className="sticky top-0 bg-card">
                       <TableRow>
-                        <TableHead>{TBulk.table.parentSku}</TableHead>
-                        <TableHead>{TBulk.table.productName}</TableHead>
-                        <TableHead>{TBulk.table.category}</TableHead>
-                        <TableHead>{TBulk.table.variantSku}</TableHead>
-                        <TableHead>{TBulk.table.variantName}</TableHead>
-                        <TableHead className="text-right">{TBulk.table.price}</TableHead>
-                        <TableHead className="text-right">{TBulk.table.stock}</TableHead>
+                        <TableHead className="text-xs">{TBulk.table.parentSku}</TableHead>
+                        <TableHead className="text-xs">{TBulk.table.productName}</TableHead>
+                        <TableHead className="text-xs">{TBulk.table.category}</TableHead>
+                        <TableHead className="text-xs">{TBulk.table.variantSku}</TableHead>
+                        <TableHead className="text-xs">{TBulk.table.variantName}</TableHead>
+                        <TableHead className="text-right text-xs">{TBulk.table.price}</TableHead>
+                        <TableHead className="text-right text-xs">{TBulk.table.stock}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {data.length > 0 ? (
                         data.map((row, index) => (
                           <TableRow key={index}>
-                            <TableCell>{row.parent_sku}</TableCell>
-                            <TableCell>{row.product_name || '"'}</TableCell>
-                            <TableCell>{row.category || '"'}</TableCell>
-                            <TableCell>{row.variant_sku}</TableCell>
-                            <TableCell>{row.variant_name}</TableCell>
-                            <TableCell className="text-right">{row.price}</TableCell>
-                            <TableCell className="text-right">{row.stock}</TableCell>
+                            <TableCell className="text-xs">{row.parent_sku}</TableCell>
+                            <TableCell className="text-xs">{row.product_name || '"'}</TableCell>
+                            <TableCell className="text-xs">{row.category || '"'}</TableCell>
+                            <TableCell className="text-xs">{row.variant_sku}</TableCell>
+                            <TableCell className="text-xs">{row.variant_name}</TableCell>
+                            <TableCell className="text-right text-xs">{row.price}</TableCell>
+                            <TableCell className="text-right text-xs">{row.stock}</TableCell>
                           </TableRow>
                         ))
                       ) : (
