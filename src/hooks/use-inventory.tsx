@@ -159,7 +159,9 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
   };
   
   const bulkAddProducts = async (products: any[]) => {
-    await bulkAddProductsDb(products);
+    // Ensure data is a plain object before sending to server action
+    const plainProducts = JSON.parse(JSON.stringify(products));
+    await bulkAddProductsDb(plainProducts);
     await fetchAllData();
   }
 
