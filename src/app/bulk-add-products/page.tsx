@@ -165,21 +165,36 @@ export default function BulkAddProductsPage() {
 
     try {
       const plainData = JSON.parse(JSON.stringify(data));
-      // First, create a "processing" entry
-      const newHistoryEntry = await bulkAddProducts(plainData, fileName);
-      historyId = newHistoryEntry.id;
+      // First, create a "processing" entry and add it to the UI immediately
+      const tempEntry = {
+        id: Date.now(), // temporary key
+        fileName,
+        date: new Date().toISOString(),
+        status: 'Memproses...' as const,
+        progress: 0,
+        addedCount: 0,
+        skippedCount: 0
+      }
+      setImportHistory(prev => [tempEntry, ...prev]);
       
-      // Add the processing entry to the top of the list for immediate feedback
-      setImportHistory(prev => [newHistoryEntry, ...prev]);
-
-      // Clear data for next import
       setData([]);
       setFileName('');
 
-      // After the server finishes, it will return the final result.
-      // We don't need to do anything here because the context will refetch and update the state.
-      // However, to ensure the UI updates, we can re-fetch history.
-      await loadHistory();
+      // Now call the server function
+      const finalResult = await bulkAddProducts(plainData, fileName);
+      historyId = finalResult.id;
+      
+      // Replace the temporary entry with the final result from the database
+      setImportHistory(prev => prev.map(item => item.id === tempEntry.id ? finalResult : item));
+      
+      // Optionally, show a toast for skipped items if any
+      if (finalResult.skippedCount && finalResult.skippedCount > 0) {
+          toast({
+              title: TBulk.skippedTitle,
+              description: TBulk.skippedDesc.replace('{count}', finalResult.skippedCount.toString())
+          });
+      }
+
 
     } catch (error) {
       console.error(error);
@@ -189,10 +204,8 @@ export default function BulkAddProductsPage() {
         title: TBulk.importFailed,
         description: `${TBulk.importFailedDesc}: ${errorMessage}`,
       });
-       // If there was an error and we have a historyId, we should update it to 'failed'
-       if(historyId) {
-           await loadHistory(); // to get the latest state including the failed one.
-       }
+       // If there was an error, we should get the latest state which might include a failed entry.
+       await loadHistory();
     } finally {
       setIsSubmitting(false);
     }
@@ -216,7 +229,7 @@ export default function BulkAddProductsPage() {
         case 'Gagal':
             return <Badge variant="destructive">{status}</Badge>;
         case 'Memproses...':
-            return <div className="flex items-center gap-2 text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /><span>{status}</span></div>;
+            return <div className="flex items-center justify-center gap-2 text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /><span>{status}</span></div>;
         default:
             return <Badge variant="secondary">{status}</Badge>;
     }
@@ -270,9 +283,9 @@ export default function BulkAddProductsPage() {
                     <TableHeader className="sticky top-0 bg-card">
                         <TableRow>
                         <TableHead className="text-xs w-[40%]">{TBulk.historyTable.file}</TableHead>
-                        <TableHead className="text-xs">{TBulk.historyTable.status}</TableHead>
-                        <TableHead className="text-right text-xs">{TBulk.historyTable.added}</TableHead>
-                        <TableHead className="text-right text-xs">{TBulk.historyTable.skipped}</TableHead>
+                        <TableHead className="text-center text-xs">{TBulk.historyTable.status}</TableHead>
+                        <TableHead className="text-center text-xs">{TBulk.historyTable.added}</TableHead>
+                        <TableHead className="text-center text-xs">{TBulk.historyTable.skipped}</TableHead>
                         <TableHead className="text-center text-xs">{TBulk.historyTable.action}</TableHead>
                         </TableRow>
                     </TableHeader>
@@ -283,17 +296,16 @@ export default function BulkAddProductsPage() {
                             <TableCell className="text-xs font-medium">
                                 <div>{result.fileName}</div>
                                 <div className="text-muted-foreground">{format(new Date(result.date), 'dd MMM yyyy, HH:mm')}</div>
-                                {result.status === 'Memproses...' && <Progress value={result.progress} className="h-1 mt-1" />}
                             </TableCell>
-                            <TableCell className="text-xs">
+                            <TableCell className="text-center text-xs">
                                 {getStatusComponent(result.status)}
                             </TableCell>
-                            <TableCell className="text-right text-xs">
+                            <TableCell className="text-center text-xs">
                                 <Button variant="link" size="sm" className="text-xs h-auto p-0" onClick={() => openDetailDialog('SKU yang Berhasil Ditambahkan', result.addedSkus)} disabled={!result.addedSkus || result.addedSkus.length === 0}>
                                     {result.addedCount ?? '-'}
                                 </Button>
                             </TableCell>
-                            <TableCell className="text-right text-xs">
+                            <TableCell className="text-center text-xs">
                                  <Button variant="link" size="sm" className="text-xs h-auto p-0" onClick={() => openDetailDialog('SKU yang Dilewati (Duplikat)', result.skippedSkus)} disabled={!result.skippedSkus || result.skippedSkus.length === 0}>
                                     {result.skippedCount ?? '-'}
                                 </Button>
@@ -343,4 +355,3 @@ export default function BulkAddProductsPage() {
     </AppLayout>
     );
 }
-

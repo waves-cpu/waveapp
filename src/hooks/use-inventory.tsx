@@ -165,7 +165,7 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
     await fetchAllData();
   };
   
-  const bulkAddProducts = async (products: any[], fileName: string) => {
+  const bulkAddProducts = async (products: any[], fileName: string): Promise<BulkImportHistory> => {
     const historyEntry = await addBulkImportHistory({
         fileName,
         date: new Date().toISOString(),
@@ -174,24 +174,31 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
 
     try {
         const result = await bulkAddProductsDb(products);
-        await updateBulkImportHistory(historyEntry.id, {
+        const finalData: Partial<BulkImportHistory> = {
             status: 'Berhasil',
             addedCount: result.addedSkus.length,
             skippedCount: result.skippedSkus.length,
             addedSkus: result.addedSkus,
             skippedSkus: result.skippedSkus
-        });
+        };
+        await updateBulkImportHistory(historyEntry.id, finalData);
+        
+        // Refetch all data to update the inventory list
+        await fetchAllData();
+
+        // Return the complete, updated history entry
+        return { ...historyEntry, ...finalData, id: historyEntry.id };
+        
     } catch (error) {
-         await updateBulkImportHistory(historyEntry.id, {
-            status: 'Gagal',
+         const finalData = {
+            status: 'Gagal' as const,
             error: error instanceof Error ? error.message : 'Unknown error',
-        });
+        };
+        await updateBulkImportHistory(historyEntry.id, finalData);
+        // Even on failure, refetch to ensure UI is consistent
+        await fetchAllData();
         throw error;
     }
-    
-    await fetchAllData();
-    const updatedEntry = await fetchBulkImportHistory().then(h => h.find(i => i.id === historyEntry.id)!);
-    return updatedEntry;
   };
 
   const updateItem = async (itemId: string, itemData: any) => {
