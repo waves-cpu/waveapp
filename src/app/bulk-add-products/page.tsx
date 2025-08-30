@@ -26,10 +26,11 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { UploadCloud, Download, PackageCheck, AlertTriangle, FileText } from 'lucide-react';
+import { UploadCloud, Download, PackageCheck, AlertTriangle, FileText, Trash2, History } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useLanguage } from '@/hooks/use-language';
 import { translations } from '@/types/language';
+import { format } from 'date-fns';
 
 type ProductRow = {
   parent_sku: string;
@@ -43,6 +44,16 @@ type ProductRow = {
   cost_price: number;
 };
 
+interface ImportResult {
+    id: string;
+    fileName: string;
+    date: string;
+    status: 'Berhasil' | 'Gagal';
+    count: number;
+    skippedCount: number;
+    error?: string;
+}
+
 export default function BulkAddProductsPage() {
   const { bulkAddProducts } = useInventory();
   const { toast } = useToast();
@@ -50,6 +61,7 @@ export default function BulkAddProductsPage() {
   const [data, setData] = useState<ProductRow[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [fileName, setFileName] = useState('');
+  const [importResults, setImportResults] = useState<ImportResult[]>([]);
   const { language } = useLanguage();
   const t = translations[language];
   const TBulk = t.bulkStockInDialog;
@@ -130,9 +142,22 @@ export default function BulkAddProductsPage() {
     }
 
     setIsSubmitting(true);
+    const newResult: Omit<ImportResult, 'id'> = {
+        fileName: fileName,
+        date: new Date().toISOString(),
+        status: 'Gagal',
+        count: 0,
+        skippedCount: 0,
+    };
+
     try {
       const plainData = JSON.parse(JSON.stringify(data));
       const result = await bulkAddProducts(plainData);
+      
+      newResult.status = 'Berhasil';
+      newResult.count = result.addedCount;
+      newResult.skippedCount = result.skippedSkus.length;
+      
       toast({
         title: TBulk.importSuccess,
         description: `${result.addedCount} ${TBulk.importSuccessDesc}`,
@@ -145,20 +170,29 @@ export default function BulkAddProductsPage() {
             description: `${TBulk.skippedDesc.replace('{count}', result.skippedSkus.length.toString())}: ${result.skippedSkus.join(', ')}`,
         })
       }
+      
+      // Clear data after successful import
+      setData([]);
+      setFileName('');
 
-      router.push('/');
     } catch (error) {
       console.error(error);
       const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.';
+      newResult.error = errorMessage;
       toast({
         variant: 'destructive',
         title: TBulk.importFailed,
         description: `${TBulk.importFailedDesc}: ${errorMessage}`,
       });
     } finally {
+      setImportResults(prev => [{ ...newResult, id: Date.now().toString() }, ...prev]);
       setIsSubmitting(false);
     }
   };
+
+  const removeResult = (id: string) => {
+    setImportResults(results => results.filter(r => r.id !== id));
+  }
 
   return (
     <AppLayout>
@@ -201,41 +235,48 @@ export default function BulkAddProductsPage() {
             </div>
 
             <div className="space-y-2">
-              <h3 className="font-semibold">{TBulk.preview}</h3>
+              <h3 className="font-semibold">Riwayat Impor</h3>
               <Card>
                 <ScrollArea className="h-72">
                   <Table>
                     <TableHeader className="sticky top-0 bg-card">
                       <TableRow>
-                        <TableHead className="text-xs">{TBulk.table.parentSku}</TableHead>
-                        <TableHead className="text-xs">{TBulk.table.productName}</TableHead>
-                        <TableHead className="text-xs">{TBulk.table.category}</TableHead>
-                        <TableHead className="text-xs">{TBulk.table.variantSku}</TableHead>
-                        <TableHead className="text-xs">{TBulk.table.variantName}</TableHead>
-                        <TableHead className="text-right text-xs">{TBulk.table.price}</TableHead>
-                        <TableHead className="text-right text-xs">{TBulk.table.stock}</TableHead>
+                        <TableHead className="text-xs w-[40%]">Nama</TableHead>
+                        <TableHead className="text-xs">Status</TableHead>
+                        <TableHead className="text-right text-xs">Jumlah</TableHead>
+                        <TableHead className="text-right text-xs">Dilewati</TableHead>
+                        <TableHead className="text-center text-xs">Aksi</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {data.length > 0 ? (
-                        data.map((row, index) => (
-                          <TableRow key={index}>
-                            <TableCell className="text-xs">{row.parent_sku}</TableCell>
-                            <TableCell className="text-xs">{row.product_name || '"'}</TableCell>
-                            <TableCell className="text-xs">{row.category || '"'}</TableCell>
-                            <TableCell className="text-xs">{row.variant_sku}</TableCell>
-                            <TableCell className="text-xs">{row.variant_name}</TableCell>
-                            <TableCell className="text-right text-xs">{row.price}</TableCell>
-                            <TableCell className="text-right text-xs">{row.stock}</TableCell>
+                      {importResults.length > 0 ? (
+                        importResults.map((result) => (
+                          <TableRow key={result.id}>
+                            <TableCell className="text-xs font-medium">
+                              <div>{result.fileName}</div>
+                              <div className="text-muted-foreground">{format(new Date(result.date), 'dd MMM yyyy, HH:mm')}</div>
+                            </TableCell>
+                            <TableCell className="text-xs">
+                              <span className={`px-2 py-1 rounded-full text-white text-xs ${result.status === 'Berhasil' ? 'bg-green-600' : 'bg-red-600'}`}>
+                                {result.status}
+                              </span>
+                            </TableCell>
+                            <TableCell className="text-right text-xs">{result.count}</TableCell>
+                            <TableCell className="text-right text-xs">{result.skippedCount}</TableCell>
+                            <TableCell className="text-center">
+                               <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => removeResult(result.id)}>
+                                    <Trash2 className="h-4 w-4" />
+                               </Button>
+                            </TableCell>
                           </TableRow>
                         ))
                       ) : (
                         <TableRow>
-                          <TableCell colSpan={7} className="h-48 text-center">
+                          <TableCell colSpan={5} className="h-48 text-center">
                             <div className="flex flex-col items-center justify-center gap-2 text-muted-foreground">
-                                <AlertTriangle className="h-8 w-8" />
-                                <p className="font-semibold">{TBulk.noDataPreview}</p>
-                                <p className="text-sm">{TBulk.uploadToPreview}</p>
+                                <History className="h-8 w-8" />
+                                <p className="font-semibold">Belum Ada Riwayat</p>
+                                <p className="text-sm">Riwayat impor massal Anda akan muncul di sini.</p>
                             </div>
                           </TableCell>
                         </TableRow>
