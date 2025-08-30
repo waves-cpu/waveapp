@@ -18,6 +18,13 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
   Table,
   TableBody,
   TableCell,
@@ -26,12 +33,13 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { UploadCloud, Download, PackageCheck, AlertTriangle, FileText, Trash2, History } from 'lucide-react';
+import { UploadCloud, Download, PackageCheck, AlertTriangle, FileText, Trash2, History, Eye } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useLanguage } from '@/hooks/use-language';
 import { translations } from '@/types/language';
 import { format } from 'date-fns';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
 
 type ProductRow = {
   parent_sku: string;
@@ -50,10 +58,16 @@ interface ImportResult {
     fileName: string;
     date: string;
     status: 'Berhasil' | 'Gagal';
-    count: number;
+    addedCount: number;
     skippedCount: number;
+    addedSkus?: string[];
     skippedSkus?: string[];
     error?: string;
+}
+
+interface DetailDialogData {
+    title: string;
+    items: string[];
 }
 
 export default function BulkAddProductsPage() {
@@ -64,7 +78,7 @@ export default function BulkAddProductsPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [fileName, setFileName] = useState('');
   const [importResults, setImportResults] = useState<ImportResult[]>([]);
-  const [lastImportSkippedInfo, setLastImportSkippedInfo] = useState<{count: number, skus: string[]} | null>(null);
+  const [detailDialogData, setDetailDialogData] = useState<DetailDialogData | null>(null);
   const { language } = useLanguage();
   const t = translations[language];
   const TBulk = t.bulkStockInDialog;
@@ -141,12 +155,11 @@ export default function BulkAddProductsPage() {
     }
 
     setIsSubmitting(true);
-    setLastImportSkippedInfo(null);
     const newResult: Omit<ImportResult, 'id'> = {
         fileName: fileName,
         date: new Date().toISOString(),
         status: 'Gagal',
-        count: 0,
+        addedCount: 0,
         skippedCount: 0,
     };
 
@@ -155,14 +168,11 @@ export default function BulkAddProductsPage() {
       const result = await bulkAddProducts(plainData);
       
       newResult.status = 'Berhasil';
-      newResult.count = result.addedCount;
+      newResult.addedCount = result.addedSkus.length;
       newResult.skippedCount = result.skippedSkus.length;
+      newResult.addedSkus = result.addedSkus;
       newResult.skippedSkus = result.skippedSkus;
 
-      if (result.skippedSkus.length > 0) {
-        setLastImportSkippedInfo({ count: result.skippedSkus.length, skus: result.skippedSkus });
-      }
-      
       // Clear data after successful import
       setData([]);
       setFileName('');
@@ -184,6 +194,12 @@ export default function BulkAddProductsPage() {
 
   const removeResult = (id: string) => {
     setImportResults(results => results.filter(r => r.id !== id));
+  }
+  
+  const openDetailDialog = (title: string, items: string[] | undefined) => {
+    if (items && items.length > 0) {
+        setDetailDialogData({ title, items });
+    }
   }
 
   return (
@@ -227,18 +243,8 @@ export default function BulkAddProductsPage() {
             </div>
 
             <div className="space-y-4">
-                <h3 className="font-semibold">{TBulk.importHistory}</h3>
-                {lastImportSkippedInfo && (
-                    <Alert>
-                        <AlertTriangle className="h-4 w-4" />
-                        <AlertTitle>{TBulk.skippedTitle}</AlertTitle>
-                        <AlertDescription>
-                           {TBulk.skippedDesc.replace('{count}', lastImportSkippedInfo.count.toString())}: {lastImportSkippedInfo.skus.join(', ')}
-                        </AlertDescription>
-                    </Alert>
-                )}
                 <Card>
-                <ScrollArea className="h-72">
+                <ScrollArea className="h-96">
                     <Table>
                     <TableHeader className="sticky top-0 bg-card">
                         <TableRow>
@@ -262,8 +268,16 @@ export default function BulkAddProductsPage() {
                                 {result.status}
                                 </span>
                             </TableCell>
-                            <TableCell className="text-right text-xs">{result.count}</TableCell>
-                            <TableCell className="text-right text-xs">{result.skippedCount}</TableCell>
+                            <TableCell className="text-right text-xs">
+                                <Button variant="link" size="sm" className="text-xs h-auto p-0" onClick={() => openDetailDialog('SKU yang Berhasil Ditambahkan', result.addedSkus)} disabled={!result.addedSkus || result.addedSkus.length === 0}>
+                                    {result.addedCount}
+                                </Button>
+                            </TableCell>
+                            <TableCell className="text-right text-xs">
+                                 <Button variant="link" size="sm" className="text-xs h-auto p-0" onClick={() => openDetailDialog('SKU yang Dilewati (Duplikat)', result.skippedSkus)} disabled={!result.skippedSkus || result.skippedSkus.length === 0}>
+                                    {result.skippedCount}
+                                </Button>
+                            </TableCell>
                             <TableCell className="text-center">
                                 <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => removeResult(result.id)}>
                                     <Trash2 className="h-4 w-4" />
@@ -289,6 +303,22 @@ export default function BulkAddProductsPage() {
             </div>
             </CardContent>
         </Card>
+        
+        <Dialog open={!!detailDialogData} onOpenChange={() => setDetailDialogData(null)}>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>{detailDialogData?.title}</DialogTitle>
+                </DialogHeader>
+                 <ScrollArea className="max-h-80 border rounded-md p-4">
+                    <ul className="list-disc list-inside">
+                        {detailDialogData?.items.map((item, index) => (
+                            <li key={index} className="text-sm">{item}</li>
+                        ))}
+                    </ul>
+                </ScrollArea>
+            </DialogContent>
+        </Dialog>
+
         </main>
     </AppLayout>
     );

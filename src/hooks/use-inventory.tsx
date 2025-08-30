@@ -39,7 +39,7 @@ import {
 interface InventoryContextType {
   items: InventoryItem[];
   addItem: (item: any) => Promise<void>;
-  bulkAddProducts: (products: any[]) => Promise<{ addedCount: number; skippedSkus: string[] }>;
+  bulkAddProducts: (products: any[]) => Promise<{ addedSkus: string[]; skippedSkus: string[] }>;
   updateItem: (itemId: string, itemData: any) => Promise<void>;
   updateStock: (itemId: string, change: number, reason: string) => Promise<void>;
   getItem: (itemId: string) => InventoryItem | undefined;
@@ -159,9 +159,7 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
   };
   
   const bulkAddProducts = async (products: any[]) => {
-    // Ensure data is a plain object before sending to server action
-    const plainProducts = JSON.parse(JSON.stringify(products));
-    const result = await bulkAddProductsDb(plainProducts);
+    const result = await bulkAddProductsDb(products);
     await fetchAllData();
     return result;
   }

@@ -310,22 +310,21 @@ export async function addProduct(itemData: any) {
     })();
 }
 
-export async function bulkAddProducts(data: any[]): Promise<{ addedCount: number; skippedSkus: string[] }> {
+export async function bulkAddProducts(data: any[]): Promise<{ addedSkus: string[]; skippedSkus: string[] }> {
     const getProductStmt = db.prepare('SELECT id FROM products WHERE sku = ?');
     const addProductStmt = db.prepare('INSERT INTO products (name, category, sku, imageUrl, hasVariants) VALUES (@name, @category, @sku, @imageUrl, @hasVariants)');
     const addVariantStmt = db.prepare('INSERT INTO variants (productId, name, sku, price, stock, costPrice) VALUES (@productId, @name, @sku, @price, @stock, @costPrice)');
     const updateProductStmt = db.prepare('UPDATE products SET stock = @stock, price = @price, costPrice = @costPrice WHERE id = @id');
     const addHistoryStmt = db.prepare('INSERT INTO history (productId, variantId, change, reason, newStockLevel, date) VALUES (@productId, @variantId, @change, @reason, @newStockLevel, @date)');
 
-    let addedCount = 0;
+    const addedSkus: string[] = [];
     const skippedSkus: string[] = [];
 
     db.transaction(() => {
         const productGroups = new Map<string, any[]>();
 
-        // Group rows by parent_sku
         data.forEach(row => {
-            if (!row.parent_sku) return; // Skip rows without a parent SKU
+            if (!row.parent_sku) return;
             if (!productGroups.has(row.parent_sku)) {
                 productGroups.set(row.parent_sku, []);
             }
@@ -337,10 +336,10 @@ export async function bulkAddProducts(data: any[]): Promise<{ addedCount: number
 
             if (existingProduct) {
                 skippedSkus.push(parentSku);
-                continue; // Skip this entire group
+                continue; 
             }
             
-            addedCount++;
+            addedSkus.push(parentSku);
             const firstRow = rows[0];
             const hasVariants = rows.some(r => r.variant_name || r.variant_sku);
             const result = addProductStmt.run({
@@ -396,8 +395,9 @@ export async function bulkAddProducts(data: any[]): Promise<{ addedCount: number
         }
     })();
     
-    return { addedCount, skippedSkus };
+    return { addedSkus, skippedSkus };
 }
+
 
 export async function editProduct(itemId: string, itemData: any) {
     const updateProductStmt = db.prepare(`
@@ -978,3 +978,4 @@ export async function deleteProductPermanently(itemId: string) {
     // ON DELETE CASCADE will handle variants, history, and channel_prices
     db.prepare('DELETE FROM products WHERE id = ?').run(itemId);
 }
+
