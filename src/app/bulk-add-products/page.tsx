@@ -31,6 +31,7 @@ import { useRouter } from 'next/navigation';
 import { useLanguage } from '@/hooks/use-language';
 import { translations } from '@/types/language';
 import { format } from 'date-fns';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 type ProductRow = {
   parent_sku: string;
@@ -51,6 +52,7 @@ interface ImportResult {
     status: 'Berhasil' | 'Gagal';
     count: number;
     skippedCount: number;
+    skippedSkus?: string[];
     error?: string;
 }
 
@@ -62,6 +64,7 @@ export default function BulkAddProductsPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [fileName, setFileName] = useState('');
   const [importResults, setImportResults] = useState<ImportResult[]>([]);
+  const [lastImportSkippedInfo, setLastImportSkippedInfo] = useState<{count: number, skus: string[]} | null>(null);
   const { language } = useLanguage();
   const t = translations[language];
   const TBulk = t.bulkStockInDialog;
@@ -78,14 +81,10 @@ export default function BulkAddProductsPage() {
         const worksheet = workbook.Sheets[sheetName];
         const jsonData = XLSX.utils.sheet_to_json<ProductRow>(worksheet);
         setData(jsonData);
-        toast({
-          title: TBulk.fileLoaded,
-          description: `${jsonData.length} ${TBulk.rowsLoaded.replace('{file}', file.name)}`,
-        });
       };
       reader.readAsBinaryString(file);
     }
-  }, [toast, TBulk]);
+  }, []);
 
   const handleDownloadTemplate = () => {
     const templateData: Partial<ProductRow>[] = [
@@ -142,6 +141,7 @@ export default function BulkAddProductsPage() {
     }
 
     setIsSubmitting(true);
+    setLastImportSkippedInfo(null);
     const newResult: Omit<ImportResult, 'id'> = {
         fileName: fileName,
         date: new Date().toISOString(),
@@ -157,18 +157,10 @@ export default function BulkAddProductsPage() {
       newResult.status = 'Berhasil';
       newResult.count = result.addedCount;
       newResult.skippedCount = result.skippedSkus.length;
-      
-      toast({
-        title: TBulk.importSuccess,
-        description: `${result.addedCount} ${TBulk.importSuccessDesc}`,
-      });
+      newResult.skippedSkus = result.skippedSkus;
 
       if (result.skippedSkus.length > 0) {
-        toast({
-            variant: "default",
-            title: TBulk.skippedTitle,
-            description: `${TBulk.skippedDesc.replace('{count}', result.skippedSkus.length.toString())}: ${result.skippedSkus.join(', ')}`,
-        })
+        setLastImportSkippedInfo({ count: result.skippedSkus.length, skus: result.skippedSkus });
       }
       
       // Clear data after successful import
@@ -234,61 +226,71 @@ export default function BulkAddProductsPage() {
               </div>
             </div>
 
-            <div className="space-y-2">
-              <h3 className="font-semibold">Riwayat Impor</h3>
-              <Card>
+            <div className="space-y-4">
+                <h3 className="font-semibold">{TBulk.importHistory}</h3>
+                {lastImportSkippedInfo && (
+                    <Alert>
+                        <AlertTriangle className="h-4 w-4" />
+                        <AlertTitle>{TBulk.skippedTitle}</AlertTitle>
+                        <AlertDescription>
+                           {TBulk.skippedDesc.replace('{count}', lastImportSkippedInfo.count.toString())}: {lastImportSkippedInfo.skus.join(', ')}
+                        </AlertDescription>
+                    </Alert>
+                )}
+                <Card>
                 <ScrollArea className="h-72">
-                  <Table>
+                    <Table>
                     <TableHeader className="sticky top-0 bg-card">
-                      <TableRow>
-                        <TableHead className="text-xs w-[40%]">Nama</TableHead>
-                        <TableHead className="text-xs">Status</TableHead>
-                        <TableHead className="text-right text-xs">Jumlah</TableHead>
-                        <TableHead className="text-right text-xs">Dilewati</TableHead>
-                        <TableHead className="text-center text-xs">Aksi</TableHead>
-                      </TableRow>
+                        <TableRow>
+                        <TableHead className="text-xs w-[40%]">{TBulk.historyTable.file}</TableHead>
+                        <TableHead className="text-xs">{TBulk.historyTable.status}</TableHead>
+                        <TableHead className="text-right text-xs">{TBulk.historyTable.added}</TableHead>
+                        <TableHead className="text-right text-xs">{TBulk.historyTable.skipped}</TableHead>
+                        <TableHead className="text-center text-xs">{TBulk.historyTable.action}</TableHead>
+                        </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {importResults.length > 0 ? (
+                        {importResults.length > 0 ? (
                         importResults.map((result) => (
-                          <TableRow key={result.id}>
+                            <TableRow key={result.id}>
                             <TableCell className="text-xs font-medium">
-                              <div>{result.fileName}</div>
-                              <div className="text-muted-foreground">{format(new Date(result.date), 'dd MMM yyyy, HH:mm')}</div>
+                                <div>{result.fileName}</div>
+                                <div className="text-muted-foreground">{format(new Date(result.date), 'dd MMM yyyy, HH:mm')}</div>
                             </TableCell>
                             <TableCell className="text-xs">
-                              <span className={`px-2 py-1 rounded-full text-white text-xs ${result.status === 'Berhasil' ? 'bg-green-600' : 'bg-red-600'}`}>
+                                <span className={`px-2 py-1 rounded-full text-white text-xs ${result.status === 'Berhasil' ? 'bg-green-600' : 'bg-red-600'}`}>
                                 {result.status}
-                              </span>
+                                </span>
                             </TableCell>
                             <TableCell className="text-right text-xs">{result.count}</TableCell>
                             <TableCell className="text-right text-xs">{result.skippedCount}</TableCell>
                             <TableCell className="text-center">
-                               <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => removeResult(result.id)}>
+                                <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => removeResult(result.id)}>
                                     <Trash2 className="h-4 w-4" />
-                               </Button>
+                                </Button>
                             </TableCell>
-                          </TableRow>
+                            </TableRow>
                         ))
-                      ) : (
+                        ) : (
                         <TableRow>
-                          <TableCell colSpan={5} className="h-48 text-center">
+                            <TableCell colSpan={5} className="h-48 text-center">
                             <div className="flex flex-col items-center justify-center gap-2 text-muted-foreground">
                                 <History className="h-8 w-8" />
-                                <p className="font-semibold">Belum Ada Riwayat</p>
-                                <p className="text-sm">Riwayat impor massal Anda akan muncul di sini.</p>
+                                <p className="font-semibold">{TBulk.noHistory}</p>
+                                <p className="text-sm">{TBulk.noHistoryDesc}</p>
                             </div>
-                          </TableCell>
+                            </TableCell>
                         </TableRow>
-                      )}
+                        )}
                     </TableBody>
-                  </Table>
+                    </Table>
                 </ScrollArea>
-              </Card>
+                </Card>
             </div>
-          </CardContent>
+            </CardContent>
         </Card>
-      </main>
+        </main>
     </AppLayout>
-  );
+    );
 }
+
