@@ -7,6 +7,7 @@ import { categories as allCategories } from '@/types';
 import {
   fetchInventoryData,
   addProduct,
+  bulkAddProducts as bulkAddProductsDb,
   editProduct,
   adjustStock,
   editVariantsBulk,
@@ -38,6 +39,7 @@ import {
 interface InventoryContextType {
   items: InventoryItem[];
   addItem: (item: any) => Promise<void>;
+  bulkAddProducts: (products: any[]) => Promise<void>;
   updateItem: (itemId: string, itemData: any) => Promise<void>;
   updateStock: (itemId: string, change: number, reason: string) => Promise<void>;
   getItem: (itemId: string) => InventoryItem | undefined;
@@ -155,6 +157,11 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
     await addProduct(itemData);
     await fetchAllData();
   };
+  
+  const bulkAddProducts = async (products: any[]) => {
+    await bulkAddProductsDb(products);
+    await fetchAllData();
+  }
 
   const updateItem = async (itemId: string, itemData: any) => {
     await editProduct(itemId, itemData);
@@ -256,6 +263,7 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
     <InventoryContext.Provider value={{ 
         items, 
         addItem,
+        bulkAddProducts,
         updateItem, 
         bulkUpdateVariants, 
         updateStock, 

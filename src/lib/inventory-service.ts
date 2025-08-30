@@ -310,6 +310,89 @@ export async function addProduct(itemData: any) {
     })();
 }
 
+export async function bulkAddProducts(data: any[]) {
+    const getProductStmt = db.prepare('SELECT id FROM products WHERE sku = ?');
+    const addProductStmt = db.prepare('INSERT INTO products (name, category, sku, imageUrl, hasVariants) VALUES (@name, @category, @sku, @imageUrl, @hasVariants)');
+    const addVariantStmt = db.prepare('INSERT INTO variants (productId, name, sku, price, stock, costPrice) VALUES (@productId, @name, @sku, @price, @stock, @costPrice)');
+    const updateProductStmt = db.prepare('UPDATE products SET stock = @stock, price = @price, costPrice = @costPrice WHERE id = @id');
+    const addHistoryStmt = db.prepare('INSERT INTO history (productId, variantId, change, reason, newStockLevel, date) VALUES (@productId, @variantId, @change, @reason, @newStockLevel, @date)');
+
+    db.transaction(() => {
+        const productGroups = new Map<string, any[]>();
+
+        // Group rows by parent_sku
+        data.forEach(row => {
+            if (!row.parent_sku) return; // Skip rows without a parent SKU
+            if (!productGroups.has(row.parent_sku)) {
+                productGroups.set(row.parent_sku, []);
+            }
+            productGroups.get(row.parent_sku)!.push(row);
+        });
+
+        for (const [parentSku, rows] of productGroups.entries()) {
+            let productId: number;
+            const existingProduct = getProductStmt.get(parentSku) as { id: number } | undefined;
+
+            if (existingProduct) {
+                productId = existingProduct.id;
+            } else {
+                const firstRow = rows[0];
+                const hasVariants = rows.some(r => r.variant_name || r.variant_sku);
+                const result = addProductStmt.run({
+                    name: firstRow.product_name,
+                    category: firstRow.category,
+                    sku: parentSku,
+                    imageUrl: firstRow.image_url || 'https://placehold.co/40x40.png',
+                    hasVariants: hasVariants ? 1 : 0
+                });
+                productId = result.lastInsertRowid as number;
+            }
+
+            if (rows.some(r => r.variant_name || r.variant_sku)) { // Product with variants
+                rows.forEach(row => {
+                    const variantResult = addVariantStmt.run({
+                        productId: productId,
+                        name: row.variant_name,
+                        sku: row.variant_sku || null,
+                        price: row.price || 0,
+                        stock: row.stock || 0,
+                        costPrice: row.cost_price || null
+                    });
+                    const variantId = variantResult.lastInsertRowid as number;
+                    if (row.stock > 0) {
+                        addHistoryStmt.run({
+                            productId: productId,
+                            variantId: variantId,
+                            change: row.stock,
+                            reason: 'Initial Stock (Bulk Import)',
+                            newStockLevel: row.stock,
+                            date: new Date().toISOString()
+                        });
+                    }
+                });
+            } else { // Simple product
+                const row = rows[0];
+                updateProductStmt.run({
+                    id: productId,
+                    stock: row.stock || 0,
+                    price: row.price || 0,
+                    costPrice: row.cost_price || null
+                });
+                if (row.stock > 0) {
+                     addHistoryStmt.run({
+                        productId: productId,
+                        variantId: null,
+                        change: row.stock,
+                        reason: 'Initial Stock (Bulk Import)',
+                        newStockLevel: row.stock,
+                        date: new Date().toISOString()
+                    });
+                }
+            }
+        }
+    })();
+}
+
 export async function editProduct(itemId: string, itemData: any) {
     const updateProductStmt = db.prepare(`
         UPDATE products SET name = @name, category = @category, sku = @sku, imageUrl = @imageUrl, hasVariants = @hasVariants, stock = @stock, price = @price, size = @size
@@ -889,11 +972,3 @@ export async function deleteProductPermanently(itemId: string) {
     // ON DELETE CASCADE will handle variants, history, and channel_prices
     db.prepare('DELETE FROM products WHERE id = ?').run(itemId);
 }
-
-
-
-
-
-
-
-

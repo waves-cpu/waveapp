@@ -443,7 +443,7 @@ export const translations = {
             inventoryMenu: "Inventaris",
             myProducts: "Produk Saya",
             accessories: "Aksesoris",
-            bulk: "Tambah Masal",
+            bulk: "Tambah Massal",
             stockIn: "Stok Masuk",
         },
         sales: {
@@ -581,7 +581,7 @@ export const translations = {
                 totalAssetValue: "Total Nilai Aset",
                 fastLabel: "Lancar",
                 slowLabel: "Lambat",
-                nonMovingLabel: "Tidak Lancar",
+                nonMovingLabel: "Tidak Bergerak",
                 chartTitle: "Grafik Perputaran Aset",
                 chartXAxisLabel: "Klasifikasi Aset",
                 topFastMoving: "10 Produk Terlaris",

@@ -42,6 +42,7 @@ import {
   Truck,
   Receipt,
   Undo2,
+  PackagePlus,
 } from 'lucide-react';
 import { Logo } from './logo';
 import { Separator } from '@/components/ui/separator';
@@ -195,6 +196,14 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                                       <SidebarMenuButton variant="ghost" size="sm" isActive={pathname === '/add-product'}>
                                           <PlusCircle />
                                           {t.dashboard.addItem}
+                                      </SidebarMenuButton>
+                                  </Link>
+                              </SidebarMenuItem>
+                               <SidebarMenuItem>
+                                  <Link href="/bulk-add-products">
+                                      <SidebarMenuButton variant="ghost" size="sm" isActive={pathname === '/bulk-add-products'}>
+                                          <PackagePlus />
+                                          {t.dashboard.bulk}
                                       </SidebarMenuButton>
                                   </Link>
                               </SidebarMenuItem>
