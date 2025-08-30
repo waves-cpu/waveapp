@@ -255,6 +255,18 @@ const createSchema = () => {
         channel TEXT NOT NULL,
         status TEXT NOT NULL
     );
+
+    CREATE TABLE IF NOT EXISTS bulk_import_history (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        fileName TEXT NOT NULL,
+        date TEXT NOT NULL,
+        status TEXT NOT NULL,
+        addedCount INTEGER,
+        skippedCount INTEGER,
+        addedSkus TEXT,
+        skippedSkus TEXT,
+        error TEXT
+    );
   `);
 };
 
@@ -295,6 +307,7 @@ const seedData = () => {
 seedData();
 
 export { db };
+
 
 
 

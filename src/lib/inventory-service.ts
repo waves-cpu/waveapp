@@ -1,8 +1,9 @@
 
+
 'use server';
 
 import { db } from './db';
-import type { InventoryItem, AdjustmentHistory, InventoryItemVariant, Sale, Reseller, ChannelPrice, ManualJournalEntry, Accessory, ShippingReceipt } from '@/types';
+import type { InventoryItem, AdjustmentHistory, InventoryItemVariant, Sale, Reseller, ChannelPrice, ManualJournalEntry, Accessory, ShippingReceipt, BulkImportHistory } from '@/types';
 import { format as formatDate, parseISO, startOfDay, endOfDay } from 'date-fns';
 
 // Settings Functions
@@ -18,6 +19,50 @@ export async function getSetting<T>(key: string): Promise<T | null> {
     }
     return null;
 }
+
+// Bulk Import History Functions
+export async function addBulkImportHistory(history: Omit<BulkImportHistory, 'id' | 'progress'>): Promise<BulkImportHistory> {
+    const result = db.prepare('INSERT INTO bulk_import_history (fileName, date, status) VALUES (@fileName, @date, @status)')
+        .run({
+            fileName: history.fileName,
+            date: history.date,
+            status: history.status,
+        });
+    const newHistory = db.prepare('SELECT * FROM bulk_import_history WHERE id = ?').get(result.lastInsertRowid) as any;
+    return { ...newHistory, addedSkus: [], skippedSkus: [] };
+}
+
+
+export async function updateBulkImportHistory(id: number, data: Partial<Omit<BulkImportHistory, 'id'>>) {
+    let fields = '';
+    const params: any = { id };
+    if (data.status) { fields += 'status = @status, '; params.status = data.status; }
+    if (data.addedCount !== undefined) { fields += 'addedCount = @addedCount, '; params.addedCount = data.addedCount; }
+    if (data.skippedCount !== undefined) { fields += 'skippedCount = @skippedCount, '; params.skippedCount = data.skippedCount; }
+    if (data.addedSkus) { fields += 'addedSkus = @addedSkus, '; params.addedSkus = JSON.stringify(data.addedSkus); }
+    if (data.skippedSkus) { fields += 'skippedSkus = @skippedSkus, '; params.skippedSkus = JSON.stringify(data.skippedSkus); }
+    if (data.error) { fields += 'error = @error, '; params.error = data.error; }
+
+    if (fields) {
+        fields = fields.slice(0, -2); // remove last ', '
+        const stmt = db.prepare(`UPDATE bulk_import_history SET ${fields} WHERE id = @id`);
+        stmt.run(params);
+    }
+}
+
+export async function fetchBulkImportHistory(): Promise<BulkImportHistory[]> {
+    const results = db.prepare('SELECT * FROM bulk_import_history ORDER BY date DESC').all() as any[];
+    return results.map(row => ({
+        ...row,
+        addedSkus: row.addedSkus ? JSON.parse(row.addedSkus) : [],
+        skippedSkus: row.skippedSkus ? JSON.parse(row.skippedSkus) : [],
+    }));
+}
+
+export async function deleteBulkImportHistory(id: number) {
+    db.prepare('DELETE FROM bulk_import_history WHERE id = ?').run(id);
+}
+
 
 // Shipping Receipt Functions
 export async function fetchShippingReceipts(options: {
@@ -978,4 +1023,3 @@ export async function deleteProductPermanently(itemId: string) {
     // ON DELETE CASCADE will handle variants, history, and channel_prices
     db.prepare('DELETE FROM products WHERE id = ?').run(itemId);
 }
-

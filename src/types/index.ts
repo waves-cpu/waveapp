@@ -141,3 +141,16 @@ export interface ShippingReceipt {
     channel: string;
     status: string;
 }
+
+export interface BulkImportHistory {
+    id: number;
+    fileName: string;
+    date: string;
+    status: 'Memproses...' | 'Berhasil' | 'Gagal';
+    progress?: number;
+    addedCount?: number;
+    skippedCount?: number;
+    addedSkus?: string[];
+    skippedSkus?: string[];
+    error?: string;
+}

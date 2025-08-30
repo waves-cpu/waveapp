@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
 import { useInventory } from '@/hooks/use-inventory';
@@ -33,13 +33,13 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { UploadCloud, Download, PackageCheck, AlertTriangle, FileText, Trash2, History, Eye } from 'lucide-react';
+import { UploadCloud, Download, PackageCheck, AlertTriangle, FileText, Trash2, History, Eye, Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useLanguage } from '@/hooks/use-language';
 import { translations } from '@/types/language';
 import { format } from 'date-fns';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Badge } from '@/components/ui/badge';
+import type { BulkImportHistory } from '@/types';
+import { Progress } from '@/components/ui/progress';
 
 type ProductRow = {
   parent_sku: string;
@@ -53,35 +53,40 @@ type ProductRow = {
   cost_price: number;
 };
 
-interface ImportResult {
-    id: string;
-    fileName: string;
-    date: string;
-    status: 'Berhasil' | 'Gagal';
-    addedCount: number;
-    skippedCount: number;
-    addedSkus?: string[];
-    skippedSkus?: string[];
-    error?: string;
-}
-
 interface DetailDialogData {
     title: string;
     items: string[];
 }
 
 export default function BulkAddProductsPage() {
-  const { bulkAddProducts } = useInventory();
+  const { bulkAddProducts, fetchImportHistory, deleteImportHistory } = useInventory();
   const { toast } = useToast();
   const router = useRouter();
   const [data, setData] = useState<ProductRow[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [fileName, setFileName] = useState('');
-  const [importResults, setImportResults] = useState<ImportResult[]>([]);
+  const [importHistory, setImportHistory] = useState<BulkImportHistory[]>([]);
   const [detailDialogData, setDetailDialogData] = useState<DetailDialogData | null>(null);
   const { language } = useLanguage();
   const t = translations[language];
   const TBulk = t.bulkStockInDialog;
+
+  const loadHistory = useCallback(async () => {
+    try {
+      const history = await fetchImportHistory();
+      setImportHistory(history);
+    } catch(error) {
+       toast({
+        variant: 'destructive',
+        title: 'Gagal memuat riwayat',
+        description: `Terjadi kesalahan saat memuat riwayat impor.`,
+      });
+    }
+  }, [fetchImportHistory, toast]);
+
+  useEffect(() => {
+    loadHistory();
+  }, [loadHistory]);
 
   const handleFileUpload = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -155,45 +160,46 @@ export default function BulkAddProductsPage() {
     }
 
     setIsSubmitting(true);
-    const newResult: Omit<ImportResult, 'id'> = {
-        fileName: fileName,
-        date: new Date().toISOString(),
-        status: 'Gagal',
-        addedCount: 0,
-        skippedCount: 0,
-    };
+    let historyId: number | undefined;
 
     try {
       const plainData = JSON.parse(JSON.stringify(data));
-      const result = await bulkAddProducts(plainData);
+      // First, create a "processing" entry
+      const newHistoryEntry = await bulkAddProducts(plainData, fileName);
+      historyId = newHistoryEntry.id;
       
-      newResult.status = 'Berhasil';
-      newResult.addedCount = result.addedSkus.length;
-      newResult.skippedCount = result.skippedSkus.length;
-      newResult.addedSkus = result.addedSkus;
-      newResult.skippedSkus = result.skippedSkus;
+      // Add the processing entry to the top of the list for immediate feedback
+      setImportHistory(prev => [newHistoryEntry, ...prev]);
 
-      // Clear data after successful import
+      // Clear data for next import
       setData([]);
       setFileName('');
+
+      // After the server finishes, it will return the final result.
+      // We don't need to do anything here because the context will refetch and update the state.
+      // However, to ensure the UI updates, we can re-fetch history.
+      await loadHistory();
 
     } catch (error) {
       console.error(error);
       const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.';
-      newResult.error = errorMessage;
       toast({
         variant: 'destructive',
         title: TBulk.importFailed,
         description: `${TBulk.importFailedDesc}: ${errorMessage}`,
       });
+       // If there was an error and we have a historyId, we should update it to 'failed'
+       if(historyId) {
+           await loadHistory(); // to get the latest state including the failed one.
+       }
     } finally {
-      setImportResults(prev => [{ ...newResult, id: Date.now().toString() }, ...prev]);
       setIsSubmitting(false);
     }
   };
 
-  const removeResult = (id: string) => {
-    setImportResults(results => results.filter(r => r.id !== id));
+  const removeResult = async (id: number) => {
+    await deleteImportHistory(id);
+    setImportHistory(results => results.filter(r => r.id !== id));
   }
   
   const openDetailDialog = (title: string, items: string[] | undefined) => {
@@ -201,6 +207,20 @@ export default function BulkAddProductsPage() {
         setDetailDialogData({ title, items });
     }
   }
+  
+  const getStatusComponent = (status: string) => {
+    switch (status) {
+        case 'Berhasil':
+            return <Badge className="bg-green-600 hover:bg-green-700">{status}</Badge>;
+        case 'Gagal':
+            return <Badge variant="destructive">{status}</Badge>;
+        case 'Memproses...':
+            return <div className="flex items-center gap-2 text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /><span>{status}</span></div>;
+        default:
+            return <Badge variant="secondary">{status}</Badge>;
+    }
+  }
+
 
   return (
     <AppLayout>
@@ -256,26 +276,25 @@ export default function BulkAddProductsPage() {
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {importResults.length > 0 ? (
-                        importResults.map((result) => (
+                        {importHistory.length > 0 ? (
+                        importHistory.map((result) => (
                             <TableRow key={result.id}>
                             <TableCell className="text-xs font-medium">
                                 <div>{result.fileName}</div>
                                 <div className="text-muted-foreground">{format(new Date(result.date), 'dd MMM yyyy, HH:mm')}</div>
+                                {result.status === 'Memproses...' && <Progress value={result.progress} className="h-1 mt-1" />}
                             </TableCell>
                             <TableCell className="text-xs">
-                                <span className={`px-2 py-1 rounded-full text-white text-xs ${result.status === 'Berhasil' ? 'bg-green-600' : 'bg-red-600'}`}>
-                                {result.status}
-                                </span>
+                                {getStatusComponent(result.status)}
                             </TableCell>
                             <TableCell className="text-right text-xs">
                                 <Button variant="link" size="sm" className="text-xs h-auto p-0" onClick={() => openDetailDialog('SKU yang Berhasil Ditambahkan', result.addedSkus)} disabled={!result.addedSkus || result.addedSkus.length === 0}>
-                                    {result.addedCount}
+                                    {result.addedCount ?? '-'}
                                 </Button>
                             </TableCell>
                             <TableCell className="text-right text-xs">
                                  <Button variant="link" size="sm" className="text-xs h-auto p-0" onClick={() => openDetailDialog('SKU yang Dilewati (Duplikat)', result.skippedSkus)} disabled={!result.skippedSkus || result.skippedSkus.length === 0}>
-                                    {result.skippedCount}
+                                    {result.skippedCount ?? '-'}
                                 </Button>
                             </TableCell>
                             <TableCell className="text-center">

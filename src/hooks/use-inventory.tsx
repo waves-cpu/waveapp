@@ -2,7 +2,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
-import type { InventoryItem, AdjustmentHistory, InventoryItemVariant, Sale, Reseller, ManualJournalEntry, Accessory, ShippingReceipt } from '@/types';
+import type { InventoryItem, AdjustmentHistory, InventoryItemVariant, Sale, Reseller, ManualJournalEntry, Accessory, ShippingReceipt, BulkImportHistory } from '@/types';
 import { categories as allCategories } from '@/types';
 import {
   fetchInventoryData,
@@ -33,13 +33,17 @@ import {
   fetchShippingReceipts,
   addShippingReceipt as addShippingReceiptDb,
   deleteShippingReceipt as deleteShippingReceiptDb,
+  addBulkImportHistory,
+  updateBulkImportHistory,
+  fetchBulkImportHistory,
+  deleteBulkImportHistory as deleteBulkImportHistoryDb,
 } from '@/lib/inventory-service';
 
 
 interface InventoryContextType {
   items: InventoryItem[];
   addItem: (item: any) => Promise<void>;
-  bulkAddProducts: (products: any[]) => Promise<{ addedSkus: string[]; skippedSkus: string[] }>;
+  bulkAddProducts: (products: any[], fileName: string) => Promise<BulkImportHistory>;
   updateItem: (itemId: string, itemData: any) => Promise<void>;
   updateStock: (itemId: string, change: number, reason: string) => Promise<void>;
   getItem: (itemId: string) => InventoryItem | undefined;
@@ -75,6 +79,9 @@ interface InventoryContextType {
   fetchShippingReceipts: (options: { page: number; limit: number; channel?: string; date?: Date; }) => Promise<{ receipts: ShippingReceipt[]; total: number; }>;
   addShippingReceipt: (receipt: Omit<ShippingReceipt, 'id'>) => Promise<ShippingReceipt>;
   deleteShippingReceipt: (id: number) => Promise<void>;
+  // Bulk Import History
+  fetchImportHistory: () => Promise<BulkImportHistory[]>;
+  deleteImportHistory: (id: number) => Promise<void>;
 }
 
 const InventoryContext = createContext<InventoryContextType | undefined>(undefined);
@@ -158,11 +165,34 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
     await fetchAllData();
   };
   
-  const bulkAddProducts = async (products: any[]) => {
-    const result = await bulkAddProductsDb(products);
+  const bulkAddProducts = async (products: any[], fileName: string) => {
+    const historyEntry = await addBulkImportHistory({
+        fileName,
+        date: new Date().toISOString(),
+        status: 'Memproses...',
+    });
+
+    try {
+        const result = await bulkAddProductsDb(products);
+        await updateBulkImportHistory(historyEntry.id, {
+            status: 'Berhasil',
+            addedCount: result.addedSkus.length,
+            skippedCount: result.skippedSkus.length,
+            addedSkus: result.addedSkus,
+            skippedSkus: result.skippedSkus
+        });
+    } catch (error) {
+         await updateBulkImportHistory(historyEntry.id, {
+            status: 'Gagal',
+            error: error instanceof Error ? error.message : 'Unknown error',
+        });
+        throw error;
+    }
+    
     await fetchAllData();
-    return result;
-  }
+    const updatedEntry = await fetchBulkImportHistory().then(h => h.find(i => i.id === historyEntry.id)!);
+    return updatedEntry;
+  };
 
   const updateItem = async (itemId: string, itemData: any) => {
     await editProduct(itemId, itemData);
@@ -259,6 +289,9 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
     // Refetching is handled by the page component.
   };
 
+  const deleteImportHistory = async (id: number) => {
+    await deleteBulkImportHistoryDb(id);
+  }
 
   return (
     <InventoryContext.Provider value={{ 
@@ -298,6 +331,8 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
         fetchShippingReceipts,
         addShippingReceipt,
         deleteShippingReceipt,
+        fetchImportHistory: fetchBulkImportHistory,
+        deleteImportHistory,
       }}>
       {children}
     </InventoryContext.Provider>
