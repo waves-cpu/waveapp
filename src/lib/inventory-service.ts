@@ -355,15 +355,15 @@ export async function addProduct(itemData: any) {
     })();
 }
 
-export async function bulkAddProducts(data: any[]): Promise<{ addedSkus: string[]; skippedSkus: string[] }> {
-    const getProductStmt = db.prepare('SELECT id FROM products WHERE sku = ?');
+export async function bulkAddProducts(data: any[]): Promise<{ addedProducts: {sku: string, name: string}[], skippedProducts: {sku: string, name: string}[] }> {
+    const getProductStmt = db.prepare('SELECT id, name FROM products WHERE sku = ?');
     const addProductStmt = db.prepare('INSERT INTO products (name, category, sku, imageUrl, hasVariants) VALUES (@name, @category, @sku, @imageUrl, @hasVariants)');
     const addVariantStmt = db.prepare('INSERT INTO variants (productId, name, sku, price, stock, costPrice) VALUES (@productId, @name, @sku, @price, @stock, @costPrice)');
     const updateProductStmt = db.prepare('UPDATE products SET stock = @stock, price = @price, costPrice = @costPrice WHERE id = @id');
     const addHistoryStmt = db.prepare('INSERT INTO history (productId, variantId, change, reason, newStockLevel, date) VALUES (@productId, @variantId, @change, @reason, @newStockLevel, @date)');
 
-    const addedSkus: string[] = [];
-    const skippedSkus: string[] = [];
+    const addedProducts: {sku: string, name: string}[] = [];
+    const skippedProducts: {sku: string, name: string}[] = [];
 
     db.transaction(() => {
         const productGroups = new Map<string, any[]>();
@@ -377,15 +377,16 @@ export async function bulkAddProducts(data: any[]): Promise<{ addedSkus: string[
         });
 
         for (const [parentSku, rows] of productGroups.entries()) {
-            const existingProduct = getProductStmt.get(parentSku) as { id: number } | undefined;
+            const firstRow = rows[0];
+            const existingProduct = getProductStmt.get(parentSku) as { id: number, name: string } | undefined;
 
             if (existingProduct) {
-                skippedSkus.push(parentSku);
+                skippedProducts.push({ sku: parentSku, name: existingProduct.name });
                 continue; 
             }
             
-            addedSkus.push(parentSku);
-            const firstRow = rows[0];
+            addedProducts.push({ sku: parentSku, name: firstRow.product_name });
+            
             const hasVariants = rows.some(r => r.variant_name || r.variant_sku);
             const result = addProductStmt.run({
                 name: firstRow.product_name,
@@ -440,7 +441,7 @@ export async function bulkAddProducts(data: any[]): Promise<{ addedSkus: string[
         }
     })();
     
-    return { addedSkus, skippedSkus };
+    return { addedProducts, skippedProducts };
 }
 
 

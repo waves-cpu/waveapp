@@ -150,7 +150,7 @@ export interface BulkImportHistory {
     progress?: number;
     addedCount?: number;
     skippedCount?: number;
-    addedSkus?: string[];
-    skippedSkus?: string[];
+    addedSkus?: { sku: string, name: string }[];
+    skippedSkus?: { sku: string, name: string }[];
     error?: string;
 }

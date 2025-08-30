@@ -173,13 +173,14 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
     });
 
     try {
-        const result = await bulkAddProductsDb(products);
+        const plainData = JSON.parse(JSON.stringify(products));
+        const result = await bulkAddProductsDb(plainData);
         const finalData: Partial<BulkImportHistory> = {
             status: 'Berhasil',
-            addedCount: result.addedSkus.length,
-            skippedCount: result.skippedSkus.length,
-            addedSkus: result.addedSkus,
-            skippedSkus: result.skippedSkus
+            addedCount: result.addedProducts.length,
+            skippedCount: result.skippedProducts.length,
+            addedSkus: result.addedProducts,
+            skippedSkus: result.skippedProducts
         };
         await updateBulkImportHistory(historyEntry.id, finalData);
         

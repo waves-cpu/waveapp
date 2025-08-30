@@ -56,7 +56,7 @@ type ProductRow = {
 
 interface DetailDialogData {
     title: string;
-    items: string[];
+    items: { sku: string; name: string }[];
 }
 
 export default function BulkAddProductsPage() {
@@ -216,7 +216,7 @@ export default function BulkAddProductsPage() {
     setImportHistory(results => results.filter(r => r.id !== id));
   }
   
-  const openDetailDialog = (title: string, items: string[] | undefined) => {
+  const openDetailDialog = (title: string, items: { sku: string, name: string }[] | undefined) => {
     if (items && items.length > 0) {
         setDetailDialogData({ title, items });
     }
@@ -344,7 +344,9 @@ export default function BulkAddProductsPage() {
                  <ScrollArea className="max-h-80 border rounded-md p-4">
                     <ul className="list-disc list-inside">
                         {detailDialogData?.items.map((item, index) => (
-                            <li key={index} className="text-sm">{item}</li>
+                            <li key={index} className="text-sm">
+                                {item.name ? `${item.name} (SKU: ${item.sku})` : item.sku}
+                            </li>
                         ))}
                     </ul>
                 </ScrollArea>
