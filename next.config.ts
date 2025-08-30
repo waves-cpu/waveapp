@@ -31,6 +31,12 @@ const nextConfig: NextConfig = {
       }
     ],
   },
+  serverActions: {
+    bodySizeLimit: '4.5mb',
+    // Extend the server action timeout for long-running operations
+    // such as bulk data imports. The default is 60s.
+    executionTimeout: 120,
+  }
 };
 
 export default nextConfig;
