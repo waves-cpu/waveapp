@@ -1,4 +1,3 @@
-
 "use client"
 
 import * as React from "react"
@@ -192,7 +191,7 @@ const Pagination = ({ totalPages, currentPage, onPageChange, className }: Custom
                         onChange={handleInputChange}
                         onBlur={handleInputBlur}
                         onKeyPress={handleInputKeyPress}
-                        className="h-8 w-10 text-center"
+                        className="h-8 w-12 text-center"
                     />
                     <span>/</span>
                     <span>{totalPages}</span>
