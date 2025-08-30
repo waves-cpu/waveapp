@@ -28,6 +28,8 @@ import {
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { UploadCloud, Download, PackageCheck, AlertTriangle, FileText } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { useLanguage } from '@/hooks/use-language';
+import { translations } from '@/types/language';
 
 type ProductRow = {
   parent_sku: string;
@@ -48,6 +50,9 @@ export default function BulkAddProductsPage() {
   const [data, setData] = useState<ProductRow[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [fileName, setFileName] = useState('');
+  const { language } = useLanguage();
+  const t = translations[language];
+  const TBulk = t.bulkStockInDialog;
 
   const handleFileUpload = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -62,13 +67,13 @@ export default function BulkAddProductsPage() {
         const jsonData = XLSX.utils.sheet_to_json<ProductRow>(worksheet);
         setData(jsonData);
         toast({
-          title: 'File Loaded',
-          description: `${jsonData.length} rows loaded from ${file.name}. Please review before importing.`,
+          title: TBulk.fileLoaded,
+          description: `${jsonData.length} ${TBulk.rowsLoaded.replace('{file}', file.name)}`,
         });
       };
       reader.readAsBinaryString(file);
     }
-  }, [toast]);
+  }, [toast, TBulk]);
 
   const handleDownloadTemplate = () => {
     const templateData: Partial<ProductRow>[] = [
@@ -118,8 +123,8 @@ export default function BulkAddProductsPage() {
     if (data.length === 0) {
       toast({
         variant: 'destructive',
-        title: 'No Data',
-        description: 'Please upload a file with product data first.',
+        title: TBulk.noData,
+        description: TBulk.noDataDesc,
       });
       return;
     }
@@ -128,15 +133,15 @@ export default function BulkAddProductsPage() {
     try {
       const result = await bulkAddProducts(data);
       toast({
-        title: 'Import Successful',
-        description: `${result.addedCount} product groups have been added.`,
+        title: TBulk.importSuccess,
+        description: `${result.addedCount} ${TBulk.importSuccessDesc}`,
       });
 
       if (result.skippedSkus.length > 0) {
         toast({
             variant: "default",
-            title: "Some Products Skipped",
-            description: `Skipped ${result.skippedSkus.length} product groups because their parent SKUs already exist: ${result.skippedSkus.join(', ')}`,
+            title: TBulk.skippedTitle,
+            description: `${TBulk.skippedDesc.replace('{count}', result.skippedSkus.length.toString())}: ${result.skippedSkus.join(', ')}`,
         })
       }
 
@@ -146,8 +151,8 @@ export default function BulkAddProductsPage() {
       const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.';
       toast({
         variant: 'destructive',
-        title: 'Import Failed',
-        description: `An error occurred during import: ${errorMessage}`,
+        title: TBulk.importFailed,
+        description: `${TBulk.importFailedDesc}: ${errorMessage}`,
       });
     } finally {
       setIsSubmitting(false);
@@ -159,7 +164,7 @@ export default function BulkAddProductsPage() {
       <main className="flex-1 p-4 md:p-10">
         <div className="flex items-center gap-4 mb-6">
           <SidebarTrigger className="md:hidden" />
-          <h1 className="text-lg font-bold">Tambah Produk Massal</h1>
+          <h1 className="text-lg font-bold">{t.dashboard.bulk}</h1>
         </div>
 
         <Card>
@@ -167,18 +172,18 @@ export default function BulkAddProductsPage() {
             <div className="grid md:grid-cols-3 gap-6">
               <div className="flex flex-col items-center justify-center p-6 border-2 border-dashed rounded-lg text-center">
                 <Download className="h-10 w-10 text-muted-foreground mb-2" />
-                <h3 className="font-semibold">Langkah 1: Unduh Template</h3>
-                <Button onClick={handleDownloadTemplate} variant="outline">
-                  Unduh Template
+                <h3 className="font-semibold">{TBulk.step1}</h3>
+                <Button onClick={handleDownloadTemplate} variant="outline" className="mt-2">
+                  {TBulk.downloadTemplate}
                 </Button>
               </div>
 
               <div className="flex flex-col items-center justify-center p-6 border-2 border-dashed rounded-lg text-center">
                  <UploadCloud className="h-10 w-10 text-muted-foreground mb-2" />
-                <h3 className="font-semibold">Langkah 2: Isi & Unggah File</h3>
-                <Button asChild variant="outline">
+                <h3 className="font-semibold">{TBulk.step2}</h3>
+                <Button asChild variant="outline" className="mt-2">
                     <label htmlFor="file-upload">
-                        Pilih File
+                        {TBulk.chooseFile}
                         <input id="file-upload" type="file" className="sr-only" onChange={handleFileUpload} accept=".xlsx, .xls, .csv" />
                     </label>
                 </Button>
@@ -187,27 +192,27 @@ export default function BulkAddProductsPage() {
               
               <div className="flex flex-col items-center justify-center p-6 border-2 border-dashed rounded-lg text-center">
                  <PackageCheck className="h-10 w-10 text-muted-foreground mb-2" />
-                <h3 className="font-semibold">Langkah 3: Tinjau & Impor</h3>
-                 <Button onClick={handleImport} disabled={data.length === 0 || isSubmitting}>
-                    {isSubmitting ? 'Mengimpor...' : `Impor ${data.length} Baris`}
+                <h3 className="font-semibold">{TBulk.step3}</h3>
+                 <Button onClick={handleImport} disabled={data.length === 0 || isSubmitting} className="mt-2">
+                    {isSubmitting ? TBulk.importing : `${TBulk.import} ${data.length} ${TBulk.rows}`}
                 </Button>
               </div>
             </div>
 
             <div className="space-y-2">
-              <h3 className="font-semibold">Pratinjau Data</h3>
+              <h3 className="font-semibold">{TBulk.preview}</h3>
               <Card>
                 <ScrollArea className="h-72">
                   <Table>
                     <TableHeader className="sticky top-0 bg-card">
                       <TableRow>
-                        <TableHead>SKU Induk</TableHead>
-                        <TableHead>Nama Produk</TableHead>
-                        <TableHead>Kategori</TableHead>
-                        <TableHead>SKU Varian</TableHead>
-                        <TableHead>Nama Varian</TableHead>
-                        <TableHead className="text-right">Harga</TableHead>
-                        <TableHead className="text-right">Stok</TableHead>
+                        <TableHead>{TBulk.table.parentSku}</TableHead>
+                        <TableHead>{TBulk.table.productName}</TableHead>
+                        <TableHead>{TBulk.table.category}</TableHead>
+                        <TableHead>{TBulk.table.variantSku}</TableHead>
+                        <TableHead>{TBulk.table.variantName}</TableHead>
+                        <TableHead className="text-right">{TBulk.table.price}</TableHead>
+                        <TableHead className="text-right">{TBulk.table.stock}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -228,8 +233,8 @@ export default function BulkAddProductsPage() {
                           <TableCell colSpan={7} className="h-48 text-center">
                             <div className="flex flex-col items-center justify-center gap-2 text-muted-foreground">
                                 <AlertTriangle className="h-8 w-8" />
-                                <p className="font-semibold">Tidak ada data untuk ditampilkan</p>
-                                <p className="text-sm">Unggah file untuk melihat pratinjau di sini.</p>
+                                <p className="font-semibold">{TBulk.noDataPreview}</p>
+                                <p className="text-sm">{TBulk.uploadToPreview}</p>
                             </div>
                           </TableCell>
                         </TableRow>
