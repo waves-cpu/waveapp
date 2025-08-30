@@ -310,12 +310,15 @@ export async function addProduct(itemData: any) {
     })();
 }
 
-export async function bulkAddProducts(data: any[]) {
+export async function bulkAddProducts(data: any[]): Promise<{ addedCount: number; skippedSkus: string[] }> {
     const getProductStmt = db.prepare('SELECT id FROM products WHERE sku = ?');
     const addProductStmt = db.prepare('INSERT INTO products (name, category, sku, imageUrl, hasVariants) VALUES (@name, @category, @sku, @imageUrl, @hasVariants)');
     const addVariantStmt = db.prepare('INSERT INTO variants (productId, name, sku, price, stock, costPrice) VALUES (@productId, @name, @sku, @price, @stock, @costPrice)');
     const updateProductStmt = db.prepare('UPDATE products SET stock = @stock, price = @price, costPrice = @costPrice WHERE id = @id');
     const addHistoryStmt = db.prepare('INSERT INTO history (productId, variantId, change, reason, newStockLevel, date) VALUES (@productId, @variantId, @change, @reason, @newStockLevel, @date)');
+
+    let addedCount = 0;
+    const skippedSkus: string[] = [];
 
     db.transaction(() => {
         const productGroups = new Map<string, any[]>();
@@ -330,24 +333,25 @@ export async function bulkAddProducts(data: any[]) {
         });
 
         for (const [parentSku, rows] of productGroups.entries()) {
-            let productId: number;
             const existingProduct = getProductStmt.get(parentSku) as { id: number } | undefined;
 
             if (existingProduct) {
-                productId = existingProduct.id;
-            } else {
-                const firstRow = rows[0];
-                const hasVariants = rows.some(r => r.variant_name || r.variant_sku);
-                const result = addProductStmt.run({
-                    name: firstRow.product_name,
-                    category: firstRow.category,
-                    sku: parentSku,
-                    imageUrl: firstRow.image_url || 'https://placehold.co/40x40.png',
-                    hasVariants: hasVariants ? 1 : 0
-                });
-                productId = result.lastInsertRowid as number;
+                skippedSkus.push(parentSku);
+                continue; // Skip this entire group
             }
-
+            
+            addedCount++;
+            const firstRow = rows[0];
+            const hasVariants = rows.some(r => r.variant_name || r.variant_sku);
+            const result = addProductStmt.run({
+                name: firstRow.product_name,
+                category: firstRow.category,
+                sku: parentSku,
+                imageUrl: firstRow.image_url || 'https://placehold.co/40x40.png',
+                hasVariants: hasVariants ? 1 : 0
+            });
+            const productId = result.lastInsertRowid as number;
+            
             if (rows.some(r => r.variant_name || r.variant_sku)) { // Product with variants
                 rows.forEach(row => {
                     const variantResult = addVariantStmt.run({
@@ -391,6 +395,8 @@ export async function bulkAddProducts(data: any[]) {
             }
         }
     })();
+    
+    return { addedCount, skippedSkus };
 }
 
 export async function editProduct(itemId: string, itemData: any) {

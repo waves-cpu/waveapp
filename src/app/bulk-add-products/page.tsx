@@ -126,11 +126,20 @@ export default function BulkAddProductsPage() {
 
     setIsSubmitting(true);
     try {
-      await bulkAddProducts(data);
+      const result = await bulkAddProducts(data);
       toast({
         title: 'Import Successful',
-        description: `${data.length} product entries have been processed.`,
+        description: `${result.addedCount} product groups have been added.`,
       });
+
+      if (result.skippedSkus.length > 0) {
+        toast({
+            variant: "default",
+            title: "Some Products Skipped",
+            description: `Skipped ${result.skippedSkus.length} product groups because their parent SKUs already exist: ${result.skippedSkus.join(', ')}`,
+        })
+      }
+
       router.push('/');
     } catch (error) {
       console.error(error);
