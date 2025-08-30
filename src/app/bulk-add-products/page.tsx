@@ -163,20 +163,11 @@ export default function BulkAddProductsPage() {
         </div>
 
         <Card>
-          <CardHeader>
-            <CardTitle>Impor Produk dari Excel</CardTitle>
-            <CardDescription>
-              Ikuti langkah-langkah ini untuk menambahkan beberapa produk sekaligus.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
+          <CardContent className="space-y-6 pt-6">
             <div className="grid md:grid-cols-3 gap-6">
               <div className="flex flex-col items-center justify-center p-6 border-2 border-dashed rounded-lg text-center">
                 <Download className="h-10 w-10 text-muted-foreground mb-2" />
                 <h3 className="font-semibold">Langkah 1: Unduh Template</h3>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Gunakan template kami untuk memastikan format data Anda benar.
-                </p>
                 <Button onClick={handleDownloadTemplate} variant="outline">
                   Unduh Template
                 </Button>
@@ -185,9 +176,6 @@ export default function BulkAddProductsPage() {
               <div className="flex flex-col items-center justify-center p-6 border-2 border-dashed rounded-lg text-center">
                  <UploadCloud className="h-10 w-10 text-muted-foreground mb-2" />
                 <h3 className="font-semibold">Langkah 2: Isi & Unggah File</h3>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Isi data produk Anda di file Excel dan unggah di sini.
-                </p>
                 <Button asChild variant="outline">
                     <label htmlFor="file-upload">
                         Pilih File
@@ -200,9 +188,6 @@ export default function BulkAddProductsPage() {
               <div className="flex flex-col items-center justify-center p-6 border-2 border-dashed rounded-lg text-center">
                  <PackageCheck className="h-10 w-10 text-muted-foreground mb-2" />
                 <h3 className="font-semibold">Langkah 3: Tinjau & Impor</h3>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Tinjau data di bawah. Jika sudah benar, klik tombol impor.
-                </p>
                  <Button onClick={handleImport} disabled={data.length === 0 || isSubmitting}>
                     {isSubmitting ? 'Mengimpor...' : `Impor ${data.length} Baris`}
                 </Button>
