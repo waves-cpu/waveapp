@@ -463,7 +463,7 @@ export default function PriceSettingsPage() {
                                                                 <div className="flex items-center gap-4">
                                                                     <Image src={field.imageUrl || 'https://placehold.co/40x40.png'} alt={field.name} width={40} height={40} className="rounded-sm" data-ai-hint="product image" />
                                                                     <div>
-                                                                        <span className="font-medium text-sm line-clamp-2">{field.name}</span>
+                                                                        <span className="font-medium text-sm">{field.name}</span>
                                                                         <div className="text-xs text-muted-foreground">SKU: {field.sku}</div>
                                                                     </div>
                                                                 </div>
@@ -499,7 +499,7 @@ export default function PriceSettingsPage() {
                                                                     <div className="flex items-center gap-4">
                                                                         <Image src={header.imageUrl || 'https://placehold.co/40x40.png'} alt={header.name} width={40} height={40} className="rounded-sm" data-ai-hint="product image" />
                                                                         <div>
-                                                                            <span className="text-sm line-clamp-2">{header.name}</span>
+                                                                            <span className="text-sm">{header.name}</span>
                                                                             <div className="text-xs text-muted-foreground font-normal">SKU: {header.sku}</div>
                                                                         </div>
                                                                     </div>
@@ -527,7 +527,7 @@ export default function PriceSettingsPage() {
                                                                                 <Store className="h-5 w-5 text-gray-400" />
                                                                             </div>
                                                                             <div>
-                                                                                <div className="font-medium text-sm line-clamp-2">{field.name}</div>
+                                                                                <div className="font-medium text-sm">{field.name}</div>
                                                                                 <div className="text-xs text-muted-foreground">SKU: {field.sku}</div>
                                                                             </div>
                                                                         </div>
