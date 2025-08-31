@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useForm } from 'react-hook-form';
@@ -45,7 +46,7 @@ export function BulkStockInDialog({ open, onOpenChange, onApply }: BulkStockInDi
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      quantity: 1,
+      quantity: 0,
       reason: 'Stock In',
     },
   });
@@ -53,7 +54,7 @@ export function BulkStockInDialog({ open, onOpenChange, onApply }: BulkStockInDi
   useEffect(() => {
     if(open) {
         form.reset({
-            quantity: 1,
+            quantity: 0,
             reason: 'Stock In',
         });
     }

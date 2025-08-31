@@ -154,7 +154,7 @@ export function StockInForm({
             return {
                 itemId: id,
                 itemName: itemDetail.name,
-                quantity: 1,
+                quantity: 0,
                 parentName: itemDetail.parentName,
                 parentSku: itemDetail.parentSku,
                 parentImageUrl: itemDetail.parentImageUrl,
@@ -335,7 +335,7 @@ export function StockInForm({
                                                             <FormControl>
                                                                 <Input 
                                                                     type="number" 
-                                                                    placeholder="10" 
+                                                                    placeholder="0" 
                                                                     {...formField} 
                                                                     ref={el => inputRefs.current[field.originalIndex] = el}
                                                                     onKeyDown={(e) => handleKeyDown(e, field.originalIndex)}
@@ -436,7 +436,7 @@ export function StockInForm({
                                                                     <FormControl>
                                                                         <Input 
                                                                             type="number" 
-                                                                            placeholder="10" 
+                                                                            placeholder="0" 
                                                                             {...formField} 
                                                                             ref={el => inputRefs.current[field.originalIndex] = el}
                                                                             onKeyDown={(e) => handleKeyDown(e, field.originalIndex)}
@@ -493,4 +493,3 @@ export function StockInForm({
     </>
   );
 }
-
