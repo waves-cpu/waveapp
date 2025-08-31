@@ -291,13 +291,13 @@ export async function fetchInventoryData() {
 
 export async function addProduct(itemData: any) {
     const addProductStmt = db.prepare(`
-        INSERT INTO products (name, category, sku, imageUrl, hasVariants, stock, price, size)
-        VALUES (@name, @category, @sku, @imageUrl, @hasVariants, @stock, @price, @size)
+        INSERT INTO products (name, category, sku, imageUrl, hasVariants, stock, price, size, costPrice)
+        VALUES (@name, @category, @sku, @imageUrl, @hasVariants, @stock, @price, @size, @costPrice)
     `);
     
     const addVariantStmt = db.prepare(`
-        INSERT INTO variants (productId, name, sku, price, stock)
-        VALUES (@productId, @name, @sku, @price, @stock)
+        INSERT INTO variants (productId, name, sku, price, stock, costPrice)
+        VALUES (@productId, @name, @sku, @price, @stock, @costPrice)
     `);
 
     const addHistoryStmt = db.prepare(`
@@ -317,6 +317,7 @@ export async function addProduct(itemData: any) {
             stock: hasVariants ? null : itemData.stock,
             price: hasVariants ? null : itemData.price,
             size: hasVariants ? null : itemData.size,
+            costPrice: hasVariants ? null : itemData.costPrice,
         });
         
         const productId = productResult.lastInsertRowid as number;
@@ -329,6 +330,7 @@ export async function addProduct(itemData: any) {
                     sku: variant.sku || null,
                     price: variant.price,
                     stock: variant.stock,
+                    costPrice: variant.costPrice,
                 });
                 const variantId = variantResult.lastInsertRowid;
                 if (variant.stock > 0) {
@@ -449,7 +451,7 @@ export async function bulkAddProducts(data: any[]): Promise<{ addedProducts: {sk
 
 export async function editProduct(itemId: string, itemData: any) {
     const updateProductStmt = db.prepare(`
-        UPDATE products SET name = @name, category = @category, sku = @sku, imageUrl = @imageUrl, hasVariants = @hasVariants, stock = @stock, price = @price, size = @size
+        UPDATE products SET name = @name, category = @category, sku = @sku, imageUrl = @imageUrl, hasVariants = @hasVariants, stock = @stock, price = @price, size = @size, costPrice = @costPrice
         WHERE id = @id
     `);
 
@@ -466,13 +468,14 @@ export async function editProduct(itemId: string, itemData: any) {
             stock: hasVariants ? null : itemData.stock,
             price: hasVariants ? null : itemData.price,
             size: hasVariants ? null : itemData.size,
+            costPrice: hasVariants ? null : itemData.costPrice,
         });
 
         if (hasVariants) {
             const upsertVariantStmt = db.prepare(`
-                INSERT INTO variants (id, productId, name, sku, price, stock)
-                VALUES (@id, @productId, @name, @sku, @price, @stock)
-                ON CONFLICT(id) DO UPDATE SET name = excluded.name, sku = excluded.sku, price = excluded.price, stock = excluded.stock
+                INSERT INTO variants (id, productId, name, sku, price, stock, costPrice)
+                VALUES (@id, @productId, @name, @sku, @price, @stock, @costPrice)
+                ON CONFLICT(id) DO UPDATE SET name = excluded.name, sku = excluded.sku, price = excluded.price, stock = excluded.stock, costPrice = excluded.costPrice
             `);
              const addHistoryStmt = db.prepare(`
                 INSERT INTO history (productId, variantId, change, reason, newStockLevel, date)
@@ -498,7 +501,8 @@ export async function editProduct(itemId: string, itemData: any) {
                     name: variant.name,
                     sku: variant.sku || null,
                     price: variant.price,
-                    stock: variant.stock
+                    stock: variant.stock,
+                    costPrice: variant.costPrice,
                 });
                 
                 const variantId = variant.id || result.lastInsertRowid;
@@ -1067,4 +1071,5 @@ export async function deleteProductPermanently(itemId: string) {
     // ON DELETE CASCADE will handle variants, history, and channel_prices
     db.prepare('DELETE FROM products WHERE id = ?').run(itemId);
 }
+
 
