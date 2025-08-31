@@ -423,7 +423,7 @@ export default function PriceSettingsPage() {
                                                         onCheckedChange={toggleAllForBulkUpdate}
                                                     />
                                                 </TableHead>
-                                                <TableHead className="w-[35%]">{TPrice.product}</TableHead>
+                                                <TableHead>{TPrice.product}</TableHead>
                                                 <TableHead className="text-center">{TPrice.costPrice}</TableHead>
                                                 <TableHead className="text-center">{TPrice.defaultPrice}</TableHead>
                                                 <TableHead className="text-center">{TSales.pos}</TableHead>
