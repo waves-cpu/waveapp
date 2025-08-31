@@ -99,7 +99,8 @@ export default function BulkAddProductsPage() {
         const workbook = XLSX.read(binaryStr, { type: 'binary' });
         const sheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[sheetName];
-        const jsonData = XLSX.utils.sheet_to_json<ProductRow>(worksheet);
+        // Ensure all data is read as raw text to prevent number formatting issues
+        const jsonData = XLSX.utils.sheet_to_json<ProductRow>(worksheet, { raw: false, defval: null });
         setData(jsonData);
       };
       reader.readAsBinaryString(file);
@@ -357,3 +358,4 @@ export default function BulkAddProductsPage() {
     </AppLayout>
     );
 }
+
