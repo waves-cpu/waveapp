@@ -41,14 +41,14 @@ export function UpdateStockDialog({ open, onOpenChange, itemId }: UpdateStockDia
   const t = translations[language];
 
   const formSchema = z.object({
-    stockChange: z.coerce.number().int().refine(val => val !== 0, { message: "Perubahan tidak boleh nol." }),
+    newStock: z.coerce.number().int().min(0, t.updateStockDialog.stockMustBePositive),
     reason: z.string().min(2, { message: t.updateStockDialog.reasonRequired }),
   });
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      stockChange: undefined,
+      newStock: undefined,
       reason: '',
     },
   });
@@ -57,11 +57,9 @@ export function UpdateStockDialog({ open, onOpenChange, itemId }: UpdateStockDia
     if (!itemId) return { parentName: '', variantName: '', stock: undefined };
 
     for (const product of items) {
-        // If the ID matches a product without variants, it's a simple product
         if (product.id === itemId && (!product.variants || product.variants.length === 0)) {
              return { parentName: product.name, variantName: '', stock: product.stock };
         }
-        // If the product has variants, check if the ID matches one of them
         if (product.variants) {
             const variant = product.variants.find(v => v.id === itemId);
             if (variant) {
@@ -70,21 +68,27 @@ export function UpdateStockDialog({ open, onOpenChange, itemId }: UpdateStockDia
         }
     }
     
-    // Fallback if no match is found (shouldn't happen with valid itemId)
     return { parentName: '', variantName: '', stock: undefined };
   }, [itemId, items]);
 
 
   useEffect(() => {
     if (!open) {
-      form.reset({ stockChange: undefined, reason: '' });
+      form.reset({ newStock: undefined, reason: '' });
+    } else if (stock !== undefined) {
+      form.setValue('newStock', stock);
     }
-  }, [open, form]);
+  }, [open, stock, form]);
 
   function onSubmit(values: z.infer<typeof formSchema>) {
     if (!itemId || stock === undefined) return;
     
-    const change = values.stockChange;
+    const change = values.newStock - stock;
+    
+    if (change === 0) {
+        onOpenChange(false);
+        return;
+    }
     
     updateStock(itemId, change, values.reason);
     toast({
@@ -105,7 +109,7 @@ export function UpdateStockDialog({ open, onOpenChange, itemId }: UpdateStockDia
              <div className='font-semibold text-foreground'>{parentName}</div>
              <div>
                {variantName ? `${variantName}: ` : ''}
-               {stock ?? 0}
+               {t.updateStockDialog.description} {stock ?? 0}
              </div>
            </div>
         </DialogHeader>
@@ -113,12 +117,12 @@ export function UpdateStockDialog({ open, onOpenChange, itemId }: UpdateStockDia
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
             <FormField
               control={form.control}
-              name="stockChange"
+              name="newStock"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>{t.updateStockDialog.stockAdjustment}</FormLabel>
+                  <FormLabel>{t.updateStockDialog.newStockLevel}</FormLabel>
                   <FormControl>
-                    <Input type="number" placeholder={t.updateStockDialog.stockAdjustmentPlaceholder} {...field} value={field.value === undefined ? '' : field.value} />
+                    <Input type="number" placeholder="e.g., 50" {...field} value={field.value === undefined ? '' : field.value} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

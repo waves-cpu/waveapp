@@ -42,14 +42,14 @@ export function UpdateStockDialogAccessories({ open, onOpenChange, itemId }: Upd
   const t = translations[language];
 
   const formSchema = z.object({
-    stockChange: z.coerce.number().int().refine(val => val !== 0, { message: "Perubahan tidak boleh nol." }),
+    newStock: z.coerce.number().int().min(0, t.updateStockDialog.stockMustBePositive),
     reason: z.string().min(2, { message: t.updateStockDialog.reasonRequired }),
   });
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      stockChange: undefined,
+      newStock: undefined,
       reason: '',
     },
   });
@@ -63,14 +63,21 @@ export function UpdateStockDialogAccessories({ open, onOpenChange, itemId }: Upd
 
   useEffect(() => {
     if (!open) {
-      form.reset({ stockChange: undefined, reason: '' });
+      form.reset({ newStock: undefined, reason: '' });
+    } else if (stock !== undefined) {
+      form.setValue('newStock', stock);
     }
-  }, [open, form]);
+  }, [open, stock, form]);
 
   function onSubmit(values: z.infer<typeof formSchema>) {
     if (!itemId || stock === undefined) return;
     
-    const change = values.stockChange;
+    const change = values.newStock - stock;
+
+    if (change === 0) {
+        onOpenChange(false);
+        return;
+    }
     
     adjustAccessoryStock(itemId, change, values.reason);
     toast({
@@ -97,12 +104,12 @@ export function UpdateStockDialogAccessories({ open, onOpenChange, itemId }: Upd
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
             <FormField
               control={form.control}
-              name="stockChange"
+              name="newStock"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>{t.updateStockDialog.stockAdjustment}</FormLabel>
+                  <FormLabel>{t.updateStockDialog.newStockLevel}</FormLabel>
                   <FormControl>
-                    <Input type="number" placeholder={t.updateStockDialog.stockAdjustmentPlaceholder} {...field} value={field.value === undefined ? '' : field.value} />
+                    <Input type="number" placeholder="e.g., 50" {...field} value={field.value === undefined ? '' : field.value} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
