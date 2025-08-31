@@ -495,7 +495,7 @@ export default function PriceSettingsPage() {
                                                                         }}
                                                                     />
                                                                  </TableCell>
-                                                                <TableCell className="font-semibold text-primary">
+                                                                <TableCell colSpan={6} className="font-semibold text-primary">
                                                                     <div className="flex items-center gap-4">
                                                                         <Image src={header.imageUrl || 'https://placehold.co/40x40.png'} alt={header.name} width={40} height={40} className="rounded-sm" data-ai-hint="product image" />
                                                                         <div>
@@ -504,7 +504,6 @@ export default function PriceSettingsPage() {
                                                                         </div>
                                                                     </div>
                                                                 </TableCell>
-                                                                <TableCell colSpan={5} />
                                                                 <TableCell className="p-1.5">
                                                                     <Button type="button" variant="ghost" size="icon" className="text-destructive hover:text-destructive-foreground hover:bg-destructive h-8 w-8" onClick={() => remove(variants.map(v => v.originalIndex))}>
                                                                         <Trash2 className="h-4 w-4" />
