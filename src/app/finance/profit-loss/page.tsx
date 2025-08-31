@@ -100,21 +100,30 @@ export default function ProfitLossPage() {
         const totalCogs = salesInDateRange.reduce((sum, sale) => sum + ((sale.cogsAtSale || 0) * sale.quantity), 0);
         const grossProfit = totalRevenue - totalCogs;
 
+        const marketplaceAdminFee = manualEntriesInDateRange
+            .filter(entry => entry.debitAccount.toLowerCase() === 'biaya administrasi marketplace')
+            .reduce((sum, entry) => sum + entry.amount, 0);
+
         const operationalExpenses = manualEntriesInDateRange
-            .filter(entry => entry.debitAccount.toLowerCase().includes('biaya') || entry.debitAccount.toLowerCase().includes('beban'))
+            .filter(entry => 
+                (entry.debitAccount.toLowerCase().includes('biaya') || entry.debitAccount.toLowerCase().includes('beban')) &&
+                entry.debitAccount.toLowerCase() !== 'biaya administrasi marketplace' &&
+                entry.debitAccount.toLowerCase() !== 'beban pokok penjualan'
+            )
             .reduce((sum, entry) => sum + entry.amount, 0);
 
         const otherIncome = manualEntriesInDateRange
-            .filter(entry => entry.creditAccount.toLowerCase().includes('pendapatan'))
+            .filter(entry => entry.creditAccount.toLowerCase().includes('pendapatan') && entry.creditAccount.toLowerCase() !== 'pendapatan penjualan')
             .reduce((sum, entry) => sum + entry.amount, 0);
 
 
-        const netProfit = grossProfit + otherIncome - operationalExpenses;
+        const netProfit = grossProfit + otherIncome - marketplaceAdminFee - operationalExpenses;
 
         return {
             totalRevenue,
             totalCogs,
             grossProfit,
+            marketplaceAdminFee,
             operationalExpenses,
             netProfit,
             otherIncome
@@ -255,25 +264,21 @@ export default function ProfitLossPage() {
                                     
                                     <TableRow className="font-semibold">
                                         <TableCell>Beban Pokok Penjualan</TableCell>
-                                        <TableCell></TableCell>
-                                    </TableRow>
-                                    <TableRow>
-                                        <TableCell className="pl-8">Total HPP</TableCell>
-                                        <TableCell className="text-right font-mono">{formatCurrency(financialData.totalCogs)}</TableCell>
-                                    </TableRow>
-                                     <TableRow className="font-semibold bg-muted/50">
-                                        <TableCell>Total Beban Pokok Penjualan</TableCell>
-                                        <TableCell className="text-right font-mono">{formatCurrency(financialData.totalCogs)}</TableCell>
+                                        <TableCell className="text-right font-mono">{formatCurrency(financialData.totalCogs, true)}</TableCell>
                                     </TableRow>
                                 </TableBody>
                                 <TableFooter>
-                                    <TableRow className="font-bold text-base bg-secondary hover:bg-secondary">
+                                    <TableRow className="font-bold text-base bg-secondary/50 hover:bg-secondary/50">
                                         <TableCell>Laba Kotor</TableCell>
                                         <TableCell className="text-right font-mono">{formatCurrency(financialData.grossProfit)}</TableCell>
                                     </TableRow>
                                      <TableRow className="font-semibold">
-                                        <TableCell>Beban Operasional</TableCell>
-                                        <TableCell className="text-right font-mono">{formatCurrency(financialData.operationalExpenses)}</TableCell>
+                                        <TableCell>Biaya Administrasi Marketplace</TableCell>
+                                        <TableCell className="text-right font-mono text-red-600">{formatCurrency(financialData.marketplaceAdminFee)}</TableCell>
+                                    </TableRow>
+                                    <TableRow className="font-semibold">
+                                        <TableCell>Beban Operasional Lainnya</TableCell>
+                                        <TableCell className="text-right font-mono text-red-600">{formatCurrency(financialData.operationalExpenses)}</TableCell>
                                     </TableRow>
                                     <TableRow className="font-bold text-lg bg-primary/10 hover:bg-primary/20">
                                         <TableCell>Laba Bersih</TableCell>
@@ -290,4 +295,5 @@ export default function ProfitLossPage() {
             </main>
         </AppLayout>
     );
-}
+
+    
