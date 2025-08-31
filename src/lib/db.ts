@@ -30,6 +30,10 @@ try {
 // Simple migration logic
 const runMigrations = () => {
   try {
+    // Data cleanup for SKU with .0 suffix
+    db.exec("UPDATE products SET sku = SUBSTR(sku, 1, LENGTH(sku) - 2) WHERE sku LIKE '%.0'");
+    db.exec("UPDATE variants SET sku = SUBSTR(sku, 1, LENGTH(sku) - 2) WHERE sku LIKE '%.0'");
+
     const tables = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='channel_prices'").get();
     if (tables) {
         const channelPricesColumns = db.pragma('table_info(channel_prices)');
@@ -307,6 +311,7 @@ const seedData = () => {
 seedData();
 
 export { db };
+
 
 
 
