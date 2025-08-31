@@ -371,19 +371,6 @@ export default function PriceSettingsPage() {
                                             <PlusCircle className="mr-2 h-4 w-4" />
                                             {TPrice.selectProduct}
                                         </Button>
-                                        <Select onValueChange={(value) => setCategoryFilter(value === 'all' ? null : value)} defaultValue="all">
-                                            <SelectTrigger className="w-full sm:w-[200px]">
-                                                <SelectValue placeholder={t.inventoryTable.selectCategoryPlaceholder} />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="all">{t.inventoryTable.allCategories}</SelectItem>
-                                                {categories.map((category) => (
-                                                    <SelectItem key={category} value={category}>
-                                                        {category}
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
                                     </div>
                                     <div className="p-2 border-t border-dashed flex flex-col md:flex-row items-center gap-2">
                                         <p className="text-sm font-medium mr-2 whitespace-nowrap">Ubah Masal:</p>
