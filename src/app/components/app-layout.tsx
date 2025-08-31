@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useMemo } from 'react';
@@ -43,6 +44,7 @@ import {
   Receipt,
   Undo2,
   PackagePlus,
+  TicketPercent,
 } from 'lucide-react';
 import { Logo } from './logo';
 import { Separator } from '@/components/ui/separator';
@@ -290,6 +292,14 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                                       <SidebarMenuButton variant="ghost" size="sm" isActive={pathname === '/finance/settings'}>
                                           <DollarSign />
                                           {t.finance.priceSettings}
+                                      </SidebarMenuButton>
+                                  </Link>
+                              </SidebarMenuItem>
+                               <SidebarMenuItem>
+                                  <Link href="/finance/discount-report">
+                                      <SidebarMenuButton variant="ghost" size="sm" isActive={pathname === '/finance/discount-report'}>
+                                          <TicketPercent />
+                                          {t.finance.discountReport}
                                       </SidebarMenuButton>
                                   </Link>
                               </SidebarMenuItem>

@@ -21,7 +21,7 @@ import { useLanguage } from '@/hooks/use-language';
 import { translations } from '@/types/language';
 import { Card, CardContent, CardFooter, CardHeader, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Trash2, ShoppingBag, Store, Search, PlusCircle, Pencil, X } from 'lucide-react';
+import { Trash2, ShoppingBag, Store, Search, PlusCircle, Pencil, X, History } from 'lucide-react';
 import type { InventoryItem, InventoryItemVariant } from '@/types';
 import { ProductSelectionDialog } from '@/app/components/product-selection-dialog';
 import Image from 'next/image';
@@ -30,6 +30,7 @@ import { SidebarTrigger } from '@/components/ui/sidebar';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import { Checkbox } from '@/components/ui/checkbox';
+import Link from 'next/link';
 
 
 const channelPriceSchema = z.object({
@@ -76,7 +77,6 @@ export default function PriceSettingsPage() {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isProductSelectionOpen, setProductSelectionOpen] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
-    const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
 
     // Bulk update state
     const [bulkUpdateChannel, setBulkUpdateChannel] = useState<'costPrice' | 'price' | 'pos' | 'reseller' | 'online'>('price');
@@ -169,19 +169,11 @@ export default function PriceSettingsPage() {
             .map((field, index) => ({ ...field, originalIndex: index }))
             .filter(field => {
                 const lowerSearchTerm = searchTerm.toLowerCase();
-                const searchMatch = !lowerSearchTerm ||
+                return !lowerSearchTerm ||
                     field.name.toLowerCase().includes(lowerSearchTerm) ||
                     (field.sku && field.sku.toLowerCase().includes(lowerSearchTerm)) ||
                     (field.parentName && field.parentName.toLowerCase().includes(lowerSearchTerm));
 
-                if (!searchMatch) return false;
-
-                if (!categoryFilter) return true;
-                
-                const inventoryItemData = allItemsMap.get(field.id);
-                const itemForCategory = inventoryItemData?.parent || inventoryItemData?.item;
-
-                return (itemForCategory as InventoryItem)?.category === categoryFilter;
             });
 
         const groups = new Map<string, { header: PriceSettingItem & { originalIndex: number }, variants: (PriceSettingItem & { originalIndex: number })[] }>();
@@ -211,12 +203,12 @@ export default function PriceSettingsPage() {
         
         return { groups: Array.from(groups.values()), simpleItems };
 
-    }, [fields, searchTerm, categoryFilter, allInventoryItems, allItemsMap]);
+    }, [fields, searchTerm, allInventoryItems, allItemsMap]);
     
     useEffect(() => {
         // Reset selections when filters change
         setSelectedItemsForBulkUpdate(new Set());
-    }, [searchTerm, categoryFilter]);
+    }, [searchTerm]);
     
     const handleBulkUpdate = () => {
         if (selectedItemsForBulkUpdate.size === 0 || bulkUpdateValue === '') {
@@ -348,6 +340,14 @@ export default function PriceSettingsPage() {
                     <div className="flex items-center gap-4">
                         <SidebarTrigger className="md:hidden" />
                         <h1 className="text-lg font-bold">{t.finance.priceSettings}</h1>
+                    </div>
+                     <div className="flex items-center gap-2">
+                        <Link href="/finance/discount-report">
+                            <Button variant="outline" size="sm">
+                                <History className="mr-2 h-4 w-4" />
+                                {t.finance.discountReport}
+                            </Button>
+                        </Link>
                     </div>
                 </div>
                 
