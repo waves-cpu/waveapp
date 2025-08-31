@@ -21,15 +21,17 @@ export async function getSetting<T>(key: string): Promise<T | null> {
 }
 
 // Bulk Import History Functions
-export async function addBulkImportHistory(history: Omit<BulkImportHistory, 'id' | 'progress'>): Promise<BulkImportHistory> {
-    const result = db.prepare('INSERT INTO bulk_import_history (fileName, date, status) VALUES (@fileName, @date, @status)')
+export async function addBulkImportHistory(history: Omit<BulkImportHistory, 'id'>): Promise<BulkImportHistory> {
+    const result = db.prepare('INSERT INTO bulk_import_history (fileName, date, status, addedSkus, skippedSkus) VALUES (@fileName, @date, @status, @addedSkus, @skippedSkus)')
         .run({
             fileName: history.fileName,
             date: history.date,
             status: history.status,
+            addedSkus: JSON.stringify(history.addedSkus || []),
+            skippedSkus: JSON.stringify(history.skippedSkus || []),
         });
     const newHistory = db.prepare('SELECT * FROM bulk_import_history WHERE id = ?').get(result.lastInsertRowid) as any;
-    return { ...newHistory, addedSkus: [], skippedSkus: [] };
+    return { ...newHistory, addedSkus: JSON.parse(newHistory.addedSkus), skippedSkus: JSON.parse(newHistory.skippedSkus) };
 }
 
 
@@ -654,16 +656,22 @@ export async function performSale(
     const getProductStmt = db.prepare('SELECT * FROM products WHERE sku = ? AND hasVariants = 0');
     const getVariantStmt = db.prepare('SELECT * FROM variants WHERE sku = ?');
     const getChannelPriceStmt = db.prepare('SELECT price FROM channel_prices WHERE (product_id = @productId OR variant_id = @variantId) AND channel = @channel');
-    const ONLINE_CHANNELS = ['shopee', 'tiktok', 'lazada'];
+    const addJournalEntryStmt = db.prepare(`
+        INSERT INTO manual_journal_entries (date, description, debitAccount, creditAccount, amount)
+        VALUES (@date, @description, @debitAccount, @creditAccount, @amount)
+    `);
+
+    const ONLINE_MARKETPLACES = ['shopee', 'tiktok', 'lazada'];
     
     db.transaction(() => {
-        // If saleDate is provided, use it. Otherwise, use the current server time.
-        // Format it consistently.
-        const saleDateString = options?.saleDate ? formatDate(options.saleDate, 'yyyy-MM-dd HH:mm:ss') : formatDate(new Date(), 'yyyy-MM-dd HH:mm:ss');
+        const saleDate = options?.saleDate || new Date();
+        const saleDateString = formatDate(saleDate, 'yyyy-MM-dd HH:mm:ss');
         const saleReason = `Sale (${channel})` + (options?.resellerName ? ` - ${options.resellerName}` : '');
 
         let priceAtSale;
         let cogsAtSale;
+        let productNameForFee = '';
+
         const variant = getVariantStmt.get(sku) as (InventoryItemVariant & { id: number, productId: number, costPrice?: number }) | undefined;
         
         if (variant) {
@@ -671,13 +679,15 @@ export async function performSale(
                 throw new Error('Insufficient stock for variant.');
             }
             
-            const isOnlineChannel = ONLINE_CHANNELS.includes(channel);
+            const isOnlineChannel = ONLINE_MARKETPLACES.includes(channel.toLowerCase());
             
             const onlinePriceResult = getChannelPriceStmt.get({ productId: null, variantId: variant.id, channel: 'shopee' }) as { price: number } | undefined;
             const specificChannelPriceResult = isOnlineChannel ? onlinePriceResult : getChannelPriceStmt.get({ productId: null, variantId: variant.id, channel: channel }) as { price: number } | undefined;
 
             priceAtSale = specificChannelPriceResult?.price ?? variant.price;
             cogsAtSale = variant.costPrice || 0;
+            const parentProduct = db.prepare('SELECT name FROM products WHERE id = ?').get(variant.productId) as { name: string };
+            productNameForFee = `${parentProduct.name} - ${variant.name}`;
 
             adjustStock(variant.id.toString(), -quantity, saleReason);
             db.prepare('INSERT INTO sales (transactionId, paymentMethod, resellerName, productId, variantId, channel, quantity, priceAtSale, cogsAtSale, saleDate) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
@@ -689,19 +699,34 @@ export async function performSale(
                     throw new Error('Insufficient stock for product.');
                 }
                 
-                const isOnlineChannel = ONLINE_CHANNELS.includes(channel);
+                const isOnlineChannel = ONLINE_MARKETPLACES.includes(channel.toLowerCase());
 
                 const onlinePriceResult = getChannelPriceStmt.get({ productId: product.id, variantId: null, channel: 'shopee' }) as { price: number } | undefined;
                 const specificChannelPriceResult = isOnlineChannel ? onlinePriceResult : getChannelPriceStmt.get({ productId: product.id, variantId: null, channel: channel }) as { price: number } | undefined;
                 
                 priceAtSale = specificChannelPriceResult?.price ?? product.price!;
                 cogsAtSale = product.costPrice || 0;
+                productNameForFee = product.name;
                 
                 adjustStock(product.id.toString(), -quantity, saleReason);
                 db.prepare('INSERT INTO sales (transactionId, paymentMethod, resellerName, productId, variantId, channel, quantity, priceAtSale, cogsAtSale, saleDate) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
                   .run(options?.transactionId, options?.paymentMethod, options?.resellerName, product.id, null, channel, quantity, priceAtSale, cogsAtSale, saleDateString);
             } else {
                 throw new Error('Product or variant with specified SKU not found or has variants.');
+            }
+        }
+
+        // Add journal entry for marketplace fee if applicable
+        if (ONLINE_MARKETPLACES.includes(channel.toLowerCase())) {
+            const adminFee = (priceAtSale * quantity) * 0.15;
+            if (adminFee > 0) {
+                addJournalEntryStmt.run({
+                    date: saleDateString,
+                    description: `Biaya admin marketplace untuk ${productNameForFee}`,
+                    debitAccount: 'Biaya Administrasi Marketplace',
+                    creditAccount: 'Piutang Usaha / Kas',
+                    amount: adminFee
+                });
             }
         }
     })();
@@ -760,19 +785,28 @@ export async function getSalesByDate(channel: string, date: Date): Promise<Sale[
 export async function revertSale(saleId: string) {
     const getSaleStmt = db.prepare('SELECT * FROM sales WHERE id = ?');
     const deleteSaleStmt = db.prepare('DELETE FROM sales WHERE id = ?');
+    const deleteJournalStmt = db.prepare("DELETE FROM manual_journal_entries WHERE description LIKE ?");
     
     db.transaction(() => {
-        const sale = getSaleStmt.get(saleId) as { id: number, productId: number, variantId?: number, quantity: number, channel: string, resellerName?: string } | undefined;
+        const sale = getSaleStmt.get(saleId) as Sale | undefined;
         if (!sale) {
             throw new Error('Sale not found.');
         }
 
-        const idToAdjust = sale.variantId ? sale.variantId.toString() : sale.productId.toString();
+        const idToAdjust = sale.variantId ? sale.variantId.toString() : (sale.productId ? sale.productId.toString() : '');
+        if (!idToAdjust) return;
+
         const reason = `Cancelled Sale (${sale.channel})` + (sale.resellerName ? ` - ${sale.resellerName}` : '');
 
         adjustStock(idToAdjust, sale.quantity, reason);
         
         deleteSaleStmt.run(saleId);
+
+        if (['shopee', 'tiktok', 'lazada'].includes(sale.channel.toLowerCase())) {
+            const productName = `${sale.productName}${sale.variantName ? ` - ${sale.variantName}` : ''}`;
+            const journalDesc = `Biaya admin marketplace untuk ${productName}`;
+            deleteJournalStmt.run(journalDesc);
+        }
     })();
 }
 
@@ -786,17 +820,26 @@ export async function revertSaleByTransaction(id: string) {
     } else {
         const getSalesStmt = db.prepare('SELECT * FROM sales WHERE transactionId = ?');
         const deleteSalesStmt = db.prepare('DELETE FROM sales WHERE transactionId = ?');
+        const deleteJournalStmt = db.prepare("DELETE FROM manual_journal_entries WHERE description LIKE ?");
 
         db.transaction(() => {
-            const sales = getSalesStmt.all(id) as { id: number, productId: number, variantId?: number, quantity: number, channel: string, resellerName?: string }[];
+            const sales = getSalesStmt.all(id) as Sale[];
             if (!sales || sales.length === 0) {
                 throw new Error('Transaction not found.');
             }
 
             sales.forEach(sale => {
-                const idToAdjust = sale.variantId ? sale.variantId.toString() : sale.productId.toString();
+                const idToAdjust = sale.variantId ? sale.variantId.toString() : (sale.productId ? sale.productId.toString() : '');
+                if (!idToAdjust) return;
+                
                 const reason = `Cancelled Transaction #${id} (${sale.channel})` + (sale.resellerName ? ` - ${sale.resellerName}` : '');
                 adjustStock(idToAdjust, sale.quantity, reason);
+
+                if (['shopee', 'tiktok', 'lazada'].includes(sale.channel.toLowerCase())) {
+                    const productName = `${sale.productName}${sale.variantName ? ` - ${sale.variantName}` : ''}`;
+                    const journalDesc = `Biaya admin marketplace untuk ${productName}`;
+                    deleteJournalStmt.run(journalDesc);
+                }
             });
 
             deleteSalesStmt.run(id);
@@ -1024,3 +1067,4 @@ export async function deleteProductPermanently(itemId: string) {
     // ON DELETE CASCADE will handle variants, history, and channel_prices
     db.prepare('DELETE FROM products WHERE id = ?').run(itemId);
 }
+

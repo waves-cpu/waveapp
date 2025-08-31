@@ -34,6 +34,7 @@ export const chartOfAccounts = [
     "Kas / Utang Usaha",
     "Penyesuaian Modal (Persediaan)",
     // Manual Accounts
+    "Biaya Administrasi Marketplace",
     "Biaya Operasional",
     "Biaya Gaji",
     "Biaya Sewa",
