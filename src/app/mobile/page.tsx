@@ -42,9 +42,15 @@ export default function MobileScanReceiptPage() {
     const [recentlyAdded, setRecentlyAdded] = useState<ShippingReceipt[]>([]);
     const inputRef = useRef<HTMLInputElement>(null);
     const [isCameraOpen, setIsCameraOpen] = useState(false);
+    const [isCameraSupported, setIsCameraSupported] = useState(true);
 
     useEffect(() => {
         initializeAudio();
+        // Check for camera support on client-side mount
+        if (typeof window !== 'undefined') {
+            const hasGetUserMedia = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
+            setIsCameraSupported(hasGetUserMedia);
+        }
     }, [initializeAudio]);
     
     useEffect(() => {
@@ -111,23 +117,10 @@ export default function MobileScanReceiptPage() {
         });
         setIsCameraOpen(false); // Close the scanner view on error
     };
-
-    const handleOpenCamera = () => {
-        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-            setIsCameraOpen(true);
-        } else {
-            toast({
-                variant: "destructive",
-                title: "Kamera Tidak Didukung",
-                description: "Akses kamera hanya tersedia pada koneksi aman (HTTPS). Harap akses aplikasi melalui alamat HTTPS.",
-                duration: 9000,
-            });
-        }
-    };
     
     if (isCameraOpen) {
         return (
-             <div className="min-h-screen text-white flex flex-col">
+             <div className="min-h-screen text-white flex flex-col bg-gray-800">
                 <header className="absolute top-0 left-0 right-0 z-10 flex items-center p-4 bg-gradient-to-b from-black/60 to-transparent">
                      <Button variant="ghost" size="icon" onClick={() => setIsCameraOpen(false)} className="rounded-full hover:bg-white/10">
                         <ArrowLeft className="h-5 w-5" />
@@ -208,6 +201,14 @@ export default function MobileScanReceiptPage() {
             </header>
 
             <main className="flex-grow flex flex-col gap-4">
+                {!isCameraSupported && (
+                    <Alert variant="destructive">
+                        <AlertTitle>Kamera Tidak Didukung</AlertTitle>
+                        <AlertDescription>
+                            Akses kamera hanya tersedia pada koneksi aman (HTTPS). Harap muat ulang halaman menggunakan alamat HTTPS.
+                        </AlertDescription>
+                    </Alert>
+                )}
                 <form onSubmit={handleFormSubmit} className="space-y-4">
                     <div className="flex items-center gap-2">
                         <div className="relative flex-grow">
@@ -221,7 +222,7 @@ export default function MobileScanReceiptPage() {
                                 disabled={isSubmitting}
                             />
                         </div>
-                        <Button type="button" size="icon" className="h-12 w-12 shrink-0" onClick={handleOpenCamera}>
+                        <Button type="button" size="icon" className="h-12 w-12 shrink-0" onClick={() => setIsCameraOpen(true)} disabled={!isCameraSupported}>
                             <Camera className="h-6 w-6" />
                         </Button>
                     </div>
