@@ -42,14 +42,13 @@ export default function MobileScanReceiptPage() {
     const [recentlyAdded, setRecentlyAdded] = useState<ShippingReceipt[]>([]);
     const inputRef = useRef<HTMLInputElement>(null);
     const [isCameraOpen, setIsCameraOpen] = useState(false);
-    const [isCameraSupported, setIsCameraSupported] = useState(true);
+    const [isContextSecure, setIsContextSecure] = useState(true);
 
     useEffect(() => {
         initializeAudio();
-        // Check for camera support on client-side mount
+        // Check for secure context on client-side mount
         if (typeof window !== 'undefined') {
-            const hasGetUserMedia = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
-            setIsCameraSupported(hasGetUserMedia);
+            setIsContextSecure(window.isSecureContext);
         }
     }, [initializeAudio]);
     
@@ -113,7 +112,7 @@ export default function MobileScanReceiptPage() {
         toast({
             variant: "destructive",
             title: "Gagal Membuka Kamera",
-            description: errorMessage || "Pastikan Anda telah memberikan izin kamera untuk situs ini.",
+            description: "Pastikan Anda telah memberikan izin kamera untuk situs ini.",
         });
         setIsCameraOpen(false); // Close the scanner view on error
     };
@@ -201,11 +200,11 @@ export default function MobileScanReceiptPage() {
             </header>
 
             <main className="flex-grow flex flex-col gap-4">
-                {!isCameraSupported && (
+                {!isContextSecure && (
                     <Alert variant="destructive">
-                        <AlertTitle>Kamera Tidak Didukung</AlertTitle>
+                        <AlertTitle>Koneksi Tidak Aman</AlertTitle>
                         <AlertDescription>
-                            Akses kamera hanya tersedia pada koneksi aman (HTTPS). Harap muat ulang halaman menggunakan alamat HTTPS.
+                            Akses kamera dinonaktifkan oleh browser pada koneksi yang tidak aman (HTTP). Harap gunakan koneksi HTTPS atau akses melalui localhost.
                         </AlertDescription>
                     </Alert>
                 )}
@@ -222,7 +221,7 @@ export default function MobileScanReceiptPage() {
                                 disabled={isSubmitting}
                             />
                         </div>
-                        <Button type="button" size="icon" className="h-12 w-12 shrink-0" onClick={() => setIsCameraOpen(true)} disabled={!isCameraSupported}>
+                        <Button type="button" size="icon" className="h-12 w-12 shrink-0" onClick={() => setIsCameraOpen(true)} disabled={!isContextSecure}>
                             <Camera className="h-6 w-6" />
                         </Button>
                     </div>
