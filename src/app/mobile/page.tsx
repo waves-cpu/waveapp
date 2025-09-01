@@ -15,7 +15,8 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
-import { Scanner } from '@yudiel/react-qr-scanner';
+import { Html5Qrcode, Html5QrcodeScanner, Html5QrcodeSupportedFormats } from 'html5-qrcode';
+
 
 type ShippingProvider = 'Shopee' | 'Tiktok' | 'Lazada' | 'Instant' | 'Tokopedia';
 
@@ -27,35 +28,46 @@ const shippingProviders: { name: ShippingProvider, icon: React.ElementType }[] =
     { name: 'Instant', icon: Truck },
 ];
 
-const ScannerDialog = ({ open, onClose, onScanSuccess, onScanError }: { open: boolean; onClose: () => void; onScanSuccess: (text: string) => void; onScanError: (error: Error) => void; }) => {
-    if (!open) return null;
+const ScannerComponent = ({ onScanSuccess, onScanError }: { onScanSuccess: (text: string) => void; onScanError: (error: string) => void; }) => {
+    const scannerRef = useRef<Html5Qrcode | null>(null);
+    const readerRef = useRef<HTMLDivElement>(null);
 
-    return (
-        <div className="fixed inset-0 bg-black z-50 flex flex-col items-center justify-center">
-            <Scanner
-                onResult={onScanSuccess}
-                onError={onScanError}
-                options={{
-                    delayBetweenScanAttempts: 1000,
-                    delayBetweenScanSuccess: 1500,
-                }}
-                styles={{
-                    container: { width: '100%', height: '100%', paddingTop: '0' },
-                }}
-            />
-             <div className="absolute top-0 left-0 right-0 bottom-0 flex items-center justify-center pointer-events-none">
-                <div className="w-[60%] h-[30%] border-4 border-dashed border-white/70 rounded-2xl" />
-            </div>
-             <Button
-                variant="ghost"
-                size="icon"
-                onClick={onClose}
-                className="absolute right-4 top-4 rounded-full bg-black/50 p-2 text-white opacity-70 ring-offset-background transition-opacity hover:opacity-100 h-10 w-10">
-                <X className="h-6 w-6" />
-                <span className="sr-only">Close</span>
-            </Button>
-        </div>
-    );
+    useEffect(() => {
+        if (readerRef.current) {
+            const scanner = new Html5Qrcode(readerRef.current.id);
+            scannerRef.current = scanner;
+
+            const startScanner = async () => {
+                try {
+                    await scanner.start(
+                        { facingMode: "environment" },
+                        {
+                            fps: 10,
+                            qrbox: { width: 250, height: 250 },
+                            supportedScanTypes: [], // Use all supported types
+                        },
+                        onScanSuccess,
+                        (errorMessage) => {
+                            // This is the scan failure callback, not for critical errors.
+                            // We can often ignore it to reduce console noise.
+                        }
+                    );
+                } catch (err: any) {
+                    onScanError(err.message || "Failed to start scanner.");
+                }
+            };
+
+            startScanner();
+        }
+
+        return () => {
+            scannerRef.current?.stop().catch(err => {
+                console.error("Failed to stop scanner gracefully", err);
+            });
+        };
+    }, [onScanSuccess, onScanError]);
+
+    return <div id="html5-qrcode-reader" ref={readerRef} className="w-full h-full"></div>;
 };
 
 
@@ -122,9 +134,15 @@ export default function MobileScanReceiptPage() {
         setIsSubmitting(false);
         inputRef.current?.focus();
     }
-    
-    const handleScanError = (error: Error) => {
-        console.log("QR Scan Error:", error?.message);
+
+    const handleScanError = (error: string) => {
+        console.error("QR Scan Error:", error);
+        toast({
+            variant: "destructive",
+            title: "Scanner Error",
+            description: "Tidak dapat memulai kamera. Pastikan Anda telah memberikan izin.",
+        });
+        setIsCameraOpen(false);
     };
 
     const handleScanSuccess = (result: string) => {
@@ -179,14 +197,26 @@ export default function MobileScanReceiptPage() {
         )
     }
 
+    if (isCameraOpen) {
+        return (
+            <div className="fixed inset-0 bg-black z-50">
+                <ScannerComponent onScanSuccess={handleScanSuccess} onScanError={handleScanError} />
+                <div className="absolute top-0 left-0 right-0 bottom-0 flex items-center justify-center pointer-events-none">
+                    <div className="w-[70vw] h-[30vh] border-4 border-dashed border-white/70 rounded-2xl" />
+                </div>
+                <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setIsCameraOpen(false)}
+                    className="absolute right-4 top-4 rounded-full bg-black/50 p-2 text-white h-10 w-10">
+                    <X className="h-6 w-6" />
+                </Button>
+            </div>
+        );
+    }
+
     return (
         <div className="min-h-screen bg-muted flex flex-col p-4">
-             <ScannerDialog
-                open={isCameraOpen}
-                onClose={() => setIsCameraOpen(false)}
-                onScanSuccess={handleScanSuccess}
-                onScanError={handleScanError}
-            />
             <header className="flex items-center justify-between mb-4">
                  <Button variant="ghost" size="icon" onClick={() => setSelectedChannel(null)}>
                     <ArrowLeft className="h-5 w-5" />
