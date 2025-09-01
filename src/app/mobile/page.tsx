@@ -111,6 +111,19 @@ export default function MobileScanReceiptPage() {
         });
         setIsCameraOpen(false); // Close the scanner view on error
     };
+
+    const handleOpenCamera = () => {
+        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+            setIsCameraOpen(true);
+        } else {
+            toast({
+                variant: "destructive",
+                title: "Kamera Tidak Didukung",
+                description: "Akses kamera hanya tersedia pada koneksi aman (HTTPS). Harap akses aplikasi melalui alamat HTTPS.",
+                duration: 9000,
+            });
+        }
+    };
     
     if (isCameraOpen) {
         return (
@@ -208,7 +221,7 @@ export default function MobileScanReceiptPage() {
                                 disabled={isSubmitting}
                             />
                         </div>
-                        <Button type="button" size="icon" className="h-12 w-12 shrink-0" onClick={() => setIsCameraOpen(true)}>
+                        <Button type="button" size="icon" className="h-12 w-12 shrink-0" onClick={handleOpenCamera}>
                             <Camera className="h-6 w-6" />
                         </Button>
                     </div>
