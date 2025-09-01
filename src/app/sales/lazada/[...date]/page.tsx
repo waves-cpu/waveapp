@@ -78,6 +78,10 @@ export default function LazadaSalesPage() {
   // The single source of truth for the date is the URL param.
   const currentDate = useMemo(() => parseDateFromParams(Array.isArray(params.date) ? params.date : undefined), [params.date]);
 
+  const refocusInput = useCallback(() => {
+    setTimeout(() => skuInputRef.current?.focus(), 0);
+  }, []);
+
   const loadSales = useCallback(async (selectedDate: Date) => {
     setLoading(true);
     try {
@@ -101,8 +105,8 @@ export default function LazadaSalesPage() {
   }, [currentDate, loadSales]);
   
   useEffect(() => {
-    skuInputRef.current?.focus();
-  }, []);
+    refocusInput();
+  }, [refocusInput]);
 
   // This function's only job is to change the URL.
   const handleDateChange = (newDate: Date | undefined) => {
@@ -135,9 +139,9 @@ export default function LazadaSalesPage() {
         });
     } finally {
         setIsSubmitting(false);
-        skuInputRef.current?.focus();
+        refocusInput();
     }
-  }, [currentDate, recordSale, toast, loadSales, playSuccessSound, playErrorSound]);
+  }, [currentDate, recordSale, toast, loadSales, playSuccessSound, playErrorSound, refocusInput]);
 
   const handleSkuSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -184,7 +188,7 @@ export default function LazadaSalesPage() {
     } finally {
       setIsSubmitting(false);
       setSku('');
-      skuInputRef.current?.focus();
+      refocusInput();
     }
   };
 
@@ -199,12 +203,12 @@ export default function LazadaSalesPage() {
                 title: 'Stok Habis',
                 description: `Stok untuk varian "${variant.name}" sudah habis.`,
             });
-            skuInputRef.current?.focus();
+            refocusInput();
             return;
         }
         handleRecordSale(variant.sku);
     } else {
-        skuInputRef.current?.focus();
+        refocusInput();
     }
   };
   
@@ -360,7 +364,7 @@ export default function LazadaSalesPage() {
               onOpenChange={(isOpen) => {
                   setIsVariantDialogOpen(isOpen);
                   if (!isOpen) {
-                    skuInputRef.current?.focus();
+                    refocusInput();
                   }
               }}
               item={productForVariantSelection}
@@ -371,5 +375,3 @@ export default function LazadaSalesPage() {
     </AppLayout>
   );
 }
-
-    
