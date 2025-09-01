@@ -15,7 +15,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
-import { Html5Qrcode } from 'html5-qrcode';
+import { Html5Qrcode, Html5QrcodeScannerState } from 'html5-qrcode';
 
 
 type ShippingProvider = 'Shopee' | 'Tiktok' | 'Lazada' | 'Instant' | 'Tokopedia';
@@ -32,11 +32,18 @@ const ScannerComponent = ({ onScanSuccess, onScanError }: { onScanSuccess: (deco
     const scannerRef = useRef<Html5Qrcode | null>(null);
 
     useEffect(() => {
-        const scanner = new Html5Qrcode("reader");
+        const scanner = new Html5Qrcode("reader", { 
+            experimentalFeatures: {
+                useBarCodeDetectorIfSupported: false,
+            }
+        });
         scannerRef.current = scanner;
 
         const startScanner = async () => {
             try {
+                 if (scanner.getState() === Html5QrcodeScannerState.SCANNING) {
+                    return;
+                }
                 await scanner.start(
                     { facingMode: "environment" },
                     { 
@@ -61,11 +68,24 @@ const ScannerComponent = ({ onScanSuccess, onScanError }: { onScanSuccess: (deco
         startScanner();
 
         return () => {
-            if (scannerRef.current && scannerRef.current.isScanning) {
-                scannerRef.current.stop().catch(err => {
-                    console.error("Failed to clear scanner on cleanup:", err);
-                });
-            }
+             const cleanupScanner = async () => {
+                if (scannerRef.current && scannerRef.current.getState() === Html5QrcodeScannerState.SCANNING) {
+                   try {
+                       await scannerRef.current.stop();
+                   } catch (err) {
+                       console.error("Failed to stop scanner on cleanup:", err);
+                   }
+                }
+                // We add a try-catch here as the DOM node might be gone by the time this runs.
+                try {
+                     if (scannerRef.current) {
+                        await scannerRef.current.clear();
+                    }
+                } catch (error) {
+                    console.error("Failed to clear scanner, node might be gone.", error)
+                }
+            };
+            cleanupScanner();
         };
     }, [onScanSuccess, onScanError]);
 
@@ -277,5 +297,3 @@ export default function MobileScanReceiptPage() {
         </>
     );
 }
-
-    
