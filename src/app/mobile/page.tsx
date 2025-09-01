@@ -15,8 +15,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
-import { Html5Qrcode, Html5QrcodeScannerState } from 'html5-qrcode';
-
+import QrScanner from 'qr-scanner';
 
 type ShippingProvider = 'Shopee' | 'Tiktok' | 'Lazada' | 'Instant' | 'Tokopedia';
 
@@ -28,71 +27,40 @@ const shippingProviders: { name: ShippingProvider, icon: React.ElementType }[] =
     { name: 'Instant', icon: Truck },
 ];
 
-const ScannerComponent = ({ onScanSuccess, onScanError }: { onScanSuccess: (decodedText: string) => void; onScanError: (errorMessage: string) => void; }) => {
-    const scannerRef = useRef<Html5Qrcode | null>(null);
-    const readerId = "reader";
+const ScannerComponent = ({ onScanSuccess, onScanError }: { onScanSuccess: (decodedText: string) => void; onScanError: (errorMessage: string | Error) => void; }) => {
+    const videoRef = useRef<HTMLVideoElement>(null);
+    const scannerRef = useRef<QrScanner | null>(null);
 
     useEffect(() => {
-        const scanner = new Html5Qrcode(readerId, { 
-            verbose: false,
-            experimentalFeatures: {
-                useBarCodeDetectorIfSupported: false,
-            }
-        });
-        scannerRef.current = scanner;
-
-        const startScanner = async () => {
-            try {
-                 if (scanner.getState() === Html5QrcodeScannerState.SCANNING) {
-                    console.log("Scanner is already running.");
-                    return;
+        if (videoRef.current) {
+            const scanner = new QrScanner(
+                videoRef.current,
+                (result) => onScanSuccess(result.data),
+                {
+                    onDecodeError: onScanError,
+                    highlightScanRegion: true,
+                    highlightCodeOutline: true,
                 }
-                await scanner.start(
-                    { facingMode: "environment" },
-                    { 
-                        fps: 5, 
-                        qrbox: (viewfinderWidth, viewfinderHeight) => {
-                            const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
-                            const qrboxSize = Math.floor(minEdge * 0.8);
-                            return {
-                                width: qrboxSize,
-                                height: qrboxSize,
-                            };
-                        },
-                    },
-                    onScanSuccess,
-                    onScanError
-                );
-            } catch (err: any) {
-                console.error("Error starting scanner:", err);
-            }
-        };
-
-        startScanner();
+            );
+            scannerRef.current = scanner;
+            scanner.start();
+        }
 
         return () => {
-             const cleanupScanner = async () => {
-                if (scannerRef.current && scannerRef.current.getState() === Html5QrcodeScannerState.SCANNING) {
-                   try {
-                       await scannerRef.current.stop();
-                   } catch (err) {
-                       console.error("Failed to stop scanner on cleanup:", err);
-                   }
-                }
-                // We add a try-catch here as the DOM node might be gone by the time this runs.
-                try {
-                     if (scannerRef.current) {
-                        await scannerRef.current.clear();
-                    }
-                } catch (error) {
-                    console.error("Failed to clear scanner, node might be gone.", error)
-                }
-            };
-            cleanupScanner();
+            if (scannerRef.current) {
+                scannerRef.current.destroy();
+            }
         };
     }, [onScanSuccess, onScanError]);
 
-    return <div id={readerId} className="w-full h-full"></div>;
+    return (
+        <div className="relative w-full h-full">
+            <video ref={videoRef} className="w-full h-full object-cover" />
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                <div className="w-[70vw] h-[30vh] border-4 border-dashed border-white/70 rounded-2xl" />
+            </div>
+        </div>
+    );
 };
 
 
@@ -161,9 +129,13 @@ export default function MobileScanReceiptPage() {
         inputRef.current?.focus();
     }
     
-    const onScanError = (errorMessage: string) => {
-        // This function is called frequently, so we don't log every error to avoid console spam.
-        // We can add more specific error handling here if needed.
+    const onScanError = (errorMessage: string | Error) => {
+        // This function is called frequently on non-scans, so only log actual errors.
+        if (typeof errorMessage === 'object' && errorMessage.message.includes('No QR code found')) {
+            // This is expected, do nothing.
+        } else {
+            console.error(errorMessage);
+        }
     };
 
     if (isCameraOpen) {
@@ -173,9 +145,6 @@ export default function MobileScanReceiptPage() {
                     onScanSuccess={(decodedText) => handleSubmit(decodedText)}
                     onScanError={onScanError}
                 />
-                <div className="absolute top-0 left-0 right-0 bottom-0 flex items-center justify-center pointer-events-none">
-                    <div className="w-[70vw] h-[30vh] border-4 border-dashed border-white/70 rounded-2xl" />
-                </div>
                 <Button
                     variant="ghost"
                     size="icon"
