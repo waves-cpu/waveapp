@@ -578,7 +578,7 @@ export async function editVariantsBulk(itemId: string, variants: InventoryItemVa
 }
 
 export async function adjustStock(itemId: string, change: number, reason: string) {
-    if (change === 0) return;
+    if (change === 0 && !reason.toLowerCase().includes('penyesuaian modal')) return;
 
     db.transaction(() => {
         const variant = db.prepare('SELECT * FROM variants WHERE id = ?').get(itemId) as (InventoryItemVariant & {id: number, productId: number}) | undefined;
@@ -854,7 +854,7 @@ export async function revertSaleByTransaction(id: string) {
 export async function updatePrices(updates: { id: string, type: 'product' | 'variant', costPrice?: number, price?: number, channelPrices?: { channel: string, price?: number }[] }[]) {
     const updateProductStmt = db.prepare('UPDATE products SET costPrice = @costPrice, price = @price WHERE id = @id');
     const updateVariantStmt = db.prepare('UPDATE variants SET costPrice = @costPrice, price = @price WHERE id = @id');
-    const addJournalEntryStmt = db.prepare(`
+    const addHistoryStmt = db.prepare(`
         INSERT INTO history (productId, variantId, change, reason, newStockLevel, date)
         VALUES (@productId, @variantId, @change, @reason, @newStockLevel, @date)
     `);
@@ -895,7 +895,7 @@ export async function updatePrices(updates: { id: string, type: 'product' | 'var
             const newCostPrice = finalCostPrice ?? 0;
             if (oldCostPrice <= 0 && newCostPrice > 0 && currentStock > 0) {
                 const totalAssetValue = currentStock * newCostPrice;
-                addJournalEntryStmt.run({
+                addHistoryStmt.run({
                     productId: update.type === 'product' ? itemBefore.id : itemBefore.productId,
                     variantId: update.type === 'variant' ? itemBefore.id : null,
                     change: 0,
@@ -1071,5 +1071,6 @@ export async function deleteProductPermanently(itemId: string) {
     // ON DELETE CASCADE will handle variants, history, and channel_prices
     db.prepare('DELETE FROM products WHERE id = ?').run(itemId);
 }
+
 
 

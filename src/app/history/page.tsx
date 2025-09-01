@@ -26,7 +26,7 @@ import type { InventoryItem, AdjustmentHistory, InventoryItemVariant, Sale } fro
 import { useLanguage } from '@/hooks/use-language';
 import { translations } from '@/types/language';
 import { SidebarTrigger } from '@/components/ui/sidebar';
-import { format, startOfDay, isSameDay, parseISO, isWithinInterval, startOfMonth, endOfMonth } from 'date-fns';
+import { format, startOfDay, isSameDay, parseISO, isWithinInterval, startOfMonth, endOfMonth, subMonths } from 'date-fns';
 import { id as localeId } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
@@ -58,7 +58,13 @@ type AggregatedSalesEntry = {
     sales: Sale[];
 };
 
-type HistoryEntry = AdjustmentEntry | AggregatedSalesEntry;
+type BeginningBalanceEntry = {
+    type: 'balance';
+    date: Date;
+    totalStock: number;
+}
+
+type HistoryEntry = AdjustmentEntry | AggregatedSalesEntry | BeginningBalanceEntry;
 
 export default function HistoryPage() {
   const { items, categories, allSales, loading } = useInventory();
@@ -77,17 +83,48 @@ export default function HistoryPage() {
 
   const allHistory = useMemo((): HistoryEntry[] => {
     const historyList: HistoryEntry[] = [];
-    const allSaleChannels = ['shopee', 'tiktok', 'lazada', 'pos', 'reseller'];
 
-    // Process adjustments first, filtering out sales-related adjustments
+    // --- 1. Calculate Beginning Balance ---
+    const beginningOfMonth = startOfMonth(new Date(selectedYear, selectedMonth));
+    let beginningStock = 0;
+    
+    items.forEach(item => {
+        const processItem = (subItem: InventoryItem | InventoryItemVariant) => {
+            let lastKnownStock = 0;
+            // History is sorted descending, find the first entry before the current month
+            const lastHistoryEntry = subItem.history?.find(h => new Date(h.date) < beginningOfMonth);
+            if(lastHistoryEntry) {
+                lastKnownStock = lastHistoryEntry.newStockLevel;
+            }
+            beginningStock += lastKnownStock;
+        };
+
+        if (item.variants && item.variants.length > 0) {
+            item.variants.forEach(variant => processItem(variant));
+        } else if (item.stock !== undefined) {
+            processItem(item);
+        }
+    });
+
+    historyList.push({
+        type: 'balance',
+        date: beginningOfMonth,
+        totalStock: beginningStock
+    });
+
+    // --- 2. Process Adjustments for the selected month ---
     items.forEach(item => {
       const processHistory = (history: AdjustmentHistory[], parentItem: InventoryItem, variant?: InventoryItemVariant) => {
         history.forEach(entry => {
+            const entryDate = new Date(entry.date);
+            if (entryDate.getFullYear() !== selectedYear || entryDate.getMonth() !== selectedMonth) {
+                return;
+            }
+
             const reasonLower = entry.reason.toLowerCase();
-            const isSaleAdjustment = allSaleChannels.some(ch => reasonLower.startsWith(`sale (${ch})`) || reasonLower.startsWith(`cancelled sale (${ch})`) || reasonLower.startsWith(`cancelled transaction`));
-            const isInitialStock = reasonLower === 'initial stock';
+            const isSaleAdjustment = ['shopee', 'tiktok', 'lazada', 'pos', 'reseller'].some(ch => reasonLower.startsWith(`sale (${ch})`) || reasonLower.startsWith(`cancelled sale (${ch})`));
             
-            if (!isSaleAdjustment && !isInitialStock && (entry.change !== 0 || reasonLower !== 'no change')) {
+            if (!isSaleAdjustment && (entry.change !== 0 || !reasonLower.includes('penyesuaian modal'))) {
                  historyList.push({
                     type: 'adjustment',
                     date: new Date(entry.date),
@@ -113,12 +150,15 @@ export default function HistoryPage() {
       }
     });
 
-    // Group and aggregate all sales
+    // --- 3. Group and aggregate sales for the selected month ---
     const groupedSales = new Map<string, { date: Date; channel: string; totalItems: number; sales: Sale[] }>();
     
     allSales.forEach(sale => {
-        // Use parseISO because the date from DB is an ISO string.
         const saleDate = parseISO(sale.saleDate);
+         if (saleDate.getFullYear() !== selectedYear || saleDate.getMonth() !== selectedMonth) {
+            return;
+        }
+
         const key = `${format(saleDate, 'yyyy-MM-dd')}-${sale.channel}`;
         
         if (!groupedSales.has(key)) {
@@ -145,7 +185,7 @@ export default function HistoryPage() {
     });
 
     return historyList.sort((a, b) => b.date.getTime() - a.date.getTime());
-  }, [items, allSales]);
+  }, [items, allSales, selectedMonth, selectedYear]);
 
   const years = useMemo(() => {
     const allYears = new Set(allHistory.map(h => h.date.getFullYear()));
@@ -157,8 +197,7 @@ export default function HistoryPage() {
   const baseFilteredHistory = useMemo(() => {
     return allHistory
       .filter(entry => {
-        if (!categoryFilter) return true;
-        if (entry.type === 'sales') return true; 
+        if (!categoryFilter || entry.type !== 'adjustment') return true;
         return entry.itemCategory === categoryFilter;
       })
       .filter(entry => {
@@ -167,26 +206,27 @@ export default function HistoryPage() {
         if (entry.type === 'sales') {
             return entry.channel.toLowerCase().includes(lowerSearchTerm) || `sales ${entry.channel}`.includes(lowerSearchTerm);
         }
+        if (entry.type === 'balance') return 'saldo awal'.includes(lowerSearchTerm);
         return (
             (entry.itemName && entry.itemName.toLowerCase().includes(lowerSearchTerm)) ||
             (entry.variantName && entry.variantName.toLowerCase().includes(lowerSearchTerm)) ||
             entry.reason.toLowerCase().includes(lowerSearchTerm)
         );
-      })
-      .filter(entry => {
-          const entryDate = new Date(entry.date);
-          return entryDate.getFullYear() === selectedYear && entryDate.getMonth() === selectedMonth;
       });
-  }, [allHistory, categoryFilter, searchTerm, selectedMonth, selectedYear]);
+  }, [allHistory, categoryFilter, searchTerm]);
 
   const adjustmentCounts = useMemo(() => {
-    const counts = { all: baseFilteredHistory.length, in: 0, out: 0 };
+    const counts = { all: 0, in: 0, out: 0 };
     baseFilteredHistory.forEach(entry => {
       if (entry.type === 'adjustment') {
+        counts.all++;
         if (entry.change > 0) counts.in += entry.change;
         else if (entry.change < 0) counts.out += Math.abs(entry.change);
       } else if (entry.type === 'sales') {
+        counts.all++;
         counts.out += entry.totalItems;
+      } else {
+        counts.all++;
       }
     });
     return counts;
@@ -195,6 +235,7 @@ export default function HistoryPage() {
   const filteredHistory = useMemo(() => {
     const filtered = baseFilteredHistory.filter(entry => {
         if (adjustmentTypeFilter === 'all') return true;
+        if (entry.type === 'balance') return false; // Hide balance from in/out filters
         const change = entry.type === 'adjustment' ? entry.change : -entry.totalItems;
         if (adjustmentTypeFilter === 'in') return change > 0;
         if (adjustmentTypeFilter === 'out') return change < 0;
@@ -216,6 +257,7 @@ export default function HistoryPage() {
     let totalIn = 0;
     let totalOut = 0;
     filteredHistory.forEach(entry => {
+        if(entry.type === 'balance') return;
         if (entry.type === 'adjustment') {
             if (entry.change > 0) {
                 totalIn += entry.change;
@@ -266,6 +308,18 @@ export default function HistoryPage() {
                 `Total ${entry.totalItems} item terjual`,
                 -entry.totalItems,
                 'N/A'
+            ].join(',');
+        }
+        if(entry.type === 'balance') {
+            return [
+                 format(entry.date, 'yyyy-MM-dd HH:mm:ss'),
+                'Saldo Awal Bulan',
+                '',
+                '',
+                '',
+                'Stok dari bulan sebelumnya',
+                '',
+                entry.totalStock
             ].join(',');
         }
 
@@ -418,7 +472,7 @@ export default function HistoryPage() {
                                     </div>
                                 </div>
                             </TableCell>
-                            <TableCell>{format(new Date(entry.date), 'PP')}</TableCell>
+                            <TableCell>{format(new Date(entry.date), 'd MMM yyyy, HH:mm')}</TableCell>
                             <TableCell className="text-center">
                                 <Badge variant={entry.change >= 0 ? 'default' : 'destructive'} className={cn(entry.change >= 0 ? 'bg-green-600' : 'bg-red-600', 'text-white')}>
                                 {entry.change > 0 ? `+${entry.change}` : entry.change}
@@ -429,7 +483,7 @@ export default function HistoryPage() {
                                 <p className="truncate">{entry.reason}</p>
                             </TableCell>
                             </>
-                        ) : (
+                        ) : entry.type === 'sales' ? (
                             <>
                             <TableCell>
                                 <div className="flex items-center gap-4">
@@ -445,7 +499,7 @@ export default function HistoryPage() {
                                     </div>
                                 </div>
                             </TableCell>
-                            <TableCell>{format(new Date(entry.date), 'PP')}</TableCell>
+                            <TableCell>{format(new Date(entry.date), 'd MMM yyyy')}</TableCell>
                             <TableCell className="text-center">
                                 <Badge variant='destructive' className="bg-red-600 text-white">
                                     -{entry.totalItems}
@@ -454,6 +508,23 @@ export default function HistoryPage() {
                             <TableCell className="text-center">-</TableCell>
                             <TableCell>
                                 <p className="truncate">Total {entry.totalItems} item terjual dari channel {entry.channel}.</p>
+                            </TableCell>
+                            </>
+                        ) : ( // Balance entry
+                             <>
+                            <TableCell>
+                                <div className="flex items-center gap-4 font-semibold">
+                                    <div className="flex h-10 w-10 items-center justify-center rounded-sm bg-blue-100">
+                                        <History className="h-5 w-5 text-blue-700" />
+                                    </div>
+                                    <div>Saldo Awal Bulan</div>
+                                </div>
+                            </TableCell>
+                            <TableCell>{format(new Date(entry.date), 'd MMM yyyy')}</TableCell>
+                            <TableCell className="text-center">-</TableCell>
+                            <TableCell className="text-center font-bold">{entry.totalStock}</TableCell>
+                            <TableCell>
+                                <p className="truncate text-muted-foreground">Total stok dari bulan sebelumnya</p>
                             </TableCell>
                             </>
                         )}
@@ -476,7 +547,7 @@ export default function HistoryPage() {
                 {paginatedHistory.length > 0 && (
                     <TableFooter>
                         <TableRow>
-                            <TableCell colSpan={3} className="font-semibold text-left">Total Perubahan:</TableCell>
+                            <TableCell colSpan={3} className="font-semibold text-left">Total Perubahan Bulan Ini:</TableCell>
                             <TableCell colSpan={2} className="font-semibold">
                                 <div className="flex items-center justify-between flex-wrap gap-y-1">
                                     <span className="text-green-600">Masuk: {historyTotals.totalIn}</span>
