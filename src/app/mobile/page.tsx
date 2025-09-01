@@ -54,14 +54,23 @@ export default function MobileScanReceiptPage() {
         }
     }, [selectedChannel, isCameraOpen]);
     
-    // Check for camera permission when component mounts or camera is opened
     useEffect(() => {
         if (isCameraOpen) {
             navigator.mediaDevices.getUserMedia({ video: true })
-                .then(() => setHasCameraPermission(true))
-                .catch(() => setHasCameraPermission(false));
+                .then(() => {
+                    setHasCameraPermission(true);
+                })
+                .catch((error) => {
+                    console.error('Error accessing camera:', error);
+                    setHasCameraPermission(false);
+                    toast({
+                        variant: 'destructive',
+                        title: 'Camera Access Denied',
+                        description: 'Please enable camera permissions in your browser settings to use this app.',
+                    });
+                });
         }
-    }, [isCameraOpen]);
+    }, [isCameraOpen, toast]);
 
     const handleSubmit = useCallback(async (scannedAwb: string) => {
         if (!scannedAwb.trim() || !selectedChannel) return;
@@ -120,7 +129,7 @@ export default function MobileScanReceiptPage() {
                     </Button>
                     <h1 className="text-lg font-bold ml-2">Scan Barcode - {selectedChannel}</h1>
                 </header>
-                 <main className="flex-grow flex flex-col justify-center items-center relative bg-black">
+                 <main className="flex-grow flex flex-col justify-center items-center relative">
                      {hasCameraPermission === true && (
                         <QrScanner
                             onDecode={handleDecode}
@@ -252,4 +261,3 @@ export default function MobileScanReceiptPage() {
             </main>
         </div>
     );
-}
