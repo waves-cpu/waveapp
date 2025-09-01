@@ -16,6 +16,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { QrScanner } from '@yudiel/react-qr-scanner';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 
 
 type ShippingProvider = 'Shopee' | 'Tiktok' | 'Lazada' | 'Instant' | 'Tokopedia';
@@ -41,6 +42,7 @@ export default function MobileScanReceiptPage() {
     const [recentlyAdded, setRecentlyAdded] = useState<ShippingReceipt[]>([]);
     const inputRef = useRef<HTMLInputElement>(null);
     const [isCameraOpen, setIsCameraOpen] = useState(false);
+    const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
 
     useEffect(() => {
         initializeAudio();
@@ -51,6 +53,15 @@ export default function MobileScanReceiptPage() {
             inputRef.current?.focus();
         }
     }, [selectedChannel, isCameraOpen]);
+    
+    // Check for camera permission when component mounts or camera is opened
+    useEffect(() => {
+        if (isCameraOpen) {
+            navigator.mediaDevices.getUserMedia({ video: true })
+                .then(() => setHasCameraPermission(true))
+                .catch(() => setHasCameraPermission(false));
+        }
+    }, [isCameraOpen]);
 
     const handleSubmit = useCallback(async (scannedAwb: string) => {
         if (!scannedAwb.trim() || !selectedChannel) return;
@@ -109,8 +120,8 @@ export default function MobileScanReceiptPage() {
                     </Button>
                     <h1 className="text-lg font-bold ml-2">Scan Barcode - {selectedChannel}</h1>
                 </header>
-                 <main className="flex-grow flex flex-col justify-center items-center relative">
-                    <div className="absolute inset-0">
+                 <main className="flex-grow flex flex-col justify-center items-center relative bg-black">
+                     {hasCameraPermission === true && (
                         <QrScanner
                             onDecode={handleDecode}
                             onError={(error) => console.log(error?.message)}
@@ -118,8 +129,21 @@ export default function MobileScanReceiptPage() {
                             containerStyle={{ width: '100%', height: '100%', paddingTop: '0' }}
                             videoStyle={{ width: '100%', height: '100%', objectFit: 'cover' }}
                         />
-                    </div>
-                     <p className="absolute bottom-8 text-sm bg-black/50 px-3 py-1.5 rounded-md">Posisikan barcode di dalam frame</p>
+                     )}
+                     <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                        <div className="w-[70vw] h-[30vw] border-4 border-white/50 rounded-lg shadow-lg"/>
+                        <p className="mt-4 text-sm bg-black/50 px-3 py-1.5 rounded-md">Posisikan barcode di dalam frame</p>
+                     </div>
+                     {hasCameraPermission === false && (
+                         <div className="absolute inset-x-4 bottom-1/4 pointer-events-auto">
+                            <Alert variant="destructive">
+                                <AlertTitle>Izin Kamera Diperlukan</AlertTitle>
+                                <AlertDescription>
+                                    Harap izinkan akses kamera di pengaturan browser Anda untuk menggunakan fitur ini.
+                                </AlertDescription>
+                            </Alert>
+                         </div>
+                     )}
                 </main>
             </div>
         )
