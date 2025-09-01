@@ -854,10 +854,6 @@ export async function revertSaleByTransaction(id: string) {
 export async function updatePrices(updates: { id: string, type: 'product' | 'variant', costPrice?: number, price?: number, channelPrices?: { channel: string, price?: number }[] }[]) {
     const updateProductStmt = db.prepare('UPDATE products SET costPrice = @costPrice, price = @price WHERE id = @id');
     const updateVariantStmt = db.prepare('UPDATE variants SET costPrice = @costPrice, price = @price WHERE id = @id');
-    const addJournalEntryStmt = db.prepare(`
-        INSERT INTO history (productId, variantId, change, reason, newStockLevel, date)
-        VALUES (@productId, @variantId, @change, @reason, @newStockLevel, @date)
-    `);
     const upsertChannelPriceStmt = db.prepare(`
         INSERT INTO channel_prices (product_id, variant_id, channel, price)
         VALUES (@productId, @variantId, @channel, @price)
@@ -888,23 +884,7 @@ export async function updatePrices(updates: { id: string, type: 'product' | 'var
             } else {
                 updateVariantStmt.run({ id: update.id, costPrice: finalCostPrice, price: finalPrice });
             }
-
-            // Journal entry for HPP/COGS adjustment
-            const currentStock = itemBefore.stock || 0;
-            const oldCostPrice = itemBefore.costPrice ?? 0;
-            const newCostPrice = finalCostPrice ?? 0;
-            if (oldCostPrice <= 0 && newCostPrice > 0 && currentStock > 0) {
-                const totalAssetValue = currentStock * newCostPrice;
-                addJournalEntryStmt.run({
-                    productId: update.type === 'product' ? itemBefore.id : itemBefore.productId,
-                    variantId: update.type === 'variant' ? itemBefore.id : null,
-                    change: 0,
-                    reason: `Penyesuaian Modal (HPP): Rp${newCostPrice.toLocaleString('id-ID')} x ${currentStock} stok`,
-                    newStockLevel: totalAssetValue,
-                    date: new Date().toISOString()
-                });
-            }
-
+            
             // Handle channel prices
             const onlinePriceInfo = update.channelPrices?.find(p => ONLINE_CHANNELS.includes(p.channel));
 
@@ -1071,5 +1051,6 @@ export async function deleteProductPermanently(itemId: string) {
     // ON DELETE CASCADE will handle variants, history, and channel_prices
     db.prepare('DELETE FROM products WHERE id = ?').run(itemId);
 }
+
 
 
