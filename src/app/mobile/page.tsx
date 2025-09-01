@@ -16,8 +16,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
-import { Html5QrcodeScanner, Html5Qrcode } from 'html5-qrcode';
-
+import { QrScanner } from '@yudiel/react-qr-scanner';
 
 type ShippingProvider = 'Shopee' | 'Tiktok' | 'Lazada' | 'Instant' | 'Tokopedia';
 
@@ -29,40 +28,23 @@ const shippingProviders: { name: ShippingProvider, icon: React.ElementType }[] =
     { name: 'Instant', icon: Truck },
 ];
 
-const Scanner = ({ onScanSuccess, onScanError, onClose }: { onScanSuccess: (decodedText: string) => void, onScanError: (errorMessage: string) => void, onClose: () => void }) => {
-    const scannerRef = useRef<Html5Qrcode | null>(null);
-
-    useEffect(() => {
-        const scanner = new Html5Qrcode('reader');
-        scannerRef.current = scanner;
-
-        const config = {
-            fps: 10,
-            qrbox: { width: 250, height: 250 },
-            rememberLastUsedCamera: true,
-            supportedScanTypes: []
-        };
-
-        scanner.start({ facingMode: "environment" }, config, onScanSuccess, onScanError)
-            .catch(err => {
-                onScanError(`Gagal memulai kamera: ${err.message}`);
-            });
-
-        return () => {
-            if (scannerRef.current?.isScanning) {
-                scannerRef.current.stop().catch(err => console.error("Gagal menghentikan scanner.", err));
-            }
-        };
-    }, [onScanSuccess, onScanError]);
+const ScannerDialog = ({ open, onClose, onScan, onScanError }: { open: boolean, onClose: () => void, onScan: (result: string) => void, onScanError: (error: any) => void }) => {
+    if (!open) return null;
 
     return (
         <div className="fixed inset-0 z-50 bg-black">
-            <div id="reader" className="w-full h-full"></div>
+            <QrScanner
+                onDecode={onScan}
+                onError={onScanError}
+                constraints={{ facingMode: 'environment' }}
+                containerStyle={{ width: '100%', height: '100%' }}
+                videoStyle={{ width: '100%', height: '100%', objectFit: 'cover' }}
+            />
             <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
                  <div className="w-[70vw] h-[30vw] md:w-80 md:h-32 border-4 border-white/50 rounded-lg shadow-lg"/>
                 <p className="mt-4 text-sm text-white bg-black/50 px-3 py-1.5 rounded-md">Posisikan barcode di dalam frame</p>
             </div>
-            <Button
+             <Button
                 variant="ghost"
                 size="icon"
                 onClick={onClose}
@@ -71,7 +53,7 @@ const Scanner = ({ onScanSuccess, onScanError, onClose }: { onScanSuccess: (deco
                 <span className="sr-only">Close</span>
             </Button>
         </div>
-    );
+    )
 }
 
 
@@ -105,9 +87,6 @@ export default function MobileScanReceiptPage() {
 
     const handleSubmit = useCallback(async (scannedAwb: string) => {
         if (!scannedAwb.trim() || !selectedChannel) return;
-        if (isSubmitting) return;
-
-        setIsSubmitting(true);
         
         const newReceipt: Omit<ShippingReceipt, 'id'> = {
             awb: scannedAwb.trim(),
@@ -120,7 +99,6 @@ export default function MobileScanReceiptPage() {
             const added = await addShippingReceipt(newReceipt);
             playSuccessSound();
             setRecentlyAdded(prev => [added, ...prev].slice(0, 10));
-            setAwb('');
         } catch (error) {
             playErrorSound();
             const errorMessage = error instanceof Error && error.message.includes('UNIQUE constraint failed')
@@ -131,36 +109,27 @@ export default function MobileScanReceiptPage() {
                 title: 'Input Gagal',
                 description: errorMessage,
             });
-        } finally {
-            setIsSubmitting(false);
-             if (!isCameraOpen) {
-                 inputRef.current?.focus();
-            }
         }
-    }, [isSubmitting, selectedChannel, scanDate, addShippingReceipt, playSuccessSound, playErrorSound, toast, isCameraOpen]);
+    }, [selectedChannel, scanDate, addShippingReceipt, playSuccessSound, playErrorSound, toast]);
 
 
-    const handleFormSubmit = (e: React.FormEvent) => {
+    const handleFormSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        handleSubmit(awb);
+        setIsSubmitting(true);
+        await handleSubmit(awb);
+        setAwb('');
+        setIsSubmitting(false);
+        inputRef.current?.focus();
     }
     
-    const handleScanSuccess = (decodedText: string) => {
-        setIsCameraOpen(false);
-        handleSubmit(decodedText);
-    };
-
-    const handleScanError = (errorMessage: string) => {
-        // Errors are frequent, only show a toast for critical ones.
-        if (errorMessage.toLowerCase().includes('permission') || errorMessage.toLowerCase().includes('gagal')) {
-            playErrorSound();
-            toast({
-                variant: "destructive",
-                title: "Kamera Error",
-                description: errorMessage,
-            });
-            setIsCameraOpen(false);
-        }
+    const handleScanError = (error: any) => {
+        playErrorSound();
+        console.error("Scan error:", error);
+        toast({
+            variant: "destructive",
+            title: "Kamera Error",
+            description: error?.message || 'Gagal memulai kamera.',
+        });
     };
     
     if (!selectedChannel) {
@@ -211,13 +180,12 @@ export default function MobileScanReceiptPage() {
 
     return (
         <div className="min-h-screen bg-muted flex flex-col p-4">
-            {isCameraOpen && (
-                <Scanner 
-                    onScanSuccess={handleScanSuccess} 
-                    onScanError={handleScanError} 
-                    onClose={() => setIsCameraOpen(false)}
-                />
-            )}
+             <ScannerDialog
+                open={isCameraOpen}
+                onClose={() => setIsCameraOpen(false)}
+                onScan={handleSubmit}
+                onScanError={handleScanError}
+             />
             <header className="flex items-center justify-between mb-4">
                  <Button variant="ghost" size="icon" onClick={() => setSelectedChannel(null)}>
                     <ArrowLeft className="h-5 w-5" />
