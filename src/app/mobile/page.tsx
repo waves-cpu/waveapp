@@ -27,52 +27,48 @@ const shippingProviders: { name: ShippingProvider, icon: React.ElementType }[] =
     { name: 'Instant', icon: Truck },
 ];
 
-const ScannerComponent = ({ onScanSuccess, setHasCameraPermission }: { onScanSuccess: (decodedText: string) => void; setHasCameraPermission: (hasPermission: boolean) => void; }) => {
+const ScannerComponent = ({ onScanSuccess }: { onScanSuccess: (decodedText: string) => void; }) => {
     const videoRef = useRef<HTMLVideoElement>(null);
     const scannerRef = useRef<QrScanner | null>(null);
+    const [hasCameraPermission, setHasCameraPermission] = useState(true);
     const { toast } = useToast();
 
     useEffect(() => {
-        let scanner: QrScanner | null = null;
-        let isCancelled = false;
+        const videoElem = videoRef.current;
+        if (!videoElem) return;
+
+        const scanner = new QrScanner(
+            videoElem,
+            (result) => onScanSuccess(result.data),
+            {
+                highlightScanRegion: true,
+                highlightCodeOutline: true,
+            }
+        );
+        scannerRef.current = scanner;
 
         const startScanner = async () => {
-             if (videoRef.current && !isCancelled) {
-                scanner = new QrScanner(
-                    videoRef.current,
-                    (result) => onScanSuccess(result.data),
-                    {
-                        highlightScanRegion: true,
-                        highlightCodeOutline: true,
-                    }
-                );
-                scannerRef.current = scanner;
-                
-                try {
-                    await scanner.start();
-                    setHasCameraPermission(true);
-                } catch(error) {
-                    console.error("Camera start error:", error);
-                    setHasCameraPermission(false);
-                    toast({
-                      variant: 'destructive',
-                      title: 'Kamera Gagal Dimulai',
-                      description: 'Pastikan Anda telah memberikan izin akses kamera di pengaturan browser.',
-                    });
-                }
+            try {
+                await scanner.start();
+                setHasCameraPermission(true);
+            } catch (error) {
+                console.error("Camera start error:", error);
+                setHasCameraPermission(false);
+                toast({
+                  variant: 'destructive',
+                  title: 'Izin Kamera Diperlukan',
+                  description: 'Harap berikan izin akses kamera di pengaturan browser Anda.',
+                });
             }
         };
 
         startScanner();
 
         return () => {
-            isCancelled = true;
-            if (scanner) {
-                scanner.destroy();
-                scannerRef.current = null;
-            }
+            scanner.destroy();
+            scannerRef.current = null;
         };
-    }, [onScanSuccess, setHasCameraPermission, toast]);
+    }, [onScanSuccess, toast]);
 
     return (
         <div className="relative w-full h-full bg-black">
@@ -80,6 +76,16 @@ const ScannerComponent = ({ onScanSuccess, setHasCameraPermission }: { onScanSuc
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                 <div className="w-[70vw] h-[30vh] border-4 border-dashed border-white/70 rounded-2xl" />
             </div>
+             {!hasCameraPermission && (
+                <div className="absolute bottom-4 left-4 right-4">
+                    <Alert variant="destructive">
+                        <AlertTitle>Izin Kamera Diperlukan</AlertTitle>
+                        <AlertDescription>
+                            Harap izinkan akses kamera di pengaturan browser Anda untuk menggunakan fitur pemindai.
+                        </AlertDescription>
+                    </Alert>
+                </div>
+             )}
         </div>
     );
 };
@@ -96,14 +102,11 @@ export default function MobileScanReceiptPage() {
     const [recentlyAdded, setRecentlyAdded] = useState<ShippingReceipt[]>([]);
     const inputRef = useRef<HTMLInputElement>(null);
     const [isCameraOpen, setIsCameraOpen] = useState(false);
-    const [isContextSecure, setIsContextSecure] = useState(true);
-    const [hasCameraPermission, setHasCameraPermission] = useState(true);
+    const [isScanningPaused, setIsScanningPaused] = useState(false);
+
 
     useEffect(() => {
         initializeAudio();
-        if (typeof window !== 'undefined') {
-            setIsContextSecure(window.isSecureContext);
-        }
     }, [initializeAudio]);
     
     useEffect(() => {
@@ -111,10 +114,19 @@ export default function MobileScanReceiptPage() {
             inputRef.current?.focus();
         }
     }, [selectedChannel, isCameraOpen]);
+    
+    const handleScanSuccess = (decodedText: string) => {
+        if (isScanningPaused) {
+            return;
+        }
+        handleSubmit(decodedText);
+    };
 
     const handleSubmit = useCallback(async (scannedAwb: string) => {
         if (!scannedAwb || !scannedAwb.trim() || !selectedChannel) return;
         
+        setIsScanningPaused(true); // Pause scanning immediately
+
         const newReceipt: Omit<ShippingReceipt, 'id'> = {
             awb: scannedAwb.trim(),
             channel: selectedChannel,
@@ -140,6 +152,11 @@ export default function MobileScanReceiptPage() {
                 title: 'Input Gagal',
                 description: errorMessage,
             });
+        } finally {
+            // Resume scanning after a delay
+            setTimeout(() => {
+                setIsScanningPaused(false);
+            }, 2000);
         }
     }, [selectedChannel, scanDate, addShippingReceipt, playSuccessSound, playErrorSound, toast]);
 
@@ -148,20 +165,13 @@ export default function MobileScanReceiptPage() {
         e.preventDefault();
         await handleSubmit(awb);
         setAwb('');
-        inputRef.current?.focus();
     }
     
-    const openCamera = () => {
-        setHasCameraPermission(true); // Assume permission is granted until scanner says otherwise
-        setIsCameraOpen(true);
-    }
-
     if (isCameraOpen) {
         return (
              <div className="fixed inset-0 bg-black z-50">
                 <ScannerComponent 
-                    onScanSuccess={(decodedText) => handleSubmit(decodedText)}
-                    setHasCameraPermission={setHasCameraPermission}
+                    onScanSuccess={handleScanSuccess}
                 />
                 <Button
                     variant="ghost"
@@ -170,16 +180,6 @@ export default function MobileScanReceiptPage() {
                     className="absolute right-4 top-4 rounded-full bg-black/50 p-2 text-white h-10 w-10">
                     <X className="h-6 w-6" />
                 </Button>
-                 {!hasCameraPermission && (
-                    <div className="absolute bottom-4 left-4 right-4">
-                        <Alert variant="destructive">
-                            <AlertTitle>Izin Kamera Diperlukan</AlertTitle>
-                            <AlertDescription>
-                                Harap izinkan akses kamera di pengaturan browser Anda untuk menggunakan fitur pemindai.
-                            </AlertDescription>
-                        </Alert>
-                    </div>
-                 )}
             </div>
         )
     }
@@ -242,14 +242,6 @@ export default function MobileScanReceiptPage() {
                 </header>
 
                 <main className="flex-grow flex flex-col gap-4">
-                    {!isContextSecure && (
-                        <Alert variant="destructive">
-                            <AlertTitle>Koneksi Tidak Aman (HTTP)</AlertTitle>
-                            <AlertDescription>
-                                Akses kamera dinonaktifkan oleh browser. Harap gunakan koneksi HTTPS atau akses melalui localhost untuk mengaktifkan pemindai.
-                            </AlertDescription>
-                        </Alert>
-                    )}
                     <form onSubmit={handleFormSubmit} className="space-y-4">
                         <div className="flex items-center gap-2">
                             <div className="relative flex-grow">
@@ -262,7 +254,7 @@ export default function MobileScanReceiptPage() {
                                     onChange={(e) => setAwb(e.target.value)}
                                 />
                             </div>
-                            <Button type="button" size="icon" className="h-12 w-12 shrink-0" onClick={openCamera} disabled={!isContextSecure}>
+                            <Button type="button" size="icon" className="h-12 w-12 shrink-0" onClick={() => setIsCameraOpen(true)}>
                                 <Camera className="h-6 w-6" />
                             </Button>
                         </div>
