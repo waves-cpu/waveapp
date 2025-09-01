@@ -15,7 +15,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
-import { Html5QrcodeScanner, Html5Qrcode } from 'html5-qrcode';
+import { Html5Qrcode } from 'html5-qrcode';
 
 
 type ShippingProvider = 'Shopee' | 'Tiktok' | 'Lazada' | 'Instant' | 'Tokopedia';
@@ -44,7 +44,6 @@ const ScannerComponent = ({ onScanSuccess, onScanFailure }: { onScanSuccess: (de
                         {
                             fps: 10,
                             qrbox: { width: 250, height: 250 },
-                            rememberLastUsedCamera: true,
                         },
                         onScanSuccess,
                         onScanFailure
@@ -139,7 +138,7 @@ export default function MobileScanReceiptPage() {
              <div className="fixed inset-0 bg-black z-50">
                 <ScannerComponent 
                     onScanSuccess={(decodedText) => handleSubmit(decodedText)}
-                    onScanFailure={(error) => console.log(error)}
+                    onScanFailure={(error) => { /* Ignore common errors */ }}
                 />
                 <div className="absolute top-0 left-0 right-0 bottom-0 flex items-center justify-center pointer-events-none">
                     <div className="w-[70vw] h-[30vh] border-4 border-dashed border-white/70 rounded-2xl" />
