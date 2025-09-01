@@ -15,8 +15,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
-import { Html5Qrcode, Html5QrcodeScanner, Html5QrcodeSupportedFormats } from 'html5-qrcode';
-
+import { Scanner } from '@yudiel/react-qr-scanner';
 
 type ShippingProvider = 'Shopee' | 'Tiktok' | 'Lazada' | 'Instant' | 'Tokopedia';
 
@@ -27,49 +26,6 @@ const shippingProviders: { name: ShippingProvider, icon: React.ElementType }[] =
     { name: 'Tokopedia', icon: ShoppingBag },
     { name: 'Instant', icon: Truck },
 ];
-
-const ScannerComponent = ({ onScanSuccess, onScanError }: { onScanSuccess: (text: string) => void; onScanError: (error: string) => void; }) => {
-    const scannerRef = useRef<Html5Qrcode | null>(null);
-    const readerRef = useRef<HTMLDivElement>(null);
-
-    useEffect(() => {
-        if (readerRef.current) {
-            const scanner = new Html5Qrcode(readerRef.current.id);
-            scannerRef.current = scanner;
-
-            const startScanner = async () => {
-                try {
-                    await scanner.start(
-                        { facingMode: "environment" },
-                        {
-                            fps: 10,
-                            qrbox: { width: 250, height: 250 },
-                            supportedScanTypes: [], // Use all supported types
-                        },
-                        onScanSuccess,
-                        (errorMessage) => {
-                            // This is the scan failure callback, not for critical errors.
-                            // We can often ignore it to reduce console noise.
-                        }
-                    );
-                } catch (err: any) {
-                    onScanError(err.message || "Failed to start scanner.");
-                }
-            };
-
-            startScanner();
-        }
-
-        return () => {
-            scannerRef.current?.stop().catch(err => {
-                console.error("Failed to stop scanner gracefully", err);
-            });
-        };
-    }, [onScanSuccess, onScanError]);
-
-    return <div id="html5-qrcode-reader" ref={readerRef} className="w-full h-full"></div>;
-};
-
 
 export default function MobileScanReceiptPage() {
     const { addShippingReceipt } = useInventory();
@@ -134,22 +90,31 @@ export default function MobileScanReceiptPage() {
         setIsSubmitting(false);
         inputRef.current?.focus();
     }
-
-    const handleScanError = (error: string) => {
-        console.error("QR Scan Error:", error);
-        toast({
-            variant: "destructive",
-            title: "Scanner Error",
-            description: "Tidak dapat memulai kamera. Pastikan Anda telah memberikan izin.",
-        });
-        setIsCameraOpen(false);
-    };
-
-    const handleScanSuccess = (result: string) => {
-        if (result) {
-            handleSubmit(result);
-        }
-    };
+    
+    if (isCameraOpen) {
+        return (
+             <div className="fixed inset-0 bg-black z-50">
+                <Scanner
+                    onResult={(text, result) => handleSubmit(text)}
+                    onError={(error) => console.log(error?.message)}
+                    options={{
+                        delayBetweenScanAttempts: 1000,
+                        delayBetweenScanSuccess: 1000,
+                    }}
+                />
+                <div className="absolute top-0 left-0 right-0 bottom-0 flex items-center justify-center pointer-events-none">
+                    <div className="w-[70vw] h-[30vh] border-4 border-dashed border-white/70 rounded-2xl" />
+                </div>
+                <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setIsCameraOpen(false)}
+                    className="absolute right-4 top-4 rounded-full bg-black/50 p-2 text-white h-10 w-10">
+                    <X className="h-6 w-6" />
+                </Button>
+            </div>
+        )
+    }
     
     if (!selectedChannel) {
         return (
@@ -197,87 +162,71 @@ export default function MobileScanReceiptPage() {
         )
     }
 
-    if (isCameraOpen) {
-        return (
-            <div className="fixed inset-0 bg-black z-50">
-                <ScannerComponent onScanSuccess={handleScanSuccess} onScanError={handleScanError} />
-                <div className="absolute top-0 left-0 right-0 bottom-0 flex items-center justify-center pointer-events-none">
-                    <div className="w-[70vw] h-[30vh] border-4 border-dashed border-white/70 rounded-2xl" />
-                </div>
-                <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => setIsCameraOpen(false)}
-                    className="absolute right-4 top-4 rounded-full bg-black/50 p-2 text-white h-10 w-10">
-                    <X className="h-6 w-6" />
-                </Button>
-            </div>
-        );
-    }
-
     return (
-        <div className="min-h-screen bg-muted flex flex-col p-4">
-            <header className="flex items-center justify-between mb-4">
-                 <Button variant="ghost" size="icon" onClick={() => setSelectedChannel(null)}>
-                    <ArrowLeft className="h-5 w-5" />
-                </Button>
-                <h1 className="text-lg font-bold">Scan Resi {selectedChannel}</h1>
-                 <div className="w-9 h-9" />
-            </header>
+        <>
+            <div className="min-h-screen bg-muted flex flex-col p-4">
+                <header className="flex items-center justify-between mb-4">
+                    <Button variant="ghost" size="icon" onClick={() => setSelectedChannel(null)}>
+                        <ArrowLeft className="h-5 w-5" />
+                    </Button>
+                    <h1 className="text-lg font-bold">Scan Resi {selectedChannel}</h1>
+                    <div className="w-9 h-9" />
+                </header>
 
-            <main className="flex-grow flex flex-col gap-4">
-                {!isContextSecure && (
-                    <Alert variant="destructive">
-                        <AlertTitle>Koneksi Tidak Aman (HTTP)</AlertTitle>
-                        <AlertDescription>
-                            Akses kamera dinonaktifkan oleh browser. Harap gunakan koneksi HTTPS atau akses melalui localhost untuk mengaktifkan pemindai.
-                        </AlertDescription>
-                    </Alert>
-                )}
-                <form onSubmit={handleFormSubmit} className="space-y-4">
-                    <div className="flex items-center gap-2">
-                        <div className="relative flex-grow">
-                            <ScanLine className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                            <Input
-                                ref={inputRef}
-                                placeholder="Scan atau ketik No. Resi (AWB)"
-                                className="pl-10 text-base h-12"
-                                value={awb}
-                                onChange={(e) => setAwb(e.target.value)}
-                                disabled={isSubmitting}
-                            />
-                        </div>
-                        <Button type="button" size="icon" className="h-12 w-12 shrink-0" onClick={() => setIsCameraOpen(true)} disabled={!isContextSecure}>
-                            <Camera className="h-6 w-6" />
-                        </Button>
-                    </div>
-                </form>
-
-                <Card className="flex-grow">
-                    <CardHeader>
-                        <CardTitle className="text-base">Baru Saja Di-scan ({selectedChannel})</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        {recentlyAdded.length === 0 ? (
-                             <div className="text-center py-10 text-muted-foreground">
-                                <p>Belum ada resi yang di-scan untuk channel ini.</p>
+                <main className="flex-grow flex flex-col gap-4">
+                    {!isContextSecure && (
+                        <Alert variant="destructive">
+                            <AlertTitle>Koneksi Tidak Aman (HTTP)</AlertTitle>
+                            <AlertDescription>
+                                Akses kamera dinonaktifkan oleh browser. Harap gunakan koneksi HTTPS atau akses melalui localhost untuk mengaktifkan pemindai.
+                            </AlertDescription>
+                        </Alert>
+                    )}
+                    <form onSubmit={handleFormSubmit} className="space-y-4">
+                        <div className="flex items-center gap-2">
+                            <div className="relative flex-grow">
+                                <ScanLine className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                                <Input
+                                    ref={inputRef}
+                                    placeholder="Scan atau ketik No. Resi (AWB)"
+                                    className="pl-10 text-base h-12"
+                                    value={awb}
+                                    onChange={(e) => setAwb(e.target.value)}
+                                    disabled={isSubmitting}
+                                />
                             </div>
-                        ) : (
-                            <ul className="space-y-2">
-                                {recentlyAdded.filter(r => r.channel === selectedChannel).map(item => (
-                                    <li key={item.id} className="flex justify-between items-center bg-secondary/50 p-2 rounded-md text-sm">
-                                        <div>
-                                            <p className="font-semibold">{item.awb}</p>
-                                            <p className="text-xs text-muted-foreground">{item.channel}</p>
-                                        </div>
-                                        <p className="text-xs text-muted-foreground">{format(parseISO(item.date), 'HH:mm:ss')}</p>
-                                    </li>
-                                ))}
-                            </ul>
-                        )}
-                    </CardContent>
-                </Card>
-            </main>
-        </div>
+                            <Button type="button" size="icon" className="h-12 w-12 shrink-0" onClick={() => setIsCameraOpen(true)} disabled={!isContextSecure}>
+                                <Camera className="h-6 w-6" />
+                            </Button>
+                        </div>
+                    </form>
+
+                    <Card className="flex-grow">
+                        <CardHeader>
+                            <CardTitle className="text-base">Baru Saja Di-scan ({selectedChannel})</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            {recentlyAdded.length === 0 ? (
+                                <div className="text-center py-10 text-muted-foreground">
+                                    <p>Belum ada resi yang di-scan untuk channel ini.</p>
+                                </div>
+                            ) : (
+                                <ul className="space-y-2">
+                                    {recentlyAdded.filter(r => r.channel === selectedChannel).map(item => (
+                                        <li key={item.id} className="flex justify-between items-center bg-secondary/50 p-2 rounded-md text-sm">
+                                            <div>
+                                                <p className="font-semibold">{item.awb}</p>
+                                                <p className="text-xs text-muted-foreground">{item.channel}</p>
+                                            </div>
+                                            <p className="text-xs text-muted-foreground">{format(parseISO(item.date), 'HH:mm:ss')}</p>
+                                        </li>
+                                    ))}
+                                </ul>
+                            )}
+                        </CardContent>
+                    </Card>
+                </main>
+            </div>
+        </>
     );
 }
