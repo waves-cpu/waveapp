@@ -112,7 +112,7 @@ export default function MobileScanReceiptPage() {
         toast({
             variant: "destructive",
             title: "Gagal Membuka Kamera",
-            description: "Pastikan Anda telah memberikan izin kamera untuk situs ini.",
+            description: "Pastikan Anda telah memberikan izin kamera untuk situs ini di pengaturan browser Anda. " + errorMessage,
         });
         setIsCameraOpen(false); // Close the scanner view on error
     };
