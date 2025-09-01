@@ -102,7 +102,7 @@ export default function MobileScanReceiptPage() {
     
     if (isCameraOpen) {
         return (
-             <div className="min-h-screen bg-black text-white flex flex-col">
+             <div className="min-h-screen text-white flex flex-col">
                 <header className="absolute top-0 left-0 right-0 z-10 flex items-center p-4 bg-gradient-to-b from-black/60 to-transparent">
                      <Button variant="ghost" size="icon" onClick={() => setIsCameraOpen(false)} className="rounded-full hover:bg-white/10">
                         <ArrowLeft className="h-5 w-5" />
