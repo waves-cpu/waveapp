@@ -6,7 +6,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ArrowLeft, ScanLine, Camera, Calendar as CalendarIcon, ShoppingBag, Truck, X } from 'lucide-react';
-import { useRouter } from 'next/navigation';
 import { useInventory } from '@/hooks/use-inventory';
 import { useToast } from '@/hooks/use-toast';
 import { useScanSounds } from '@/hooks/use-scan-sounds';
@@ -16,7 +15,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
-import { Scanner } from '@yudiel/react-qr-scanner';
+import { Html5QrcodeScanner, Html5QrcodeScannerState } from 'html5-qrcode';
 
 type ShippingProvider = 'Shopee' | 'Tiktok' | 'Lazada' | 'Instant' | 'Tokopedia';
 
@@ -28,28 +27,45 @@ const shippingProviders: { name: ShippingProvider, icon: React.ElementType }[] =
     { name: 'Instant', icon: Truck },
 ];
 
-const ScannerDialog = ({ open, onClose, onScan, onScanError }: { open: boolean, onClose: () => void, onScan: (result: string) => void, onScanError: (error: any) => void }) => {
-    if (!open) return null;
+const ScannerComponent = ({ onScanSuccess, onScanError, onClose }: { onScanSuccess: (text: string) => void, onScanError: (error: string) => void, onClose: () => void }) => {
+    const scannerRef = useRef<Html5QrcodeScanner | null>(null);
+    const scannerRegionId = "html5qr-code-full-region";
+
+    useEffect(() => {
+        if (!scannerRef.current) {
+            const scanner = new Html5QrcodeScanner(
+                scannerRegionId,
+                {
+                    fps: 10,
+                    qrbox: { width: 250, height: 250 },
+                    rememberLastUsedCamera: true,
+                    supportedScanTypes: [],
+                },
+                false // verbose
+            );
+
+            const successCallback = (decodedText: string, decodedResult: any) => {
+                onScanSuccess(decodedText);
+            };
+
+            const errorCallback = (errorMessage: string) => {
+                // We can ignore common errors or handle them if needed
+            };
+            
+            scanner.render(successCallback, errorCallback);
+            scannerRef.current = scanner;
+        }
+
+        return () => {
+            if (scannerRef.current && scannerRef.current.getState() === Html5QrcodeScannerState.SCANNING) {
+                scannerRef.current.clear().catch(err => console.error("Failed to clear scanner", err));
+            }
+        };
+    }, [onScanSuccess, onScanError]);
 
     return (
-        <div className="fixed inset-0 z-50 bg-black">
-            <Scanner
-                onResult={onScan}
-                onError={onScanError}
-                options={{
-                    constraints: {
-                        facingMode: 'environment'
-                    }
-                }}
-                styles={{
-                    container: { width: '100%', height: '100%' },
-                    video: { width: '100%', height: '100%', objectFit: 'cover' }
-                }}
-            />
-            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                 <div className="w-[70vw] h-[30vw] md:w-80 md:h-32 border-4 border-white/50 rounded-lg shadow-lg"/>
-                <p className="mt-4 text-sm text-white bg-black/50 px-3 py-1.5 rounded-md">Posisikan barcode di dalam frame</p>
-            </div>
+        <div className="fixed inset-0 bg-black z-50 flex flex-col">
+            <div id={scannerRegionId} className="w-full flex-grow"></div>
              <Button
                 variant="ghost"
                 size="icon"
@@ -59,15 +75,14 @@ const ScannerDialog = ({ open, onClose, onScan, onScanError }: { open: boolean, 
                 <span className="sr-only">Close</span>
             </Button>
         </div>
-    )
-}
+    );
+};
 
 
 export default function MobileScanReceiptPage() {
     const { addShippingReceipt } = useInventory();
     const { toast } = useToast();
     const { playSuccessSound, playErrorSound, initializeAudio } = useScanSounds();
-    const router = useRouter();
 
     const [selectedChannel, setSelectedChannel] = useState<ShippingProvider | null>(null);
     const [awb, setAwb] = useState('');
@@ -128,13 +143,13 @@ export default function MobileScanReceiptPage() {
         inputRef.current?.focus();
     }
     
-    const handleScanError = (error: any) => {
+    const handleScanError = (error: string) => {
         playErrorSound();
         console.error("Scan error:", error);
         toast({
             variant: "destructive",
-            title: "Kamera Error",
-            description: error?.message || 'Gagal memulai kamera.',
+            title: "Scan Error",
+            description: error || 'Gagal memindai.',
         });
     };
     
@@ -186,12 +201,13 @@ export default function MobileScanReceiptPage() {
 
     return (
         <div className="min-h-screen bg-muted flex flex-col p-4">
-             <ScannerDialog
-                open={isCameraOpen}
-                onClose={() => setIsCameraOpen(false)}
-                onScan={handleSubmit}
-                onScanError={handleScanError}
-             />
+             {isCameraOpen && (
+                <ScannerComponent 
+                    onScanSuccess={handleSubmit}
+                    onScanError={handleScanError}
+                    onClose={() => setIsCameraOpen(false)}
+                />
+             )}
             <header className="flex items-center justify-between mb-4">
                  <Button variant="ghost" size="icon" onClick={() => setSelectedChannel(null)}>
                     <ArrowLeft className="h-5 w-5" />
@@ -256,3 +272,5 @@ export default function MobileScanReceiptPage() {
         </div>
     );
 }
+
+    
