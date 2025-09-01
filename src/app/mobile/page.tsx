@@ -16,7 +16,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
-import { QrScanner } from '@yudiel/react-qr-scanner';
+import { Scanner } from '@yudiel/react-qr-scanner';
 
 type ShippingProvider = 'Shopee' | 'Tiktok' | 'Lazada' | 'Instant' | 'Tokopedia';
 
@@ -33,12 +33,18 @@ const ScannerDialog = ({ open, onClose, onScan, onScanError }: { open: boolean, 
 
     return (
         <div className="fixed inset-0 z-50 bg-black">
-            <QrScanner
-                onDecode={onScan}
+            <Scanner
+                onResult={onScan}
                 onError={onScanError}
-                constraints={{ facingMode: 'environment' }}
-                containerStyle={{ width: '100%', height: '100%' }}
-                videoStyle={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                options={{
+                    constraints: {
+                        facingMode: 'environment'
+                    }
+                }}
+                styles={{
+                    container: { width: '100%', height: '100%' },
+                    video: { width: '100%', height: '100%', objectFit: 'cover' }
+                }}
             />
             <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
                  <div className="w-[70vw] h-[30vw] md:w-80 md:h-32 border-4 border-white/50 rounded-lg shadow-lg"/>
