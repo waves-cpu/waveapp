@@ -128,7 +128,6 @@ export const translations = {
             assetReport: "Asset Report",
             profitLossReport: "Profit & Loss Report",
             priceSettings: "Price Settings",
-            discountReport: "Discount Report",
             balanceSheet: "Balance Sheet",
             priceSettingsPage: {
                 description: "Select products to set their cost price, default selling price, and channel-specific prices.",
@@ -471,7 +470,7 @@ export const translations = {
             cancel: "Cancel",
             saveChanges: "Save Changes",
             apply: "Apply",
-            saving: "Saving...",
+            saving: 'Saving...',
             update: "Update",
         }
     },
@@ -602,7 +601,6 @@ export const translations = {
             assetReport: "Laporan Aset",
             profitLossReport: "Laporan Laba Rugi",
             priceSettings: "Pengaturan Harga",
-            discountReport: "Laporan Diskon",
             balanceSheet: "Neraca Keuangan",
             priceSettingsPage: {
                 description: "Pilih produk untuk mengatur harga modal (HPP), harga jual default, dan harga spesifik per kanal penjualan.",

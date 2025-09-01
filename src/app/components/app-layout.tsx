@@ -45,6 +45,7 @@ import {
   Undo2,
   PackagePlus,
   TicketPercent,
+  Activity,
 } from 'lucide-react';
 import { Logo } from './logo';
 import { Separator } from '@/components/ui/separator';
@@ -247,6 +248,14 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                       </CollapsibleTrigger>
                       <CollapsibleContent>
                           <SidebarMenu className="ml-4 mt-2 border-l border-muted-foreground/20 pl-4">
+                                <SidebarMenuItem>
+                                  <Link href="/finance/statements">
+                                      <SidebarMenuButton variant="ghost" size="sm" isActive={pathname === '/finance/statements'}>
+                                          <Activity />
+                                          {t.finance.financialStatements}
+                                      </SidebarMenuButton>
+                                  </Link>
+                              </SidebarMenuItem>
                                <SidebarMenuItem>
                                   <Link href="/finance/journal">
                                       <SidebarMenuButton variant="ghost" size="sm" isActive={pathname === '/finance/journal'}>
@@ -292,14 +301,6 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                                       <SidebarMenuButton variant="ghost" size="sm" isActive={pathname === '/finance/settings'}>
                                           <DollarSign />
                                           {t.finance.priceSettings}
-                                      </SidebarMenuButton>
-                                  </Link>
-                              </SidebarMenuItem>
-                               <SidebarMenuItem>
-                                  <Link href="/finance/discount-report">
-                                      <SidebarMenuButton variant="ghost" size="sm" isActive={pathname === '/finance/discount-report'}>
-                                          <TicketPercent />
-                                          {t.finance.discountReport}
                                       </SidebarMenuButton>
                                   </Link>
                               </SidebarMenuItem>
