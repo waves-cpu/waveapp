@@ -5,7 +5,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowLeft, ScanLine, Camera, Calendar as CalendarIcon, ShoppingCart, Truck, X } from 'lucide-react';
+import { ArrowLeft, ScanLine, Camera, Calendar as CalendarIcon, ShoppingCart, Truck, X, ShoppingBag } from 'lucide-react';
 import { useInventory } from '@/hooks/use-inventory';
 import { useToast } from '@/hooks/use-toast';
 import { useScanSounds } from '@/hooks/use-scan-sounds';
@@ -34,6 +34,7 @@ const ScannerComponent = ({ onScanSuccess, onScanError }: { onScanSuccess: (deco
 
     useEffect(() => {
         const scanner = new Html5Qrcode(readerId, { 
+            verbose: false,
             experimentalFeatures: {
                 useBarCodeDetectorIfSupported: false,
             }
