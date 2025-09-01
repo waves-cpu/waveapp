@@ -17,13 +17,6 @@ import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { QrScanner } from 'react-qrcode-scanner';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogClose,
-} from "@/components/ui/dialog"
 
 
 type ShippingProvider = 'Shopee' | 'Tiktok' | 'Lazada' | 'Instant' | 'Tokopedia';
@@ -36,42 +29,37 @@ const shippingProviders: { name: ShippingProvider, icon: React.ElementType }[] =
     { name: 'Instant', icon: Truck },
 ];
 
-const ScannerDialog = ({
-    open,
-    onOpenChange,
+const ScannerOverlay = ({
     onScan,
-    onError
+    onError,
+    onClose
 } : {
-    open: boolean,
-    onOpenChange: (open: boolean) => void,
     onScan: (data: string | null) => void,
-    onError: (error: any) => void
+    onError: (error: any) => void,
+    onClose: () => void
 }) => {
     
     return (
-        <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="p-0 border-0 gap-0 max-w-full w-full h-full md:h-[calc(100vh-4rem)] md:max-w-md">
-                 <DialogHeader className="sr-only">
-                    <DialogTitle>QR Code Scanner</DialogTitle>
-                 </DialogHeader>
-                 <div className="relative w-full h-full">
-                     <QrScanner
-                        onDecode={onScan}
-                        onError={onError}
-                        video={{ facingMode: "environment" }}
-                        className="w-full h-full"
-                    />
-                    <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                        <div className="w-[70vw] h-[30vw] md:w-80 md:h-32 border-4 border-white/50 rounded-lg shadow-lg"/>
-                        <p className="mt-4 text-sm text-white bg-black/50 px-3 py-1.5 rounded-md">Posisikan barcode di dalam frame</p>
-                    </div>
-                     <DialogClose className="absolute right-4 top-4 rounded-full bg-black/50 p-2 text-white opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground">
-                        <X className="h-4 w-4" />
-                        <span className="sr-only">Close</span>
-                    </DialogClose>
-                </div>
-            </DialogContent>
-        </Dialog>
+        <div className="fixed inset-0 z-50 bg-black">
+            <QrScanner
+                onDecode={onScan}
+                onError={onError}
+                video={{ facingMode: "environment" }}
+                className="w-full h-full"
+            />
+            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                <div className="w-[70vw] h-[30vw] md:w-80 md:h-32 border-4 border-white/50 rounded-lg shadow-lg"/>
+                <p className="mt-4 text-sm text-white bg-black/50 px-3 py-1.5 rounded-md">Posisikan barcode di dalam frame</p>
+            </div>
+             <Button
+                variant="ghost"
+                size="icon"
+                onClick={onClose}
+                className="absolute right-4 top-4 rounded-full bg-black/50 p-2 text-white opacity-70 ring-offset-background transition-opacity hover:opacity-100 h-9 w-9">
+                <X className="h-5 w-5" />
+                <span className="sr-only">Close</span>
+            </Button>
+        </div>
     )
 }
 
@@ -214,12 +202,13 @@ export default function MobileScanReceiptPage() {
 
     return (
         <div className="min-h-screen bg-muted flex flex-col p-4">
-            <ScannerDialog
-                open={isCameraOpen}
-                onOpenChange={setIsCameraOpen}
-                onScan={handleScan}
-                onError={handleError}
-            />
+            {isCameraOpen && (
+                <ScannerOverlay
+                    onScan={handleScan}
+                    onError={handleError}
+                    onClose={() => setIsCameraOpen(false)}
+                />
+            )}
             <header className="flex items-center justify-between mb-4">
                  <Button variant="ghost" size="icon" onClick={() => setSelectedChannel(null)}>
                     <ArrowLeft className="h-5 w-5" />
