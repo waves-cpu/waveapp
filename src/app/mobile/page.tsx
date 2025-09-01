@@ -27,34 +27,56 @@ const shippingProviders: { name: ShippingProvider, icon: React.ElementType }[] =
     { name: 'Instant', icon: Truck },
 ];
 
-const ScannerComponent = ({ onScanSuccess, onScanError }: { onScanSuccess: (decodedText: string) => void; onScanError: (errorMessage: string | Error) => void; }) => {
+const ScannerComponent = ({ onScanSuccess, onScanError, setHasCameraPermission }: { onScanSuccess: (decodedText: string) => void; onScanError: (errorMessage: string | Error) => void; setHasCameraPermission: (hasPermission: boolean) => void; }) => {
     const videoRef = useRef<HTMLVideoElement>(null);
     const scannerRef = useRef<QrScanner | null>(null);
+    const { toast } = useToast();
 
     useEffect(() => {
-        if (videoRef.current) {
-            const scanner = new QrScanner(
-                videoRef.current,
-                (result) => onScanSuccess(result.data),
-                {
-                    onDecodeError: onScanError,
-                    highlightScanRegion: true,
-                    highlightCodeOutline: true,
-                }
-            );
-            scannerRef.current = scanner;
-            scanner.start();
-        }
+        let scanner: QrScanner | null = null;
+        let isCancelled = false;
 
-        return () => {
-            if (scannerRef.current) {
-                scannerRef.current.destroy();
+        const startScanner = async () => {
+             if (videoRef.current && !isCancelled) {
+                scanner = new QrScanner(
+                    videoRef.current,
+                    (result) => onScanSuccess(result.data),
+                    {
+                        onDecodeError: onScanError,
+                        highlightScanRegion: true,
+                        highlightCodeOutline: true,
+                    }
+                );
+                scannerRef.current = scanner;
+                
+                try {
+                    await scanner.start();
+                    setHasCameraPermission(true);
+                } catch(error) {
+                    console.error("Camera start error:", error);
+                    setHasCameraPermission(false);
+                    toast({
+                      variant: 'destructive',
+                      title: 'Kamera Gagal Dimulai',
+                      description: 'Pastikan Anda telah memberikan izin akses kamera di pengaturan browser.',
+                    });
+                }
             }
         };
-    }, [onScanSuccess, onScanError]);
+
+        startScanner();
+
+        return () => {
+            isCancelled = true;
+            if (scanner) {
+                scanner.destroy();
+                scannerRef.current = null;
+            }
+        };
+    }, [onScanSuccess, onScanError, setHasCameraPermission, toast]);
 
     return (
-        <div className="relative w-full h-full">
+        <div className="relative w-full h-full bg-black">
             <video ref={videoRef} className="w-full h-full object-cover" />
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                 <div className="w-[70vw] h-[30vh] border-4 border-dashed border-white/70 rounded-2xl" />
@@ -76,6 +98,7 @@ export default function MobileScanReceiptPage() {
     const inputRef = useRef<HTMLInputElement>(null);
     const [isCameraOpen, setIsCameraOpen] = useState(false);
     const [isContextSecure, setIsContextSecure] = useState(true);
+    const [hasCameraPermission, setHasCameraPermission] = useState(true);
 
     useEffect(() => {
         initializeAudio();
@@ -137,6 +160,11 @@ export default function MobileScanReceiptPage() {
             console.error(errorMessage);
         }
     };
+    
+    const openCamera = () => {
+        setHasCameraPermission(true); // Assume permission is granted until scanner says otherwise
+        setIsCameraOpen(true);
+    }
 
     if (isCameraOpen) {
         return (
@@ -144,6 +172,7 @@ export default function MobileScanReceiptPage() {
                 <ScannerComponent 
                     onScanSuccess={(decodedText) => handleSubmit(decodedText)}
                     onScanError={onScanError}
+                    setHasCameraPermission={setHasCameraPermission}
                 />
                 <Button
                     variant="ghost"
@@ -152,6 +181,16 @@ export default function MobileScanReceiptPage() {
                     className="absolute right-4 top-4 rounded-full bg-black/50 p-2 text-white h-10 w-10">
                     <X className="h-6 w-6" />
                 </Button>
+                 {!hasCameraPermission && (
+                    <div className="absolute bottom-4 left-4 right-4">
+                        <Alert variant="destructive">
+                            <AlertTitle>Izin Kamera Diperlukan</AlertTitle>
+                            <AlertDescription>
+                                Harap izinkan akses kamera di pengaturan browser Anda untuk menggunakan fitur pemindai.
+                            </AlertDescription>
+                        </Alert>
+                    </div>
+                 )}
             </div>
         )
     }
@@ -234,7 +273,7 @@ export default function MobileScanReceiptPage() {
                                     onChange={(e) => setAwb(e.target.value)}
                                 />
                             </div>
-                            <Button type="button" size="icon" className="h-12 w-12 shrink-0" onClick={() => setIsCameraOpen(true)} disabled={!isContextSecure}>
+                            <Button type="button" size="icon" className="h-12 w-12 shrink-0" onClick={openCamera} disabled={!isContextSecure}>
                                 <Camera className="h-6 w-6" />
                             </Button>
                         </div>
