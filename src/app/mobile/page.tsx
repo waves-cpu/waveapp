@@ -54,7 +54,7 @@ export default function MobileScanReceiptPage() {
         }
     }, [selectedChannel, isCameraOpen]);
     
-    useEffect(() => {
+     useEffect(() => {
         if (isCameraOpen) {
             navigator.mediaDevices.getUserMedia({ video: true })
                 .then(() => {
@@ -65,8 +65,8 @@ export default function MobileScanReceiptPage() {
                     setHasCameraPermission(false);
                     toast({
                         variant: 'destructive',
-                        title: 'Camera Access Denied',
-                        description: 'Please enable camera permissions in your browser settings to use this app.',
+                        title: 'Izin Kamera Ditolak',
+                        description: 'Harap aktifkan izin kamera di pengaturan browser Anda untuk menggunakan fitur ini.',
                     });
                 });
         }
@@ -119,6 +119,16 @@ export default function MobileScanReceiptPage() {
     const handleDecode = (result: string) => {
         handleSubmit(result);
     };
+
+    const handleCameraError = (error: Error) => {
+        console.error("Camera Error:", error);
+        toast({
+            variant: "destructive",
+            title: "Gagal Membuka Kamera",
+            description: error.message || "Pastikan Anda telah memberikan izin kamera untuk situs ini.",
+        });
+        setIsCameraOpen(false); // Close the scanner view on error
+    };
     
     if (isCameraOpen) {
         return (
@@ -133,7 +143,7 @@ export default function MobileScanReceiptPage() {
                      {hasCameraPermission === true && (
                         <QrScanner
                             onDecode={handleDecode}
-                            onError={(error) => console.log(error?.message)}
+                            onError={handleCameraError}
                             constraints={{ facingMode: 'environment' }}
                             containerStyle={{ width: '100%', height: '100%', paddingTop: '0' }}
                             videoStyle={{ width: '100%', height: '100%', objectFit: 'cover' }}
@@ -261,3 +271,4 @@ export default function MobileScanReceiptPage() {
             </main>
         </div>
     );
+
