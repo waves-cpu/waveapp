@@ -29,7 +29,6 @@ const shippingProviders: { name: ShippingProvider, icon: React.ElementType }[] =
 
 const ScannerComponent = ({ onScanSuccess }: { onScanSuccess: (decodedText: string) => void; }) => {
     const videoRef = useRef<HTMLVideoElement>(null);
-    const scannerRef = useRef<QrScanner | null>(null);
     const [hasCameraPermission, setHasCameraPermission] = useState(true);
     const { toast } = useToast();
 
@@ -37,36 +36,41 @@ const ScannerComponent = ({ onScanSuccess }: { onScanSuccess: (decodedText: stri
         const videoElem = videoRef.current;
         if (!videoElem) return;
 
-        const scanner = new QrScanner(
+        const qrScanner = new QrScanner(
             videoElem,
-            (result) => onScanSuccess(result.data),
+            result => onScanSuccess(result.data),
             {
                 highlightScanRegion: true,
                 highlightCodeOutline: true,
             }
         );
-        scannerRef.current = scanner;
+
+        let isCancelled = false;
 
         const startScanner = async () => {
-            try {
-                await scanner.start();
-                setHasCameraPermission(true);
+             try {
+                await qrScanner.start();
+                if (!isCancelled) {
+                    setHasCameraPermission(true);
+                }
             } catch (error) {
-                console.error("Camera start error:", error);
-                setHasCameraPermission(false);
-                toast({
-                  variant: 'destructive',
-                  title: 'Izin Kamera Diperlukan',
-                  description: 'Harap berikan izin akses kamera di pengaturan browser Anda.',
-                });
+                if (!isCancelled) {
+                    console.error("Camera start error:", error);
+                    setHasCameraPermission(false);
+                    toast({
+                        variant: 'destructive',
+                        title: 'Izin Kamera Diperlukan',
+                        description: 'Harap berikan izin akses kamera di pengaturan browser Anda.',
+                    });
+                }
             }
         };
 
         startScanner();
 
         return () => {
-            scanner.destroy();
-            scannerRef.current = null;
+            isCancelled = true;
+            qrScanner.destroy();
         };
     }, [onScanSuccess, toast]);
 
@@ -102,8 +106,11 @@ export default function MobileScanReceiptPage() {
     const [recentlyAdded, setRecentlyAdded] = useState<ShippingReceipt[]>([]);
     const inputRef = useRef<HTMLInputElement>(null);
     const [isCameraOpen, setIsCameraOpen] = useState(false);
-    const [isScanningPaused, setIsScanningPaused] = useState(false);
+    const [lastScannedAwb, setLastScannedAwb] = useState<string | null>(null);
 
+    const refocusInput = useCallback(() => {
+        setTimeout(() => inputRef.current?.focus(), 0);
+    }, []);
 
     useEffect(() => {
         initializeAudio();
@@ -111,24 +118,18 @@ export default function MobileScanReceiptPage() {
     
     useEffect(() => {
         if(selectedChannel && !isCameraOpen) {
-            inputRef.current?.focus();
+            refocusInput();
         }
-    }, [selectedChannel, isCameraOpen]);
+    }, [selectedChannel, isCameraOpen, refocusInput]);
     
-    const handleScanSuccess = (decodedText: string) => {
-        if (isScanningPaused) {
-            return;
-        }
-        handleSubmit(decodedText);
-    };
-
     const handleSubmit = useCallback(async (scannedAwb: string) => {
         if (!scannedAwb || !scannedAwb.trim() || !selectedChannel) return;
         
-        setIsScanningPaused(true); // Pause scanning immediately
+        const trimmedAwb = scannedAwb.trim();
+        setLastScannedAwb(trimmedAwb);
 
         const newReceipt: Omit<ShippingReceipt, 'id'> = {
-            awb: scannedAwb.trim(),
+            awb: trimmedAwb,
             channel: selectedChannel,
             date: format(scanDate, "yyyy-MM-dd'T'HH:mm:ss"),
             status: 'Perlu Diproses'
@@ -139,32 +140,34 @@ export default function MobileScanReceiptPage() {
             playSuccessSound();
             toast({
                 title: 'Resi Ditambahkan',
-                description: `Resi ${scannedAwb} berhasil disimpan.`,
+                description: `Resi ${trimmedAwb} berhasil disimpan.`,
             });
             setRecentlyAdded(prev => [added, ...prev].slice(0, 10));
         } catch (error) {
             playErrorSound();
             const errorMessage = error instanceof Error && error.message.includes('UNIQUE constraint failed')
-                ? `Resi ${scannedAwb.trim()} sudah pernah di-scan.`
+                ? `Resi ${trimmedAwb} sudah pernah di-scan.`
                 : 'Gagal menyimpan resi.';
             toast({
                 variant: 'destructive',
                 title: 'Input Gagal',
                 description: errorMessage,
             });
-        } finally {
-            // Resume scanning after a delay
-            setTimeout(() => {
-                setIsScanningPaused(false);
-            }, 2000);
         }
     }, [selectedChannel, scanDate, addShippingReceipt, playSuccessSound, playErrorSound, toast]);
 
+    const handleScanSuccess = (decodedText: string) => {
+        if (decodedText === lastScannedAwb) {
+            return; // Ignore if it's the same as the last processed AWB
+        }
+        handleSubmit(decodedText);
+    };
 
     const handleFormSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         await handleSubmit(awb);
         setAwb('');
+        refocusInput();
     }
     
     if (isCameraOpen) {
@@ -176,7 +179,10 @@ export default function MobileScanReceiptPage() {
                 <Button
                     variant="ghost"
                     size="icon"
-                    onClick={() => setIsCameraOpen(false)}
+                    onClick={() => {
+                        setIsCameraOpen(false);
+                        setLastScannedAwb(null); // Reset when closing camera
+                    }}
                     className="absolute right-4 top-4 rounded-full bg-black/50 p-2 text-white h-10 w-10">
                     <X className="h-6 w-6" />
                 </Button>
@@ -254,7 +260,10 @@ export default function MobileScanReceiptPage() {
                                     onChange={(e) => setAwb(e.target.value)}
                                 />
                             </div>
-                            <Button type="button" size="icon" className="h-12 w-12 shrink-0" onClick={() => setIsCameraOpen(true)}>
+                            <Button type="button" size="icon" className="h-12 w-12 shrink-0" onClick={() => {
+                                setIsCameraOpen(true);
+                                setLastScannedAwb(null); // Reset when opening camera
+                            }}>
                                 <Camera className="h-6 w-6" />
                             </Button>
                         </div>
