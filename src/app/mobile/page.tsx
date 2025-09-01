@@ -51,6 +51,9 @@ const ScannerDialog = ({
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="p-0 border-0 gap-0 max-w-full w-full h-full md:h-[calc(100vh-4rem)] md:max-w-md">
+                 <DialogHeader className="sr-only">
+                    <DialogTitle>QR Code Scanner</DialogTitle>
+                 </DialogHeader>
                  <div className="relative w-full h-full">
                      <QrScanner
                         onScan={onScan}
