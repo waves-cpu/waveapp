@@ -15,7 +15,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
-import { Html5Qrcode, Html5QrcodeScannerState } from 'html5-qrcode';
+import { Html5Qrcode } from 'html5-qrcode';
 
 
 type ShippingProvider = 'Shopee' | 'Tiktok' | 'Lazada' | 'Instant' | 'Tokopedia';
@@ -28,27 +28,24 @@ const shippingProviders: { name: ShippingProvider, icon: React.ElementType }[] =
     { name: 'Instant', icon: Truck },
 ];
 
-const ScannerComponent = ({ onScanSuccess, onScanFailure }: { onScanSuccess: (decodedText: string, decodedResult: any) => void, onScanFailure: (error: any) => void }) => {
+const ScannerComponent = ({ onScanSuccess }: { onScanSuccess: (decodedText: string) => void }) => {
     const scannerRef = useRef<Html5Qrcode | null>(null);
 
     useEffect(() => {
-        const scanner = new Html5Qrcode("reader");
+        const scanner = new Html5Qrcode("reader", { 
+             experimentalFeatures: {
+                useBarCodeDetectorIfSupported: false,
+             }
+        });
         scannerRef.current = scanner;
 
         const startScanner = async () => {
-             if (scannerRef.current && scannerRef.current.getState() === Html5QrcodeScannerState.SCANNING) {
-                return;
-            }
             try {
-                const config = {
-                    fps: 10,
-                    qrbox: { width: 250, height: 250 },
-                };
                 await scanner.start(
                     { facingMode: "environment" },
-                    config,
+                    { fps: 5, qrbox: { width: 250, height: 250 }, aspectRatio: 1.0 },
                     onScanSuccess,
-                    onScanFailure
+                    (errorMessage) => { /* ignore errors */ }
                 );
             } catch (err) {
                 console.error("Error starting scanner:", err);
@@ -58,13 +55,11 @@ const ScannerComponent = ({ onScanSuccess, onScanFailure }: { onScanSuccess: (de
         startScanner();
 
         return () => {
-            if (scannerRef.current && scannerRef.current.getState() === Html5QrcodeScannerState.SCANNING) {
-                scannerRef.current.stop().catch(err => {
-                    // Ignore error on stop.
-                });
-            }
+            scannerRef.current?.clear().catch(err => {
+                console.error("Failed to clear scanner:", err);
+            });
         };
-    }, [onScanSuccess, onScanFailure]);
+    }, [onScanSuccess]);
 
     return <div id="reader" className="w-full h-full"></div>;
 };
@@ -139,7 +134,6 @@ export default function MobileScanReceiptPage() {
              <div className="fixed inset-0 bg-black z-50">
                 <ScannerComponent 
                     onScanSuccess={(decodedText) => handleSubmit(decodedText)}
-                    onScanFailure={(error) => { /* Ignore common errors */ }}
                 />
                 <div className="absolute top-0 left-0 right-0 bottom-0 flex items-center justify-center pointer-events-none">
                     <div className="w-[70vw] h-[30vh] border-4 border-dashed border-white/70 rounded-2xl" />
