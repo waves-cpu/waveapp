@@ -15,8 +15,8 @@ import { format, parseISO } from 'date-fns';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
-import { QrScanner } from 'react-qrcode-scanner';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
+import { Html5QrcodeScanner, Html5Qrcode } from 'html5-qrcode';
 
 
 type ShippingProvider = 'Shopee' | 'Tiktok' | 'Lazada' | 'Instant' | 'Tokopedia';
@@ -29,29 +29,40 @@ const shippingProviders: { name: ShippingProvider, icon: React.ElementType }[] =
     { name: 'Instant', icon: Truck },
 ];
 
-const ScannerOverlay = ({
-    onScan,
-    onError,
-    onClose
-} : {
-    onScan: (data: string | null) => void,
-    onError: (error: any) => void,
-    onClose: () => void
-}) => {
-    
+const Scanner = ({ onScanSuccess, onScanError, onClose }: { onScanSuccess: (decodedText: string) => void, onScanError: (errorMessage: string) => void, onClose: () => void }) => {
+    const scannerRef = useRef<Html5Qrcode | null>(null);
+
+    useEffect(() => {
+        const scanner = new Html5Qrcode('reader');
+        scannerRef.current = scanner;
+
+        const config = {
+            fps: 10,
+            qrbox: { width: 250, height: 250 },
+            rememberLastUsedCamera: true,
+            supportedScanTypes: []
+        };
+
+        scanner.start({ facingMode: "environment" }, config, onScanSuccess, onScanError)
+            .catch(err => {
+                onScanError(`Gagal memulai kamera: ${err.message}`);
+            });
+
+        return () => {
+            if (scannerRef.current?.isScanning) {
+                scannerRef.current.stop().catch(err => console.error("Gagal menghentikan scanner.", err));
+            }
+        };
+    }, [onScanSuccess, onScanError]);
+
     return (
         <div className="fixed inset-0 z-50 bg-black">
-            <QrScanner
-                onDecode={onScan}
-                onError={onError}
-                video={{ facingMode: "environment" }}
-                className="w-full h-full"
-            />
+            <div id="reader" className="w-full h-full"></div>
             <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                <div className="w-[70vw] h-[30vw] md:w-80 md:h-32 border-4 border-white/50 rounded-lg shadow-lg"/>
+                 <div className="w-[70vw] h-[30vw] md:w-80 md:h-32 border-4 border-white/50 rounded-lg shadow-lg"/>
                 <p className="mt-4 text-sm text-white bg-black/50 px-3 py-1.5 rounded-md">Posisikan barcode di dalam frame</p>
             </div>
-             <Button
+            <Button
                 variant="ghost"
                 size="icon"
                 onClick={onClose}
@@ -60,7 +71,7 @@ const ScannerOverlay = ({
                 <span className="sr-only">Close</span>
             </Button>
         </div>
-    )
+    );
 }
 
 
@@ -81,7 +92,6 @@ export default function MobileScanReceiptPage() {
 
     useEffect(() => {
         initializeAudio();
-        // Check for secure context on client-side mount
         if (typeof window !== 'undefined') {
             setIsContextSecure(window.isSecureContext);
         }
@@ -123,9 +133,7 @@ export default function MobileScanReceiptPage() {
             });
         } finally {
             setIsSubmitting(false);
-            if (isCameraOpen) {
-                 // Keep camera open for next scan
-            } else {
+             if (!isCameraOpen) {
                  inputRef.current?.focus();
             }
         }
@@ -137,22 +145,23 @@ export default function MobileScanReceiptPage() {
         handleSubmit(awb);
     }
     
-    const handleScan = (data: string | null) => {
-        if (data) {
-            setIsCameraOpen(false);
-            handleSubmit(data);
-        }
-    }
-    const handleError = (err: any) => {
-        console.error(err);
+    const handleScanSuccess = (decodedText: string) => {
         setIsCameraOpen(false);
-        toast({
-            variant: "destructive",
-            title: "Kamera Error",
-            description: "Tidak dapat mengakses kamera. Pastikan Anda telah memberikan izin dan menggunakan koneksi HTTPS.",
-        });
-    }
+        handleSubmit(decodedText);
+    };
 
+    const handleScanError = (errorMessage: string) => {
+        // Errors are frequent, only show a toast for critical ones.
+        if (errorMessage.toLowerCase().includes('permission') || errorMessage.toLowerCase().includes('gagal')) {
+            playErrorSound();
+            toast({
+                variant: "destructive",
+                title: "Kamera Error",
+                description: errorMessage,
+            });
+            setIsCameraOpen(false);
+        }
+    };
     
     if (!selectedChannel) {
         return (
@@ -203,9 +212,9 @@ export default function MobileScanReceiptPage() {
     return (
         <div className="min-h-screen bg-muted flex flex-col p-4">
             {isCameraOpen && (
-                <ScannerOverlay
-                    onScan={handleScan}
-                    onError={handleError}
+                <Scanner 
+                    onScanSuccess={handleScanSuccess} 
+                    onScanError={handleScanError} 
                     onClose={() => setIsCameraOpen(false)}
                 />
             )}
@@ -220,9 +229,9 @@ export default function MobileScanReceiptPage() {
             <main className="flex-grow flex flex-col gap-4">
                 {!isContextSecure && (
                     <Alert variant="destructive">
-                        <AlertTitle>Koneksi Tidak Aman</AlertTitle>
+                        <AlertTitle>Koneksi Tidak Aman (HTTP)</AlertTitle>
                         <AlertDescription>
-                            Akses kamera dinonaktifkan oleh browser pada koneksi yang tidak aman (HTTP). Harap gunakan koneksi HTTPS atau akses melalui localhost.
+                            Akses kamera dinonaktifkan oleh browser. Harap gunakan koneksi HTTPS atau akses melalui localhost untuk mengaktifkan pemindai.
                         </AlertDescription>
                     </Alert>
                 )}
