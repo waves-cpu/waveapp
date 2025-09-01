@@ -28,26 +28,32 @@ const shippingProviders: { name: ShippingProvider, icon: React.ElementType }[] =
     { name: 'Instant', icon: Truck },
 ];
 
-const ScannerComponent = ({ onScanSuccess }: { onScanSuccess: (decodedText: string) => void }) => {
+const ScannerComponent = ({ onScanSuccess, onScanError }: { onScanSuccess: (decodedText: string) => void; onScanError: (errorMessage: string) => void; }) => {
     const scannerRef = useRef<Html5Qrcode | null>(null);
 
     useEffect(() => {
-        const scanner = new Html5Qrcode("reader", { 
-             experimentalFeatures: {
-                useBarCodeDetectorIfSupported: false,
-             }
-        });
+        const scanner = new Html5Qrcode("reader");
         scannerRef.current = scanner;
 
         const startScanner = async () => {
             try {
                 await scanner.start(
                     { facingMode: "environment" },
-                    { fps: 5, qrbox: { width: 250, height: 250 }, aspectRatio: 1.0 },
+                    { 
+                        fps: 5, 
+                        qrbox: (viewfinderWidth, viewfinderHeight) => {
+                            const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
+                            const qrboxSize = Math.floor(minEdge * 0.7);
+                            return {
+                                width: qrboxSize,
+                                height: qrboxSize,
+                            };
+                        },
+                    },
                     onScanSuccess,
-                    (errorMessage) => { /* ignore errors */ }
+                    onScanError
                 );
-            } catch (err) {
+            } catch (err: any) {
                 console.error("Error starting scanner:", err);
             }
         };
@@ -55,11 +61,13 @@ const ScannerComponent = ({ onScanSuccess }: { onScanSuccess: (decodedText: stri
         startScanner();
 
         return () => {
-            scannerRef.current?.clear().catch(err => {
-                console.error("Failed to clear scanner:", err);
-            });
+            if (scannerRef.current && scannerRef.current.isScanning) {
+                scannerRef.current.stop().catch(err => {
+                    console.error("Failed to clear scanner on cleanup:", err);
+                });
+            }
         };
-    }, [onScanSuccess]);
+    }, [onScanSuccess, onScanError]);
 
     return <div id="reader" className="w-full h-full"></div>;
 };
@@ -73,7 +81,6 @@ export default function MobileScanReceiptPage() {
     const [selectedChannel, setSelectedChannel] = useState<ShippingProvider | null>(null);
     const [awb, setAwb] = useState('');
     const [scanDate, setScanDate] = useState<Date>(new Date());
-    const [isSubmitting, setIsSubmitting] = useState(false);
     const [recentlyAdded, setRecentlyAdded] = useState<ShippingReceipt[]>([]);
     const inputRef = useRef<HTMLInputElement>(null);
     const [isCameraOpen, setIsCameraOpen] = useState(false);
@@ -105,6 +112,10 @@ export default function MobileScanReceiptPage() {
         try {
             const added = await addShippingReceipt(newReceipt);
             playSuccessSound();
+            toast({
+                title: 'Resi Ditambahkan',
+                description: `Resi ${scannedAwb} berhasil disimpan.`,
+            });
             setRecentlyAdded(prev => [added, ...prev].slice(0, 10));
         } catch (error) {
             playErrorSound();
@@ -122,18 +133,22 @@ export default function MobileScanReceiptPage() {
 
     const handleFormSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        setIsSubmitting(true);
         await handleSubmit(awb);
         setAwb('');
-        setIsSubmitting(false);
         inputRef.current?.focus();
     }
     
+    const onScanError = (errorMessage: string) => {
+        // This function is called frequently, so we don't log every error to avoid console spam.
+        // We can add more specific error handling here if needed.
+    };
+
     if (isCameraOpen) {
         return (
              <div className="fixed inset-0 bg-black z-50">
                 <ScannerComponent 
                     onScanSuccess={(decodedText) => handleSubmit(decodedText)}
+                    onScanError={onScanError}
                 />
                 <div className="absolute top-0 left-0 right-0 bottom-0 flex items-center justify-center pointer-events-none">
                     <div className="w-[70vw] h-[30vh] border-4 border-dashed border-white/70 rounded-2xl" />
@@ -225,7 +240,6 @@ export default function MobileScanReceiptPage() {
                                     className="pl-10 text-base h-12"
                                     value={awb}
                                     onChange={(e) => setAwb(e.target.value)}
-                                    disabled={isSubmitting}
                                 />
                             </div>
                             <Button type="button" size="icon" className="h-12 w-12 shrink-0" onClick={() => setIsCameraOpen(true)} disabled={!isContextSecure}>
@@ -263,3 +277,5 @@ export default function MobileScanReceiptPage() {
         </>
     );
 }
+
+    
