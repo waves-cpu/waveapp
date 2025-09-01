@@ -15,7 +15,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
-import { Html5Qrcode } from 'html5-qrcode';
+import { Html5Qrcode, Html5QrcodeScannerState } from 'html5-qrcode';
 
 
 type ShippingProvider = 'Shopee' | 'Tiktok' | 'Lazada' | 'Instant' | 'Tokopedia';
@@ -32,23 +32,24 @@ const ScannerComponent = ({ onScanSuccess, onScanFailure }: { onScanSuccess: (de
     const scannerRef = useRef<Html5Qrcode | null>(null);
 
     useEffect(() => {
-        const qrCodeScanner = new Html5Qrcode("reader");
-        scannerRef.current = qrCodeScanner;
+        const scanner = new Html5Qrcode("reader");
+        scannerRef.current = scanner;
 
         const startScanner = async () => {
+             if (scannerRef.current && scannerRef.current.getState() === Html5QrcodeScannerState.SCANNING) {
+                return;
+            }
             try {
-                const cameras = await Html5Qrcode.getCameras();
-                if (cameras && cameras.length) {
-                    await qrCodeScanner.start(
-                        { facingMode: "environment" },
-                        {
-                            fps: 10,
-                            qrbox: { width: 250, height: 250 },
-                        },
-                        onScanSuccess,
-                        onScanFailure
-                    );
-                }
+                const config = {
+                    fps: 10,
+                    qrbox: { width: 250, height: 250 },
+                };
+                await scanner.start(
+                    { facingMode: "environment" },
+                    config,
+                    onScanSuccess,
+                    onScanFailure
+                );
             } catch (err) {
                 console.error("Error starting scanner:", err);
             }
@@ -57,9 +58,9 @@ const ScannerComponent = ({ onScanSuccess, onScanFailure }: { onScanSuccess: (de
         startScanner();
 
         return () => {
-            if (scannerRef.current && scannerRef.current.isScanning) {
+            if (scannerRef.current && scannerRef.current.getState() === Html5QrcodeScannerState.SCANNING) {
                 scannerRef.current.stop().catch(err => {
-                    console.error("Failed to stop scanner:", err);
+                    // Ignore error on stop.
                 });
             }
         };
