@@ -27,7 +27,7 @@ const shippingProviders: { name: ShippingProvider, icon: React.ElementType }[] =
     { name: 'Instant', icon: Truck },
 ];
 
-const ScannerComponent = ({ onScanSuccess, onScanError, setHasCameraPermission }: { onScanSuccess: (decodedText: string) => void; onScanError: (errorMessage: string | Error) => void; setHasCameraPermission: (hasPermission: boolean) => void; }) => {
+const ScannerComponent = ({ onScanSuccess, setHasCameraPermission }: { onScanSuccess: (decodedText: string) => void; setHasCameraPermission: (hasPermission: boolean) => void; }) => {
     const videoRef = useRef<HTMLVideoElement>(null);
     const scannerRef = useRef<QrScanner | null>(null);
     const { toast } = useToast();
@@ -42,7 +42,6 @@ const ScannerComponent = ({ onScanSuccess, onScanError, setHasCameraPermission }
                     videoRef.current,
                     (result) => onScanSuccess(result.data),
                     {
-                        onDecodeError: onScanError,
                         highlightScanRegion: true,
                         highlightCodeOutline: true,
                     }
@@ -73,7 +72,7 @@ const ScannerComponent = ({ onScanSuccess, onScanError, setHasCameraPermission }
                 scannerRef.current = null;
             }
         };
-    }, [onScanSuccess, onScanError, setHasCameraPermission, toast]);
+    }, [onScanSuccess, setHasCameraPermission, toast]);
 
     return (
         <div className="relative w-full h-full bg-black">
@@ -152,15 +151,6 @@ export default function MobileScanReceiptPage() {
         inputRef.current?.focus();
     }
     
-    const onScanError = (errorMessage: string | Error) => {
-        // This function is called frequently on non-scans, so only log actual errors.
-        if (typeof errorMessage === 'object' && errorMessage.message.includes('No QR code found')) {
-            // This is expected, do nothing.
-        } else {
-            console.error(errorMessage);
-        }
-    };
-    
     const openCamera = () => {
         setHasCameraPermission(true); // Assume permission is granted until scanner says otherwise
         setIsCameraOpen(true);
@@ -171,7 +161,6 @@ export default function MobileScanReceiptPage() {
              <div className="fixed inset-0 bg-black z-50">
                 <ScannerComponent 
                     onScanSuccess={(decodedText) => handleSubmit(decodedText)}
-                    onScanError={onScanError}
                     setHasCameraPermission={setHasCameraPermission}
                 />
                 <Button
