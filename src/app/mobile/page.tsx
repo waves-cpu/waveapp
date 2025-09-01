@@ -5,7 +5,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowLeft, ScanLine, Camera, Calendar as CalendarIcon, ShoppingBag, Truck, X } from 'lucide-react';
+import { ArrowLeft, ScanLine, Camera, Calendar as CalendarIcon, ShoppingCart, Truck, X } from 'lucide-react';
 import { useInventory } from '@/hooks/use-inventory';
 import { useToast } from '@/hooks/use-toast';
 import { useScanSounds } from '@/hooks/use-scan-sounds';
@@ -30,9 +30,10 @@ const shippingProviders: { name: ShippingProvider, icon: React.ElementType }[] =
 
 const ScannerComponent = ({ onScanSuccess, onScanError }: { onScanSuccess: (decodedText: string) => void; onScanError: (errorMessage: string) => void; }) => {
     const scannerRef = useRef<Html5Qrcode | null>(null);
+    const readerId = "reader";
 
     useEffect(() => {
-        const scanner = new Html5Qrcode("reader", { 
+        const scanner = new Html5Qrcode(readerId, { 
             experimentalFeatures: {
                 useBarCodeDetectorIfSupported: false,
             }
@@ -42,6 +43,7 @@ const ScannerComponent = ({ onScanSuccess, onScanError }: { onScanSuccess: (deco
         const startScanner = async () => {
             try {
                  if (scanner.getState() === Html5QrcodeScannerState.SCANNING) {
+                    console.log("Scanner is already running.");
                     return;
                 }
                 await scanner.start(
@@ -50,7 +52,7 @@ const ScannerComponent = ({ onScanSuccess, onScanError }: { onScanSuccess: (deco
                         fps: 5, 
                         qrbox: (viewfinderWidth, viewfinderHeight) => {
                             const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
-                            const qrboxSize = Math.floor(minEdge * 0.7);
+                            const qrboxSize = Math.floor(minEdge * 0.8);
                             return {
                                 width: qrboxSize,
                                 height: qrboxSize,
@@ -89,7 +91,7 @@ const ScannerComponent = ({ onScanSuccess, onScanError }: { onScanSuccess: (deco
         };
     }, [onScanSuccess, onScanError]);
 
-    return <div id="reader" className="w-full h-full"></div>;
+    return <div id={readerId} className="w-full h-full"></div>;
 };
 
 
