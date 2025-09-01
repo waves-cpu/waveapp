@@ -5,7 +5,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowLeft, ScanLine, Camera, Calendar as CalendarIcon, ShoppingBag, Truck } from 'lucide-react';
+import { ArrowLeft, ScanLine, Camera, Calendar as CalendarIcon, ShoppingBag, Truck, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useInventory } from '@/hooks/use-inventory';
 import { useToast } from '@/hooks/use-toast';
@@ -15,8 +15,15 @@ import { format, parseISO } from 'date-fns';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
-import { QrScanner } from '@yudiel/react-qr-scanner';
+import QrScanner from 'react-qr-scanner';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogClose,
+} from "@/components/ui/dialog"
 
 
 type ShippingProvider = 'Shopee' | 'Tiktok' | 'Lazada' | 'Instant' | 'Tokopedia';
@@ -28,6 +35,45 @@ const shippingProviders: { name: ShippingProvider, icon: React.ElementType }[] =
     { name: 'Tokopedia', icon: ShoppingBag },
     { name: 'Instant', icon: Truck },
 ];
+
+const ScannerDialog = ({
+    open,
+    onOpenChange,
+    onScan,
+    onError
+} : {
+    open: boolean,
+    onOpenChange: (open: boolean) => void,
+    onScan: (data: string | null) => void,
+    onError: (error: any) => void
+}) => {
+    
+    return (
+        <Dialog open={open} onOpenChange={onOpenChange}>
+            <DialogContent className="p-0 border-0 gap-0 max-w-full w-full h-full md:h-[calc(100vh-4rem)] md:max-w-md">
+                 <div className="relative w-full h-full">
+                     <QrScanner
+                        onScan={onScan}
+                        onError={onError}
+                        style={{ width: '100%', height: '100%' }}
+                        constraints={{
+                            video: { facingMode: "environment" }
+                        }}
+                    />
+                    <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                        <div className="w-[70vw] h-[30vw] md:w-80 md:h-32 border-4 border-white/50 rounded-lg shadow-lg"/>
+                        <p className="mt-4 text-sm text-white bg-black/50 px-3 py-1.5 rounded-md">Posisikan barcode di dalam frame</p>
+                    </div>
+                     <DialogClose className="absolute right-4 top-4 rounded-full bg-black/50 p-2 text-white opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground">
+                        <X className="h-4 w-4" />
+                        <span className="sr-only">Close</span>
+                    </DialogClose>
+                </div>
+            </DialogContent>
+        </Dialog>
+    )
+}
+
 
 export default function MobileScanReceiptPage() {
     const { addShippingReceipt } = useInventory();
@@ -89,7 +135,7 @@ export default function MobileScanReceiptPage() {
         } finally {
             setIsSubmitting(false);
             if (isCameraOpen) {
-                 // Do not close camera, allow for next scan
+                 // Keep camera open for next scan
             } else {
                  inputRef.current?.focus();
             }
@@ -102,46 +148,22 @@ export default function MobileScanReceiptPage() {
         handleSubmit(awb);
     }
     
-    const handleDecode = (result: string) => {
-        handleSubmit(result);
-    };
-
-    const handleCameraError = (error: Error | string) => {
-        const errorMessage = typeof error === 'string' ? error : error.message;
-        console.error("Camera Error:", errorMessage);
+    const handleScan = (data: string | null) => {
+        if (data) {
+            setIsCameraOpen(false);
+            handleSubmit(data);
+        }
+    }
+    const handleError = (err: any) => {
+        console.error(err);
+        setIsCameraOpen(false);
         toast({
             variant: "destructive",
-            title: "Gagal Membuka Kamera",
-            description: "Pastikan Anda telah memberikan izin kamera untuk situs ini di pengaturan browser Anda. " + errorMessage,
+            title: "Kamera Error",
+            description: "Tidak dapat mengakses kamera. Pastikan Anda telah memberikan izin dan menggunakan koneksi HTTPS.",
         });
-        setIsCameraOpen(false); // Close the scanner view on error
-    };
-    
-    if (isCameraOpen) {
-        return (
-             <div className="min-h-screen text-white flex flex-col bg-gray-800">
-                <header className="absolute top-0 left-0 right-0 z-10 flex items-center p-4 bg-gradient-to-b from-black/60 to-transparent">
-                     <Button variant="ghost" size="icon" onClick={() => setIsCameraOpen(false)} className="rounded-full hover:bg-white/10">
-                        <ArrowLeft className="h-5 w-5" />
-                    </Button>
-                    <h1 className="text-lg font-bold ml-2">Scan Barcode - {selectedChannel}</h1>
-                </header>
-                 <main className="flex-grow flex flex-col justify-center items-center relative">
-                    <QrScanner
-                        onDecode={handleDecode}
-                        onError={handleCameraError}
-                        constraints={{ facingMode: 'environment' }}
-                        containerStyle={{ width: '100%', height: '100%', paddingTop: '0' }}
-                        videoStyle={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                    />
-                     <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                        <div className="w-[70vw] h-[30vw] border-4 border-white/50 rounded-lg shadow-lg"/>
-                        <p className="mt-4 text-sm bg-black/50 px-3 py-1.5 rounded-md">Posisikan barcode di dalam frame</p>
-                     </div>
-                </main>
-            </div>
-        )
     }
+
     
     if (!selectedChannel) {
         return (
@@ -191,6 +213,12 @@ export default function MobileScanReceiptPage() {
 
     return (
         <div className="min-h-screen bg-muted flex flex-col p-4">
+            <ScannerDialog
+                open={isCameraOpen}
+                onOpenChange={setIsCameraOpen}
+                onScan={handleScan}
+                onError={handleError}
+            />
             <header className="flex items-center justify-between mb-4">
                  <Button variant="ghost" size="icon" onClick={() => setSelectedChannel(null)}>
                     <ArrowLeft className="h-5 w-5" />
@@ -255,5 +283,3 @@ export default function MobileScanReceiptPage() {
         </div>
     );
 }
-
-    
