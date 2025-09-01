@@ -87,7 +87,7 @@ export default function MobileScanReceiptPage() {
     }, [selectedChannel, isCameraOpen]);
 
     const handleSubmit = useCallback(async (scannedAwb: string) => {
-        if (!scannedAwb.trim() || !selectedChannel) return;
+        if (!scannedAwb || !scannedAwb.trim() || !selectedChannel) return;
         
         const newReceipt: Omit<ShippingReceipt, 'id'> = {
             awb: scannedAwb.trim(),
@@ -124,9 +124,13 @@ export default function MobileScanReceiptPage() {
     }
     
     const handleScanError = (error: Error) => {
-        // Most "errors" are just the scanner not finding a QR code, which is normal.
-        // We can log it for debugging but don't need to show a toast unless it's a critical error.
         console.log("QR Scan Error:", error?.message);
+    };
+
+    const handleScanSuccess = (result: string) => {
+        if (result) {
+            handleSubmit(result);
+        }
     };
     
     if (!selectedChannel) {
@@ -180,7 +184,7 @@ export default function MobileScanReceiptPage() {
              <ScannerDialog
                 open={isCameraOpen}
                 onClose={() => setIsCameraOpen(false)}
-                onScanSuccess={handleSubmit}
+                onScanSuccess={handleScanSuccess}
                 onScanError={handleScanError}
             />
             <header className="flex items-center justify-between mb-4">
