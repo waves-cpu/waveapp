@@ -42,7 +42,6 @@ export default function MobileScanReceiptPage() {
     const [recentlyAdded, setRecentlyAdded] = useState<ShippingReceipt[]>([]);
     const inputRef = useRef<HTMLInputElement>(null);
     const [isCameraOpen, setIsCameraOpen] = useState(false);
-    const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
 
     useEffect(() => {
         initializeAudio();
@@ -53,24 +52,6 @@ export default function MobileScanReceiptPage() {
             inputRef.current?.focus();
         }
     }, [selectedChannel, isCameraOpen]);
-    
-     useEffect(() => {
-        if (isCameraOpen) {
-            navigator.mediaDevices.getUserMedia({ video: true })
-                .then(() => {
-                    setHasCameraPermission(true);
-                })
-                .catch((error) => {
-                    console.error('Error accessing camera:', error);
-                    setHasCameraPermission(false);
-                    toast({
-                        variant: 'destructive',
-                        title: 'Izin Kamera Ditolak',
-                        description: 'Harap aktifkan izin kamera di pengaturan browser Anda untuk menggunakan fitur ini.',
-                    });
-                });
-        }
-    }, [isCameraOpen, toast]);
 
     const handleSubmit = useCallback(async (scannedAwb: string) => {
         if (!scannedAwb.trim() || !selectedChannel) return;
@@ -120,12 +101,13 @@ export default function MobileScanReceiptPage() {
         handleSubmit(result);
     };
 
-    const handleCameraError = (error: Error) => {
-        console.error("Camera Error:", error);
+    const handleCameraError = (error: Error | string) => {
+        const errorMessage = typeof error === 'string' ? error : error.message;
+        console.error("Camera Error:", errorMessage);
         toast({
             variant: "destructive",
             title: "Gagal Membuka Kamera",
-            description: error.message || "Pastikan Anda telah memberikan izin kamera untuk situs ini.",
+            description: errorMessage || "Pastikan Anda telah memberikan izin kamera untuk situs ini.",
         });
         setIsCameraOpen(false); // Close the scanner view on error
     };
@@ -140,29 +122,17 @@ export default function MobileScanReceiptPage() {
                     <h1 className="text-lg font-bold ml-2">Scan Barcode - {selectedChannel}</h1>
                 </header>
                  <main className="flex-grow flex flex-col justify-center items-center relative">
-                     {hasCameraPermission === true && (
-                        <QrScanner
-                            onDecode={handleDecode}
-                            onError={handleCameraError}
-                            constraints={{ facingMode: 'environment' }}
-                            containerStyle={{ width: '100%', height: '100%', paddingTop: '0' }}
-                            videoStyle={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                        />
-                     )}
+                    <QrScanner
+                        onDecode={handleDecode}
+                        onError={handleCameraError}
+                        constraints={{ facingMode: 'environment' }}
+                        containerStyle={{ width: '100%', height: '100%', paddingTop: '0' }}
+                        videoStyle={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    />
                      <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
                         <div className="w-[70vw] h-[30vw] border-4 border-white/50 rounded-lg shadow-lg"/>
                         <p className="mt-4 text-sm bg-black/50 px-3 py-1.5 rounded-md">Posisikan barcode di dalam frame</p>
                      </div>
-                     {hasCameraPermission === false && (
-                         <div className="absolute inset-x-4 bottom-1/4 pointer-events-auto">
-                            <Alert variant="destructive">
-                                <AlertTitle>Izin Kamera Diperlukan</AlertTitle>
-                                <AlertDescription>
-                                    Harap izinkan akses kamera di pengaturan browser Anda untuk menggunakan fitur ini.
-                                </AlertDescription>
-                            </Alert>
-                         </div>
-                     )}
                 </main>
             </div>
         )
@@ -271,4 +241,4 @@ export default function MobileScanReceiptPage() {
             </main>
         </div>
     );
-
+}
