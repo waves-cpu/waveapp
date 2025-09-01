@@ -8,12 +8,13 @@ import { useInventory } from '@/hooks/use-inventory';
 import { useLanguage } from '@/hooks/use-language';
 import { translations } from '@/types/language';
 import type { InventoryItem, InventoryItemVariant, ChannelPrice } from '@/types';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Search, Percent, Tag } from 'lucide-react';
 import Image from 'next/image';
+import { Pagination } from '@/components/ui/pagination';
 
 const CHANNELS = ['pos', 'reseller', 'shopee', 'tiktok', 'lazada'];
 
@@ -39,6 +40,8 @@ export default function DiscountReportPage() {
     const [categoryFilter, setCategoryFilter] = useState('all');
     const [channelFilter, setChannelFilter] = useState('all');
     const [searchTerm, setSearchTerm] = useState('');
+    const [currentPage, setCurrentPage] = useState(1);
+    const [itemsPerPage, setItemsPerPage] = useState(10);
 
     const discountedItems = useMemo((): DiscountedItem[] => {
         const results: DiscountedItem[] = [];
@@ -75,7 +78,7 @@ export default function DiscountReportPage() {
     }, [items]);
 
     const filteredItems = useMemo(() => {
-        return discountedItems.filter(item => {
+        const filtered = discountedItems.filter(item => {
             const categoryMatch = categoryFilter === 'all' || item.category === categoryFilter;
             const channelMatch = channelFilter === 'all' || item.channel === channelFilter;
             const searchMatch = !searchTerm || 
@@ -84,7 +87,17 @@ export default function DiscountReportPage() {
             
             return categoryMatch && channelMatch && searchMatch;
         });
+        setCurrentPage(1);
+        return filtered;
     }, [discountedItems, categoryFilter, channelFilter, searchTerm]);
+
+    const totalPages = Math.ceil(filteredItems.length / itemsPerPage);
+
+    const paginatedItems = useMemo(() => {
+        const startIndex = (currentPage - 1) * itemsPerPage;
+        return filteredItems.slice(startIndex, startIndex + itemsPerPage);
+    }, [filteredItems, currentPage, itemsPerPage]);
+
 
     const getChannelTranslation = (channel: string) => {
         const salesTranslations = t.sales as Record<string, string>;
@@ -148,8 +161,8 @@ export default function DiscountReportPage() {
                                         <TableRow>
                                             <TableCell colSpan={5} className="h-24 text-center">Memuat data...</TableCell>
                                         </TableRow>
-                                    ) : filteredItems.length > 0 ? (
-                                        filteredItems.map(item => (
+                                    ) : paginatedItems.length > 0 ? (
+                                        paginatedItems.map(item => (
                                             <TableRow key={item.id}>
                                                 <TableCell>
                                                     <div className="flex items-center gap-3">
@@ -183,6 +196,37 @@ export default function DiscountReportPage() {
                             </Table>
                         </div>
                     </CardContent>
+                     {totalPages > 1 && (
+                        <CardFooter>
+                           <div className="flex w-full items-center justify-end pt-4 border-t">
+                                <div className="flex items-center gap-4">
+                                    <Pagination
+                                        totalPages={totalPages}
+                                        currentPage={currentPage}
+                                        onPageChange={setCurrentPage}
+                                    />
+                                    <Select
+                                        value={`${itemsPerPage}`}
+                                        onValueChange={(value) => {
+                                            setItemsPerPage(Number(value))
+                                            setCurrentPage(1)
+                                        }}
+                                        >
+                                        <SelectTrigger className="h-8 w-[200px]">
+                                            <SelectValue placeholder={itemsPerPage} />
+                                        </SelectTrigger>
+                                        <SelectContent side="top">
+                                            {[10, 20, 50].map((pageSize) => (
+                                            <SelectItem key={pageSize} value={`${pageSize}`}>
+                                                {`${pageSize} / ${t.productSelectionDialog.page}`}
+                                            </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            </div>
+                        </CardFooter>
+                    )}
                 </Card>
             </main>
         </AppLayout>

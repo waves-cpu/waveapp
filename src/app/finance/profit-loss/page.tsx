@@ -295,5 +295,4 @@ export default function ProfitLossPage() {
             </main>
         </AppLayout>
     );
-
-    
+}
