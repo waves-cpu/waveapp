@@ -109,35 +109,24 @@ function InventoryTableSkeleton() {
     )
 }
 
-const LOW_STOCK_THRESHOLD = 10;
-
-function getAccessoryLowStockThreshold(category?: string, name?: string): number {
-    const lowerCaseName = name?.toLowerCase() || '';
-    if (category === 'Label') return 5000;
-    if (lowerCaseName.includes('kertas hangtag')) return 50000;
-    if (category === 'Sticker') return 50000;
-    if (category === 'Packaging') return 10000;
-    return LOW_STOCK_THRESHOLD; // Default
-}
-
-
 function StockBar({ stock, onUpdateClick, item }: { stock: number; onUpdateClick: () => void, item: InventoryItem }) {
     const { language } = useLanguage();
     const t = translations[language];
 
-    const lowStockThreshold = item.variants ? LOW_STOCK_THRESHOLD : getAccessoryLowStockThreshold(item.category, item.name);
-    
-    const getStockColor = (stock: number) => {
-        if (stock === 0) return 'bg-red-500';
-        if (stock < lowStockThreshold) return 'bg-yellow-500';
-        return 'bg-green-500';
+    const getStockColor = (currentStock: number) => {
+        if (currentStock >= 100) return 'bg-green-500';
+        if (currentStock >= 50) return 'bg-yellow-500';
+        if (currentStock >= 10) return 'bg-orange-500';
+        if (currentStock > 0) return 'bg-red-500';
+        return 'bg-red-600'; // Empty stock
     };
 
-    const maxProgressValue = lowStockThreshold * 5;
+    const maxProgressValue = 100;
+    const progressValue = Math.min(stock, maxProgressValue);
 
     return (
         <div className="relative w-36 group">
-            <Progress value={(stock / maxProgressValue) * 100} className="h-6" indicatorClassName={getStockColor(stock)} />
+            <Progress value={progressValue} className="h-6" indicatorClassName={getStockColor(stock)} />
             <div className="absolute inset-0 flex items-center justify-start px-2">
                 <div className="flex items-center gap-1">
                     <span className="font-medium text-xs text-foreground">{stock.toLocaleString('id-ID')}</span>
@@ -267,21 +256,15 @@ export function InventoryTable({ onUpdateStock, isAccessoryTable = false }: Inve
       })
       .map(item => {
         if (stockFilter === 'all') return item;
-
-        const lowStockThreshold = isAccessoryTable ? getAccessoryLowStockThreshold(item.category, item.name) : LOW_STOCK_THRESHOLD;
-
-        if (item.variants && item.variants.length > 0) {
-            const filteredVariants = item.variants.filter(v => {
-                if (stockFilter === 'low') return v.stock > 0 && v.stock <= LOW_STOCK_THRESHOLD;
-                if (stockFilter === 'empty') return v.stock === 0;
-                return true;
-            });
-            return filteredVariants.length > 0 ? { ...item, variants: filteredVariants } : null;
-        } else {
-            if (stockFilter === 'low') return (item.stock ?? 0) > 0 && (item.stock ?? 0) <= lowStockThreshold ? item : null;
-            if (stockFilter === 'empty') return item.stock === 0 ? item : null;
-            return item;
+        const totalStock = item.variants ? item.variants.reduce((sum, v) => sum + v.stock, 0) : (item.stock || 0);
+        
+        if (stockFilter === 'low') {
+            return totalStock > 0 && totalStock < 50 ? item : null;
         }
+        if (stockFilter === 'empty') {
+            return totalStock === 0 ? item : null;
+        }
+        return item;
       })
       .filter((item): item is InventoryItem => item !== null);
     
@@ -302,13 +285,12 @@ export function InventoryTable({ onUpdateStock, isAccessoryTable = false }: Inve
     const counts = { all: 0, low: 0, empty: 0 };
     (source as InventoryItem[]).forEach(item => {
       counts.all++;
-      const lowStockThreshold = isAccessoryTable ? getAccessoryLowStockThreshold(item.category, item.name) : LOW_STOCK_THRESHOLD;
-      if (item.variants && item.variants.length > 0) {
-        if (item.variants.some(v => v.stock === 0)) counts.empty++;
-        if (item.variants.some(v => v.stock > 0 && v.stock <= LOW_STOCK_THRESHOLD)) counts.low++;
-      } else {
-        if (item.stock === 0) counts.empty++;
-        if ((item.stock ?? 0) > 0 && (item.stock ?? 0) <= lowStockThreshold) counts.low++;
+      const totalStock = item.variants ? item.variants.reduce((sum, v) => sum + v.stock, 0) : (item.stock || 0);
+
+      if (totalStock === 0) {
+        counts.empty++;
+      } else if (totalStock > 0 && totalStock < 50) {
+        counts.low++;
       }
     });
     return counts;
