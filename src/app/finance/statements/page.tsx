@@ -38,7 +38,6 @@ const CHANNEL_COLORS: { [key: string]: string } = {
 
 interface ProfitabilityData {
     productId: string;
-    variantId?: string;
     name: string;
     sku?: string;
     unitsSold: number;
@@ -103,8 +102,9 @@ export default function SalesReportPage() {
         const profitabilityMap = new Map<string, ProfitabilityData>();
 
         salesInDateRange.forEach(sale => {
-            const soldItemId = sale.variantId || sale.productId;
-            
+            const parentProductId = sale.productId;
+            if (!parentProductId) return;
+
             const saleRevenue = sale.priceAtSale * sale.quantity;
             const saleCogs = (sale.cogsAtSale || 0) * sale.quantity;
             
@@ -114,12 +114,11 @@ export default function SalesReportPage() {
 
             channelSales[sale.channel] = (channelSales[sale.channel] || 0) + saleRevenue;
 
-            if (!profitabilityMap.has(soldItemId)) {
-                profitabilityMap.set(soldItemId, {
-                    productId: sale.productId,
-                    variantId: sale.variantId,
-                    name: sale.productName + (sale.variantName ? ` - ${sale.variantName}` : ''),
-                    sku: sale.sku,
+            if (!profitabilityMap.has(parentProductId)) {
+                profitabilityMap.set(parentProductId, {
+                    productId: parentProductId,
+                    name: sale.productName,
+                    sku: items.find(i => i.id === parentProductId)?.sku,
                     unitsSold: 0,
                     totalRevenue: 0,
                     totalCogs: 0,
@@ -127,7 +126,7 @@ export default function SalesReportPage() {
                 });
             }
 
-            const current = profitabilityMap.get(soldItemId)!;
+            const current = profitabilityMap.get(parentProductId)!;
             current.unitsSold += sale.quantity;
             current.totalRevenue += saleRevenue;
             current.totalCogs += saleCogs;
@@ -147,7 +146,7 @@ export default function SalesReportPage() {
             productProfitability: Array.from(profitabilityMap.values()).sort((a,b) => b.grossProfit - a.grossProfit),
         };
 
-    }, [allSales, dateRange]);
+    }, [allSales, dateRange, items]);
 
 
     const pieChartConfig = useMemo(() => {
@@ -309,7 +308,7 @@ export default function SalesReportPage() {
                                     </TableHeader>
                                     <TableBody>
                                         {productProfitability.slice(0, 10).length > 0 ? productProfitability.slice(0, 10).map(p => (
-                                            <TableRow key={p.variantId || p.productId}>
+                                            <TableRow key={p.productId}>
                                                 <TableCell className="font-medium text-xs py-2">
                                                     <div>{p.name}</div>
                                                     <div className="text-muted-foreground">SKU: {p.sku || '-'}</div>
