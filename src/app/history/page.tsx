@@ -256,6 +256,12 @@ export default function HistoryPage() {
   const historyTotals = useMemo(() => {
     let totalIn = 0;
     let totalOut = 0;
+    
+    const balanceEntry = allHistory.find(entry => entry.type === 'balance') as BeginningBalanceEntry | undefined;
+    const beginningBalance = balanceEntry?.totalStock || 0;
+
+    totalIn += beginningBalance;
+
     filteredHistory.forEach(entry => {
         if(entry.type === 'balance') return;
         if (entry.type === 'adjustment') {
@@ -270,7 +276,7 @@ export default function HistoryPage() {
     });
     const netChange = totalIn - totalOut;
     return { totalIn, totalOut, netChange };
-  }, [filteredHistory])
+  }, [filteredHistory, allHistory]);
   
   const uniqueCategoriesWithSales = useMemo(() => {
       return [...categories].sort()
@@ -550,11 +556,11 @@ export default function HistoryPage() {
                             <TableCell colSpan={3} className="font-semibold text-left">Total Perubahan Bulan Ini:</TableCell>
                             <TableCell colSpan={2} className="font-semibold">
                                 <div className="flex items-center justify-between flex-wrap gap-y-1">
-                                    <span className="text-green-600">Masuk: {historyTotals.totalIn}</span>
-                                    <span className="text-red-600">Keluar: {historyTotals.totalOut}</span>
+                                    <span className="text-green-600">Masuk: {historyTotals.totalIn.toLocaleString('id-ID')}</span>
+                                    <span className="text-red-600">Keluar: {historyTotals.totalOut.toLocaleString('id-ID')}</span>
                                     <span>Net: 
                                         <span className={cn(historyTotals.netChange >= 0 ? "text-green-600" : "text-red-600", "ml-1")}>
-                                            {historyTotals.netChange > 0 && '+'}{historyTotals.netChange}
+                                            {historyTotals.netChange > 0 && '+'}{historyTotals.netChange.toLocaleString('id-ID')}
                                         </span>
                                     </span>
                                 </div>

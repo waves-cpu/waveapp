@@ -41,6 +41,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useParams, useRouter } from 'next/navigation';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 
 type ShippingProvider = 'Shopee' | 'Tiktok' | 'Lazada' | 'Instant';
@@ -76,7 +77,7 @@ export default function ReceiptPage() {
     const [searchTerm, setSearchTerm] = useState('');
     const [isDatePickerOpen, setDatePickerOpen] = useState(false);
     const [currentPage, setCurrentPage] = useState(1);
-    const [itemsPerPage, setItemsPerPage] = useState(25);
+    const [itemsPerPage, setItemsPerPage] = useState(50);
     const { toast } = useToast();
     const { language } = useLanguage();
     const t = translations[language].shipping.receiptPage;
@@ -403,11 +404,31 @@ export default function ReceiptPage() {
                         </CardContent>
                          {totalPages > 1 && (
                             <div className="flex items-center justify-end p-4 border-t">
-                                <Pagination
-                                    totalPages={totalPages}
-                                    currentPage={currentPage}
-                                    onPageChange={setCurrentPage}
-                                />
+                                 <div className="flex items-center gap-4">
+                                    <Pagination
+                                        totalPages={totalPages}
+                                        currentPage={currentPage}
+                                        onPageChange={setCurrentPage}
+                                    />
+                                    <Select
+                                        value={`${itemsPerPage}`}
+                                        onValueChange={(value) => {
+                                            setItemsPerPage(Number(value))
+                                            setCurrentPage(1)
+                                        }}
+                                        >
+                                        <SelectTrigger className="h-8 w-[200px]">
+                                            <SelectValue placeholder={itemsPerPage} />
+                                        </SelectTrigger>
+                                        <SelectContent side="top">
+                                            {[25, 50, 100].map((pageSize) => (
+                                            <SelectItem key={pageSize} value={`${pageSize}`}>
+                                                {`${pageSize} / halaman`}
+                                            </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
                             </div>
                         )}
                     </Card>
@@ -416,4 +437,3 @@ export default function ReceiptPage() {
         </AppLayout>
     );
 }
-
