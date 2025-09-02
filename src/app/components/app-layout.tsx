@@ -46,6 +46,7 @@ import {
   PackagePlus,
   TicketPercent,
   Activity,
+  BarChart,
 } from 'lucide-react';
 import { Logo } from './logo';
 import { Separator } from '@/components/ui/separator';
@@ -251,8 +252,8 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                                 <SidebarMenuItem>
                                   <Link href="/finance/statements">
                                       <SidebarMenuButton variant="ghost" size="sm" isActive={pathname === '/finance/statements'}>
-                                          <Activity />
-                                          {t.finance.financialStatements}
+                                          <BarChart />
+                                          {t.finance.salesReport}
                                       </SidebarMenuButton>
                                   </Link>
                               </SidebarMenuItem>

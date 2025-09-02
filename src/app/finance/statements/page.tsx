@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { AppLayout } from "@/app/components/app-layout";
@@ -69,7 +70,7 @@ function FinancialReportSkeleton() {
 }
 
 
-export default function FinancialStatementsPage() {
+export default function SalesReportPage() {
     const { language } = useLanguage();
     const t = translations[language];
     const TFinance = t.finance;
@@ -167,7 +168,7 @@ export default function FinancialStatementsPage() {
                 <main className="flex-1 p-4 md:p-10">
                     <div className="flex items-center gap-4 mb-6">
                         <SidebarTrigger className="md:hidden" />
-                        <h1 className="text-lg font-bold">{TFinance.financialStatements}</h1>
+                        <h1 className="text-lg font-bold">{TFinance.salesReport}</h1>
                     </div>
                     <FinancialReportSkeleton />
                 </main>
@@ -181,7 +182,7 @@ export default function FinancialStatementsPage() {
                 <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
                     <div className="flex items-center gap-4">
                         <SidebarTrigger className="md:hidden" />
-                        <h1 className="text-lg font-bold">{TFinance.financialStatements}</h1>
+                        <h1 className="text-lg font-bold">{TFinance.salesReport}</h1>
                     </div>
                      <Popover>
                         <PopoverTrigger asChild>
@@ -291,7 +292,7 @@ export default function FinancialStatementsPage() {
                     </Card>
                     <Card className="md:col-span-3 flex flex-col">
                         <CardHeader>
-                            <CardTitle className="text-base">Profitabilitas Produk</CardTitle>
+                            <CardTitle className="text-base">Top 10 Produk Terlaris</CardTitle>
                             <CardDescription>Diurutkan berdasarkan laba kotor tertinggi</CardDescription>
                         </CardHeader>
                         <CardContent className="flex-grow p-0">
@@ -307,7 +308,7 @@ export default function FinancialStatementsPage() {
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                        {productProfitability.length > 0 ? productProfitability.map(p => (
+                                        {productProfitability.slice(0, 10).length > 0 ? productProfitability.slice(0, 10).map(p => (
                                             <TableRow key={p.variantId || p.productId}>
                                                 <TableCell className="font-medium text-xs py-2">
                                                     <div>{p.name}</div>
