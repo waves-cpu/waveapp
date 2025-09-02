@@ -53,7 +53,7 @@ interface InventoryContextType {
   fetchItems: () => Promise<void>;
   loading: boolean;
   recordSale: (sku: string, channel: string, quantity: number, options?: { saleDate?: Date; transactionId?: string; paymentMethod?: string; resellerName?: string; }) => Promise<void>;
-  fetchSales: (channel: string, date: Date) => Promise<Sale[]>;
+  fetchSales: (channel: string, date: Date, page: number, limit: number) => Promise<{sales: Sale[], total: number}>;
   cancelSale: (saleId: string) => Promise<void>;
   cancelSaleTransaction: (transactionId: string) => Promise<void>;
   getProductBySku: (sku: string) => Promise<InventoryItem | null>;
@@ -242,8 +242,8 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
     await fetchAllData();
   };
 
-  const fetchSales = async (channel: string, date: Date): Promise<Sale[]> => {
-    return await getSalesByDate(channel, date);
+  const fetchSales = async (channel: string, date: Date, page: number, limit: number): Promise<{ sales: Sale[], total: number }> => {
+    return await getSalesByDate(channel, date, page, limit);
   };
   
   const cancelSale = async (saleId: string) => {

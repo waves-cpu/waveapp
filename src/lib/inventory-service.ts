@@ -1,5 +1,4 @@
 
-
 'use server';
 
 import { db } from './db';
@@ -757,8 +756,17 @@ export async function fetchAllSales(): Promise<Sale[]> {
     }));
 }
 
-export async function getSalesByDate(channel: string, date: Date): Promise<Sale[]> {
+export async function getSalesByDate(channel: string, date: Date, page: number, limit: number): Promise<{ sales: Sale[], total: number }> {
     const dateString = formatDate(date, 'yyyy-MM-dd');
+    const offset = (page - 1) * limit;
+
+    const countQuery = db.prepare(`
+        SELECT COUNT(*) as count 
+        FROM sales 
+        WHERE channel = @channel AND date(saleDate) = @dateString
+    `);
+    const totalResult = countQuery.get({ channel, dateString }) as { count: number };
+    const total = totalResult.count;
 
     const salesQuery = db.prepare(`
         SELECT 
@@ -772,18 +780,23 @@ export async function getSalesByDate(channel: string, date: Date): Promise<Sale[
         WHERE s.channel = @channel 
         AND date(s.saleDate) = @dateString
         ORDER BY s.id DESC
+        LIMIT @limit OFFSET @offset
     `);
     
     const sales = salesQuery.all({ 
         channel, 
-        dateString 
+        dateString,
+        limit,
+        offset
     }) as any[];
     
-    return sales.map(s => ({
+    const mappedSales = sales.map(s => ({
         ...s, 
         id: s.id.toString(),
         saleDate: s.saleDate // Keep as string from DB
     }));
+
+    return { sales: mappedSales, total };
 }
 
 export async function revertSale(saleId: string) {
@@ -1071,6 +1084,3 @@ export async function deleteProductPermanently(itemId: string) {
     // ON DELETE CASCADE will handle variants, history, and channel_prices
     db.prepare('DELETE FROM products WHERE id = ?').run(itemId);
 }
-
-
-

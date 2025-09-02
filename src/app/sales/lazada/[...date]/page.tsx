@@ -43,6 +43,9 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { AppLayout } from '@/app/components/app-layout';
 import { useScanSounds } from '@/hooks/use-scan-sounds';
 import { useParams, useRouter } from 'next/navigation';
+import { Pagination } from '@/components/ui/pagination';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+
 
 function parseDateFromParams(dateArray: string[] | undefined): Date {
     if (dateArray && dateArray.length > 0) {
@@ -66,11 +69,15 @@ export default function LazadaSalesPage() {
   const params = useParams();
 
   const [sales, setSales] = useState<Sale[]>([]);
+  const [totalSales, setTotalSales] = useState(0);
   const [loading, setLoading] = useState(true);
   const [sku, setSku] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const skuInputRef = useRef<HTMLInputElement>(null);
   const [isDatePickerOpen, setDatePickerOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(50);
+
 
   const [productForVariantSelection, setProductForVariantSelection] = useState<InventoryItem | null>(null);
   const [isVariantDialogOpen, setIsVariantDialogOpen] = useState(false);
@@ -85,8 +92,9 @@ export default function LazadaSalesPage() {
   const loadSales = useCallback(async (selectedDate: Date) => {
     setLoading(true);
     try {
-      const salesData = await fetchSales('lazada', selectedDate);
+      const { sales: salesData, total } = await fetchSales('lazada', selectedDate, currentPage, itemsPerPage);
       setSales(salesData);
+      setTotalSales(total);
     } catch (error) {
       console.error('Failed to fetch sales:', error);
       toast({
@@ -97,7 +105,7 @@ export default function LazadaSalesPage() {
     } finally {
       setLoading(false);
     }
-  }, [fetchSales, toast]);
+  }, [fetchSales, toast, currentPage, itemsPerPage]);
   
   // This effect reacts to changes in the URL parameter.
   useEffect(() => {
@@ -114,6 +122,7 @@ export default function LazadaSalesPage() {
         setDatePickerOpen(false);
         const formattedDate = format(newDate, 'MM-dd-yyyy');
         router.push(`/sales/lazada/${formattedDate}`);
+        setCurrentPage(1);
     }
   }
 
@@ -230,6 +239,8 @@ export default function LazadaSalesPage() {
         });
     }
   };
+  
+  const totalPages = Math.ceil(totalSales / itemsPerPage);
 
 
   return (
@@ -356,6 +367,35 @@ export default function LazadaSalesPage() {
               </TableBody>
             </Table>
           </div>
+            {totalPages > 1 && (
+                <div className="flex items-center justify-end p-4 border-t">
+                    <div className="flex items-center gap-4">
+                        <Pagination
+                            totalPages={totalPages}
+                            currentPage={currentPage}
+                            onPageChange={setCurrentPage}
+                        />
+                        <Select
+                            value={`${itemsPerPage}`}
+                            onValueChange={(value) => {
+                                setItemsPerPage(Number(value))
+                                setCurrentPage(1)
+                            }}
+                            >
+                            <SelectTrigger className="h-8 w-[200px]">
+                                <SelectValue placeholder={itemsPerPage} />
+                            </SelectTrigger>
+                            <SelectContent side="top">
+                                {[10, 20, 50, 100].map((pageSize) => (
+                                <SelectItem key={pageSize} value={`${pageSize}`}>
+                                    {`${pageSize} / ${t.productSelectionDialog.page}`}
+                                </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                </div>
+            )}
         </div>
       </main>
       {productForVariantSelection && (
