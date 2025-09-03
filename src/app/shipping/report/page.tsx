@@ -34,6 +34,7 @@ type DailyReport = {
     date: string;
     pending: number;
     shipped: number;
+    completed: number;
     cancelled: number;
     returned: number;
     total: number;
@@ -50,13 +51,13 @@ function ReportSkeleton() {
                 <Table>
                     <TableHeader>
                         <TableRow>
-                            {[...Array(5)].map((_,i) => <TableHead key={i}><Skeleton className="h-5" /></TableHead>)}
+                            {[...Array(6)].map((_,i) => <TableHead key={i}><Skeleton className="h-5" /></TableHead>)}
                         </TableRow>
                     </TableHeader>
                      <TableBody>
                         {[...Array(10)].map((_,i) => (
                             <TableRow key={i}>
-                                {[...Array(5)].map((_, j) => <TableCell key={j}><Skeleton className="h-4" /></TableCell>)}
+                                {[...Array(6)].map((_, j) => <TableCell key={j}><Skeleton className="h-4" /></TableCell>)}
                             </TableRow>
                         ))}
                     </TableBody>
@@ -116,6 +117,7 @@ export default function ShippingReportPage() {
                         date: dateKey,
                         pending: 0,
                         shipped: 0,
+                        completed: 0,
                         cancelled: 0,
                         returned: 0,
                         total: 0
@@ -129,6 +131,9 @@ export default function ShippingReportPage() {
                         break;
                     case 'Dikirim':
                         acc[dateKey].shipped++;
+                        break;
+                    case 'Selesai':
+                        acc[dateKey].completed++;
                         break;
                     case 'Dibatalkan':
                         acc[dateKey].cancelled++;
@@ -204,6 +209,7 @@ export default function ShippingReportPage() {
                                             <TableHead>{t.table.date}</TableHead>
                                             <TableHead className="text-center">{t.table.pending}</TableHead>
                                             <TableHead className="text-center">{t.table.shipped}</TableHead>
+                                            <TableHead className="text-center">{t.table.completed}</TableHead>
                                             <TableHead className="text-center">{t.table.cancelled}</TableHead>
                                             <TableHead className="text-center">{t.table.returned}</TableHead>
                                             <TableHead className="text-right">{t.table.total}</TableHead>
@@ -215,13 +221,14 @@ export default function ShippingReportPage() {
                                                 <TableCell className="font-medium">{format(parseISO(item.date), 'dd MMMM yyyy', {locale: localeId})}</TableCell>
                                                 <TableCell className="text-center">{item.pending}</TableCell>
                                                 <TableCell className="text-center">{item.shipped}</TableCell>
+                                                <TableCell className="text-center">{item.completed}</TableCell>
                                                 <TableCell className="text-center">{item.cancelled}</TableCell>
                                                 <TableCell className="text-center">{item.returned}</TableCell>
                                                 <TableCell className="text-right font-bold">{item.total}</TableCell>
                                             </TableRow>
                                         )) : (
                                             <TableRow>
-                                                <TableCell colSpan={6} className="h-48 text-center">
+                                                <TableCell colSpan={7} className="h-48 text-center">
                                                     <div className="flex flex-col items-center justify-center gap-4 text-muted-foreground">
                                                         <FileText className="h-16 w-16" />
                                                         <p className="font-semibold">{t.noDataTitle}</p>

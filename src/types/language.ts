@@ -1,5 +1,4 @@
 
-
 export const translations = {
     en: {
         sidebar: {
@@ -111,6 +110,7 @@ export const translations = {
                     date: "Date",
                     pending: "Pending",
                     shipped: "Shipped",
+                    completed: "Completed",
                     cancelled: "Cancelled",
                     returned: "Returned",
                     total: "Total Receipts",
@@ -584,6 +584,7 @@ export const translations = {
                     date: "Tanggal",
                     pending: "Perlu Diproses",
                     shipped: "Dikirim",
+                    completed: "Selesai",
                     cancelled: "Batal",
                     returned: "Return",
                     total: "Total Resi",
