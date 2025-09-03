@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
@@ -76,7 +77,7 @@ interface InventoryContextType {
   adjustAccessoryStock: (accessoryId: string, change: number, reason: string) => Promise<void>;
   // Shipping
   shippingReceipts: ShippingReceipt[];
-  fetchShippingReceipts: (options: { page: number; limit: number; channel?: string; date?: Date; status?: string[]; }) => Promise<{ receipts: ShippingReceipt[]; total: number; }>;
+  fetchShippingReceipts: (options: { page: number; limit: number; channel?: string; date?: Date; status?: string[]; awb?: string; }) => Promise<{ receipts: ShippingReceipt[]; total: number; }>;
   addShippingReceipt: (receipt: Omit<ShippingReceipt, 'id'>) => Promise<ShippingReceipt>;
   deleteShippingReceipt: (id: number) => Promise<void>;
   // Bulk Import History
@@ -288,7 +289,7 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
     await fetchAllData();
   };
 
-  const fetchShippingReceipts = async (options: { page: number; limit: number; channel?: string; date?: Date; status?: string[] }) => {
+  const fetchShippingReceipts = async (options: { page: number; limit: number; channel?: string; date?: Date; status?: string[]; awb?: string }) => {
     return await fetchShippingReceiptsDb({ ...options });
   };
 

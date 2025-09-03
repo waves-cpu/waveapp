@@ -1,4 +1,5 @@
 
+
 'use server';
 
 import { db } from './db';
@@ -1106,4 +1107,5 @@ export async function deleteProductPermanently(itemId: string) {
     // ON DELETE CASCADE will handle variants, history, and channel_prices
     db.prepare('DELETE FROM products WHERE id = ?').run(itemId);
 }
+
 
