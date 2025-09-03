@@ -319,27 +319,31 @@ export default function ReturnPage() {
                         </h1>
                     </div>
                 </div>
-                 <div className="flex gap-2 overflow-x-auto no-scrollbar border-b pb-2">
-                    <Button 
-                        variant={activeChannel === null ? 'secondary' : 'ghost'}
-                        size="sm"
-                        onClick={() => setActiveChannel(null)}
-                        className="shrink-0"
-                    >
-                        Semua
-                    </Button>
-                    {(['Shopee', 'Tiktok', 'Lazada', 'Instant'] as const).map(tab => (
+                 <div className="flex flex-col gap-2">
+                    <div className="flex gap-2 overflow-x-auto no-scrollbar">
                         <Button 
-                            key={tab}
-                            variant={activeChannel === tab ? 'secondary' : 'ghost'}
+                            variant={activeChannel === null ? 'secondary' : 'ghost'}
                             size="sm"
-                            onClick={() => setActiveChannel(tab)}
+                            onClick={() => setActiveChannel(null)}
                             className="shrink-0"
                         >
-                            {tab}
+                            Semua
                         </Button>
-                    ))}
+                        {(['Shopee', 'Tiktok', 'Lazada', 'Instant'] as const).map(tab => (
+                            <Button 
+                                key={tab}
+                                variant={activeChannel === tab ? 'secondary' : 'ghost'}
+                                size="sm"
+                                onClick={() => setActiveChannel(tab)}
+                                className="shrink-0"
+                            >
+                                {tab}
+                            </Button>
+                        ))}
+                    </div>
+                    <div className="border-b"></div>
                 </div>
+
 
                 <div className="grid gap-6">
                     <Card>
