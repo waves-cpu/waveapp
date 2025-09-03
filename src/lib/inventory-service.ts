@@ -123,20 +123,42 @@ export async function fetchShippingReceipts(options: {
     return { receipts, total };
 }
 
-export async function fetchShippingReceiptCountsByChannel(dateString: string): Promise<Record<string, number>> {
+export async function fetchShippingReceiptCountsByChannel(dateString?: string, status?: string[]): Promise<Record<string, number>> {
+    let whereClauses = [];
+    const params: any[] = [];
+
+    if (dateString) {
+        whereClauses.push("DATE(date) = ?");
+        params.push(dateString);
+    }
+    if (status && status.length > 0) {
+        whereClauses.push(`status IN (${status.map(() => '?').join(',')})`);
+        params.push(...status);
+    } else {
+        // Default to 'Perlu Diproses' if no status is provided but date is
+        if(dateString) {
+            whereClauses.push("status = ?");
+            params.push('Perlu Diproses');
+        }
+    }
+    
+    const whereString = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
+    
     const query = db.prepare(`
         SELECT channel, COUNT(*) as count 
         FROM shipping_receipts 
-        WHERE DATE(date) = ? AND status = 'Perlu Diproses'
+        ${whereString}
         GROUP BY channel
     `);
-    const results = query.all(dateString) as { channel: string, count: number }[];
+
+    const results = query.all(...params) as { channel: string, count: number }[];
     const counts: Record<string, number> = {};
     results.forEach(row => {
         counts[row.channel] = row.count;
     });
     return counts;
 }
+
 
 
 export async function addShippingReceipt(receipt: Omit<ShippingReceipt, 'id'>): Promise<ShippingReceipt> {

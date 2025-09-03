@@ -30,7 +30,7 @@ import {
   adjustAccessoryStock as adjustAccessoryStockDb,
   archiveProduct as archiveProductDb,
   deleteProductPermanently as deleteProductPermanentlyDb,
-  fetchShippingReceipts,
+  fetchShippingReceipts as fetchShippingReceiptsDb,
   addShippingReceipt as addShippingReceiptDb,
   deleteShippingReceipt as deleteShippingReceiptDb,
   addBulkImportHistory,
@@ -76,7 +76,7 @@ interface InventoryContextType {
   adjustAccessoryStock: (accessoryId: string, change: number, reason: string) => Promise<void>;
   // Shipping
   shippingReceipts: ShippingReceipt[];
-  fetchShippingReceipts: (options: { page: number; limit: number; channel?: string; date?: Date; }) => Promise<{ receipts: ShippingReceipt[]; total: number; }>;
+  fetchShippingReceipts: (options: { page: number; limit: number; channel?: string; date?: Date; status?: string[]; }) => Promise<{ receipts: ShippingReceipt[]; total: number; }>;
   addShippingReceipt: (receipt: Omit<ShippingReceipt, 'id'>) => Promise<ShippingReceipt>;
   deleteShippingReceipt: (id: number) => Promise<void>;
   // Bulk Import History
@@ -104,7 +104,7 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
         fetchAllSales(),
         getResellers(),
         fetchManualJournalEntries(),
-        fetchShippingReceipts({ page: 1, limit: 1000 }), // Fetch initial receipts
+        fetchShippingReceiptsDb({ page: 1, limit: 1000 }), // Fetch initial receipts
       ]);
       
       setItems(inventoryData.items);
@@ -286,6 +286,10 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
   const adjustAccessoryStock = async (accessoryId: string, change: number, reason: string) => {
     await adjustAccessoryStockDb(accessoryId, change, reason);
     await fetchAllData();
+  };
+
+  const fetchShippingReceipts = async (options: { page: number; limit: number; channel?: string; date?: Date; status?: string[] }) => {
+    return await fetchShippingReceiptsDb({ ...options });
   };
 
   const addShippingReceipt = async (receipt: Omit<ShippingReceipt, 'id'>) => {

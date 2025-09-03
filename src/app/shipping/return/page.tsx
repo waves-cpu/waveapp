@@ -17,9 +17,9 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Undo2, Truck, CheckCircle, XCircle, Package, Trash2, Search } from 'lucide-react';
+import { Undo2, Truck, CheckCircle, XCircle, Package, Trash2, Search, Plus, Minus } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { updateShippingReceiptStatus } from '@/lib/inventory-service';
+import { fetchShippingReceiptCountsByChannel, updateShippingReceiptStatus } from '@/lib/inventory-service';
 import type { ShippingReceipt, InventoryItem, InventoryItemVariant } from '@/types';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
@@ -65,6 +65,8 @@ const getStatusVariant = (status: string) => {
     }
 };
 
+type ReturnedItem = InventoryItemVariant & { quantity: number };
+
 const ReturnProductDialog = ({
     open,
     onOpenChange,
@@ -72,69 +74,82 @@ const ReturnProductDialog = ({
 }: {
     open: boolean;
     onOpenChange: (open: boolean) => void;
-    onProcessReturn: (variant: InventoryItemVariant) => Promise<void>;
+    onProcessReturn: (items: ReturnedItem[]) => Promise<void>;
 }) => {
-    const { items, getProductBySku } = useInventory();
+    const { getProductBySku } = useInventory();
     const [searchTerm, setSearchTerm] = useState('');
-    const [filteredItems, setFilteredItems] = useState<InventoryItem[]>([]);
-    const { playErrorSound } = useScanSounds();
-    const { toast } = useToast();
-    const [productForVariantSelection, setProductForVariantSelection] = useState<InventoryItem | null>(null);
-    const [selectedVariant, setSelectedVariant] = useState<InventoryItemVariant | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [productForVariantSelection, setProductForVariantSelection] = useState<InventoryItem | null>(null);
+    const [returnedItems, setReturnedItems] = useState<ReturnedItem[]>([]);
+    const { playSuccessSound, playErrorSound } = useScanSounds();
+    const { toast } = useToast();
+    const inputRef = React.useRef<HTMLInputElement>(null);
 
     useEffect(() => {
         if (!open) {
             setSearchTerm('');
-            setFilteredItems([]);
-            setProductForVariantSelection(null);
-            setSelectedVariant(null);
+            setReturnedItems([]);
             setIsSubmitting(false);
+        } else {
+             setTimeout(() => inputRef.current?.focus(), 100);
         }
     }, [open]);
 
+    const addOrUpdateReturnedItem = (variant: InventoryItemVariant) => {
+        setReturnedItems(prevItems => {
+            const existingItem = prevItems.find(item => item.id === variant.id);
+            if (existingItem) {
+                return prevItems.map(item =>
+                    item.id === variant.id ? { ...item, quantity: item.quantity + 1 } : item
+                );
+            }
+            return [...prevItems, { ...variant, quantity: 1 }];
+        });
+        playSuccessSound();
+        setSearchTerm('');
+    };
+    
     const handleSearch = async (e: React.FormEvent) => {
         e.preventDefault();
-        setSelectedVariant(null); // Reset selection on new search
-        if (!searchTerm) {
-            setFilteredItems(items.filter(i => i.variants && i.variants.length > 0));
-            return;
-        }
+        if (!searchTerm) return;
 
         const product = await getProductBySku(searchTerm);
         if (product) {
             if (product.variants && product.variants.length > 1) {
                 setProductForVariantSelection(product);
             } else if (product.variants && product.variants.length === 1) {
-                setSelectedVariant(product.variants[0]);
+                addOrUpdateReturnedItem(product.variants[0]);
             } else {
+                 playErrorSound();
                  toast({ variant: "destructive", title: "Produk Tunggal", description: "Produk ini tidak memiliki varian untuk dipilih." });
             }
         } else {
-            const searchResults = items.filter(i => 
-                i.name.toLowerCase().includes(searchTerm.toLowerCase()) && 
-                i.variants && i.variants.length > 0
-            );
-            setFilteredItems(searchResults);
-             if (searchResults.length === 0) {
-                 playErrorSound();
-                 toast({ variant: "destructive", title: "Produk Tidak Ditemukan" });
-            }
+            playErrorSound();
+            toast({ variant: "destructive", title: "Produk Tidak Ditemukan" });
         }
+        inputRef.current?.focus();
     };
 
     const handleVariantSelectFromDialog = (variant: InventoryItemVariant | null) => {
         setProductForVariantSelection(null);
         if(variant) {
-            setSelectedVariant(variant);
+            addOrUpdateReturnedItem(variant);
         }
+        inputRef.current?.focus();
     }
     
+    const updateQuantity = (id: string, newQuantity: number) => {
+        setReturnedItems(prevItems =>
+            prevItems.map(item => (item.id === id ? { ...item, quantity: newQuantity } : item))
+                         .filter(item => item.quantity > 0)
+        );
+    };
+
     const handleFinalizeReturn = async () => {
-        if (!selectedVariant) return;
+        if (returnedItems.length === 0) return;
         setIsSubmitting(true);
         try {
-            await onProcessReturn(selectedVariant);
+            await onProcessReturn(returnedItems);
             onOpenChange(false);
         } finally {
             setIsSubmitting(false);
@@ -144,62 +159,75 @@ const ReturnProductDialog = ({
     return (
         <>
             <Dialog open={open} onOpenChange={onOpenChange}>
-                <DialogContent className="sm:max-w-2xl">
+                <DialogContent className="sm:max-w-3xl">
                     <DialogHeader>
                         <DialogTitle>Proses Barang Return</DialogTitle>
-                        <DialogDescription>Cari dan pilih produk yang dikembalikan untuk dimasukkan kembali ke stok.</DialogDescription>
+                        <DialogDescription>Scan atau cari produk yang dikembalikan untuk dimasukkan kembali ke stok.</DialogDescription>
                     </DialogHeader>
-                    <form onSubmit={handleSearch} className="flex items-center gap-2">
-                        <Input
-                            placeholder="Masukkan SKU atau Nama Produk..."
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                        />
-                        <Button type="submit">
-                            <Search className="mr-2 h-4 w-4" />
-                            Cari
-                        </Button>
-                    </form>
-                    
-                    {selectedVariant && (
-                        <div className="p-4 bg-secondary rounded-md">
-                            <h4 className="text-sm font-semibold">Produk Terpilih:</h4>
-                            <p className="text-sm">{selectedVariant.parentName} - {selectedVariant.name}</p>
-                            <p className="text-xs text-muted-foreground">SKU: {selectedVariant.sku}</p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="space-y-4">
+                            <form onSubmit={handleSearch} className="flex items-center gap-2">
+                                <Input
+                                    ref={inputRef}
+                                    placeholder="Masukkan SKU atau Nama Produk..."
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                />
+                                <Button type="submit">
+                                    <Search className="mr-2 h-4 w-4" />
+                                    Cari
+                                </Button>
+                            </form>
+                            <p className="text-xs text-muted-foreground text-center">Hasil pencarian akan otomatis ditambahkan ke tabel di samping.</p>
                         </div>
-                    )}
 
-                    {!selectedVariant && (
-                        <ScrollArea className="h-72 border rounded-md">
-                            <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead>Produk</TableHead>
-                                        <TableHead>Varian</TableHead>
-                                        <TableHead className="text-center">Stok</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {filteredItems.flatMap(item =>
-                                        item.variants?.map(variant => (
-                                            <TableRow key={variant.id} onClick={() => setSelectedVariant(variant)} className="cursor-pointer">
-                                                <TableCell className="font-medium">{item.name}</TableCell>
-                                                <TableCell>{variant.name}</TableCell>
-                                                <TableCell className="text-center">{variant.stock}</TableCell>
+                         <Card>
+                            <CardContent className="p-0">
+                                <ScrollArea className="h-72 border rounded-md">
+                                    <Table>
+                                        <TableHeader>
+                                            <TableRow>
+                                                <TableHead>Produk</TableHead>
+                                                <TableHead className="w-[120px] text-center">Jumlah</TableHead>
                                             </TableRow>
-                                        ))
-                                    )}
-                                </TableBody>
-                            </Table>
-                            {filteredItems.length === 0 && !productForVariantSelection && (
-                                <p className="p-4 text-center text-sm text-muted-foreground">Mulai pencarian untuk melihat produk.</p>
-                            )}
-                        </ScrollArea>
-                    )}
+                                        </TableHeader>
+                                        <TableBody>
+                                            {returnedItems.length > 0 ? returnedItems.map(item => (
+                                                <TableRow key={item.id}>
+                                                    <TableCell>
+                                                        <p className="font-medium text-sm">{item.parentName} - {item.name}</p>
+                                                        <p className="text-xs text-muted-foreground">SKU: {item.sku}</p>
+                                                    </TableCell>
+                                                    <TableCell className="text-center">
+                                                         <div className="flex items-center justify-center gap-1">
+                                                            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => updateQuantity(item.id, item.quantity - 1)}><Minus className="h-4 w-4" /></Button>
+                                                            <Input
+                                                                type="number"
+                                                                value={item.quantity}
+                                                                onChange={(e) => updateQuantity(item.id, parseInt(e.target.value) || 0)}
+                                                                className="w-12 h-8 text-center"
+                                                            />
+                                                            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => updateQuantity(item.id, item.quantity + 1)}><Plus className="h-4 w-4" /></Button>
+                                                         </div>
+                                                    </TableCell>
+                                                </TableRow>
+                                            )) : (
+                                                <TableRow>
+                                                    <TableCell colSpan={2} className="h-40 text-center text-muted-foreground">
+                                                        Belum ada produk ditambahkan.
+                                                    </TableCell>
+                                                </TableRow>
+                                            )}
+                                        </TableBody>
+                                    </Table>
+                                </ScrollArea>
+                            </CardContent>
+                         </Card>
+                    </div>
                     
                     <DialogFooter>
                         <Button variant="ghost" onClick={() => onOpenChange(false)}>Batal</Button>
-                        <Button onClick={handleFinalizeReturn} disabled={!selectedVariant || isSubmitting}>
+                        <Button onClick={handleFinalizeReturn} disabled={returnedItems.length === 0 || isSubmitting}>
                             {isSubmitting ? 'Memproses...' : 'Masukkan Barang ke Stok'}
                         </Button>
                     </DialogFooter>
@@ -227,7 +255,7 @@ export default function ReturnPage() {
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(25);
     const { toast } = useToast();
-    const { items, updateStock, fetchShippingReceipts, deleteShippingReceipt } = useInventory();
+    const { updateStock, fetchShippingReceipts, deleteShippingReceipt } = useInventory();
     const { language } = useLanguage();
     const t = translations[language].shipping.returnPage;
     const tCommon = translations[language].common;
@@ -236,6 +264,7 @@ export default function ReturnPage() {
     const [receiptToDelete, setReceiptToDelete] = useState<ShippingReceipt | null>(null);
     const [isProductSelectionDialogOpen, setIsProductSelectionDialogOpen] = useState(false);
     const [activeChannel, setActiveChannel] = useState<string | null>(null);
+    const [channelCounts, setChannelCounts] = useState<Record<string, number> | null>(null);
 
 
     const fetchReturns = useCallback(async () => {
@@ -256,10 +285,21 @@ export default function ReturnPage() {
             setLoading(false);
         }
     }, [currentPage, itemsPerPage, activeChannel, toast, t.fetchError, fetchShippingReceipts]);
+    
+    const fetchCounts = useCallback(async () => {
+        try {
+            const counts = await fetchShippingReceiptCountsByChannel(undefined, ['Return', 'Dibatalkan', 'Diantar', 'Tidak Sampai']);
+            setChannelCounts(counts);
+        } catch (error) {
+             console.error("Failed to fetch channel counts:", error);
+        }
+    }, []);
+
 
     useEffect(() => {
         fetchReturns();
-    }, [fetchReturns]);
+        fetchCounts();
+    }, [fetchReturns, fetchCounts]);
     
     const totalPages = Math.ceil(totalReturns / itemsPerPage);
 
@@ -268,6 +308,7 @@ export default function ReturnPage() {
             await updateShippingReceiptStatus(id, newStatus);
             toast({ title: t.statusUpdateSuccess, description: t.statusUpdateSuccessDesc.replace('{status}', newStatus) });
             fetchReturns();
+            fetchCounts();
         } catch (error) {
             console.error(`Failed to change status to ${newStatus}:`, error);
             toast({ variant: 'destructive', title: t.statusUpdateError });
@@ -281,6 +322,7 @@ export default function ReturnPage() {
             toast({ title: t.deleteSuccess, description: t.deleteSuccessDesc.replace('{awb}', receiptToDelete.awb) });
             setReceiptToDelete(null);
             fetchReturns(); // Refresh data
+            fetchCounts();
         } catch (error) {
             console.error("Failed to delete receipt:", error);
             toast({ variant: 'destructive', title: t.deleteError });
@@ -292,16 +334,20 @@ export default function ReturnPage() {
         setIsProductSelectionDialogOpen(true);
     };
     
-    const handleVariantReturned = async (variant: InventoryItemVariant) => {
+    const handleVariantReturned = async (returnedItems: ReturnedItem[]) => {
         if (!selectedReceipt) return;
         
         try {
-            // Return 1 item to stock
-            await updateStock(variant.id, 1, `Return dari resi ${selectedReceipt.awb}`);
-            // Mark receipt as 'Selesai'
+            const stockUpdatePromises = returnedItems.map(item => 
+                updateStock(item.id, item.quantity, `Return dari resi ${selectedReceipt.awb}`)
+            );
+            
+            await Promise.all(stockUpdatePromises);
             await handleChangeStatus(selectedReceipt.id, 'Return Selesai');
-            toast({ title: t.stockReturnedSuccess, description: t.stockReturnedSuccessDesc.replace('{name}', variant.name) });
-            fetchReturns(); // Refresh list after successful operation
+            
+            toast({ title: t.stockReturnedSuccess, description: `${returnedItems.length} jenis produk telah dikembalikan ke stok.` });
+            fetchReturns();
+            fetchCounts();
         } catch (error) {
             toast({ variant: 'destructive', title: t.stockReturnedError });
             throw error; // Re-throw to keep dialog open on failure
@@ -320,28 +366,39 @@ export default function ReturnPage() {
                     </div>
                 </div>
                  <div className="flex flex-col gap-2">
-                    <div className="flex gap-2 overflow-x-auto no-scrollbar">
-                        <Button 
-                            variant={activeChannel === null ? 'secondary' : 'ghost'}
-                            size="sm"
-                            onClick={() => setActiveChannel(null)}
-                            className="shrink-0"
-                        >
-                            Semua
-                        </Button>
-                        {(['Shopee', 'Tiktok', 'Lazada', 'Instant'] as const).map(tab => (
+                     <div className="border-b">
+                        <div className="flex gap-2 overflow-x-auto no-scrollbar pb-2">
                             <Button 
-                                key={tab}
-                                variant={activeChannel === tab ? 'secondary' : 'ghost'}
+                                variant={activeChannel === null ? 'secondary' : 'ghost'}
                                 size="sm"
-                                onClick={() => setActiveChannel(tab)}
+                                onClick={() => setActiveChannel(null)}
                                 className="shrink-0"
                             >
-                                {tab}
+                                Semua
+                                {channelCounts && (
+                                     <Badge variant={activeChannel === null ? 'default' : 'secondary'} className="ml-2">
+                                        {Object.values(channelCounts).reduce((a,b) => a+b, 0)}
+                                    </Badge>
+                                )}
                             </Button>
-                        ))}
+                            {(['Shopee', 'Tiktok', 'Lazada', 'Instant'] as const).map(tab => (
+                                <Button 
+                                    key={tab}
+                                    variant={activeChannel === tab ? 'secondary' : 'ghost'}
+                                    size="sm"
+                                    onClick={() => setActiveChannel(tab)}
+                                    className="shrink-0"
+                                >
+                                    {tab}
+                                    {channelCounts && (
+                                         <Badge variant={activeChannel === tab ? 'default' : 'secondary'} className="ml-2">
+                                            {channelCounts[tab] || 0}
+                                        </Badge>
+                                    )}
+                                </Button>
+                            ))}
+                        </div>
                     </div>
-                    <div className="border-b"></div>
                 </div>
 
 
