@@ -620,7 +620,7 @@ export async function findProductBySku(sku: string): Promise<InventoryItem | nul
             ...parent,
             id: parent.id.toString(),
             // This structure indicates to the caller that a specific variant was found
-            variants: [{...variantResult, id: variantResult.id.toString()}] 
+            variants: [{...variantResult, id: variantResult.id.toString(), parentName: parent.name}] 
         };
     }
 
@@ -1084,3 +1084,4 @@ export async function deleteProductPermanently(itemId: string) {
     // ON DELETE CASCADE will handle variants, history, and channel_prices
     db.prepare('DELETE FROM products WHERE id = ?').run(itemId);
 }
+

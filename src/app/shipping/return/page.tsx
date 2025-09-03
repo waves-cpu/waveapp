@@ -40,13 +40,12 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { VariantSelectionDialog } from '@/app/components/variant-selection-dialog';
 import { useInventory } from '@/hooks/use-inventory';
 import { useLanguage } from '@/hooks/use-language';
 import { translations } from '@/types/language';
-import { Dialog, DialogHeader, DialogTitle, DialogContent, DialogDescription } from '@/components/ui/dialog';
+import { Dialog, DialogHeader, DialogTitle, DialogContent, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useScanSounds } from '@/hooks/use-scan-sounds';
@@ -67,11 +66,11 @@ const getStatusVariant = (status: string) => {
 const ReturnProductDialog = ({
     open,
     onOpenChange,
-    onProductSelected
+    onProcessReturn
 }: {
     open: boolean;
     onOpenChange: (open: boolean) => void;
-    onProductSelected: (variant: InventoryItemVariant) => void;
+    onProcessReturn: (variant: InventoryItemVariant) => Promise<void>;
 }) => {
     const { items, getProductBySku } = useInventory();
     const [searchTerm, setSearchTerm] = useState('');
@@ -79,17 +78,22 @@ const ReturnProductDialog = ({
     const { playErrorSound } = useScanSounds();
     const { toast } = useToast();
     const [productForVariantSelection, setProductForVariantSelection] = useState<InventoryItem | null>(null);
+    const [selectedVariant, setSelectedVariant] = useState<InventoryItemVariant | null>(null);
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     useEffect(() => {
         if (!open) {
             setSearchTerm('');
             setFilteredItems([]);
             setProductForVariantSelection(null);
+            setSelectedVariant(null);
+            setIsSubmitting(false);
         }
     }, [open]);
 
     const handleSearch = async (e: React.FormEvent) => {
         e.preventDefault();
+        setSelectedVariant(null); // Reset selection on new search
         if (!searchTerm) {
             setFilteredItems(items.filter(i => i.variants && i.variants.length > 0));
             return;
@@ -100,7 +104,7 @@ const ReturnProductDialog = ({
             if (product.variants && product.variants.length > 1) {
                 setProductForVariantSelection(product);
             } else if (product.variants && product.variants.length === 1) {
-                onProductSelected(product.variants[0]);
+                setSelectedVariant(product.variants[0]);
             } else {
                  toast({ variant: "destructive", title: "Produk Tunggal", description: "Produk ini tidak memiliki varian untuk dipilih." });
             }
@@ -117,11 +121,19 @@ const ReturnProductDialog = ({
         }
     };
 
-    const handleVariantSelect = (variant: InventoryItemVariant | null) => {
+    const handleVariantSelectFromDialog = (variant: InventoryItemVariant | null) => {
         setProductForVariantSelection(null);
         if(variant) {
-            onProductSelected(variant);
+            setSelectedVariant(variant);
         }
+    }
+    
+    const handleFinalizeReturn = async () => {
+        if (!selectedVariant) return;
+        setIsSubmitting(true);
+        await onProcessReturn(selectedVariant);
+        setIsSubmitting(false);
+        onOpenChange(false);
     }
 
     return (
@@ -129,8 +141,8 @@ const ReturnProductDialog = ({
             <Dialog open={open} onOpenChange={onOpenChange}>
                 <DialogContent className="sm:max-w-2xl">
                     <DialogHeader>
-                        <DialogTitle>Pilih Produk yang Dikembalikan</DialogTitle>
-                        <DialogDescription>Cari berdasarkan SKU atau nama produk untuk menemukan item yang dikembalikan.</DialogDescription>
+                        <DialogTitle>Proses Barang Return</DialogTitle>
+                        <DialogDescription>Cari dan pilih produk yang dikembalikan untuk dimasukkan kembali ke stok.</DialogDescription>
                     </DialogHeader>
                     <form onSubmit={handleSearch} className="flex items-center gap-2">
                         <Input
@@ -143,31 +155,49 @@ const ReturnProductDialog = ({
                             Cari
                         </Button>
                     </form>
-                    <ScrollArea className="h-72 border rounded-md">
-                        <Table>
-                             <TableHeader>
-                                <TableRow>
-                                    <TableHead>Produk</TableHead>
-                                    <TableHead>Varian</TableHead>
-                                    <TableHead className="text-center">Stok</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {filteredItems.flatMap(item =>
-                                    item.variants?.map(variant => (
-                                        <TableRow key={variant.id} onClick={() => onProductSelected(variant)} className="cursor-pointer">
-                                            <TableCell className="font-medium">{item.name}</TableCell>
-                                            <TableCell>{variant.name}</TableCell>
-                                            <TableCell className="text-center">{variant.stock}</TableCell>
-                                        </TableRow>
-                                    ))
-                                )}
-                            </TableBody>
-                        </Table>
-                         {filteredItems.length === 0 && !productForVariantSelection && (
-                             <p className="p-4 text-center text-sm text-muted-foreground">Mulai pencarian untuk melihat produk.</p>
-                         )}
-                    </ScrollArea>
+                    
+                    {selectedVariant && (
+                        <div className="p-4 bg-secondary rounded-md">
+                            <h4 className="text-sm font-semibold">Produk Terpilih:</h4>
+                            <p className="text-sm">{selectedVariant.parentName} - {selectedVariant.name}</p>
+                            <p className="text-xs text-muted-foreground">SKU: {selectedVariant.sku}</p>
+                        </div>
+                    )}
+
+                    {!selectedVariant && (
+                        <ScrollArea className="h-72 border rounded-md">
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Produk</TableHead>
+                                        <TableHead>Varian</TableHead>
+                                        <TableHead className="text-center">Stok</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {filteredItems.flatMap(item =>
+                                        item.variants?.map(variant => (
+                                            <TableRow key={variant.id} onClick={() => setSelectedVariant(variant)} className="cursor-pointer">
+                                                <TableCell className="font-medium">{item.name}</TableCell>
+                                                <TableCell>{variant.name}</TableCell>
+                                                <TableCell className="text-center">{variant.stock}</TableCell>
+                                            </TableRow>
+                                        ))
+                                    )}
+                                </TableBody>
+                            </Table>
+                            {filteredItems.length === 0 && !productForVariantSelection && (
+                                <p className="p-4 text-center text-sm text-muted-foreground">Mulai pencarian untuk melihat produk.</p>
+                            )}
+                        </ScrollArea>
+                    )}
+                    
+                    <DialogFooter>
+                        <Button variant="ghost" onClick={() => onOpenChange(false)}>Batal</Button>
+                        <Button onClick={handleFinalizeReturn} disabled={!selectedVariant || isSubmitting}>
+                            {isSubmitting ? 'Memproses...' : 'Masukkan Barang ke Stok'}
+                        </Button>
+                    </DialogFooter>
                 </DialogContent>
             </Dialog>
             {productForVariantSelection && (
@@ -175,7 +205,7 @@ const ReturnProductDialog = ({
                     open={!!productForVariantSelection}
                     onOpenChange={(isOpen) => !isOpen && setProductForVariantSelection(null)}
                     item={productForVariantSelection}
-                    onSelect={handleVariantSelect}
+                    onSelect={handleVariantSelectFromDialog}
                     cart={[]}
                     ignoreStockCheck={true}
                 />
@@ -200,6 +230,7 @@ export default function ReturnPage() {
     const [selectedReceipt, setSelectedReceipt] = useState<ShippingReceipt | null>(null);
     const [receiptToDelete, setReceiptToDelete] = useState<ShippingReceipt | null>(null);
     const [isProductSelectionDialogOpen, setIsProductSelectionDialogOpen] = useState(false);
+    const [activeChannel, setActiveChannel] = useState<string | null>(null);
 
 
     const fetchReturns = useCallback(async () => {
@@ -208,7 +239,8 @@ export default function ReturnPage() {
             const { receipts, total } = await fetchShippingReceipts({
                 page: currentPage,
                 limit: itemsPerPage,
-                status: ['Return', 'Dibatalkan', 'Diantar', 'Tidak Sampai']
+                status: ['Return', 'Dibatalkan', 'Diantar', 'Tidak Sampai'],
+                channel: activeChannel ?? undefined,
             });
             setReturns(receipts);
             setTotalReturns(total);
@@ -218,7 +250,7 @@ export default function ReturnPage() {
         } finally {
             setLoading(false);
         }
-    }, [currentPage, itemsPerPage, toast, t.fetchError, fetchShippingReceipts]);
+    }, [currentPage, itemsPerPage, activeChannel, toast, t.fetchError, fetchShippingReceipts]);
 
     useEffect(() => {
         fetchReturns();
@@ -256,19 +288,19 @@ export default function ReturnPage() {
     };
     
     const handleVariantReturned = async (variant: InventoryItemVariant) => {
-        setIsProductSelectionDialogOpen(false);
-        if (variant && selectedReceipt) {
-            try {
-                // Return 1 item to stock
-                await updateStock(variant.id, 1, `Return dari resi ${selectedReceipt.awb}`);
-                // Mark receipt as 'Selesai'
-                await handleChangeStatus(selectedReceipt.id, 'Selesai');
-                toast({ title: t.stockReturnedSuccess, description: t.stockReturnedSuccessDesc.replace('{name}', variant.name) });
-            } catch (error) {
-                toast({ variant: 'destructive', title: t.stockReturnedError });
-            }
+        if (!selectedReceipt) return;
+        
+        try {
+            // Return 1 item to stock
+            await updateStock(variant.id, 1, `Return dari resi ${selectedReceipt.awb}`);
+            // Mark receipt as 'Selesai'
+            await handleChangeStatus(selectedReceipt.id, 'Selesai');
+            toast({ title: t.stockReturnedSuccess, description: t.stockReturnedSuccessDesc.replace('{name}', variant.name) });
+            fetchReturns(); // Refresh list after successful operation
+        } catch (error) {
+            toast({ variant: 'destructive', title: t.stockReturnedError });
+            throw error; // Re-throw to keep dialog open on failure
         }
-        setSelectedReceipt(null);
     };
 
     return (
@@ -281,6 +313,27 @@ export default function ReturnPage() {
                            {t.title}
                         </h1>
                     </div>
+                </div>
+                 <div className="flex items-center gap-2 overflow-x-auto no-scrollbar border-b pb-2">
+                    <Button 
+                        variant={activeChannel === null ? 'secondary' : 'ghost'}
+                        size="sm"
+                        onClick={() => setActiveChannel(null)}
+                        className="shrink-0"
+                    >
+                        Semua
+                    </Button>
+                    {(['Shopee', 'Tiktok', 'Lazada', 'Instant'] as const).map(tab => (
+                        <Button 
+                            key={tab}
+                            variant={activeChannel === tab ? 'secondary' : 'ghost'}
+                            size="sm"
+                            onClick={() => setActiveChannel(tab)}
+                            className="shrink-0"
+                        >
+                            {tab}
+                        </Button>
+                    ))}
                 </div>
 
                 <div className="grid gap-6">
@@ -384,7 +437,7 @@ export default function ReturnPage() {
             <ReturnProductDialog
                 open={isProductSelectionDialogOpen}
                 onOpenChange={setIsProductSelectionDialogOpen}
-                onProductSelected={handleVariantReturned}
+                onProcessReturn={handleVariantReturned}
             />
         </AppLayout>
     );
