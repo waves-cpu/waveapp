@@ -54,6 +54,7 @@ import { useScanSounds } from '@/hooks/use-scan-sounds';
 const getStatusVariant = (status: string) => {
     switch (status.toLowerCase()) {
         case 'selesai': return 'default';
+        case 'return selesai': return 'default';
         case 'dikirim':
         case 'diantar': return 'secondary';
         case 'return':
@@ -131,9 +132,12 @@ const ReturnProductDialog = ({
     const handleFinalizeReturn = async () => {
         if (!selectedVariant) return;
         setIsSubmitting(true);
-        await onProcessReturn(selectedVariant);
-        setIsSubmitting(false);
-        onOpenChange(false);
+        try {
+            await onProcessReturn(selectedVariant);
+            onOpenChange(false);
+        } finally {
+            setIsSubmitting(false);
+        }
     }
 
     return (
@@ -294,7 +298,7 @@ export default function ReturnPage() {
             // Return 1 item to stock
             await updateStock(variant.id, 1, `Return dari resi ${selectedReceipt.awb}`);
             // Mark receipt as 'Selesai'
-            await handleChangeStatus(selectedReceipt.id, 'Selesai');
+            await handleChangeStatus(selectedReceipt.id, 'Return Selesai');
             toast({ title: t.stockReturnedSuccess, description: t.stockReturnedSuccessDesc.replace('{name}', variant.name) });
             fetchReturns(); // Refresh list after successful operation
         } catch (error) {
