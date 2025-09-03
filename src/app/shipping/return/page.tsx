@@ -17,9 +17,9 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Undo2, Truck, CheckCircle, XCircle, Package, Trash2, Search, Plus, Minus } from 'lucide-react';
+import { Undo2, Truck, CheckCircle, XCircle, Package, Trash2, Search, Minus, Plus } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { fetchShippingReceipts, updateShippingReceiptStatus, deleteShippingReceipt } from '@/lib/inventory-service';
+import { useInventory } from '@/hooks/use-inventory';
 import type { ShippingReceipt, InventoryItem, InventoryItemVariant } from '@/types';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
@@ -42,7 +42,6 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { VariantSelectionDialog } from '@/app/components/variant-selection-dialog';
-import { useInventory } from '@/hooks/use-inventory';
 import { useLanguage } from '@/hooks/use-language';
 import { translations } from '@/types/language';
 import { Dialog, DialogHeader, DialogTitle, DialogContent, DialogDescription, DialogFooter } from '@/components/ui/dialog';
@@ -138,10 +137,16 @@ const ReturnProductDialog = ({
     }
     
     const updateQuantity = (id: string, newQuantity: number) => {
-        setReturnedItems(prevItems =>
-            prevItems.map(item => (item.id === id ? { ...item, quantity: newQuantity } : item))
-                         .filter(item => item.quantity > 0)
-        );
+        setReturnedItems(prevItems => {
+            if (newQuantity <= 0) {
+                return prevItems.filter(item => item.id !== id);
+            }
+            return prevItems.map(item => (item.id === id ? { ...item, quantity: newQuantity } : item));
+        });
+    };
+    
+    const removeItem = (id: string) => {
+        setReturnedItems(prevItems => prevItems.filter(item => item.id !== id));
     };
 
     const handleFinalizeReturn = async () => {
@@ -184,7 +189,8 @@ const ReturnProductDialog = ({
                                         <TableHeader>
                                             <TableRow>
                                                 <TableHead>Produk</TableHead>
-                                                <TableHead className="w-[150px] text-center">Jumlah</TableHead>
+                                                <TableHead className="w-[120px] text-center">Jumlah</TableHead>
+                                                <TableHead className="w-[50px]"></TableHead>
                                             </TableRow>
                                         </TableHeader>
                                         <TableBody>
@@ -196,20 +202,23 @@ const ReturnProductDialog = ({
                                                     </TableCell>
                                                     <TableCell>
                                                          <div className="flex items-center justify-center gap-1">
-                                                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => updateQuantity(item.id, item.quantity - 1)}><Minus className="h-4 w-4" /></Button>
                                                             <Input
                                                                 type="number"
                                                                 value={item.quantity}
                                                                 onChange={(e) => updateQuantity(item.id, parseInt(e.target.value) || 0)}
-                                                                className="w-14 h-8 text-center"
+                                                                className="w-20 h-8 text-center"
                                                             />
-                                                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => updateQuantity(item.id, item.quantity + 1)}><Plus className="h-4 w-4" /></Button>
                                                          </div>
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        <Button variant="ghost" size="icon" className="text-destructive h-8 w-8" onClick={() => removeItem(item.id)}>
+                                                            <Trash2 className="h-4 w-4" />
+                                                        </Button>
                                                     </TableCell>
                                                 </TableRow>
                                             )) : (
                                                 <TableRow>
-                                                    <TableCell colSpan={2} className="h-40 text-center text-muted-foreground">
+                                                    <TableCell colSpan={3} className="h-40 text-center text-muted-foreground">
                                                         Belum ada produk ditambahkan.
                                                     </TableCell>
                                                 </TableRow>
@@ -261,6 +270,7 @@ export default function ReturnPage() {
     const [isProductSelectionDialogOpen, setIsProductSelectionDialogOpen] = useState(false);
     const [activeChannel, setActiveChannel] = useState<string | null>(null);
     const [channelCounts, setChannelCounts] = useState<Record<string, number> | null>(null);
+    const [searchTerm, setSearchTerm] = useState('');
 
 
     const fetchReturns = useCallback(async () => {
@@ -271,6 +281,7 @@ export default function ReturnPage() {
                 limit: itemsPerPage,
                 status: ['Return', 'Dibatalkan', 'Diantar', 'Tidak Sampai'],
                 channel: activeChannel ?? undefined,
+                awb: searchTerm || undefined,
             });
             setReturns(receipts);
             setTotalReturns(total);
@@ -280,19 +291,13 @@ export default function ReturnPage() {
         } finally {
             setLoading(false);
         }
-    }, [currentPage, itemsPerPage, activeChannel, toast, t.fetchError, fetchShippingReceipts]);
+    }, [currentPage, itemsPerPage, activeChannel, searchTerm, toast, t.fetchError, fetchShippingReceipts]);
     
     const fetchCounts = useCallback(async () => {
         try {
-            const counts = await fetchShippingReceipts({
-                page: 1,
-                limit: 1, // We only need counts
-                status: ['Return', 'Dibatalkan', 'Diantar', 'Tidak Sampai'],
-            });
-            
-            const allReceipts = await fetchShippingReceipts({ page: 1, limit: 10000, status: ['Return', 'Dibatalkan', 'Diantar', 'Tidak Sampai'] });
+            const allReturnReceipts = await fetchShippingReceipts({ page: 1, limit: 10000, status: ['Return', 'Dibatalkan', 'Diantar', 'Tidak Sampai'] });
             const countsByChannel: Record<string, number> = {};
-            allReceipts.receipts.forEach(r => {
+            allReturnReceipts.receipts.forEach(r => {
                 countsByChannel[r.channel] = (countsByChannel[r.channel] || 0) + 1;
             });
 
@@ -305,8 +310,11 @@ export default function ReturnPage() {
 
     useEffect(() => {
         fetchReturns();
+    }, [fetchReturns]);
+
+    useEffect(() => {
         fetchCounts();
-    }, [fetchReturns, fetchCounts]);
+    }, [fetchCounts]);
     
     const totalPages = Math.ceil(totalReturns / itemsPerPage);
 
@@ -328,7 +336,7 @@ export default function ReturnPage() {
             await deleteShippingReceipt(receiptToDelete.id);
             toast({ title: t.deleteSuccess, description: t.deleteSuccessDesc.replace('{awb}', receiptToDelete.awb) });
             setReceiptToDelete(null);
-            fetchReturns(); // Refresh data
+            fetchReturns();
             fetchCounts();
         } catch (error) {
             console.error("Failed to delete receipt:", error);
@@ -371,10 +379,19 @@ export default function ReturnPage() {
                            {t.title}
                         </h1>
                     </div>
+                     <div className="relative">
+                        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                        <Input
+                            placeholder="Cari No. Resi..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="pl-8 h-9 w-full md:w-64"
+                        />
+                    </div>
                 </div>
                  <div className="flex flex-col gap-2">
                      <div className="border-b">
-                        <div className="flex gap-2 overflow-x-auto no-scrollbar pb-2">
+                        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-2">
                             <Button 
                                 variant={activeChannel === null ? 'secondary' : 'ghost'}
                                 size="sm"
