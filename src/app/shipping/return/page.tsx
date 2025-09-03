@@ -19,7 +19,7 @@ import {
 } from '@/components/ui/table';
 import { Undo2, Truck, CheckCircle, XCircle, Package, Trash2, Search, Plus, Minus } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { fetchShippingReceiptCountsByChannel, updateShippingReceiptStatus } from '@/lib/inventory-service';
+import { fetchShippingReceipts, updateShippingReceiptStatus, deleteShippingReceipt } from '@/lib/inventory-service';
 import type { ShippingReceipt, InventoryItem, InventoryItemVariant } from '@/types';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
@@ -40,7 +40,6 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { VariantSelectionDialog } from '@/app/components/variant-selection-dialog';
 import { useInventory } from '@/hooks/use-inventory';
@@ -65,7 +64,7 @@ const getStatusVariant = (status: string) => {
     }
 };
 
-type ReturnedItem = InventoryItemVariant & { quantity: number };
+type ReturnedItem = InventoryItemVariant & { quantity: number; parentName?: string };
 
 const ReturnProductDialog = ({
     open,
@@ -95,7 +94,7 @@ const ReturnProductDialog = ({
         }
     }, [open]);
 
-    const addOrUpdateReturnedItem = (variant: InventoryItemVariant) => {
+    const addOrUpdateReturnedItem = (variant: InventoryItemVariant, parentName?: string) => {
         setReturnedItems(prevItems => {
             const existingItem = prevItems.find(item => item.id === variant.id);
             if (existingItem) {
@@ -103,7 +102,7 @@ const ReturnProductDialog = ({
                     item.id === variant.id ? { ...item, quantity: item.quantity + 1 } : item
                 );
             }
-            return [...prevItems, { ...variant, quantity: 1 }];
+            return [...prevItems, { ...variant, quantity: 1, parentName }];
         });
         playSuccessSound();
         setSearchTerm('');
@@ -118,7 +117,7 @@ const ReturnProductDialog = ({
             if (product.variants && product.variants.length > 1) {
                 setProductForVariantSelection(product);
             } else if (product.variants && product.variants.length === 1) {
-                addOrUpdateReturnedItem(product.variants[0]);
+                addOrUpdateReturnedItem(product.variants[0], product.name);
             } else {
                  playErrorSound();
                  toast({ variant: "destructive", title: "Produk Tunggal", description: "Produk ini tidak memiliki varian untuk dipilih." });
@@ -131,10 +130,10 @@ const ReturnProductDialog = ({
     };
 
     const handleVariantSelectFromDialog = (variant: InventoryItemVariant | null) => {
-        setProductForVariantSelection(null);
-        if(variant) {
-            addOrUpdateReturnedItem(variant);
+        if (variant && productForVariantSelection) {
+            addOrUpdateReturnedItem(variant, productForVariantSelection.name);
         }
+        setProductForVariantSelection(null);
         inputRef.current?.focus();
     }
     
@@ -159,36 +158,33 @@ const ReturnProductDialog = ({
     return (
         <>
             <Dialog open={open} onOpenChange={onOpenChange}>
-                <DialogContent className="sm:max-w-3xl">
+                <DialogContent className="sm:max-w-xl">
                     <DialogHeader>
                         <DialogTitle>Proses Barang Return</DialogTitle>
                         <DialogDescription>Scan atau cari produk yang dikembalikan untuk dimasukkan kembali ke stok.</DialogDescription>
                     </DialogHeader>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div className="space-y-4">
-                            <form onSubmit={handleSearch} className="flex items-center gap-2">
+                    <div className="space-y-4">
+                        <form onSubmit={handleSearch}>
+                             <div className="relative">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                                 <Input
                                     ref={inputRef}
-                                    placeholder="Masukkan SKU atau Nama Produk..."
+                                    placeholder="Masukkan SKU atau Nama Produk, lalu Enter..."
                                     value={searchTerm}
                                     onChange={(e) => setSearchTerm(e.target.value)}
+                                    className="pl-10"
                                 />
-                                <Button type="submit">
-                                    <Search className="mr-2 h-4 w-4" />
-                                    Cari
-                                </Button>
-                            </form>
-                            <p className="text-xs text-muted-foreground text-center">Hasil pencarian akan otomatis ditambahkan ke tabel di samping.</p>
-                        </div>
-
+                             </div>
+                        </form>
+                        
                          <Card>
                             <CardContent className="p-0">
-                                <ScrollArea className="h-72 border rounded-md">
+                                <ScrollArea className="h-64 border rounded-md">
                                     <Table>
                                         <TableHeader>
                                             <TableRow>
                                                 <TableHead>Produk</TableHead>
-                                                <TableHead className="w-[120px] text-center">Jumlah</TableHead>
+                                                <TableHead className="w-[150px] text-center">Jumlah</TableHead>
                                             </TableRow>
                                         </TableHeader>
                                         <TableBody>
@@ -198,16 +194,16 @@ const ReturnProductDialog = ({
                                                         <p className="font-medium text-sm">{item.parentName} - {item.name}</p>
                                                         <p className="text-xs text-muted-foreground">SKU: {item.sku}</p>
                                                     </TableCell>
-                                                    <TableCell className="text-center">
+                                                    <TableCell>
                                                          <div className="flex items-center justify-center gap-1">
-                                                            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => updateQuantity(item.id, item.quantity - 1)}><Minus className="h-4 w-4" /></Button>
+                                                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => updateQuantity(item.id, item.quantity - 1)}><Minus className="h-4 w-4" /></Button>
                                                             <Input
                                                                 type="number"
                                                                 value={item.quantity}
                                                                 onChange={(e) => updateQuantity(item.id, parseInt(e.target.value) || 0)}
-                                                                className="w-12 h-8 text-center"
+                                                                className="w-14 h-8 text-center"
                                                             />
-                                                            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => updateQuantity(item.id, item.quantity + 1)}><Plus className="h-4 w-4" /></Button>
+                                                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => updateQuantity(item.id, item.quantity + 1)}><Plus className="h-4 w-4" /></Button>
                                                          </div>
                                                     </TableCell>
                                                 </TableRow>
@@ -288,12 +284,23 @@ export default function ReturnPage() {
     
     const fetchCounts = useCallback(async () => {
         try {
-            const counts = await fetchShippingReceiptCountsByChannel(undefined, ['Return', 'Dibatalkan', 'Diantar', 'Tidak Sampai']);
-            setChannelCounts(counts);
+            const counts = await fetchShippingReceipts({
+                page: 1,
+                limit: 1, // We only need counts
+                status: ['Return', 'Dibatalkan', 'Diantar', 'Tidak Sampai'],
+            });
+            
+            const allReceipts = await fetchShippingReceipts({ page: 1, limit: 10000, status: ['Return', 'Dibatalkan', 'Diantar', 'Tidak Sampai'] });
+            const countsByChannel: Record<string, number> = {};
+            allReceipts.receipts.forEach(r => {
+                countsByChannel[r.channel] = (countsByChannel[r.channel] || 0) + 1;
+            });
+
+            setChannelCounts(countsByChannel);
         } catch (error) {
              console.error("Failed to fetch channel counts:", error);
         }
-    }, []);
+    }, [fetchShippingReceipts]);
 
 
     useEffect(() => {
