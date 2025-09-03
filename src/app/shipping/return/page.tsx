@@ -40,6 +40,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
+  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { VariantSelectionDialog } from '@/app/components/variant-selection-dialog';
 import { useInventory } from '@/hooks/use-inventory';
@@ -318,7 +319,7 @@ export default function ReturnPage() {
                         </h1>
                     </div>
                 </div>
-                 <div className="flex items-center gap-2 overflow-x-auto no-scrollbar border-b pb-2">
+                 <div className="flex gap-2 overflow-x-auto no-scrollbar border-b pb-2">
                     <Button 
                         variant={activeChannel === null ? 'secondary' : 'ghost'}
                         size="sm"
