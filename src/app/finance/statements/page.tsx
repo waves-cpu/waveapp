@@ -8,9 +8,9 @@ import { useLanguage } from "@/hooks/use-language";
 import { translations } from "@/types/language";
 import { useInventory } from "@/hooks/use-inventory";
 import React, { useMemo, useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { DollarSign, Package, TrendingUp, ShoppingCart, Activity } from "lucide-react";
+import { DollarSign, Package, TrendingUp, ShoppingCart, Activity, Eye } from "lucide-react";
 import { Pie, PieChart as RechartsPieChart, Cell, Tooltip, ResponsiveContainer, Legend } from "recharts";
 import { ChartConfig, ChartContainer, ChartTooltipContent } from "@/components/ui/chart";
 import { subDays, isWithinInterval, startOfDay, endOfDay, format, parseISO } from "date-fns";
@@ -23,6 +23,9 @@ import { Calendar } from "@/components/ui/calendar";
 import { Calendar as CalendarIcon } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import { DateRange } from "react-day-picker";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
 
 const formatCurrency = (amount: number) => `Rp${Math.round(amount).toLocaleString('id-ID')}`;
 
@@ -44,6 +47,7 @@ interface ProfitabilityData {
     totalRevenue: number;
     totalCogs: number;
     grossProfit: number;
+    category: string;
 }
 
 function FinancialReportSkeleton() {
@@ -68,17 +72,127 @@ function FinancialReportSkeleton() {
     )
 }
 
+function AllProductsDialog({
+    open,
+    onOpenChange,
+    allProducts,
+    categories
+} : {
+    open: boolean;
+    onOpenChange: (open: boolean) => void;
+    allProducts: ProfitabilityData[];
+    categories: string[];
+}) {
+    const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
+    const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
+
+    const filteredData = useMemo(() => {
+        return allProducts.filter(p => {
+            if (categoryFilter && p.category !== categoryFilter) {
+                return false;
+            }
+            return true;
+        })
+    }, [allProducts, categoryFilter, dateRange]);
+
+    return (
+        <Dialog open={open} onOpenChange={onOpenChange}>
+            <DialogContent className="max-w-4xl h-[90vh] flex flex-col">
+                <DialogHeader>
+                    <DialogTitle>Semua Produk Terlaris</DialogTitle>
+                    <CardDescription>Diurutkan berdasarkan unit terjual terbanyak.</CardDescription>
+                </DialogHeader>
+                 <div className="flex flex-col sm:flex-row gap-2">
+                    <Select onValueChange={(value) => setCategoryFilter(value === 'all' ? null : value)} defaultValue="all">
+                        <SelectTrigger className="w-full sm:w-[180px]">
+                            <SelectValue placeholder="Filter Kategori" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">Semua Kategori</SelectItem>
+                            {categories.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
+                     <Popover>
+                        <PopoverTrigger asChild>
+                        <Button
+                            variant={"outline"}
+                            className={cn(
+                            "w-full sm:w-[240px] justify-start text-left font-normal",
+                            !dateRange && "text-muted-foreground"
+                            )}
+                        >
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {dateRange?.from ? (
+                            dateRange.to ? (
+                                <>{format(dateRange.from, "LLL dd, y")} - {format(dateRange.to, "LLL dd, y")}</>
+                            ) : (
+                                format(dateRange.from, "LLL dd, y")
+                            )
+                            ) : (
+                            <span>Pilih rentang tanggal</span>
+                            )}
+                        </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                            initialFocus
+                            mode="range"
+                            defaultMonth={dateRange?.from}
+                            selected={dateRange}
+                            onSelect={setDateRange}
+                            numberOfMonths={2}
+                        />
+                        </PopoverContent>
+                    </Popover>
+                </div>
+                 <div className="flex-grow overflow-hidden border rounded-md">
+                    <ScrollArea className="h-full">
+                        <Table>
+                            <TableHeader className="sticky top-0 bg-card">
+                                <TableRow>
+                                    <TableHead className="text-xs">Produk</TableHead>
+                                    <TableHead className="text-center text-xs">Terjual</TableHead>
+                                    <TableHead className="text-left text-xs">Omzet</TableHead>
+                                    <TableHead className="text-left text-xs">HPP</TableHead>
+                                    <TableHead className="text-left text-xs">Laba Kotor</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {filteredData.map(p => (
+                                    <TableRow key={p.productId}>
+                                        <TableCell className="font-medium text-xs py-2">
+                                            <div>{p.name}</div>
+                                            <div className="text-muted-foreground">SKU: {p.sku || '-'}</div>
+                                        </TableCell>
+                                        <TableCell className="text-center text-xs py-2 font-bold">{p.unitsSold}</TableCell>
+                                        <TableCell className="text-left text-xs py-2">{formatCurrency(p.totalRevenue)}</TableCell>
+                                        <TableCell className="text-left text-xs py-2">{formatCurrency(p.totalCogs)}</TableCell>
+                                        <TableCell className="text-left font-semibold text-xs py-2">{formatCurrency(p.grossProfit)}</TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </ScrollArea>
+                </div>
+                 <DialogFooter className="border-t pt-4">
+                    <p className="text-sm text-muted-foreground">Menampilkan {filteredData.length} dari {allProducts.length} produk.</p>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    )
+}
 
 export default function SalesReportPage() {
     const { language } = useLanguage();
     const t = translations[language];
     const TFinance = t.finance;
-    const { items, allSales, loading } = useInventory();
+    const { items, allSales, loading, categories } = useInventory();
 
     const [dateRange, setDateRange] = useState<DateRange | undefined>({
       from: subDays(new Date(), 29),
       to: new Date(),
     });
+    const [isTopProductsDialogOpen, setIsTopProductsDialogOpen] = useState(false);
 
     const { 
         totalRevenue,
@@ -113,12 +227,15 @@ export default function SalesReportPage() {
             units += sale.quantity;
 
             channelSales[sale.channel] = (channelSales[sale.channel] || 0) + saleRevenue;
+            
+            const parentProduct = items.find(i => i.id === parentProductId);
 
             if (!profitabilityMap.has(parentProductId)) {
                 profitabilityMap.set(parentProductId, {
                     productId: parentProductId,
                     name: sale.productName,
-                    sku: items.find(i => i.id === parentProductId)?.sku,
+                    sku: parentProduct?.sku,
+                    category: parentProduct?.category || 'Uncategorized',
                     unitsSold: 0,
                     totalRevenue: 0,
                     totalCogs: 0,
@@ -143,7 +260,7 @@ export default function SalesReportPage() {
                 value, 
                 fill: CHANNEL_COLORS[name] || CHANNEL_COLORS.default 
             })).sort((a,b) => b.value - a.value),
-            productProfitability: Array.from(profitabilityMap.values()).sort((a,b) => b.grossProfit - a.grossProfit),
+            productProfitability: Array.from(profitabilityMap.values()).sort((a,b) => b.unitsSold - a.unitsSold),
         };
 
     }, [allSales, dateRange, items]);
@@ -290,9 +407,14 @@ export default function SalesReportPage() {
                         </CardContent>
                     </Card>
                     <Card className="md:col-span-3 flex flex-col">
-                        <CardHeader>
-                            <CardTitle className="text-base">Top 10 Produk Terlaris</CardTitle>
-                            <CardDescription>Diurutkan berdasarkan laba kotor tertinggi</CardDescription>
+                        <CardHeader className="flex flex-row items-center justify-between">
+                            <div>
+                                <CardTitle className="text-base">Top 10 Produk Terlaris</CardTitle>
+                                <CardDescription>Diurutkan berdasarkan unit terjual terbanyak</CardDescription>
+                            </div>
+                            <Button variant="ghost" size="icon" onClick={() => setIsTopProductsDialogOpen(true)}>
+                                <Eye className="h-4 w-4" />
+                            </Button>
                         </CardHeader>
                         <CardContent className="flex-grow p-0">
                             <ScrollArea className="h-96">
@@ -302,7 +424,6 @@ export default function SalesReportPage() {
                                             <TableHead className="text-xs">Produk</TableHead>
                                             <TableHead className="text-center text-xs">Terjual</TableHead>
                                             <TableHead className="text-left text-xs">Omzet</TableHead>
-                                            <TableHead className="text-left text-xs">HPP</TableHead>
                                             <TableHead className="text-left text-xs">Laba Kotor</TableHead>
                                         </TableRow>
                                     </TableHeader>
@@ -313,14 +434,13 @@ export default function SalesReportPage() {
                                                     <div>{p.name}</div>
                                                     <div className="text-muted-foreground">SKU: {p.sku || '-'}</div>
                                                 </TableCell>
-                                                <TableCell className="text-center text-xs py-2">{p.unitsSold}</TableCell>
+                                                <TableCell className="text-center text-xs font-bold py-2">{p.unitsSold}</TableCell>
                                                 <TableCell className="text-left text-xs py-2">{formatCurrency(p.totalRevenue)}</TableCell>
-                                                <TableCell className="text-left text-xs py-2">{formatCurrency(p.totalCogs)}</TableCell>
                                                 <TableCell className="text-left font-semibold text-xs py-2">{formatCurrency(p.grossProfit)}</TableCell>
                                             </TableRow>
                                         )) : (
                                             <TableRow>
-                                                <TableCell colSpan={5} className="h-24 text-center text-sm text-muted-foreground">
+                                                <TableCell colSpan={4} className="h-24 text-center text-sm text-muted-foreground">
                                                     Tidak ada data profitabilitas untuk ditampilkan.
                                                 </TableCell>
                                             </TableRow>
@@ -332,6 +452,13 @@ export default function SalesReportPage() {
                     </Card>
                 </div>
             </main>
+             <AllProductsDialog
+                open={isTopProductsDialogOpen}
+                onOpenChange={setIsTopProductsDialogOpen}
+                allProducts={productProfitability}
+                categories={categories}
+            />
         </AppLayout>
     );
 }
+
