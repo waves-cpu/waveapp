@@ -203,13 +203,22 @@ export function PosCart() {
 
     const handleSaleComplete = async (paymentMethod: string, receiptData: ReceiptData) => {
         try {
-            const salePromises = cart.map(item =>
-                recordSale(item.sku!, 'pos', item.quantity, {
+            const { discount, subtotal } = receiptData;
+            const discountRatio = subtotal > 0 ? discount / subtotal : 0;
+
+            const salePromises = cart.map(item => {
+                const itemSubtotal = item.price * item.quantity;
+                const itemDiscount = itemSubtotal * discountRatio;
+                const pricePerItemAfterDiscount = item.price - (item.price * discountRatio);
+
+                return recordSale(item.sku!, 'pos', item.quantity, {
                     saleDate: new Date(),
                     transactionId: receiptData.transactionId,
                     paymentMethod,
-                })
-            );
+                    priceAtSale: pricePerItemAfterDiscount,
+                });
+            });
+
             await Promise.all(salePromises);
             toast({
                 title: "Penjualan Berhasil",

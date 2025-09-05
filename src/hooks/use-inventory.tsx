@@ -34,6 +34,9 @@ import {
   fetchShippingReceipts as fetchShippingReceiptsDb,
   addShippingReceipt as addShippingReceiptDb,
   deleteShippingReceipt as deleteShippingReceiptDb,
+  updateShippingReceiptsStatus,
+  updateShippingReceiptStatus,
+  fetchShippingReceiptCountsByChannel,
   addBulkImportHistory,
   updateBulkImportHistory,
   fetchBulkImportHistory,
@@ -53,7 +56,7 @@ interface InventoryContextType {
   bulkUpdateVariants: (itemId: string, variants: InventoryItemVariant[], reason: string) => Promise<void>;
   fetchItems: () => Promise<void>;
   loading: boolean;
-  recordSale: (sku: string, channel: string, quantity: number, options?: { saleDate?: Date; transactionId?: string; paymentMethod?: string; resellerName?: string; }) => Promise<void>;
+  recordSale: (sku: string, channel: string, quantity: number, options?: { saleDate?: Date; transactionId?: string; paymentMethod?: string; resellerName?: string; priceAtSale?: number; }) => Promise<void>;
   fetchSales: (channel: string, date: Date, page: number, limit: number) => Promise<{sales: Sale[], total: number}>;
   cancelSale: (saleId: string) => Promise<void>;
   cancelSaleTransaction: (transactionId: string) => Promise<void>;
@@ -77,9 +80,12 @@ interface InventoryContextType {
   adjustAccessoryStock: (accessoryId: string, change: number, reason: string) => Promise<void>;
   // Shipping
   shippingReceipts: ShippingReceipt[];
-  fetchShippingReceipts: (options: { page: number; limit: number; channel?: string; date?: Date; status?: string[]; awb?: string; }) => Promise<{ receipts: ShippingReceipt[]; total: number; }>;
+  fetchShippingReceipts: (options: { page: number; limit: number; channel?: string; date?: Date; dateString?: string; status?: string[]; awb?: string; }) => Promise<{ receipts: ShippingReceipt[]; total: number; }>;
   addShippingReceipt: (receipt: Omit<ShippingReceipt, 'id'>) => Promise<ShippingReceipt>;
   deleteShippingReceipt: (id: number) => Promise<void>;
+  updateShippingReceiptsStatus: (ids: number[], status: string) => Promise<void>;
+  updateShippingReceiptStatus: (id: number, status: string) => Promise<void>;
+  fetchShippingReceiptCountsByChannel: (dateString?: string, status?: string[]) => Promise<Record<string, number>>;
   // Bulk Import History
   fetchImportHistory: () => Promise<BulkImportHistory[]>;
   deleteImportHistory: (id: number) => Promise<void>;
@@ -238,7 +244,7 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
     return undefined;
   }, [items]);
 
-  const recordSale = async (sku: string, channel: string, quantity: number, options?: { saleDate?: Date, transactionId?: string, paymentMethod?: string, resellerName?: string }) => {
+  const recordSale = async (sku: string, channel: string, quantity: number, options?: { saleDate?: Date, transactionId?: string, paymentMethod?: string, resellerName?: string, priceAtSale?: number }) => {
     await performSale(sku, channel, quantity, options);
     await fetchAllData();
   };
@@ -289,9 +295,10 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
     await fetchAllData();
   };
 
-  const fetchShippingReceipts = async (options: { page: number; limit: number; channel?: string; date?: Date; status?: string[]; awb?: string }) => {
+  const _fetchShippingReceipts = async (options: { page: number; limit: number; channel?: string; date?: Date; dateString?: string, status?: string[]; awb?: string; }) => {
     return await fetchShippingReceiptsDb({ ...options });
   };
+  
 
   const addShippingReceipt = async (receipt: Omit<ShippingReceipt, 'id'>) => {
     return await addShippingReceiptDb(receipt);
@@ -341,9 +348,12 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
         updateAccessory,
         adjustAccessoryStock,
         shippingReceipts,
-        fetchShippingReceipts,
+        fetchShippingReceipts: _fetchShippingReceipts,
         addShippingReceipt,
         deleteShippingReceipt,
+        updateShippingReceiptsStatus,
+        updateShippingReceiptStatus,
+        fetchShippingReceiptCountsByChannel,
         fetchImportHistory: fetchBulkImportHistory,
         deleteImportHistory,
       }}>

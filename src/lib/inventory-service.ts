@@ -676,7 +676,8 @@ export async function performSale(
         saleDate?: Date, 
         transactionId?: string, 
         paymentMethod?: string,
-        resellerName?: string
+        resellerName?: string,
+        priceAtSale?: number
     }
 ) {
     const getProductStmt = db.prepare('SELECT * FROM products WHERE sku = ? AND hasVariants = 0');
@@ -694,7 +695,7 @@ export async function performSale(
         const saleDateString = formatDate(saleDate, 'yyyy-MM-dd HH:mm:ss');
         const saleReason = `Sale (${channel})` + (options?.resellerName ? ` - ${options.resellerName}` : '');
 
-        let priceAtSale;
+        let finalPriceAtSale;
         let cogsAtSale;
         let productNameForFee = '';
 
@@ -705,19 +706,22 @@ export async function performSale(
                 throw new Error('Insufficient stock for variant.');
             }
             
-            const isOnlineChannel = ONLINE_MARKETPLACES.includes(channel.toLowerCase());
-            
-            const onlinePriceResult = getChannelPriceStmt.get({ productId: null, variantId: variant.id, channel: 'shopee' }) as { price: number } | undefined;
-            const specificChannelPriceResult = isOnlineChannel ? onlinePriceResult : getChannelPriceStmt.get({ productId: null, variantId: variant.id, channel: channel }) as { price: number } | undefined;
+            if (options?.priceAtSale !== undefined) {
+                finalPriceAtSale = options.priceAtSale;
+            } else {
+                const isOnlineChannel = ONLINE_MARKETPLACES.includes(channel.toLowerCase());
+                const onlinePriceResult = getChannelPriceStmt.get({ productId: null, variantId: variant.id, channel: 'shopee' }) as { price: number } | undefined;
+                const specificChannelPriceResult = isOnlineChannel ? onlinePriceResult : getChannelPriceStmt.get({ productId: null, variantId: variant.id, channel: channel }) as { price: number } | undefined;
+                finalPriceAtSale = specificChannelPriceResult?.price ?? variant.price;
+            }
 
-            priceAtSale = specificChannelPriceResult?.price ?? variant.price;
             cogsAtSale = variant.costPrice || 0;
             const parentProduct = db.prepare('SELECT name FROM products WHERE id = ?').get(variant.productId) as { name: string };
             productNameForFee = `${parentProduct.name} - ${variant.name}`;
 
             adjustStock(variant.id.toString(), -quantity, saleReason);
             db.prepare('INSERT INTO sales (transactionId, paymentMethod, resellerName, productId, variantId, channel, quantity, priceAtSale, cogsAtSale, saleDate) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
-              .run(options?.transactionId, options?.paymentMethod, options?.resellerName, variant.productId, variant.id, channel, quantity, priceAtSale, cogsAtSale, saleDateString);
+              .run(options?.transactionId, options?.paymentMethod, options?.resellerName, variant.productId, variant.id, channel, quantity, finalPriceAtSale, cogsAtSale, saleDateString);
         } else {
             const product = getProductStmt.get(sku) as (InventoryItem & { id: number, costPrice?: number }) | undefined;
             if (product) {
@@ -725,18 +729,21 @@ export async function performSale(
                     throw new Error('Insufficient stock for product.');
                 }
                 
-                const isOnlineChannel = ONLINE_MARKETPLACES.includes(channel.toLowerCase());
+                if (options?.priceAtSale !== undefined) {
+                    finalPriceAtSale = options.priceAtSale;
+                } else {
+                    const isOnlineChannel = ONLINE_MARKETPLACES.includes(channel.toLowerCase());
+                    const onlinePriceResult = getChannelPriceStmt.get({ productId: product.id, variantId: null, channel: 'shopee' }) as { price: number } | undefined;
+                    const specificChannelPriceResult = isOnlineChannel ? onlinePriceResult : getChannelPriceStmt.get({ productId: product.id, variantId: null, channel: channel }) as { price: number } | undefined;
+                    finalPriceAtSale = specificChannelPriceResult?.price ?? product.price!;
+                }
 
-                const onlinePriceResult = getChannelPriceStmt.get({ productId: product.id, variantId: null, channel: 'shopee' }) as { price: number } | undefined;
-                const specificChannelPriceResult = isOnlineChannel ? onlinePriceResult : getChannelPriceStmt.get({ productId: product.id, variantId: null, channel: channel }) as { price: number } | undefined;
-                
-                priceAtSale = specificChannelPriceResult?.price ?? product.price!;
                 cogsAtSale = product.costPrice || 0;
                 productNameForFee = product.name;
                 
                 adjustStock(product.id.toString(), -quantity, saleReason);
                 db.prepare('INSERT INTO sales (transactionId, paymentMethod, resellerName, productId, variantId, channel, quantity, priceAtSale, cogsAtSale, saleDate) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
-                  .run(options?.transactionId, options?.paymentMethod, options?.resellerName, product.id, null, channel, quantity, priceAtSale, cogsAtSale, saleDateString);
+                  .run(options?.transactionId, options?.paymentMethod, options?.resellerName, product.id, null, channel, quantity, finalPriceAtSale, cogsAtSale, saleDateString);
             } else {
                 throw new Error('Product or variant with specified SKU not found or has variants.');
             }
@@ -744,7 +751,7 @@ export async function performSale(
 
         // Add journal entry for marketplace fee if applicable
         if (ONLINE_MARKETPLACES.includes(channel.toLowerCase())) {
-            const adminFee = (priceAtSale * quantity) * 0.15;
+            const adminFee = (finalPriceAtSale * quantity) * 0.15;
             if (adminFee > 0) {
                 addJournalEntryStmt.run({
                     date: saleDateString,
@@ -1107,5 +1114,6 @@ export async function deleteProductPermanently(itemId: string) {
     // ON DELETE CASCADE will handle variants, history, and channel_prices
     db.prepare('DELETE FROM products WHERE id = ?').run(itemId);
 }
+
 
 
