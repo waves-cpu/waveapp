@@ -53,13 +53,31 @@ export default function MobileScanReceiptPage() {
     }, [selectedChannel, isCameraOpen]);
 
     const handleSubmit = useCallback(async (scannedAwb: string) => {
-        if (!scannedAwb.trim() || !selectedChannel) return;
+        const trimmedAwb = scannedAwb.trim();
+        if (!trimmedAwb || !selectedChannel) return;
         if (isSubmitting) return;
+
+        // Client-side duplicate check
+        if (recentlyAdded.some(receipt => receipt.awb === trimmedAwb)) {
+            playErrorSound();
+            toast({
+                variant: 'destructive',
+                title: 'Resi Duplikat',
+                description: `Resi ${trimmedAwb} sudah pernah di-scan.`,
+            });
+             if (isCameraOpen) {
+                // Allow for next scan without closing camera
+            } else {
+                setAwb(''); // Clear input for next scan
+                inputRef.current?.focus();
+            }
+            return;
+        }
 
         setIsSubmitting(true);
         
         const newReceipt: Omit<ShippingReceipt, 'id'> = {
-            awb: scannedAwb.trim(),
+            awb: trimmedAwb,
             channel: selectedChannel,
             date: format(scanDate, "yyyy-MM-dd'T'HH:mm:ss"),
             status: 'Perlu Diproses'
@@ -73,7 +91,7 @@ export default function MobileScanReceiptPage() {
         } catch (error) {
             playErrorSound();
             const errorMessage = error instanceof Error && error.message.includes('UNIQUE constraint failed')
-                ? `Resi ${scannedAwb.trim()} sudah pernah di-scan.`
+                ? `Resi ${trimmedAwb} sudah pernah di-scan.`
                 : 'Gagal menyimpan resi.';
             toast({
                 variant: 'destructive',
@@ -88,7 +106,7 @@ export default function MobileScanReceiptPage() {
                  inputRef.current?.focus();
             }
         }
-    }, [isSubmitting, selectedChannel, scanDate, addShippingReceipt, playSuccessSound, playErrorSound, toast, isCameraOpen]);
+    }, [isSubmitting, selectedChannel, scanDate, addShippingReceipt, playSuccessSound, playErrorSound, toast, isCameraOpen, recentlyAdded]);
 
 
     const handleFormSubmit = (e: React.FormEvent) => {
