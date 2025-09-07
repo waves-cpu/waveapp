@@ -145,6 +145,39 @@ function AllProductsDialog({
                             {categories.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
                         </SelectContent>
                     </Select>
+                     <Popover>
+                        <PopoverTrigger asChild>
+                        <Button
+                            id="date-dialog"
+                            variant={"outline"}
+                            className={cn(
+                            "w-full sm:w-[240px] justify-start text-left font-normal",
+                            !dateRange && "text-muted-foreground"
+                            )}
+                        >
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {dateRange?.from ? (
+                            dateRange.to ? (
+                                <>{format(dateRange.from, "LLL dd, y")} - {format(dateRange.to, "LLL dd, y")}</>
+                            ) : (
+                                format(dateRange.from, "LLL dd, y")
+                            )
+                            ) : (
+                            <span>Pilih rentang tanggal</span>
+                            )}
+                        </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="end">
+                        <Calendar
+                            initialFocus
+                            mode="range"
+                            defaultMonth={dateRange?.from}
+                            selected={dateRange}
+                            onSelect={setDateRange}
+                            numberOfMonths={2}
+                        />
+                        </PopoverContent>
+                    </Popover>
                 </div>
                  <div className="flex-grow overflow-hidden border rounded-md">
                     <ScrollArea className="h-full">
@@ -211,14 +244,7 @@ export default function SalesReportPage() {
     });
     const [isTopProductsDialogOpen, setIsTopProductsDialogOpen] = useState(false);
 
-    const { 
-        totalRevenue,
-        totalCogs,
-        grossProfit,
-        salesByChannel,
-        productProfitability,
-        totalUnitsSold
-    } = useMemo(() => {
+    const productProfitability = useMemo(() => {
         const productMap = new Map<string, InventoryItem>();
         items.forEach(item => productMap.set(item.id, item));
 
@@ -229,10 +255,6 @@ export default function SalesReportPage() {
             return isWithinInterval(saleDate, { start: startOfDay(dateRange.from), end: endOfDay(toDate) });
         });
 
-        let revenue = 0;
-        let cogs = 0;
-        let units = 0;
-        const channelSales: { [key: string]: number } = {};
         const profitabilityMap = new Map<string, ProfitabilityData>();
 
         salesInDateRange.forEach(sale => {
@@ -258,12 +280,6 @@ export default function SalesReportPage() {
             
             const saleRevenue = sale.priceAtSale * sale.quantity;
             const saleCogs = (sale.cogsAtSale || 0) * sale.quantity;
-            
-            revenue += saleRevenue;
-            cogs += saleCogs;
-            units += sale.quantity;
-
-            channelSales[sale.channel] = (channelSales[sale.channel] || 0) + saleRevenue;
             
             const productProfit = profitabilityMap.get(parentProductId)!;
             productProfit.unitsSold += sale.quantity;
@@ -304,6 +320,40 @@ export default function SalesReportPage() {
             }
         });
 
+        return Array.from(profitabilityMap.values()).sort((a,b) => b.unitsSold - a.unitsSold);
+    }, [allSales, dateRange, items]);
+
+
+    const { 
+        totalRevenue,
+        totalCogs,
+        grossProfit,
+        salesByChannel,
+        totalUnitsSold
+    } = useMemo(() => {
+        const salesInDateRange = allSales.filter(sale => {
+            if (!dateRange || !dateRange.from) return true;
+            const saleDate = parseISO(sale.saleDate);
+            const toDate = dateRange.to || dateRange.from;
+            return isWithinInterval(saleDate, { start: startOfDay(dateRange.from), end: endOfDay(toDate) });
+        });
+
+        let revenue = 0;
+        let cogs = 0;
+        let units = 0;
+        const channelSales: { [key: string]: number } = {};
+        
+        salesInDateRange.forEach(sale => {
+            const saleRevenue = sale.priceAtSale * sale.quantity;
+            const saleCogs = (sale.cogsAtSale || 0) * sale.quantity;
+            
+            revenue += saleRevenue;
+            cogs += saleCogs;
+            units += sale.quantity;
+
+            channelSales[sale.channel] = (channelSales[sale.channel] || 0) + saleRevenue;
+        });
+
         return {
             totalRevenue: revenue,
             totalCogs: cogs,
@@ -314,10 +364,9 @@ export default function SalesReportPage() {
                 value, 
                 fill: CHANNEL_COLORS[name] || CHANNEL_COLORS.default 
             })).sort((a,b) => b.value - a.value),
-            productProfitability: Array.from(profitabilityMap.values()).sort((a,b) => b.unitsSold - a.unitsSold),
         };
 
-    }, [allSales, dateRange, items]);
+    }, [allSales, dateRange]);
 
 
     const pieChartConfig = useMemo(() => {
@@ -516,4 +565,5 @@ export default function SalesReportPage() {
         </AppLayout>
     );
 }
+
 
