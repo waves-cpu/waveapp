@@ -345,7 +345,7 @@ export default function PriceSettingsPage() {
                         <Link href="/finance/discount-report">
                             <Button variant="outline" size="sm">
                                 <History className="mr-2 h-4 w-4" />
-                                {t.finance.discountReport}
+                                {t.finance.discountReportPage.title}
                             </Button>
                         </Link>
                     </div>

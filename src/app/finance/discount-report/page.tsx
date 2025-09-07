@@ -9,157 +9,117 @@ import { useInventory } from "@/hooks/use-inventory";
 import React, { useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { DollarSign, Package, TrendingUp, ShoppingCart, Activity } from "lucide-react";
-import { Pie, PieChart as RechartsPieChart, Cell, Tooltip, ResponsiveContainer, Legend } from "recharts";
-import { ChartConfig, ChartContainer, ChartTooltipContent } from "@/components/ui/chart";
-import { subDays, isWithinInterval, startOfDay, endOfDay, format, parseISO } from "date-fns";
+import { DollarSign, Percent, Tag } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import type { InventoryItem, InventoryItemVariant, Sale } from "@/types";
-import { Button } from "@/components/ui/button";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Calendar } from "@/components/ui/calendar";
-import { Calendar as CalendarIcon } from 'lucide-react';
-import { cn } from "@/lib/utils";
-import { DateRange } from "react-day-picker";
+import type { InventoryItem, InventoryItemVariant } from "@/types";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 
 const formatCurrency = (amount: number) => `Rp${Math.round(amount).toLocaleString('id-ID')}`;
 
-const CHANNEL_COLORS: { [key: string]: string } = {
-  pos: "hsl(var(--chart-1))",
-  reseller: "hsl(var(--chart-2))",
-  shopee: "hsl(var(--chart-3))",
-  tiktok: "hsl(var(--chart-4))",
-  lazada: "hsl(var(--chart-5))",
-  default: "hsl(var(--muted-foreground))",
-};
-
-
-interface ProfitabilityData {
-    productId: string;
-    variantId?: string;
+interface DiscountedProduct {
+    id: string;
     name: string;
     sku?: string;
-    unitsSold: number;
-    totalRevenue: number;
-    totalCogs: number;
-    grossProfit: number;
+    category: string;
+    defaultPrice: number;
+    discountPrice: number;
+    channel: string;
 }
 
-function FinancialReportSkeleton() {
+function DiscountReportSkeleton() {
     return (
-        <div className="space-y-6">
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                <Card><CardHeader><Skeleton className="h-24 w-full" /></CardHeader></Card>
-                <Card><CardHeader><Skeleton className="h-24 w-full" /></CardHeader></Card>
-                <Card><CardHeader><Skeleton className="h-24 w-full" /></CardHeader></Card>
-            </div>
-            <div className="grid md:grid-cols-5 gap-4">
-                <Card className="md:col-span-2">
-                    <CardHeader><Skeleton className="h-8 w-1/2" /></CardHeader>
-                    <CardContent><Skeleton className="h-48 w-full" /></CardContent>
-                </Card>
-                 <Card className="md:col-span-3">
-                    <CardHeader><Skeleton className="h-8 w-1/2" /></CardHeader>
-                    <CardContent><Skeleton className="h-48 w-full" /></CardContent>
-                </Card>
-            </div>
-        </div>
-    )
+        <Card>
+            <CardHeader>
+                <div className="flex justify-between items-center">
+                    <div className="space-y-1">
+                        <Skeleton className="h-6 w-48" />
+                        <Skeleton className="h-4 w-64" />
+                    </div>
+                    <div className="flex gap-2">
+                        <Skeleton className="h-9 w-32" />
+                        <Skeleton className="h-9 w-40" />
+                    </div>
+                </div>
+            </CardHeader>
+            <CardContent>
+                <div className="border rounded-md">
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                {[...Array(4)].map((_, i) => <TableHead key={i}><Skeleton className="h-5 w-full" /></TableHead>)}
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {[...Array(10)].map((_, i) => (
+                                <TableRow key={i}>
+                                    {[...Array(4)].map((_, j) => <TableCell key={j}><Skeleton className="h-4 w-full" /></TableCell>)}
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                </div>
+            </CardContent>
+        </Card>
+    );
 }
 
-
-export default function FinancialStatementsPage() {
+export default function DiscountReportPage() {
     const { language } = useLanguage();
     const t = translations[language];
-    const TFinance = t.finance;
-    const { items, allSales, loading } = useInventory();
+    const TFinance = t.finance.discountReportPage;
+    const { items, accessories, categories, loading } = useInventory();
+    
+    const [channelFilter, setChannelFilter] = useState<string | null>(null);
+    const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
 
-    const [dateRange, setDateRange] = useState<DateRange | undefined>({
-      from: subDays(new Date(), 29),
-      to: new Date(),
-    });
+    const discountedProducts = useMemo((): DiscountedProduct[] => {
+        const allDiscounted: DiscountedProduct[] = [];
 
-    const { 
-        totalRevenue,
-        totalCogs,
-        grossProfit,
-        salesByChannel,
-        productProfitability,
-        totalUnitsSold
-    } = useMemo(() => {
-        const salesInDateRange = allSales.filter(sale => {
-            if (!dateRange || !dateRange.from) return true;
-            const saleDate = parseISO(sale.saleDate);
-            const toDate = dateRange.to || dateRange.from;
-            return isWithinInterval(saleDate, { start: startOfDay(dateRange.from), end: endOfDay(toDate) });
-        });
+        const processItem = (item: InventoryItem | InventoryItemVariant, parent?: InventoryItem) => {
+            const defaultPrice = item.price;
+            if (defaultPrice === undefined || defaultPrice === null) return;
 
-        let revenue = 0;
-        let cogs = 0;
-        let units = 0;
-        const channelSales: { [key: string]: number } = {};
-        const profitabilityMap = new Map<string, ProfitabilityData>();
-
-        salesInDateRange.forEach(sale => {
-            const soldItemId = sale.variantId || sale.productId;
-            
-            const saleRevenue = sale.priceAtSale * sale.quantity;
-            const saleCogs = (sale.cogsAtSale || 0) * sale.quantity;
-            
-            revenue += saleRevenue;
-            cogs += saleCogs;
-            units += sale.quantity;
-
-            channelSales[sale.channel] = (channelSales[sale.channel] || 0) + saleRevenue;
-
-            if (!profitabilityMap.has(soldItemId)) {
-                profitabilityMap.set(soldItemId, {
-                    productId: sale.productId,
-                    variantId: sale.variantId,
-                    name: sale.productName + (sale.variantName ? ` - ${sale.variantName}` : ''),
-                    sku: sale.sku,
-                    unitsSold: 0,
-                    totalRevenue: 0,
-                    totalCogs: 0,
-                    grossProfit: 0,
-                });
-            }
-
-            const current = profitabilityMap.get(soldItemId)!;
-            current.unitsSold += sale.quantity;
-            current.totalRevenue += saleRevenue;
-            current.totalCogs += saleCogs;
-            current.grossProfit += (saleRevenue - saleCogs);
-        });
-
-        return {
-            totalRevenue: revenue,
-            totalCogs: cogs,
-            grossProfit: revenue - cogs,
-            totalUnitsSold: units,
-            salesByChannel: Object.entries(channelSales).map(([name, value]) => ({ 
-                name: name.charAt(0).toUpperCase() + name.slice(1), 
-                value, 
-                fill: CHANNEL_COLORS[name] || CHANNEL_COLORS.default 
-            })).sort((a,b) => b.value - a.value),
-            productProfitability: Array.from(profitabilityMap.values()).sort((a,b) => b.grossProfit - a.grossProfit),
+            item.channelPrices?.forEach(cp => {
+                if (cp.price !== undefined && cp.price !== null && cp.price < defaultPrice) {
+                    allDiscounted.push({
+                        id: item.id,
+                        name: parent ? `${parent.name} - ${item.name}` : item.name,
+                        sku: item.sku,
+                        category: parent ? parent.category : (item as InventoryItem).category,
+                        defaultPrice: defaultPrice,
+                        discountPrice: cp.price,
+                        channel: cp.channel,
+                    });
+                }
+            });
         };
 
-    }, [allSales, dateRange]);
-
-
-    const pieChartConfig = useMemo(() => {
-        const config: ChartConfig = {};
-        salesByChannel.forEach(channel => {
-            config[channel.name] = {
-                label: channel.name,
-                color: channel.fill
+        [...items, ...accessories].forEach(item => {
+            if (item.variants && item.variants.length > 0) {
+                item.variants.forEach(variant => processItem(variant, item));
+            } else {
+                processItem(item);
             }
         });
-        return config;
-    }, [salesByChannel]);
 
+        return allDiscounted;
+    }, [items, accessories]);
+
+    const filteredProducts = useMemo(() => {
+        return discountedProducts
+            .filter(p => !channelFilter || p.channel === channelFilter)
+            .filter(p => !categoryFilter || p.category === categoryFilter);
+    }, [discountedProducts, channelFilter, categoryFilter]);
+
+    const allChannels = useMemo(() => {
+        return Array.from(new Set(discountedProducts.map(p => p.channel))).sort();
+    }, [discountedProducts]);
+
+    const allCategoriesWithDiscounts = useMemo(() => {
+        return Array.from(new Set(discountedProducts.map(p => p.category))).sort();
+    }, [discountedProducts]);
 
     if (loading) {
         return (
@@ -167,170 +127,102 @@ export default function FinancialStatementsPage() {
                 <main className="flex-1 p-4 md:p-10">
                     <div className="flex items-center gap-4 mb-6">
                         <SidebarTrigger className="md:hidden" />
-                        <h1 className="text-lg font-bold">{TFinance.financialStatements}</h1>
+                        <h1 className="text-lg font-bold">{TFinance.title}</h1>
                     </div>
-                    <FinancialReportSkeleton />
+                    <DiscountReportSkeleton />
                 </main>
             </AppLayout>
-        )
+        );
     }
 
     return (
         <AppLayout>
             <main className="flex-1 p-4 md:p-10 pb-8">
-                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
-                    <div className="flex items-center gap-4">
-                        <SidebarTrigger className="md:hidden" />
-                        <h1 className="text-lg font-bold">{TFinance.financialStatements}</h1>
-                    </div>
-                     <Popover>
-                        <PopoverTrigger asChild>
-                        <Button
-                            id="date"
-                            variant={"outline"}
-                            className={cn(
-                            "w-full md:w-[300px] justify-start text-left font-normal",
-                            !dateRange && "text-muted-foreground"
-                            )}
-                        >
-                            <CalendarIcon className="mr-2 h-4 w-4" />
-                            {dateRange?.from ? (
-                            dateRange.to ? (
-                                <>{format(dateRange.from, "LLL dd, y")} - {format(dateRange.to, "LLL dd, y")}</>
-                            ) : (
-                                format(dateRange.from, "LLL dd, y")
-                            )
-                            ) : (
-                            <span>Pilih rentang tanggal</span>
-                            )}
-                        </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="end">
-                        <Calendar
-                            initialFocus
-                            mode="range"
-                            defaultMonth={dateRange?.from}
-                            selected={dateRange}
-                            onSelect={setDateRange}
-                            numberOfMonths={2}
-                        />
-                        </PopoverContent>
-                    </Popover>
-                </div>
-
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-4">
-                    <Card>
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">Total Omzet</CardTitle>
-                            <DollarSign className="h-4 w-4 text-muted-foreground" />
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-2xl font-bold">{formatCurrency(totalRevenue)}</div>
-                        </CardContent>
-                    </Card>
-                    <Card>
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">Total HPP</CardTitle>
-                            <ShoppingCart className="h-4 w-4 text-muted-foreground" />
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-2xl font-bold">{formatCurrency(totalCogs)}</div>
-                        </CardContent>
-                    </Card>
-                    <Card>
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">Laba Kotor</CardTitle>
-                            <TrendingUp className="h-4 w-4 text-muted-foreground" />
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-2xl font-bold">{formatCurrency(grossProfit)}</div>
-                        </CardContent>
-                    </Card>
-                    <Card>
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">Unit Terjual</CardTitle>
-                            <Package className="h-4 w-4 text-muted-foreground" />
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-2xl font-bold">{totalUnitsSold.toLocaleString('id-ID')}</div>
-                        </CardContent>
-                    </Card>
-                </div>
-
-                <div className="grid md:grid-cols-5 gap-4">
-                     <Card className="md:col-span-2">
-                        <CardHeader>
-                            <CardTitle className="text-base">Omzet per Kanal</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            {salesByChannel.length > 0 ? (
-                                <ChartContainer config={pieChartConfig} className="mx-auto aspect-square h-[250px]">
-                                    <RechartsPieChart>
-                                        <Tooltip cursor={false} content={<ChartTooltipContent formatter={(value) => formatCurrency(Number(value))} hideLabel />} />
-                                        <Pie data={salesByChannel} dataKey="value" nameKey="name" innerRadius={60} strokeWidth={5}>
-                                            {salesByChannel.map((entry) => (
-                                                <Cell key={entry.name} fill={entry.fill} />
-                                            ))}
-                                        </Pie>
-                                        <Legend content={({ payload }) => (
-                                            <div className="flex flex-wrap gap-x-4 gap-y-1 justify-center mt-4 text-xs">
-                                                {payload?.map((entry) => (
-                                                    <div key={entry.value} className="flex items-center gap-1.5">
-                                                        <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: entry.color }}></div>
-                                                        <span>{entry.value}</span>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        )} />
-                                    </RechartsPieChart>
-                                </ChartContainer>
-                            ) : (
-                                <div className="h-[250px] flex items-center justify-center text-muted-foreground text-sm">Tidak ada data penjualan</div>
-                            )}
-                        </CardContent>
-                    </Card>
-                    <Card className="md:col-span-3 flex flex-col">
-                        <CardHeader>
-                            <CardTitle className="text-base">Profitabilitas Produk</CardTitle>
-                            <CardDescription>Diurutkan berdasarkan laba kotor tertinggi</CardDescription>
-                        </CardHeader>
-                        <CardContent className="flex-grow p-0">
-                            <ScrollArea className="h-96">
+                <Card>
+                    <CardHeader>
+                        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                            <div>
+                                <CardTitle>{TFinance.title}</CardTitle>
+                                <CardDescription>{TFinance.description}</CardDescription>
+                            </div>
+                            <div className="flex flex-col sm:flex-row gap-2">
+                                <Select onValueChange={(value) => setChannelFilter(value === 'all' ? null : value)} defaultValue="all">
+                                    <SelectTrigger className="w-full sm:w-[180px]">
+                                        <SelectValue placeholder={TFinance.channel} />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="all">{TFinance.all} {TFinance.channel}</SelectItem>
+                                        {allChannels.map(channel => (
+                                            <SelectItem key={channel} value={channel} className="capitalize">{channel}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                                <Select onValueChange={(value) => setCategoryFilter(value === 'all' ? null : value)} defaultValue="all">
+                                    <SelectTrigger className="w-full sm:w-[180px]">
+                                        <SelectValue placeholder={TFinance.category} />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="all">{TFinance.all} {TFinance.category}</SelectItem>
+                                        {allCategoriesWithDiscounts.map(cat => (
+                                            <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        </div>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="border rounded-md">
+                            <ScrollArea className="h-[calc(100vh-22rem)]">
                                 <Table>
                                     <TableHeader className="sticky top-0 bg-card">
                                         <TableRow>
-                                            <TableHead className="text-xs">Produk</TableHead>
-                                            <TableHead className="text-center text-xs">Terjual</TableHead>
-                                            <TableHead className="text-left text-xs">Omzet</TableHead>
-                                            <TableHead className="text-left text-xs">HPP</TableHead>
-                                            <TableHead className="text-left text-xs">Laba Kotor</TableHead>
+                                            <TableHead>{TFinance.product}</TableHead>
+                                            <TableHead>{TFinance.defaultPrice}</TableHead>
+                                            <TableHead>{TFinance.discountPrice}</TableHead>
+                                            <TableHead>{TFinance.discount}</TableHead>
+                                            <TableHead>{TFinance.channel}</TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                        {productProfitability.length > 0 ? productProfitability.map(p => (
-                                            <TableRow key={p.variantId || p.productId}>
-                                                <TableCell className="font-medium text-xs py-2">
-                                                    <div>{p.name}</div>
-                                                    <div className="text-muted-foreground">SKU: {p.sku || '-'}</div>
-                                                </TableCell>
-                                                <TableCell className="text-center text-xs py-2">{p.unitsSold}</TableCell>
-                                                <TableCell className="text-left text-xs py-2">{formatCurrency(p.totalRevenue)}</TableCell>
-                                                <TableCell className="text-left text-xs py-2">{formatCurrency(p.totalCogs)}</TableCell>
-                                                <TableCell className="text-left font-semibold text-xs py-2">{formatCurrency(p.grossProfit)}</TableCell>
-                                            </TableRow>
-                                        )) : (
+                                        {filteredProducts.length > 0 ? (
+                                            filteredProducts.map(p => (
+                                                <TableRow key={`${p.id}-${p.channel}`}>
+                                                    <TableCell>
+                                                        <div className="font-medium text-sm">{p.name}</div>
+                                                        <div className="text-xs text-muted-foreground">SKU: {p.sku || '-'}</div>
+                                                    </TableCell>
+                                                    <TableCell>{formatCurrency(p.defaultPrice)}</TableCell>
+                                                    <TableCell className="font-semibold text-destructive">{formatCurrency(p.discountPrice)}</TableCell>
+                                                    <TableCell>
+                                                        <Badge variant="destructive">
+                                                            -{Math.round(((p.defaultPrice - p.discountPrice) / p.defaultPrice) * 100)}%
+                                                        </Badge>
+                                                    </TableCell>
+                                                    <TableCell className="capitalize">
+                                                        <Badge variant="secondary">{p.channel}</Badge>
+                                                    </TableCell>
+                                                </TableRow>
+                                            ))
+                                        ) : (
                                             <TableRow>
-                                                <TableCell colSpan={5} className="h-24 text-center text-sm text-muted-foreground">
-                                                    Tidak ada data profitabilitas untuk ditampilkan.
+                                                <TableCell colSpan={5} className="h-48 text-center">
+                                                     <div className="flex flex-col items-center justify-center gap-4 text-muted-foreground">
+                                                        <Tag className="h-16 w-16" />
+                                                        <div className="text-center">
+                                                        <p className="font-semibold">{TFinance.noDiscounts}</p>
+                                                        <p className="text-sm">{TFinance.noDiscountsDesc}</p>
+                                                        </div>
+                                                    </div>
                                                 </TableCell>
                                             </TableRow>
                                         )}
                                     </TableBody>
                                 </Table>
                             </ScrollArea>
-                        </CardContent>
-                    </Card>
-                </div>
+                        </div>
+                    </CardContent>
+                </Card>
             </main>
         </AppLayout>
     );
