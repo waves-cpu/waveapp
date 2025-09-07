@@ -89,15 +89,17 @@ function AllProductsDialog({
     open,
     onOpenChange,
     allProducts,
-    categories
+    categories,
+    initialDateRange,
 } : {
     open: boolean;
     onOpenChange: (open: boolean) => void;
     allProducts: ProfitabilityData[];
     categories: string[];
+    initialDateRange: DateRange | undefined;
 }) {
     const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
-    const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
+    const [dateRange, setDateRange] = useState<DateRange | undefined>(initialDateRange);
     const [searchTerm, setSearchTerm] = useState('');
 
     const filteredData = useMemo(() => {
@@ -143,38 +145,6 @@ function AllProductsDialog({
                             {categories.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
                         </SelectContent>
                     </Select>
-                     <Popover>
-                        <PopoverTrigger asChild>
-                        <Button
-                            variant={"outline"}
-                            className={cn(
-                            "w-full sm:w-[240px] justify-start text-left font-normal",
-                            !dateRange && "text-muted-foreground"
-                            )}
-                        >
-                            <CalendarIcon className="mr-2 h-4 w-4" />
-                            {dateRange?.from ? (
-                            dateRange.to ? (
-                                <>{format(dateRange.from, "LLL dd, y")} - {format(dateRange.to, "LLL dd, y")}</>
-                            ) : (
-                                format(dateRange.from, "LLL dd, y")
-                            )
-                            ) : (
-                            <span>Pilih rentang tanggal</span>
-                            )}
-                        </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                            initialFocus
-                            mode="range"
-                            defaultMonth={dateRange?.from}
-                            selected={dateRange}
-                            onSelect={setDateRange}
-                            numberOfMonths={2}
-                        />
-                        </PopoverContent>
-                    </Popover>
                 </div>
                  <div className="flex-grow overflow-hidden border rounded-md">
                     <ScrollArea className="h-full">
@@ -233,7 +203,7 @@ export default function SalesReportPage() {
     const { language } = useLanguage();
     const t = translations[language];
     const TFinance = t.finance;
-    const { items: allInventoryItems, allSales, loading, categories } = useInventory();
+    const { allSales, loading, categories } = useInventory();
 
     const [dateRange, setDateRange] = useState<DateRange | undefined>({
       from: subDays(new Date(), 29),
@@ -249,7 +219,6 @@ export default function SalesReportPage() {
         productProfitability,
         totalUnitsSold
     } = useMemo(() => {
-        const productMap = new Map(allInventoryItems.map(item => [item.id, item]));
 
         const salesInDateRange = allSales.filter(sale => {
             if (!dateRange || !dateRange.from) return true;
@@ -268,16 +237,13 @@ export default function SalesReportPage() {
             const parentProductId = sale.productId;
             if (!parentProductId) return;
 
-            const productDetails = productMap.get(parentProductId);
-
             // Initialize parent product in map if not present
             if (!profitabilityMap.has(parentProductId)) {
-                if (!productDetails) return; // Skip sale if product details not found
                 profitabilityMap.set(parentProductId, {
                     productId: parentProductId,
-                    name: productDetails.name,
-                    sku: productDetails.sku,
-                    category: productDetails.category || 'Uncategorized',
+                    name: sale.productName,
+                    sku: sale.sku, // This will be the parent SKU if it's the first sale item, or a variant SKU. We will correct the parent SKU later.
+                    category: sale.productCategory || 'Uncategorized',
                     unitsSold: 0,
                     totalRevenue: 0,
                     totalCogs: 0,
@@ -326,6 +292,25 @@ export default function SalesReportPage() {
             }
         });
 
+        // Correct parent SKU for products with variants
+        profitabilityMap.forEach(product => {
+            if (product.variants && product.variants.length > 0) {
+                 const firstSale = salesInDateRange.find(s => s.productId === product.productId);
+                 if (firstSale) {
+                     product.name = firstSale.productName; // Ensure parent name is correct
+                 }
+                 // The SKU on the parent level was likely a variant SKU, let's find the true parent SKU
+                 const parentSaleEntry = salesInDateRange.find(s => s.productId === product.productId && !s.variantId);
+                 if(parentSaleEntry) {
+                    product.sku = parentSaleEntry.sku;
+                 } else {
+                    // if no parent sale entry, find first variant and try to deduce parent sku if needed.
+                    // For now, we assume the initial product name and category are sufficient.
+                 }
+            }
+        })
+
+
         // Sort variants inside each product
         profitabilityMap.forEach(p => {
             if (p.variants) {
@@ -346,7 +331,7 @@ export default function SalesReportPage() {
             productProfitability: Array.from(profitabilityMap.values()).sort((a,b) => b.unitsSold - a.unitsSold),
         };
 
-    }, [allSales, allInventoryItems, dateRange]);
+    }, [allSales, dateRange]);
 
 
     const pieChartConfig = useMemo(() => {
@@ -540,6 +525,7 @@ export default function SalesReportPage() {
                 onOpenChange={setIsTopProductsDialogOpen}
                 allProducts={productProfitability}
                 categories={categories}
+                initialDateRange={dateRange}
             />
         </AppLayout>
     );
