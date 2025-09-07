@@ -163,12 +163,18 @@ export async function fetchShippingReceiptCountsByChannel(dateString?: string, s
 
 
 export async function addShippingReceipt(receipt: Omit<ShippingReceipt, 'id'>): Promise<ShippingReceipt> {
-    const result = db.prepare('INSERT INTO shipping_receipts (awb, date, channel, status) VALUES (@awb, @date, @channel, @status)').run({
-        ...receipt
-    });
-    
-    const newReceipt = db.prepare('SELECT * FROM shipping_receipts WHERE id = ?').get(result.lastInsertRowid) as ShippingReceipt;
-    return newReceipt;
+    try {
+        const result = db.prepare('INSERT INTO shipping_receipts (awb, date, channel, status) VALUES (@awb, @date, @channel, @status)').run({
+            ...receipt
+        });
+        const newReceipt = db.prepare('SELECT * FROM shipping_receipts WHERE id = ?').get(result.lastInsertRowid) as ShippingReceipt;
+        return newReceipt;
+    } catch (error) {
+        if (error instanceof Error && error.message.includes('UNIQUE constraint failed')) {
+            throw new Error(`DUPLICATE_AWB: Resi ${receipt.awb} sudah ada di database.`);
+        }
+        throw error;
+    }
 }
 
 export async function deleteShippingReceipt(id: number) {
@@ -1115,6 +1121,7 @@ export async function deleteProductPermanently(itemId: string) {
     // ON DELETE CASCADE will handle variants, history, and channel_prices
     db.prepare('DELETE FROM products WHERE id = ?').run(itemId);
 }
+
 
 
 

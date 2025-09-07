@@ -63,7 +63,7 @@ export default function MobileScanReceiptPage() {
             toast({
                 variant: 'destructive',
                 title: 'Resi Duplikat',
-                description: `Resi ${trimmedAwb} sudah pernah di-scan.`,
+                description: `Resi ${trimmedAwb} sudah pernah di-scan sesi ini.`,
             });
              if (isCameraOpen) {
                 // Allow for next scan without closing camera
@@ -90,7 +90,7 @@ export default function MobileScanReceiptPage() {
             setAwb('');
         } catch (error) {
             playErrorSound();
-            const errorMessage = error instanceof Error && error.message.includes('UNIQUE constraint failed')
+            const errorMessage = error instanceof Error && error.message.includes('DUPLICATE_AWB')
                 ? `Resi ${trimmedAwb} sudah pernah di-scan.`
                 : 'Gagal menyimpan resi.';
             toast({
