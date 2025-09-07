@@ -91,19 +91,101 @@ function AllProductsDialog({
     allProducts: initialAllProducts,
     categories,
     initialDateRange,
+    allSales,
 } : {
     open: boolean;
     onOpenChange: (open: boolean) => void;
     allProducts: ProfitabilityData[];
     categories: string[];
     initialDateRange: DateRange | undefined;
+    allSales: Sale[];
 }) {
     const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [dateRange, setDateRange] = useState<DateRange | undefined>(initialDateRange);
+    const { items } = useInventory();
+
+    const productProfitability = useMemo(() => {
+        const productMap = new Map<string, InventoryItem>();
+        items.forEach(item => productMap.set(item.id, item));
+
+        const salesInDateRange = allSales.filter(sale => {
+            if (!dateRange || !dateRange.from) return true;
+            const saleDate = parseISO(sale.saleDate);
+            const toDate = dateRange.to || dateRange.from;
+            return isWithinInterval(saleDate, { start: startOfDay(dateRange.from), end: endOfDay(toDate) });
+        });
+        
+        const profitabilityMap = new Map<string, ProfitabilityData>();
+
+        salesInDateRange.forEach(sale => {
+            const parentProductId = sale.productId;
+            if (!parentProductId) return;
+
+            const productDetails = productMap.get(parentProductId);
+            
+            if (!profitabilityMap.has(parentProductId)) {
+                 profitabilityMap.set(parentProductId, {
+                    productId: parentProductId,
+                    name: productDetails?.name || sale.productName,
+                    sku: productDetails?.sku || sale.parentSku,
+                    category: productDetails?.category || 'Uncategorized',
+                    unitsSold: 0,
+                    totalRevenue: 0,
+                    totalCogs: 0,
+                    grossProfit: 0,
+                    variants: [],
+                });
+            }
+            
+            const saleRevenue = sale.priceAtSale * sale.quantity;
+            const saleCogs = (sale.cogsAtSale || 0) * sale.quantity;
+            
+            const productProfit = profitabilityMap.get(parentProductId)!;
+            productProfit.unitsSold += sale.quantity;
+            productProfit.totalRevenue += saleRevenue;
+            productProfit.totalCogs += saleCogs;
+            productProfit.grossProfit += (saleRevenue - saleCogs);
+            
+            // Handle variant-level profitability
+            if (sale.variantId) {
+                if (!productProfit.variants) {
+                    productProfit.variants = [];
+                }
+                let variantProfit = productProfit.variants.find(v => v.variantId === sale.variantId);
+                if (!variantProfit) {
+                    variantProfit = {
+                        variantId: sale.variantId,
+                        name: sale.variantName || 'Unknown Variant',
+                        sku: sale.sku,
+                        unitsSold: 0,
+                        totalRevenue: 0,
+                        totalCogs: 0,
+                        grossProfit: 0,
+                    };
+                    productProfit.variants.push(variantProfit);
+                }
+                variantProfit.unitsSold += sale.quantity;
+                variantProfit.totalRevenue += saleRevenue;
+                variantProfit.totalCogs += saleCogs;
+                variantProfit.grossProfit += (saleRevenue - saleCogs);
+            }
+        });
+
+
+        // Sort variants inside each product
+        profitabilityMap.forEach(p => {
+            if (p.variants) {
+                p.variants.sort((a,b) => b.unitsSold - a.unitsSold);
+            }
+        });
+
+        return Array.from(profitabilityMap.values()).sort((a,b) => b.unitsSold - a.unitsSold);
+    }, [allSales, dateRange, items]);
+
 
     const filteredData = useMemo(() => {
-        return initialAllProducts
+        return productProfitability
             .filter(p => !categoryFilter || p.category === categoryFilter)
             .filter(p => {
                 if (!searchTerm) return true;
@@ -117,7 +199,7 @@ function AllProductsDialog({
             })
             .sort((a,b) => b.unitsSold - a.unitsSold);
 
-    }, [initialAllProducts, categoryFilter, searchTerm]);
+    }, [productProfitability, categoryFilter, searchTerm]);
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
@@ -225,7 +307,9 @@ function AllProductsDialog({
                     </ScrollArea>
                 </div>
                  <DialogFooter className="border-t pt-4">
-                    <p className="text-sm text-muted-foreground">Menampilkan {filteredData.length} dari {initialAllProducts.length} produk.</p>
+                     {filteredData.length > 0 && (
+                        <p className="text-sm text-muted-foreground">Menampilkan {filteredData.length} dari {productProfitability.length} produk.</p>
+                     )}
                 </DialogFooter>
             </DialogContent>
         </Dialog>
@@ -262,8 +346,7 @@ export default function SalesReportPage() {
             if (!parentProductId) return;
 
             const productDetails = productMap.get(parentProductId);
-
-            // Initialize parent product in map if not present
+            
             if (!profitabilityMap.has(parentProductId)) {
                  profitabilityMap.set(parentProductId, {
                     productId: parentProductId,
@@ -561,9 +644,11 @@ export default function SalesReportPage() {
                 allProducts={productProfitability}
                 categories={categories}
                 initialDateRange={dateRange}
+                allSales={allSales}
             />
         </AppLayout>
     );
 }
+
 
 
