@@ -91,17 +91,25 @@ function AllProductsDialog({
     allSales,
     categories,
     initialDateRange,
+    initialAllProducts
 } : {
     open: boolean;
     onOpenChange: (open: boolean) => void;
     allSales: Sale[];
     categories: string[];
     initialDateRange: DateRange | undefined;
+    initialAllProducts: InventoryItem[];
 }) {
     const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [dateRange, setDateRange] = useState<DateRange | undefined>(initialDateRange);
 
+    const productMap = useMemo(() => {
+        const map = new Map<string, InventoryItem>();
+        initialAllProducts.forEach(p => map.set(p.id, p));
+        return map;
+    }, [initialAllProducts]);
+    
     const productProfitability = useMemo(() => {
         const salesInDateRange = allSales.filter(sale => {
             if (!dateRange || !dateRange.from) return true;
@@ -116,12 +124,18 @@ function AllProductsDialog({
             const parentProductId = sale.productId;
             if (!parentProductId) return;
 
+            const productDetails = productMap.get(parentProductId);
+            // If product details not found (e.g. archived/deleted), still process the sale with data from sale record
+            const productName = productDetails?.name || sale.productName;
+            const productSku = productDetails?.sku || sale.parentSku;
+            const productCategory = productDetails?.category || sale.productCategory;
+
             if (!profitabilityMap.has(parentProductId)) {
                  profitabilityMap.set(parentProductId, {
                     productId: parentProductId,
-                    name: sale.productName,
-                    sku: sale.parentSku,
-                    category: sale.productCategory,
+                    name: productName,
+                    sku: productSku,
+                    category: productCategory,
                     unitsSold: 0,
                     totalRevenue: 0,
                     totalCogs: 0,
@@ -170,7 +184,7 @@ function AllProductsDialog({
         });
 
         return Array.from(profitabilityMap.values()).sort((a,b) => b.unitsSold - a.unitsSold);
-    }, [allSales, dateRange]);
+    }, [allSales, dateRange, productMap]);
 
 
     const filteredData = useMemo(() => {
@@ -264,22 +278,22 @@ function AllProductsDialog({
                             </TableHeader>
                             <TableBody>
                                 {filteredData.flatMap(p => [
-                                    <TableRow key={`product-${p.productId}`} className="bg-muted/50 hover:bg-muted/50">
-                                        <TableCell className="font-bold text-xs py-2">
+                                    <TableRow key={`product-${p.productId}`} className="bg-muted/50 hover:bg-muted/50 border-b">
+                                        <TableCell className="font-medium text-xs py-2">
                                             <div>{p.name}</div>
                                             <div className="text-muted-foreground font-normal">SKU: {p.sku || '-'}</div>
                                         </TableCell>
-                                        <TableCell className="text-center text-xs font-bold py-2">{p.unitsSold}</TableCell>
-                                        <TableCell className="text-left text-xs font-bold py-2">{formatCurrency(p.totalRevenue)}</TableCell>
-                                        <TableCell className="text-left text-xs font-bold py-2">{formatCurrency(p.totalCogs)}</TableCell>
-                                        <TableCell className="text-left font-bold text-xs py-2">{formatCurrency(p.grossProfit)}</TableCell>
+                                        <TableCell className="text-center text-xs font-medium py-2">{p.unitsSold}</TableCell>
+                                        <TableCell className="text-left text-xs font-medium py-2">{formatCurrency(p.totalRevenue)}</TableCell>
+                                        <TableCell className="text-left text-xs font-medium py-2">{formatCurrency(p.totalCogs)}</TableCell>
+                                        <TableCell className="text-left font-medium text-xs py-2">{formatCurrency(p.grossProfit)}</TableCell>
                                     </TableRow>,
                                     ...(p.variants || []).filter(v => {
                                         if (!searchTerm) return true;
                                         const lowerSearch = searchTerm.toLowerCase();
                                         return v.name.toLowerCase().includes(lowerSearch) || (v.sku && v.sku.toLowerCase().includes(lowerSearch));
                                     }).map(v => (
-                                         <TableRow key={`variant-${v.variantId}`}>
+                                         <TableRow key={`variant-${v.variantId}`} noBorder>
                                             <TableCell className="font-medium text-xs py-2 pl-8">
                                                 <div>{v.name}</div>
                                                 <div className="text-muted-foreground">SKU: {v.sku || '-'}</div>
@@ -579,10 +593,12 @@ export default function SalesReportPage() {
                 allSales={allSales}
                 categories={categories}
                 initialDateRange={dateRange}
+                initialAllProducts={items}
             />
         </AppLayout>
     );
 }
+
 
 
 
