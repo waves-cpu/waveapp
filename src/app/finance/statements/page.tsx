@@ -7,7 +7,7 @@ import { SidebarTrigger } from "@/components/ui/sidebar";
 import { useLanguage } from "@/hooks/use-language";
 import { translations } from "@/types/language";
 import { useInventory } from "@/hooks/use-inventory";
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DollarSign, Package, TrendingUp, ShoppingCart, Activity, Eye, Search, Store } from "lucide-react";
@@ -273,7 +273,7 @@ function AllProductsDialog({
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {filteredData.map(p => (
+                                {filteredData.map((p, productIndex) => (
                                 <React.Fragment key={`fragment-${p.productId}`}>
                                     <TableRow>
                                         <TableCell className="py-2">
@@ -292,7 +292,7 @@ function AllProductsDialog({
                                         const lowerSearch = searchTerm.toLowerCase();
                                         return v.name.toLowerCase().includes(lowerSearch) || (v.sku && v.sku.toLowerCase().includes(lowerSearch));
                                     }).map((v, variantIndex, variantsArray) => (
-                                         <TableRow key={`variant-${v.variantId}`} className={cn(variantIndex === variantsArray.length - 1 && 'border-b')}>
+                                         <TableRow key={`variant-${v.variantId}`}>
                                             <TableCell className="py-2">
                                                 <div className="flex items-center gap-4">
                                                     <div className="flex h-10 w-10 items-center justify-center rounded-sm">
@@ -310,6 +310,12 @@ function AllProductsDialog({
                                             <TableCell className="text-left font-semibold text-xs py-2">{formatCurrency(v.grossProfit)}</TableCell>
                                         </TableRow>
                                     ))}
+                                    {p.variants && p.variants.length > 0 && (
+                                        <TableRow>
+                                            <TableCell colSpan={5} className="p-0 h-px"><div className="border-b"></div></TableCell>
+                                        </TableRow>
+                                    )}
+                                    {!p.variants && <TableRow><TableCell colSpan={5} className="p-0 h-px"><div className="border-b"></div></TableCell></TableRow>}
                                 </React.Fragment>
                                 ))}
                             </TableBody>
@@ -605,4 +611,3 @@ export default function SalesReportPage() {
         </AppLayout>
     );
 }
-
