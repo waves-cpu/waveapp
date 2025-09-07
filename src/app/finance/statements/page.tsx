@@ -218,9 +218,6 @@ export default function SalesReportPage() {
         productProfitability,
         totalUnitsSold
     } = useMemo(() => {
-        const productMap = new Map<string, InventoryItem>();
-        items.forEach(item => productMap.set(item.id, item));
-
         const salesInDateRange = allSales.filter(sale => {
             if (!dateRange || !dateRange.from) return true;
             const saleDate = parseISO(sale.saleDate);
@@ -238,15 +235,13 @@ export default function SalesReportPage() {
             const parentProductId = sale.productId;
             if (!parentProductId) return;
 
-            const productDetails = productMap.get(parentProductId);
-
             // Initialize parent product in map if not present
             if (!profitabilityMap.has(parentProductId)) {
                 profitabilityMap.set(parentProductId, {
                     productId: parentProductId,
-                    name: productDetails?.name || sale.productName,
-                    sku: productDetails?.sku,
-                    category: productDetails?.category || 'Uncategorized',
+                    name: sale.productName,
+                    sku: sale.parentSku,
+                    category: sale.productCategory || 'Uncategorized',
                     unitsSold: 0,
                     totalRevenue: 0,
                     totalCogs: 0,
@@ -316,7 +311,7 @@ export default function SalesReportPage() {
             productProfitability: Array.from(profitabilityMap.values()).sort((a,b) => b.unitsSold - a.unitsSold),
         };
 
-    }, [allSales, items, dateRange]);
+    }, [allSales, dateRange]);
 
 
     const pieChartConfig = useMemo(() => {

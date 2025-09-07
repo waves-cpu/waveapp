@@ -66,6 +66,8 @@ const runMigrations = () => {
     const hasPaymentMethod = salesColumns.some((col: any) => col.name === 'paymentMethod');
     const hasResellerName = salesColumns.some((col: any) => col.name === 'resellerName');
     const hasCogs = salesColumns.some((col: any) => col.name === 'cogsAtSale');
+    const hasParentSku = salesColumns.some((col: any) => col.name === 'parentSku');
+
 
     if (!hasTransactionId) {
       console.log('Adding transactionId column to sales table...');
@@ -85,6 +87,11 @@ const runMigrations = () => {
     if (!hasCogs) {
         console.log('Adding cogsAtSale column to sales table...');
         db.exec('ALTER TABLE sales ADD COLUMN cogsAtSale REAL');
+    }
+    
+    if (!hasParentSku) {
+        console.log('Adding parentSku column to sales table...');
+        db.exec('ALTER TABLE sales ADD COLUMN parentSku TEXT');
     }
 
     const resellerColumns = db.pragma('table_info(resellers)');
@@ -220,6 +227,7 @@ const createSchema = () => {
         productId INTEGER,
         variantId INTEGER,
         accessoryId INTEGER,
+        parentSku TEXT,
         channel TEXT NOT NULL,
         quantity INTEGER NOT NULL,
         priceAtSale REAL NOT NULL,
@@ -311,6 +319,7 @@ const seedData = () => {
 seedData();
 
 export { db };
+
 
 
 

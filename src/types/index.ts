@@ -108,12 +108,14 @@ export interface Sale {
   productId?: string;
   variantId?: string;
   accessoryId?: string;
+  parentSku?: string;
   channel: string;
   quantity: number;
   priceAtSale: number;
   cogsAtSale?: number;
   saleDate: string; // ISO String
   productName: string;
+  productCategory: string;
   variantName?: string;
   sku?: string;
 }

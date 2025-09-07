@@ -704,6 +704,8 @@ export async function performSale(
         let finalPriceAtSale;
         let cogsAtSale;
         let productNameForFee = '';
+        let parentSkuForSale: string | null = null;
+
 
         const variant = getVariantStmt.get(sku) as (InventoryItemVariant & { id: number, productId: number, costPrice?: number }) | undefined;
         
@@ -722,14 +724,15 @@ export async function performSale(
             }
 
             cogsAtSale = variant.costPrice || 0;
-            const parentProduct = db.prepare('SELECT name FROM products WHERE id = ?').get(variant.productId) as { name: string };
+            const parentProduct = db.prepare('SELECT name, sku FROM products WHERE id = ?').get(variant.productId) as { name: string, sku: string };
             productNameForFee = `${parentProduct.name} - ${variant.name}`;
+            parentSkuForSale = parentProduct.sku;
 
             adjustStock(variant.id.toString(), -quantity, saleReason);
-            db.prepare('INSERT INTO sales (transactionId, paymentMethod, resellerName, productId, variantId, channel, quantity, priceAtSale, cogsAtSale, saleDate) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
-              .run(options?.transactionId, options?.paymentMethod, options?.resellerName, variant.productId, variant.id, channel, quantity, finalPriceAtSale, cogsAtSale, saleDateString);
+            db.prepare('INSERT INTO sales (transactionId, paymentMethod, resellerName, productId, variantId, channel, quantity, priceAtSale, cogsAtSale, saleDate, parentSku) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
+              .run(options?.transactionId, options?.paymentMethod, options?.resellerName, variant.productId, variant.id, channel, quantity, finalPriceAtSale, cogsAtSale, saleDateString, parentSkuForSale);
         } else {
-            const product = getProductStmt.get(sku) as (InventoryItem & { id: number, costPrice?: number }) | undefined;
+            const product = getProductStmt.get(sku) as (InventoryItem & { id: number, costPrice?: number, sku: string }) | undefined;
             if (product) {
                  if (product.stock! < quantity) {
                     throw new Error('Insufficient stock for product.');
@@ -746,10 +749,11 @@ export async function performSale(
 
                 cogsAtSale = product.costPrice || 0;
                 productNameForFee = product.name;
+                parentSkuForSale = product.sku;
                 
                 adjustStock(product.id.toString(), -quantity, saleReason);
-                db.prepare('INSERT INTO sales (transactionId, paymentMethod, resellerName, productId, variantId, channel, quantity, priceAtSale, cogsAtSale, saleDate) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
-                  .run(options?.transactionId, options?.paymentMethod, options?.resellerName, product.id, null, channel, quantity, finalPriceAtSale, cogsAtSale, saleDateString);
+                db.prepare('INSERT INTO sales (transactionId, paymentMethod, resellerName, productId, variantId, channel, quantity, priceAtSale, cogsAtSale, saleDate, parentSku) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
+                  .run(options?.transactionId, options?.paymentMethod, options?.resellerName, product.id, null, channel, quantity, finalPriceAtSale, cogsAtSale, saleDateString, parentSkuForSale);
             } else {
                 throw new Error('Product or variant with specified SKU not found or has variants.');
             }
@@ -777,6 +781,7 @@ export async function fetchAllSales(): Promise<Sale[]> {
             s.id, s.transactionId, s.paymentMethod, s.resellerName, s.productId, s.variantId, s.channel, s.quantity, s.priceAtSale, s.cogsAtSale, s.saleDate,
             p.name as productName,
             p.category as productCategory,
+            s.parentSku,
             v.name as variantName,
             COALESCE(v.sku, p.sku) as sku
         FROM sales s
@@ -1121,6 +1126,7 @@ export async function deleteProductPermanently(itemId: string) {
     // ON DELETE CASCADE will handle variants, history, and channel_prices
     db.prepare('DELETE FROM products WHERE id = ?').run(itemId);
 }
+
 
 
 
