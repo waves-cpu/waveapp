@@ -10,7 +10,7 @@ import { translations } from "@/types/language";
 import { useInventory } from "@/hooks/use-inventory";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { DollarSign, Package, TrendingUp, ShoppingCart, Activity, Eye, Search, Store } from "lucide-react";
+import { DollarSign, Package, TrendingUp, ShoppingCart, Activity, Eye, Search, Store, ChevronDown } from "lucide-react";
 import { Pie, PieChart as RechartsPieChart, Cell, Tooltip, ResponsiveContainer, Legend } from "recharts";
 import { ChartConfig, ChartContainer, ChartTooltipContent } from "@/components/ui/chart";
 import { subDays, isWithinInterval, startOfDay, endOfDay, format, parseISO } from "date-fns";
@@ -26,6 +26,7 @@ import { DateRange } from "react-day-picker";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
 
 const formatCurrency = (amount: number) => `Rp${Math.round(amount).toLocaleString('id-ID')}`;
@@ -103,6 +104,7 @@ function AllProductsDialog({
     const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [dateRange, setDateRange] = useState<DateRange | undefined>(initialDateRange);
+    const [openVariants, setOpenVariants] = useState<Record<string, boolean>>({});
 
     const productMap = useMemo(() => {
         const map = new Map<string, InventoryItem>();
@@ -130,7 +132,7 @@ function AllProductsDialog({
                  profitabilityMap.set(parentProductId, {
                     productId: parentProductId,
                     name: productDetails?.name || sale.productName,
-                    sku: productDetails?.sku || sale.parentSku,
+                    sku: sale.parentSku || productDetails?.sku || sale.sku,
                     category: productDetails?.category || sale.productCategory,
                     unitsSold: 0,
                     totalRevenue: 0,
@@ -199,6 +201,10 @@ function AllProductsDialog({
             .sort((a,b) => b.unitsSold - a.unitsSold);
 
     }, [productProfitability, categoryFilter, searchTerm]);
+
+    const toggleVariantVisibility = (productId: string) => {
+        setOpenVariants(prev => ({ ...prev, [productId]: !prev[productId] }));
+    };
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
@@ -273,46 +279,63 @@ function AllProductsDialog({
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {filteredData.map((p) => (
-                                <React.Fragment key={`fragment-${p.productId}`}>
-                                    <TableRow noBorder>
-                                        <TableCell className="py-2">
-                                            <div>
-                                                <div className="font-medium text-sm">{p.name}</div>
-                                                <div className="text-muted-foreground font-normal text-xs">SKU: {p.sku || '-'}</div>
-                                            </div>
-                                        </TableCell>
-                                        <TableCell className="text-center text-xs font-medium py-2">{p.unitsSold}</TableCell>
-                                        <TableCell className="text-left text-xs font-medium py-2">{formatCurrency(p.totalRevenue)}</TableCell>
-                                        <TableCell className="text-left text-xs font-medium py-2">{formatCurrency(p.totalCogs)}</TableCell>
-                                        <TableCell className="text-left font-medium text-xs py-2">{formatCurrency(p.grossProfit)}</TableCell>
-                                    </TableRow>
-                                    {(p.variants || []).filter(v => {
-                                        if (!searchTerm) return true;
-                                        const lowerSearch = searchTerm.toLowerCase();
-                                        return v.name.toLowerCase().includes(lowerSearch) || (v.sku && v.sku.toLowerCase().includes(lowerSearch));
-                                    }).map((v, variantIndex, variantsArray) => (
-                                         <TableRow key={`variant-${v.variantId}`} noBorder className={cn(variantIndex === variantsArray.length - 1 && "border-b")}>
-                                            <TableCell className="py-2">
-                                                <div className="flex items-center gap-4">
-                                                    <div className="flex h-10 w-10 items-center justify-center rounded-sm">
-                                                        <Store className="h-5 w-5 text-gray-400" />
-                                                    </div>
-                                                    <div>
-                                                        <div className="font-medium text-sm">{v.name}</div>
-                                                        <div className="text-xs text-muted-foreground">SKU: {v.sku || '-'}</div>
-                                                    </div>
-                                                </div>
-                                            </TableCell>
-                                            <TableCell className="text-center text-xs py-2">{v.unitsSold}</TableCell>
-                                            <TableCell className="text-left text-xs py-2">{formatCurrency(v.totalRevenue)}</TableCell>
-                                            <TableCell className="text-left text-xs py-2">{formatCurrency(v.totalCogs)}</TableCell>
-                                            <TableCell className="text-left font-semibold text-xs py-2">{formatCurrency(v.grossProfit)}</TableCell>
-                                        </TableRow>
-                                    ))}
-                                    {(!p.variants || p.variants.length === 0) && <TableRow noBorder className="border-b"><TableCell colSpan={5} className="p-0 h-0"></TableCell></TableRow>}
-                                </React.Fragment>
-                                ))}
+                                {filteredData.map((p) => {
+                                    const hasVariants = p.variants && p.variants.length > 0;
+                                    return (
+                                        <Collapsible asChild key={`collapsible-${p.productId}`} open={openVariants[p.productId] || false} onOpenChange={() => toggleVariantVisibility(p.productId)}>
+                                            <React.Fragment>
+                                                <CollapsibleTrigger asChild>
+                                                    <TableRow className="cursor-pointer">
+                                                        <TableCell className="py-2">
+                                                            <div className="flex items-center gap-2">
+                                                                {hasVariants && (
+                                                                    <ChevronDown className={cn("h-4 w-4 transition-transform", openVariants[p.productId] && "rotate-180")} />
+                                                                )}
+                                                                <div className={cn(!hasVariants && "pl-6")}>
+                                                                    <div className="font-medium text-sm">{p.name}</div>
+                                                                    <div className="text-muted-foreground font-normal text-xs">SKU: {p.sku || '-'}</div>
+                                                                </div>
+                                                            </div>
+                                                        </TableCell>
+                                                        <TableCell className="text-center text-xs font-medium py-2">{p.unitsSold}</TableCell>
+                                                        <TableCell className="text-left text-xs font-medium py-2">{formatCurrency(p.totalRevenue)}</TableCell>
+                                                        <TableCell className="text-left text-xs font-medium py-2">{formatCurrency(p.totalCogs)}</TableCell>
+                                                        <TableCell className="text-left font-medium text-xs py-2">{formatCurrency(p.grossProfit)}</TableCell>
+                                                    </TableRow>
+                                                </CollapsibleTrigger>
+                                                {hasVariants && (
+                                                    <CollapsibleContent asChild>
+                                                        <>
+                                                        {(p.variants || []).filter(v => {
+                                                            if (!searchTerm) return true;
+                                                            const lowerSearch = searchTerm.toLowerCase();
+                                                            return v.name.toLowerCase().includes(lowerSearch) || (v.sku && v.sku.toLowerCase().includes(lowerSearch));
+                                                        }).map((v, variantIndex, variantsArray) => (
+                                                            <TableRow key={`variant-${v.variantId}`} className="bg-muted/30 hover:bg-muted/50">
+                                                                <TableCell className="py-2">
+                                                                    <div className="flex items-center gap-4">
+                                                                        <div className="flex h-10 w-10 items-center justify-center rounded-sm pl-6">
+                                                                            <Store className="h-5 w-5 text-gray-400" />
+                                                                        </div>
+                                                                        <div>
+                                                                            <div className="font-medium text-sm">{v.name}</div>
+                                                                            <div className="text-xs text-muted-foreground">SKU: {v.sku || '-'}</div>
+                                                                        </div>
+                                                                    </div>
+                                                                </TableCell>
+                                                                <TableCell className="text-center text-xs py-2">{v.unitsSold}</TableCell>
+                                                                <TableCell className="text-left text-xs py-2">{formatCurrency(v.totalRevenue)}</TableCell>
+                                                                <TableCell className="text-left text-xs py-2">{formatCurrency(v.totalCogs)}</TableCell>
+                                                                <TableCell className="text-left font-semibold text-xs py-2">{formatCurrency(v.grossProfit)}</TableCell>
+                                                            </TableRow>
+                                                        ))}
+                                                        </>
+                                                    </CollapsibleContent>
+                                                )}
+                                            </React.Fragment>
+                                        </Collapsible>
+                                    )
+                                })}
                             </TableBody>
                         </Table>
                     </ScrollArea>
