@@ -190,7 +190,7 @@ function AllProductsDialog({
                             </TableHeader>
                             <TableBody>
                                 {filteredData.flatMap(p => [
-                                    <TableRow key={p.productId} className="bg-muted/50 hover:bg-muted/50">
+                                    <TableRow key={`product-${p.productId}`} className="bg-muted/50 hover:bg-muted/50">
                                         <TableCell className="font-bold text-xs py-2">
                                             <div>{p.name}</div>
                                             <div className="text-muted-foreground font-normal">SKU: {p.sku || '-'}</div>
@@ -205,7 +205,7 @@ function AllProductsDialog({
                                         const lowerSearch = searchTerm.toLowerCase();
                                         return v.name.toLowerCase().includes(lowerSearch) || (v.sku && v.sku.toLowerCase().includes(lowerSearch));
                                     }).map(v => (
-                                         <TableRow key={v.variantId}>
+                                         <TableRow key={`variant-${v.variantId}`}>
                                             <TableCell className="font-medium text-xs py-2 pl-8">
                                                 <div>{v.name}</div>
                                                 <div className="text-muted-foreground">SKU: {v.sku || '-'}</div>
@@ -543,5 +543,6 @@ export default function SalesReportPage() {
         </AppLayout>
     );
 }
+
 
 
