@@ -23,7 +23,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Calendar as CalendarIcon } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import { DateRange } from "react-day-picker";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 
@@ -93,14 +93,14 @@ function AllProductsDialog({
             }
             return true;
         })
-    }, [allProducts, categoryFilter, dateRange]);
+    }, [allProducts, categoryFilter]);
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="max-w-4xl h-[90vh] flex flex-col">
                 <DialogHeader>
                     <DialogTitle>Semua Produk Terlaris</DialogTitle>
-                    <CardDescription>Diurutkan berdasarkan unit terjual terbanyak.</CardDescription>
+                    <DialogDescription>Diurutkan berdasarkan unit terjual terbanyak.</DialogDescription>
                 </DialogHeader>
                  <div className="flex flex-col sm:flex-row gap-2">
                     <Select onValueChange={(value) => setCategoryFilter(value === 'all' ? null : value)} defaultValue="all">
@@ -208,6 +208,8 @@ export default function SalesReportPage() {
             const toDate = dateRange.to || dateRange.from;
             return isWithinInterval(saleDate, { start: startOfDay(dateRange.from), end: endOfDay(toDate) });
         });
+        
+        const productsMap = new Map(items.map(item => [item.id, item]));
 
         let revenue = 0;
         let cogs = 0;
@@ -228,12 +230,12 @@ export default function SalesReportPage() {
 
             channelSales[sale.channel] = (channelSales[sale.channel] || 0) + saleRevenue;
             
-            const parentProduct = items.find(i => i.id === parentProductId);
+            const parentProduct = productsMap.get(parentProductId);
 
             if (!profitabilityMap.has(parentProductId)) {
                 profitabilityMap.set(parentProductId, {
                     productId: parentProductId,
-                    name: sale.productName,
+                    name: parentProduct?.name || sale.productName,
                     sku: parentProduct?.sku,
                     category: parentProduct?.category || 'Uncategorized',
                     unitsSold: 0,
