@@ -276,8 +276,9 @@ function AllProductsDialog({
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {filteredData.flatMap(p => [
-                                    <TableRow key={`product-${p.productId}`} className="bg-muted/50 hover:bg-muted/50">
+                                {filteredData.map(p => (
+                                <React.Fragment key={`fragment-${p.productId}`}>
+                                    <TableRow className={cn("bg-muted/50 hover:bg-muted/50", p.variants && p.variants.length > 0 ? '' : 'border-b')}>
                                         <TableCell className="py-2">
                                             <div className="flex items-center gap-4">
                                                 <Image src={p.imageUrl || 'https://placehold.co/40x40.png'} alt={p.name} width={40} height={40} className="rounded-sm" data-ai-hint="product image" />
@@ -291,13 +292,13 @@ function AllProductsDialog({
                                         <TableCell className="text-left text-xs font-medium py-2">{formatCurrency(p.totalRevenue)}</TableCell>
                                         <TableCell className="text-left text-xs font-medium py-2">{formatCurrency(p.totalCogs)}</TableCell>
                                         <TableCell className="text-left font-medium text-xs py-2">{formatCurrency(p.grossProfit)}</TableCell>
-                                    </TableRow>,
-                                    ...(p.variants || []).filter(v => {
+                                    </TableRow>
+                                    {(p.variants || []).filter(v => {
                                         if (!searchTerm) return true;
                                         const lowerSearch = searchTerm.toLowerCase();
                                         return v.name.toLowerCase().includes(lowerSearch) || (v.sku && v.sku.toLowerCase().includes(lowerSearch));
                                     }).map((v, variantIndex, variantsArray) => (
-                                         <TableRow key={`variant-${v.variantId}`} noBorder className={cn(variantIndex === variantsArray.length - 1 && 'border-b')}>
+                                         <TableRow key={`variant-${v.variantId}`} className={cn(variantIndex === variantsArray.length - 1 && 'border-b')}>
                                             <TableCell className="py-2">
                                                 <div className="flex items-center gap-4 pl-4">
                                                     <div className="flex h-10 w-10 items-center justify-center rounded-sm">
@@ -314,8 +315,9 @@ function AllProductsDialog({
                                             <TableCell className="text-left text-xs py-2">{formatCurrency(v.totalCogs)}</TableCell>
                                             <TableCell className="text-left font-semibold text-xs py-2">{formatCurrency(v.grossProfit)}</TableCell>
                                         </TableRow>
-                                    ))
-                                ])}
+                                    ))}
+                                </React.Fragment>
+                                ))}
                             </TableBody>
                         </Table>
                     </ScrollArea>
@@ -609,10 +611,4 @@ export default function SalesReportPage() {
         </AppLayout>
     );
 }
-
-
-
-
-
-
 
