@@ -294,7 +294,7 @@ function AllProductsDialog({
                                     }).map((v, variantIndex, variantsArray) => (
                                          <TableRow key={`variant-${v.variantId}`} className={cn(variantIndex === variantsArray.length - 1 && 'border-b')}>
                                             <TableCell className="py-2">
-                                                <div className="flex items-center gap-4 pl-4">
+                                                <div className="flex items-center gap-4">
                                                     <div className="flex h-10 w-10 items-center justify-center rounded-sm">
                                                         <Store className="h-5 w-5 text-gray-400" />
                                                     </div>
@@ -605,3 +605,4 @@ export default function SalesReportPage() {
         </AppLayout>
     );
 }
+
