@@ -48,6 +48,7 @@ interface ProfitabilityData {
     totalCogs: number;
     grossProfit: number;
     category: string;
+    sales: Sale[];
 }
 
 function FinancialReportSkeleton() {
@@ -87,13 +88,36 @@ function AllProductsDialog({
     const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
 
     const filteredData = useMemo(() => {
-        return allProducts.filter(p => {
-            if (categoryFilter && p.category !== categoryFilter) {
-                return false;
-            }
-            return true;
-        })
-    }, [allProducts, categoryFilter]);
+        return allProducts
+            .map(product => {
+                // If a date range is set, recalculate metrics for that product within the range
+                if (dateRange?.from) {
+                    const toDate = dateRange.to || dateRange.from;
+                    const salesInDateRange = product.sales.filter(sale => 
+                        isWithinInterval(parseISO(sale.saleDate), { start: startOfDay(dateRange.from!), end: endOfDay(toDate) })
+                    );
+
+                    if (salesInDateRange.length === 0) return null; // Exclude product if no sales in range
+
+                    const newMetrics = salesInDateRange.reduce((acc, sale) => {
+                        const saleRevenue = sale.priceAtSale * sale.quantity;
+                        const saleCogs = (sale.cogsAtSale || 0) * sale.quantity;
+                        acc.unitsSold += sale.quantity;
+                        acc.totalRevenue += saleRevenue;
+                        acc.totalCogs += saleCogs;
+                        acc.grossProfit += saleRevenue - saleCogs;
+                        return acc;
+                    }, { unitsSold: 0, totalRevenue: 0, totalCogs: 0, grossProfit: 0 });
+
+                    return { ...product, ...newMetrics };
+                }
+                return product;
+            })
+            .filter((p): p is ProfitabilityData => p !== null) // Remove nulls
+            .filter(p => !categoryFilter || p.category === categoryFilter)
+            .sort((a,b) => b.unitsSold - a.unitsSold);
+
+    }, [allProducts, categoryFilter, dateRange]);
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
@@ -202,6 +226,8 @@ export default function SalesReportPage() {
         productProfitability,
         totalUnitsSold
     } = useMemo(() => {
+        const productsMap = new Map(items.map(item => [item.id, item]));
+
         const salesInDateRange = allSales.filter(sale => {
             if (!dateRange || !dateRange.from) return true;
             const saleDate = parseISO(sale.saleDate);
@@ -209,27 +235,16 @@ export default function SalesReportPage() {
             return isWithinInterval(saleDate, { start: startOfDay(dateRange.from), end: endOfDay(toDate) });
         });
         
-        const productsMap = new Map(items.map(item => [item.id, item]));
-
         let revenue = 0;
         let cogs = 0;
         let units = 0;
         const channelSales: { [key: string]: number } = {};
         const profitabilityMap = new Map<string, ProfitabilityData>();
 
-        salesInDateRange.forEach(sale => {
+        allSales.forEach(sale => {
             const parentProductId = sale.productId;
             if (!parentProductId) return;
 
-            const saleRevenue = sale.priceAtSale * sale.quantity;
-            const saleCogs = (sale.cogsAtSale || 0) * sale.quantity;
-            
-            revenue += saleRevenue;
-            cogs += saleCogs;
-            units += sale.quantity;
-
-            channelSales[sale.channel] = (channelSales[sale.channel] || 0) + saleRevenue;
-            
             const parentProduct = productsMap.get(parentProductId);
 
             if (!profitabilityMap.has(parentProductId)) {
@@ -242,14 +257,34 @@ export default function SalesReportPage() {
                     totalRevenue: 0,
                     totalCogs: 0,
                     grossProfit: 0,
+                    sales: [],
                 });
             }
-
+            
             const current = profitabilityMap.get(parentProductId)!;
-            current.unitsSold += sale.quantity;
-            current.totalRevenue += saleRevenue;
-            current.totalCogs += saleCogs;
-            current.grossProfit += (saleRevenue - saleCogs);
+            current.sales.push(sale);
+        });
+
+        salesInDateRange.forEach(sale => {
+            const parentProductId = sale.productId;
+            if (!parentProductId) return;
+            
+            const saleRevenue = sale.priceAtSale * sale.quantity;
+            const saleCogs = (sale.cogsAtSale || 0) * sale.quantity;
+            
+            revenue += saleRevenue;
+            cogs += saleCogs;
+            units += sale.quantity;
+
+            channelSales[sale.channel] = (channelSales[sale.channel] || 0) + saleRevenue;
+            
+            const current = profitabilityMap.get(parentProductId);
+            if (current) {
+                current.unitsSold += sale.quantity;
+                current.totalRevenue += saleRevenue;
+                current.totalCogs += saleCogs;
+                current.grossProfit += (saleRevenue - saleCogs);
+            }
         });
 
         return {
