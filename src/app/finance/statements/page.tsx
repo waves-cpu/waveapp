@@ -125,17 +125,13 @@ function AllProductsDialog({
             if (!parentProductId) return;
 
             const productDetails = productMap.get(parentProductId);
-            // If product details not found (e.g. archived/deleted), still process the sale with data from sale record
-            const productName = productDetails?.name || sale.productName;
-            const productSku = productDetails?.sku || sale.parentSku;
-            const productCategory = productDetails?.category || sale.productCategory;
-
+            
             if (!profitabilityMap.has(parentProductId)) {
                  profitabilityMap.set(parentProductId, {
                     productId: parentProductId,
-                    name: productName,
-                    sku: productSku,
-                    category: productCategory,
+                    name: productDetails?.name || sale.productName,
+                    sku: productDetails?.sku || sale.parentSku,
+                    category: productDetails?.category || sale.productCategory,
                     unitsSold: 0,
                     totalRevenue: 0,
                     totalCogs: 0,
@@ -278,7 +274,7 @@ function AllProductsDialog({
                             </TableHeader>
                             <TableBody>
                                 {filteredData.flatMap(p => [
-                                    <TableRow key={`product-${p.productId}`} className="bg-muted/50 hover:bg-muted/50 border-b">
+                                    <TableRow key={`product-${p.productId}`} className="bg-muted/50 hover:bg-muted/50">
                                         <TableCell className="font-medium text-xs py-2">
                                             <div>{p.name}</div>
                                             <div className="text-muted-foreground font-normal">SKU: {p.sku || '-'}</div>
@@ -292,9 +288,9 @@ function AllProductsDialog({
                                         if (!searchTerm) return true;
                                         const lowerSearch = searchTerm.toLowerCase();
                                         return v.name.toLowerCase().includes(lowerSearch) || (v.sku && v.sku.toLowerCase().includes(lowerSearch));
-                                    }).map(v => (
-                                         <TableRow key={`variant-${v.variantId}`} noBorder>
-                                            <TableCell className="font-medium text-xs py-2 pl-8">
+                                    }).map((v, variantIndex, variantsArray) => (
+                                         <TableRow key={`variant-${v.variantId}`} noBorder className={cn(variantIndex === variantsArray.length - 1 && 'border-b')}>
+                                            <TableCell className="text-xs py-2 pl-8">
                                                 <div>{v.name}</div>
                                                 <div className="text-muted-foreground">SKU: {v.sku || '-'}</div>
                                             </TableCell>
@@ -310,7 +306,7 @@ function AllProductsDialog({
                     </ScrollArea>
                 </div>
                  <DialogFooter className="border-t pt-4">
-                     {filteredData.length > 0 && (
+                     {filteredData.length > 1 && (
                         <p className="text-sm text-muted-foreground">Menampilkan {filteredData.length} dari {productProfitability.length} produk.</p>
                      )}
                 </DialogFooter>
@@ -598,6 +594,7 @@ export default function SalesReportPage() {
         </AppLayout>
     );
 }
+
 
 
 
