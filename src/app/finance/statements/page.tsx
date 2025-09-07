@@ -10,7 +10,7 @@ import { useInventory } from "@/hooks/use-inventory";
 import React, { useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { DollarSign, Package, TrendingUp, ShoppingCart, Activity, Eye, Search } from "lucide-react";
+import { DollarSign, Package, TrendingUp, ShoppingCart, Activity, Eye, Search, Store } from "lucide-react";
 import { Pie, PieChart as RechartsPieChart, Cell, Tooltip, ResponsiveContainer, Legend } from "recharts";
 import { ChartConfig, ChartContainer, ChartTooltipContent } from "@/components/ui/chart";
 import { subDays, isWithinInterval, startOfDay, endOfDay, format, parseISO } from "date-fns";
@@ -26,6 +26,7 @@ import { DateRange } from "react-day-picker";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
+import Image from 'next/image';
 
 
 const formatCurrency = (amount: number) => `Rp${Math.round(amount).toLocaleString('id-ID')}`;
@@ -45,6 +46,7 @@ interface ProfitabilityData {
     name: string;
     sku?: string;
     category: string;
+    imageUrl?: string;
     unitsSold: number;
     totalRevenue: number;
     totalCogs: number;
@@ -132,6 +134,7 @@ function AllProductsDialog({
                     name: productDetails?.name || sale.productName,
                     sku: productDetails?.sku || sale.parentSku,
                     category: productDetails?.category || sale.productCategory,
+                    imageUrl: productDetails?.imageUrl,
                     unitsSold: 0,
                     totalRevenue: 0,
                     totalCogs: 0,
@@ -275,9 +278,14 @@ function AllProductsDialog({
                             <TableBody>
                                 {filteredData.flatMap(p => [
                                     <TableRow key={`product-${p.productId}`} className="bg-muted/50 hover:bg-muted/50">
-                                        <TableCell className="font-medium text-xs py-2">
-                                            <div>{p.name}</div>
-                                            <div className="text-muted-foreground font-normal">SKU: {p.sku || '-'}</div>
+                                        <TableCell className="py-2">
+                                            <div className="flex items-center gap-4">
+                                                <Image src={p.imageUrl || 'https://placehold.co/40x40.png'} alt={p.name} width={40} height={40} className="rounded-sm" data-ai-hint="product image" />
+                                                <div>
+                                                    <div className="font-medium text-sm">{p.name}</div>
+                                                    <div className="text-muted-foreground font-normal text-xs">SKU: {p.sku || '-'}</div>
+                                                </div>
+                                            </div>
                                         </TableCell>
                                         <TableCell className="text-center text-xs font-medium py-2">{p.unitsSold}</TableCell>
                                         <TableCell className="text-left text-xs font-medium py-2">{formatCurrency(p.totalRevenue)}</TableCell>
@@ -290,9 +298,16 @@ function AllProductsDialog({
                                         return v.name.toLowerCase().includes(lowerSearch) || (v.sku && v.sku.toLowerCase().includes(lowerSearch));
                                     }).map((v, variantIndex, variantsArray) => (
                                          <TableRow key={`variant-${v.variantId}`} noBorder className={cn(variantIndex === variantsArray.length - 1 && 'border-b')}>
-                                            <TableCell className="text-xs py-2 pl-8">
-                                                <div>{v.name}</div>
-                                                <div className="text-muted-foreground">SKU: {v.sku || '-'}</div>
+                                            <TableCell className="py-2">
+                                                <div className="flex items-center gap-4 pl-4">
+                                                    <div className="flex h-10 w-10 items-center justify-center rounded-sm">
+                                                        <Store className="h-5 w-5 text-gray-400" />
+                                                    </div>
+                                                    <div>
+                                                        <div className="font-medium text-sm">{v.name}</div>
+                                                        <div className="text-xs text-muted-foreground">SKU: {v.sku || '-'}</div>
+                                                    </div>
+                                                </div>
                                             </TableCell>
                                             <TableCell className="text-center text-xs py-2">{v.unitsSold}</TableCell>
                                             <TableCell className="text-left text-xs py-2">{formatCurrency(v.totalRevenue)}</TableCell>
@@ -594,6 +609,7 @@ export default function SalesReportPage() {
         </AppLayout>
     );
 }
+
 
 
 
