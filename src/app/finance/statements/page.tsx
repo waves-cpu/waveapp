@@ -132,7 +132,7 @@ function AllProductsDialog({
                  profitabilityMap.set(parentProductId, {
                     productId: parentProductId,
                     name: productDetails?.name || sale.productName,
-                    sku: productDetails?.sku || sale.parentSku,
+                    sku: productDetails?.sku,
                     category: productDetails?.category || sale.productCategory,
                     imageUrl: productDetails?.imageUrl,
                     unitsSold: 0,
@@ -278,7 +278,7 @@ function AllProductsDialog({
                             <TableBody>
                                 {filteredData.map(p => (
                                 <React.Fragment key={`fragment-${p.productId}`}>
-                                    <TableRow className={cn("bg-muted/50 hover:bg-muted/50", p.variants && p.variants.length > 0 ? '' : 'border-b')}>
+                                    <TableRow className={cn(p.variants && p.variants.length > 0 ? '' : 'border-b')}>
                                         <TableCell className="py-2">
                                             <div className="flex items-center gap-4">
                                                 <Image src={p.imageUrl || 'https://placehold.co/40x40.png'} alt={p.name} width={40} height={40} className="rounded-sm" data-ai-hint="product image" />
@@ -611,5 +611,6 @@ export default function SalesReportPage() {
         </AppLayout>
     );
 }
+
 
 
