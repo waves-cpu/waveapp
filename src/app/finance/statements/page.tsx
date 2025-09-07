@@ -134,7 +134,6 @@ function AllProductsDialog({
                     name: productDetails?.name || sale.productName,
                     sku: productDetails?.sku,
                     category: productDetails?.category || sale.productCategory,
-                    imageUrl: productDetails?.imageUrl,
                     unitsSold: 0,
                     totalRevenue: 0,
                     totalCogs: 0,
@@ -278,14 +277,11 @@ function AllProductsDialog({
                             <TableBody>
                                 {filteredData.map(p => (
                                 <React.Fragment key={`fragment-${p.productId}`}>
-                                    <TableRow className={cn(p.variants && p.variants.length > 0 ? '' : 'border-b')}>
+                                    <TableRow className={cn(!p.variants || p.variants.length === 0 ? 'border-b' : '')}>
                                         <TableCell className="py-2">
-                                            <div className="flex items-center gap-4">
-                                                <Image src={p.imageUrl || 'https://placehold.co/40x40.png'} alt={p.name} width={40} height={40} className="rounded-sm" data-ai-hint="product image" />
-                                                <div>
-                                                    <div className="font-medium text-sm">{p.name}</div>
-                                                    <div className="text-muted-foreground font-normal text-xs">SKU: {p.sku || '-'}</div>
-                                                </div>
+                                            <div>
+                                                <div className="font-medium text-sm">{p.name}</div>
+                                                <div className="text-muted-foreground font-normal text-xs">SKU: {p.sku || '-'}</div>
                                             </div>
                                         </TableCell>
                                         <TableCell className="text-center text-xs font-medium py-2">{p.unitsSold}</TableCell>
@@ -611,6 +607,7 @@ export default function SalesReportPage() {
         </AppLayout>
     );
 }
+
 
 
 
