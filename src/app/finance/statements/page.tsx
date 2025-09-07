@@ -26,7 +26,6 @@ import { DateRange } from "react-day-picker";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import Image from 'next/image';
 
 
 const formatCurrency = (amount: number) => `Rp${Math.round(amount).toLocaleString('id-ID')}`;
@@ -46,7 +45,6 @@ interface ProfitabilityData {
     name: string;
     sku?: string;
     category: string;
-    imageUrl?: string;
     unitsSold: number;
     totalRevenue: number;
     totalCogs: number;
@@ -132,7 +130,7 @@ function AllProductsDialog({
                  profitabilityMap.set(parentProductId, {
                     productId: parentProductId,
                     name: productDetails?.name || sale.productName,
-                    sku: productDetails?.sku,
+                    sku: sale.parentSku || productDetails?.sku || sale.sku,
                     category: productDetails?.category || sale.productCategory,
                     unitsSold: 0,
                     totalRevenue: 0,
@@ -277,7 +275,7 @@ function AllProductsDialog({
                             <TableBody>
                                 {filteredData.map(p => (
                                 <React.Fragment key={`fragment-${p.productId}`}>
-                                    <TableRow className={cn(!p.variants || p.variants.length === 0 ? 'border-b' : '')}>
+                                    <TableRow>
                                         <TableCell className="py-2">
                                             <div>
                                                 <div className="font-medium text-sm">{p.name}</div>
@@ -607,7 +605,3 @@ export default function SalesReportPage() {
         </AppLayout>
     );
 }
-
-
-
-
