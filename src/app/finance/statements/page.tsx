@@ -99,7 +99,6 @@ function AllProductsDialog({
     initialDateRange: DateRange | undefined;
 }) {
     const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
-    const [dateRange, setDateRange] = useState<DateRange | undefined>(initialDateRange);
     const [searchTerm, setSearchTerm] = useState('');
 
     const filteredData = useMemo(() => {
@@ -203,7 +202,7 @@ export default function SalesReportPage() {
     const { language } = useLanguage();
     const t = translations[language];
     const TFinance = t.finance;
-    const { allSales, loading, categories } = useInventory();
+    const { items, allSales, loading, categories } = useInventory();
 
     const [dateRange, setDateRange] = useState<DateRange | undefined>({
       from: subDays(new Date(), 29),
@@ -219,13 +218,15 @@ export default function SalesReportPage() {
         productProfitability,
         totalUnitsSold
     } = useMemo(() => {
-
         const salesInDateRange = allSales.filter(sale => {
             if (!dateRange || !dateRange.from) return true;
             const saleDate = parseISO(sale.saleDate);
             const toDate = dateRange.to || dateRange.from;
             return isWithinInterval(saleDate, { start: startOfDay(dateRange.from), end: endOfDay(toDate) });
         });
+
+        const productMap = new Map<string, InventoryItem>();
+        items.forEach(item => productMap.set(item.id, item));
         
         let revenue = 0;
         let cogs = 0;
@@ -236,14 +237,21 @@ export default function SalesReportPage() {
         salesInDateRange.forEach(sale => {
             const parentProductId = sale.productId;
             if (!parentProductId) return;
-
+            
+            const productDetails = productMap.get(parentProductId);
+            
             // Initialize parent product in map if not present
             if (!profitabilityMap.has(parentProductId)) {
+                // Use productDetails as the source of truth if available
+                const initialName = productDetails?.name || sale.productName;
+                const initialCategory = productDetails?.category || 'Uncategorized';
+                const initialSku = productDetails?.sku;
+
                 profitabilityMap.set(parentProductId, {
                     productId: parentProductId,
-                    name: sale.productName,
-                    sku: sale.sku, // This will be the parent SKU if it's the first sale item, or a variant SKU. We will correct the parent SKU later.
-                    category: sale.productCategory || 'Uncategorized',
+                    name: initialName,
+                    sku: initialSku,
+                    category: initialCategory,
                     unitsSold: 0,
                     totalRevenue: 0,
                     totalCogs: 0,
@@ -292,24 +300,6 @@ export default function SalesReportPage() {
             }
         });
 
-        // Correct parent SKU for products with variants
-        profitabilityMap.forEach(product => {
-            if (product.variants && product.variants.length > 0) {
-                 const firstSale = salesInDateRange.find(s => s.productId === product.productId);
-                 if (firstSale) {
-                     product.name = firstSale.productName; // Ensure parent name is correct
-                 }
-                 // The SKU on the parent level was likely a variant SKU, let's find the true parent SKU
-                 const parentSaleEntry = salesInDateRange.find(s => s.productId === product.productId && !s.variantId);
-                 if(parentSaleEntry) {
-                    product.sku = parentSaleEntry.sku;
-                 } else {
-                    // if no parent sale entry, find first variant and try to deduce parent sku if needed.
-                    // For now, we assume the initial product name and category are sufficient.
-                 }
-            }
-        })
-
 
         // Sort variants inside each product
         profitabilityMap.forEach(p => {
@@ -331,7 +321,7 @@ export default function SalesReportPage() {
             productProfitability: Array.from(profitabilityMap.values()).sort((a,b) => b.unitsSold - a.unitsSold),
         };
 
-    }, [allSales, dateRange]);
+    }, [allSales, items, dateRange]);
 
 
     const pieChartConfig = useMemo(() => {
