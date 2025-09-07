@@ -770,6 +770,7 @@ export async function fetchAllSales(): Promise<Sale[]> {
         SELECT 
             s.id, s.transactionId, s.paymentMethod, s.resellerName, s.productId, s.variantId, s.channel, s.quantity, s.priceAtSale, s.cogsAtSale, s.saleDate,
             p.name as productName,
+            p.category as productCategory,
             v.name as variantName,
             COALESCE(v.sku, p.sku) as sku
         FROM sales s
@@ -1114,6 +1115,7 @@ export async function deleteProductPermanently(itemId: string) {
     // ON DELETE CASCADE will handle variants, history, and channel_prices
     db.prepare('DELETE FROM products WHERE id = ?').run(itemId);
 }
+
 
 
 
