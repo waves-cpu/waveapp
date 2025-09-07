@@ -88,7 +88,7 @@ function FinancialReportSkeleton() {
 function AllProductsDialog({
     open,
     onOpenChange,
-    allProducts,
+    allProducts: initialAllProducts,
     categories,
     initialDateRange,
 } : {
@@ -100,9 +100,10 @@ function AllProductsDialog({
 }) {
     const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
+    const [dateRange, setDateRange] = useState<DateRange | undefined>(initialDateRange);
 
     const filteredData = useMemo(() => {
-        return allProducts
+        return initialAllProducts
             .filter(p => !categoryFilter || p.category === categoryFilter)
             .filter(p => {
                 if (!searchTerm) return true;
@@ -116,7 +117,7 @@ function AllProductsDialog({
             })
             .sort((a,b) => b.unitsSold - a.unitsSold);
 
-    }, [allProducts, categoryFilter, searchTerm]);
+    }, [initialAllProducts, categoryFilter, searchTerm]);
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
@@ -191,7 +192,7 @@ function AllProductsDialog({
                     </ScrollArea>
                 </div>
                  <DialogFooter className="border-t pt-4">
-                    <p className="text-sm text-muted-foreground">Menampilkan {filteredData.length} dari {allProducts.length} produk.</p>
+                    <p className="text-sm text-muted-foreground">Menampilkan {filteredData.length} dari {initialAllProducts.length} produk.</p>
                 </DialogFooter>
             </DialogContent>
         </Dialog>
@@ -242,32 +243,17 @@ export default function SalesReportPage() {
 
             // Initialize parent product in map if not present
             if (!profitabilityMap.has(parentProductId)) {
-                 if (!productDetails) {
-                    // Fallback for sales of deleted/archived products
-                     profitabilityMap.set(parentProductId, {
-                        productId: parentProductId,
-                        name: sale.productName,
-                        sku: sale.parentSku,
-                        category: sale.productCategory || 'Uncategorized',
-                        unitsSold: 0,
-                        totalRevenue: 0,
-                        totalCogs: 0,
-                        grossProfit: 0,
-                        variants: [],
-                    });
-                } else {
-                    profitabilityMap.set(parentProductId, {
-                        productId: parentProductId,
-                        name: productDetails.name,
-                        sku: productDetails.sku,
-                        category: productDetails.category,
-                        unitsSold: 0,
-                        totalRevenue: 0,
-                        totalCogs: 0,
-                        grossProfit: 0,
-                        variants: [],
-                    });
-                }
+                 profitabilityMap.set(parentProductId, {
+                    productId: parentProductId,
+                    name: productDetails?.name || sale.productName,
+                    sku: productDetails?.sku || sale.parentSku,
+                    category: productDetails?.category || 'Uncategorized',
+                    unitsSold: 0,
+                    totalRevenue: 0,
+                    totalCogs: 0,
+                    grossProfit: 0,
+                    variants: [],
+                });
             }
             
             const saleRevenue = sale.priceAtSale * sale.quantity;
@@ -530,3 +516,4 @@ export default function SalesReportPage() {
         </AppLayout>
     );
 }
+
