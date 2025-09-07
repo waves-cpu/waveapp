@@ -218,6 +218,9 @@ export default function SalesReportPage() {
         productProfitability,
         totalUnitsSold
     } = useMemo(() => {
+        const productMap = new Map<string, InventoryItem>();
+        items.forEach(item => productMap.set(item.id, item));
+
         const salesInDateRange = allSales.filter(sale => {
             if (!dateRange || !dateRange.from) return true;
             const saleDate = parseISO(sale.saleDate);
@@ -225,9 +228,6 @@ export default function SalesReportPage() {
             return isWithinInterval(saleDate, { start: startOfDay(dateRange.from), end: endOfDay(toDate) });
         });
 
-        const productMap = new Map<string, InventoryItem>();
-        items.forEach(item => productMap.set(item.id, item));
-        
         let revenue = 0;
         let cogs = 0;
         let units = 0;
@@ -237,21 +237,16 @@ export default function SalesReportPage() {
         salesInDateRange.forEach(sale => {
             const parentProductId = sale.productId;
             if (!parentProductId) return;
-            
+
             const productDetails = productMap.get(parentProductId);
-            
+
             // Initialize parent product in map if not present
             if (!profitabilityMap.has(parentProductId)) {
-                // Use productDetails as the source of truth if available
-                const initialName = productDetails?.name || sale.productName;
-                const initialCategory = productDetails?.category || 'Uncategorized';
-                const initialSku = productDetails?.sku;
-
                 profitabilityMap.set(parentProductId, {
                     productId: parentProductId,
-                    name: initialName,
-                    sku: initialSku,
-                    category: initialCategory,
+                    name: productDetails?.name || sale.productName,
+                    sku: productDetails?.sku,
+                    category: productDetails?.category || 'Uncategorized',
                     unitsSold: 0,
                     totalRevenue: 0,
                     totalCogs: 0,
