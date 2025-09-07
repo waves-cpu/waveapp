@@ -233,9 +233,9 @@ export default function AssetReportPage() {
                 { name: TAsset.slowLabel, value: variantSlowValue, fill: 'var(--color-slow)' },
                 { name: TAsset.nonMovingLabel, value: variantNonMovingValue, fill: 'var(--color-nonMoving)' }
             ].filter(d => d.value > 0),
-            fastMovingProducts: fast.sort((a,b) => b.salesCount - a.salesCount).slice(0, 10),
-            slowMovingProducts: slow.sort((a,b) => b.salesCount - a.salesCount).slice(0, 10),
-            nonMovingProducts: non.sort((a,b) => b.stockValue - a.stockValue).slice(0, 10),
+            fastMovingProducts: fast.sort((a,b) => b.salesCount - a.salesCount).slice(0, 20),
+            slowMovingProducts: slow.sort((a,b) => b.salesCount - a.salesCount).slice(0, 20),
+            nonMovingProducts: non.sort((a,b) => b.stockValue - a.stockValue).slice(0, 20),
         };
     }, [items, allSales, selectedMonth, selectedYear, TAsset.fastLabel, TAsset.slowLabel, TAsset.nonMovingLabel]);
 
