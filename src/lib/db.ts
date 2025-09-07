@@ -135,6 +135,21 @@ const runMigrations = () => {
         console.log('Adding category column to accessories table...');
         db.exec('ALTER TABLE accessories ADD COLUMN category TEXT');
     }
+    
+    // Backfill parentSku for existing sales
+    const salesColumnsForBackfill = db.pragma('table_info(sales)');
+    if (salesColumnsForBackfill.some((col: any) => col.name === 'parentSku')) {
+        console.log('Backfilling parentSku for existing sales records...');
+        const stmt = db.prepare(`
+            UPDATE sales
+            SET parentSku = (SELECT sku FROM products WHERE products.id = sales.productId)
+            WHERE parentSku IS NULL AND productId IS NOT NULL
+        `);
+        const info = stmt.run();
+        if (info.changes > 0) {
+            console.log(`Backfill complete. ${info.changes} rows updated.`);
+        }
+    }
 
 
   } catch (error) {
@@ -319,6 +334,7 @@ const seedData = () => {
 seedData();
 
 export { db };
+
 
 
 
