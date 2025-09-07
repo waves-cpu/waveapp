@@ -272,11 +272,12 @@ export default function SalesReportPage() {
 
             // Initialize parent product in map if not present
             if (!profitabilityMap.has(parentProductId)) {
+                if (!productDetails) return; // Skip sale if product details not found
                 profitabilityMap.set(parentProductId, {
                     productId: parentProductId,
-                    name: sale.productName,
-                    sku: productDetails?.sku,
-                    category: productDetails?.category || 'Uncategorized',
+                    name: productDetails.name,
+                    sku: productDetails.sku,
+                    category: productDetails.category || 'Uncategorized',
                     unitsSold: 0,
                     totalRevenue: 0,
                     totalCogs: 0,
@@ -543,6 +544,3 @@ export default function SalesReportPage() {
         </AppLayout>
     );
 }
-
-
-
