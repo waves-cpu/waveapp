@@ -88,27 +88,21 @@ function FinancialReportSkeleton() {
 function AllProductsDialog({
     open,
     onOpenChange,
-    allProducts: initialAllProducts,
+    allSales,
     categories,
     initialDateRange,
-    allSales,
 } : {
     open: boolean;
     onOpenChange: (open: boolean) => void;
-    allProducts: ProfitabilityData[];
+    allSales: Sale[];
     categories: string[];
     initialDateRange: DateRange | undefined;
-    allSales: Sale[];
 }) {
     const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [dateRange, setDateRange] = useState<DateRange | undefined>(initialDateRange);
-    const { items } = useInventory();
 
     const productProfitability = useMemo(() => {
-        const productMap = new Map<string, InventoryItem>();
-        items.forEach(item => productMap.set(item.id, item));
-
         const salesInDateRange = allSales.filter(sale => {
             if (!dateRange || !dateRange.from) return true;
             const saleDate = parseISO(sale.saleDate);
@@ -122,14 +116,12 @@ function AllProductsDialog({
             const parentProductId = sale.productId;
             if (!parentProductId) return;
 
-            const productDetails = productMap.get(parentProductId);
-            
             if (!profitabilityMap.has(parentProductId)) {
                  profitabilityMap.set(parentProductId, {
                     productId: parentProductId,
-                    name: productDetails?.name || sale.productName,
-                    sku: productDetails?.sku || sale.parentSku,
-                    category: productDetails?.category || 'Uncategorized',
+                    name: sale.productName,
+                    sku: sale.parentSku,
+                    category: sale.productCategory,
                     unitsSold: 0,
                     totalRevenue: 0,
                     totalCogs: 0,
@@ -147,7 +139,6 @@ function AllProductsDialog({
             productProfit.totalCogs += saleCogs;
             productProfit.grossProfit += (saleRevenue - saleCogs);
             
-            // Handle variant-level profitability
             if (sale.variantId) {
                 if (!productProfit.variants) {
                     productProfit.variants = [];
@@ -172,8 +163,6 @@ function AllProductsDialog({
             }
         });
 
-
-        // Sort variants inside each product
         profitabilityMap.forEach(p => {
             if (p.variants) {
                 p.variants.sort((a,b) => b.unitsSold - a.unitsSold);
@@ -181,7 +170,7 @@ function AllProductsDialog({
         });
 
         return Array.from(profitabilityMap.values()).sort((a,b) => b.unitsSold - a.unitsSold);
-    }, [allSales, dateRange, items]);
+    }, [allSales, dateRange]);
 
 
     const filteredData = useMemo(() => {
@@ -328,90 +317,12 @@ export default function SalesReportPage() {
     });
     const [isTopProductsDialogOpen, setIsTopProductsDialogOpen] = useState(false);
 
-    const productProfitability = useMemo(() => {
-        const productMap = new Map<string, InventoryItem>();
-        items.forEach(item => productMap.set(item.id, item));
-
-        const salesInDateRange = allSales.filter(sale => {
-            if (!dateRange || !dateRange.from) return true;
-            const saleDate = parseISO(sale.saleDate);
-            const toDate = dateRange.to || dateRange.from;
-            return isWithinInterval(saleDate, { start: startOfDay(dateRange.from), end: endOfDay(toDate) });
-        });
-
-        const profitabilityMap = new Map<string, ProfitabilityData>();
-
-        salesInDateRange.forEach(sale => {
-            const parentProductId = sale.productId;
-            if (!parentProductId) return;
-
-            const productDetails = productMap.get(parentProductId);
-            
-            if (!profitabilityMap.has(parentProductId)) {
-                 profitabilityMap.set(parentProductId, {
-                    productId: parentProductId,
-                    name: productDetails?.name || sale.productName,
-                    sku: productDetails?.sku || sale.parentSku,
-                    category: productDetails?.category || 'Uncategorized',
-                    unitsSold: 0,
-                    totalRevenue: 0,
-                    totalCogs: 0,
-                    grossProfit: 0,
-                    variants: [],
-                });
-            }
-            
-            const saleRevenue = sale.priceAtSale * sale.quantity;
-            const saleCogs = (sale.cogsAtSale || 0) * sale.quantity;
-            
-            const productProfit = profitabilityMap.get(parentProductId)!;
-            productProfit.unitsSold += sale.quantity;
-            productProfit.totalRevenue += saleRevenue;
-            productProfit.totalCogs += saleCogs;
-            productProfit.grossProfit += (saleRevenue - saleCogs);
-            
-            // Handle variant-level profitability
-            if (sale.variantId) {
-                if (!productProfit.variants) {
-                    productProfit.variants = [];
-                }
-                let variantProfit = productProfit.variants.find(v => v.variantId === sale.variantId);
-                if (!variantProfit) {
-                    variantProfit = {
-                        variantId: sale.variantId,
-                        name: sale.variantName || 'Unknown Variant',
-                        sku: sale.sku,
-                        unitsSold: 0,
-                        totalRevenue: 0,
-                        totalCogs: 0,
-                        grossProfit: 0,
-                    };
-                    productProfit.variants.push(variantProfit);
-                }
-                variantProfit.unitsSold += sale.quantity;
-                variantProfit.totalRevenue += saleRevenue;
-                variantProfit.totalCogs += saleCogs;
-                variantProfit.grossProfit += (saleRevenue - saleCogs);
-            }
-        });
-
-
-        // Sort variants inside each product
-        profitabilityMap.forEach(p => {
-            if (p.variants) {
-                p.variants.sort((a,b) => b.unitsSold - a.unitsSold);
-            }
-        });
-
-        return Array.from(profitabilityMap.values()).sort((a,b) => b.unitsSold - a.unitsSold);
-    }, [allSales, dateRange, items]);
-
-
     const { 
         totalRevenue,
         totalCogs,
         grossProfit,
         salesByChannel,
+        productProfitability,
         totalUnitsSold
     } = useMemo(() => {
         const salesInDateRange = allSales.filter(sale => {
@@ -425,8 +336,12 @@ export default function SalesReportPage() {
         let cogs = 0;
         let units = 0;
         const channelSales: { [key: string]: number } = {};
-        
+        const profitabilityMap = new Map<string, ProfitabilityData>();
+
         salesInDateRange.forEach(sale => {
+            const parentProductId = sale.productId;
+             if (!parentProductId) return;
+            
             const saleRevenue = sale.priceAtSale * sale.quantity;
             const saleCogs = (sale.cogsAtSale || 0) * sale.quantity;
             
@@ -435,6 +350,25 @@ export default function SalesReportPage() {
             units += sale.quantity;
 
             channelSales[sale.channel] = (channelSales[sale.channel] || 0) + saleRevenue;
+
+            if (!profitabilityMap.has(parentProductId)) {
+                profitabilityMap.set(parentProductId, {
+                    productId: parentProductId,
+                    name: sale.productName,
+                    sku: sale.parentSku,
+                    category: sale.productCategory,
+                    unitsSold: 0,
+                    totalRevenue: 0,
+                    totalCogs: 0,
+                    grossProfit: 0,
+                });
+            }
+
+            const current = profitabilityMap.get(parentProductId)!;
+            current.unitsSold += sale.quantity;
+            current.totalRevenue += saleRevenue;
+            current.totalCogs += saleCogs;
+            current.grossProfit += (saleRevenue - saleCogs);
         });
 
         return {
@@ -447,6 +381,7 @@ export default function SalesReportPage() {
                 value, 
                 fill: CHANNEL_COLORS[name] || CHANNEL_COLORS.default 
             })).sort((a,b) => b.value - a.value),
+            productProfitability: Array.from(profitabilityMap.values()).sort((a,b) => b.unitsSold - a.unitsSold),
         };
 
     }, [allSales, dateRange]);
@@ -641,14 +576,14 @@ export default function SalesReportPage() {
              <AllProductsDialog
                 open={isTopProductsDialogOpen}
                 onOpenChange={setIsTopProductsDialogOpen}
-                allProducts={productProfitability}
+                allSales={allSales}
                 categories={categories}
                 initialDateRange={dateRange}
-                allSales={allSales}
             />
         </AppLayout>
     );
 }
+
 
 
 
