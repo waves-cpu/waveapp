@@ -2,12 +2,12 @@
 
 'use client';
 
+import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { AppLayout } from "@/app/components/app-layout";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { useLanguage } from "@/hooks/use-language";
 import { translations } from "@/types/language";
 import { useInventory } from "@/hooks/use-inventory";
-import React, { useMemo, useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DollarSign, Package, TrendingUp, ShoppingCart, Activity, Eye, Search, Store } from "lucide-react";
@@ -130,7 +130,7 @@ function AllProductsDialog({
                  profitabilityMap.set(parentProductId, {
                     productId: parentProductId,
                     name: productDetails?.name || sale.productName,
-                    sku: sale.parentSku || productDetails?.sku || sale.sku,
+                    sku: productDetails?.sku || sale.parentSku,
                     category: productDetails?.category || sale.productCategory,
                     unitsSold: 0,
                     totalRevenue: 0,
@@ -273,9 +273,9 @@ function AllProductsDialog({
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {filteredData.map((p, productIndex) => (
+                                {filteredData.map((p) => (
                                 <React.Fragment key={`fragment-${p.productId}`}>
-                                    <TableRow>
+                                    <TableRow noBorder>
                                         <TableCell className="py-2">
                                             <div>
                                                 <div className="font-medium text-sm">{p.name}</div>
@@ -292,7 +292,7 @@ function AllProductsDialog({
                                         const lowerSearch = searchTerm.toLowerCase();
                                         return v.name.toLowerCase().includes(lowerSearch) || (v.sku && v.sku.toLowerCase().includes(lowerSearch));
                                     }).map((v, variantIndex, variantsArray) => (
-                                         <TableRow key={`variant-${v.variantId}`}>
+                                         <TableRow key={`variant-${v.variantId}`} noBorder className={cn(variantIndex === variantsArray.length - 1 && "border-b")}>
                                             <TableCell className="py-2">
                                                 <div className="flex items-center gap-4">
                                                     <div className="flex h-10 w-10 items-center justify-center rounded-sm">
@@ -310,12 +310,7 @@ function AllProductsDialog({
                                             <TableCell className="text-left font-semibold text-xs py-2">{formatCurrency(v.grossProfit)}</TableCell>
                                         </TableRow>
                                     ))}
-                                    {p.variants && p.variants.length > 0 && (
-                                        <TableRow>
-                                            <TableCell colSpan={5} className="p-0 h-px"><div className="border-b"></div></TableCell>
-                                        </TableRow>
-                                    )}
-                                    {!p.variants && <TableRow><TableCell colSpan={5} className="p-0 h-px"><div className="border-b"></div></TableCell></TableRow>}
+                                    {(!p.variants || p.variants.length === 0) && <TableRow noBorder className="border-b"><TableCell colSpan={5} className="p-0 h-0"></TableCell></TableRow>}
                                 </React.Fragment>
                                 ))}
                             </TableBody>
