@@ -258,14 +258,9 @@ export async function fetchInventoryData() {
 
     const channelPriceMap = new Map<string, ChannelPrice[]>();
     for (const cp of fetchedChannelPrices) {
-        let key: string;
-        if (cp.variant_id) {
-            key = cp.variant_id.toString();
-        } else if (cp.product_id) {
-            key = cp.product_id.toString();
-        } else {
-            continue;
-        }
+        // Use variant_id as the primary key if it exists, otherwise use product_id.
+        // This correctly associates channel prices with either a variant or a simple product.
+        const key = cp.variant_id ? cp.variant_id.toString() : cp.product_id.toString();
 
         if (!channelPriceMap.has(key)) {
             channelPriceMap.set(key, []);
@@ -921,13 +916,12 @@ export async function updatePrices(updates: { id: string, type: 'product' | 'var
         INSERT INTO history (productId, variantId, change, reason, newStockLevel, date)
         VALUES (@productId, @variantId, @change, @reason, @newStockLevel, @date)
     `);
-    const upsertChannelPriceStmt = db.prepare(`
+    const insertChannelPriceStmt = db.prepare(`
         INSERT INTO channel_prices (product_id, variant_id, channel, price)
         VALUES (@productId, @variantId, @channel, @price)
-        ON CONFLICT(product_id, variant_id, channel) DO UPDATE SET price = excluded.price
     `);
-     const deleteChannelPriceStmtProduct = db.prepare('DELETE FROM channel_prices WHERE product_id = @id AND channel = @channel');
-    const deleteChannelPriceStmtVariant = db.prepare('DELETE FROM channel_prices WHERE variant_id = @id AND channel = @channel');
+    const deleteChannelPricesByProduct = db.prepare('DELETE FROM channel_prices WHERE product_id = ?');
+    const deleteChannelPricesByVariant = db.prepare('DELETE FROM channel_prices WHERE variant_id = ?');
     
     const getProductStmt = db.prepare('SELECT * FROM products WHERE id = ?');
     const getVariantStmt = db.prepare('SELECT * FROM variants WHERE id = ?');
@@ -966,24 +960,23 @@ export async function updatePrices(updates: { id: string, type: 'product' | 'var
                 });
             }
 
-            // Handle channel prices
+            // Handle channel prices using a delete-then-insert strategy
+            const { id, type } = update;
+            if (type === 'product') {
+                deleteChannelPricesByProduct.run(id);
+            } else {
+                deleteChannelPricesByVariant.run(id);
+            }
+            
             update.channelPrices?.forEach(channelPrice => {
-                const params = {
-                    productId: update.type === 'product' ? update.id : null,
-                    variantId: update.type === 'variant' ? update.id : null,
-                    channel: channelPrice.channel,
-                };
-                
                 const priceIsValid = channelPrice.price !== undefined && channelPrice.price !== null && channelPrice.price >= 0;
-
                 if (priceIsValid) {
-                    upsertChannelPriceStmt.run({ ...params, price: channelPrice.price });
-                } else {
-                    if (update.type === 'product') {
-                        deleteChannelPriceStmtProduct.run({ id: update.id, channel: channelPrice.channel });
-                    } else {
-                        deleteChannelPriceStmtVariant.run({ id: update.id, channel: channelPrice.channel });
-                    }
+                    insertChannelPriceStmt.run({
+                        productId: type === 'product' ? id : null,
+                        variantId: type === 'variant' ? id : null,
+                        channel: channelPrice.channel,
+                        price: channelPrice.price
+                    });
                 }
             });
         });
@@ -1118,6 +1111,7 @@ export async function deleteProductPermanently(itemId: string) {
     // ON DELETE CASCADE will handle variants, history, and channel_prices
     db.prepare('DELETE FROM products WHERE id = ?').run(itemId);
 }
+
 
 
 
