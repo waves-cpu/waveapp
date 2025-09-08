@@ -296,6 +296,28 @@ export const translations = {
             title: "Select Variant",
             description: "This product has multiple variants. Please select one to continue the sale."
         },
+        invoice: {
+            settingsTitle: "Invoice Settings",
+            shopInfoTitle: "Shop Information",
+            shopInfoDesc: "This information will be displayed on the invoice header.",
+            shopNameLabel: "Shop Name",
+            shopNamePlaceholder: "Your Shop Name",
+            addressLabel: "Address",
+            addressPlaceholder: "Shop address",
+            phoneLabel: "Phone Number",
+            phonePlaceholder: "Shop phone number",
+            paymentInfoTitle: "Payment Information",
+            paymentInfoDesc: "This will be displayed for payment instructions.",
+            bankNameLabel: "Bank Name",
+            bankNamePlaceholder: "e.g. Bank Central Asia (BCA)",
+            accountNumberLabel: "Account Number",
+            accountNumberPlaceholder: "e.g. 1234567890",
+            accountHolderLabel: "Account Holder Name",
+            accountHolderPlaceholder: "e.g. Your Shop Name",
+            termsTitle: "Terms & Conditions",
+            termsLabel: "Terms",
+            termsPlaceholder: "e.g. Payment due within 7 days...",
+        },
         pos: {
             title: "Point of Sale",
             searchPlaceholder: "Scan SKU or search product name...",
@@ -476,6 +498,8 @@ export const translations = {
             apply: "Apply",
             saving: 'Saving...',
             update: "Update",
+            back: "Back",
+            loading: "Loading"
         }
     },
     id: {
@@ -514,7 +538,7 @@ export const translations = {
                 selectAll: "Pilih semua",
                 select: "Pilih",
                 table: {
-                    awb: "No. Resi (AWB)",
+                    awb: "No. Resi",
                     date: "Tanggal",
                     channel: "Kanal",
                     status: "Status",
@@ -548,7 +572,7 @@ export const translations = {
             returnPage: {
                 title: "Kelola Return & Resi Batal",
                 table: {
-                    awb: "No. Resi (AWB)",
+                    awb: "No. Resi",
                     date: "Tanggal",
                     channel: "Kanal",
                     status: "Status",
@@ -571,7 +595,7 @@ export const translations = {
                 processReturn: "Proses Return",
                 selectReturnedItem: "Pilih produk yang dikembalikan untuk ditambahkan ke stok.",
                 stockReturnedSuccess: "Stok Dikembalikan",
-                stockReturnedSuccessDesc: "1 item {name} telah ditambahkan kembali ke stok.",
+                stockReturnedSuccessDesc: "{count} jenis produk telah dikembalikan ke stok.",
                 stockReturnedError: "Gagal mengembalikan stok.",
                 deleteConfirmTitle: "Hapus Data Return Ini?",
                 deleteConfirmDesc: "Anda yakin ingin menghapus catatan return untuk {awb}? Tindakan ini tidak bisa dibatalkan.",
@@ -774,6 +798,28 @@ export const translations = {
             title: "Pilih Varian",
             description: "Produk ini memiliki beberapa varian. Silakan pilih salah satu untuk melanjutkan penjualan."
         },
+        invoice: {
+            settingsTitle: "Pengaturan Faktur",
+            shopInfoTitle: "Informasi Toko",
+            shopInfoDesc: "Informasi ini akan ditampilkan di kepala faktur.",
+            shopNameLabel: "Nama Toko",
+            shopNamePlaceholder: "Nama Toko Anda",
+            addressLabel: "Alamat",
+            addressPlaceholder: "Alamat toko",
+            phoneLabel: "Nomor Telepon",
+            phonePlaceholder: "Nomor telepon toko",
+            paymentInfoTitle: "Informasi Pembayaran",
+            paymentInfoDesc: "Informasi ini akan ditampilkan untuk instruksi pembayaran.",
+            bankNameLabel: "Nama Bank",
+            bankNamePlaceholder: "cth. Bank Central Asia (BCA)",
+            accountNumberLabel: "Nomor Rekening",
+            accountNumberPlaceholder: "cth. 1234567890",
+            accountHolderLabel: "Nama Pemilik Rekening",
+            accountHolderPlaceholder: "cth. Nama Toko Anda",
+            termsTitle: "Syarat & Ketentuan",
+            termsLabel: "Syarat & Ketentuan",
+            termsPlaceholder: "cth. Pembayaran jatuh tempo dalam 7 hari...",
+        },
         pos: {
             title: "Point of Sale",
             searchPlaceholder: "Pindai SKU atau cari nama produk...",
@@ -954,6 +1000,8 @@ export const translations = {
             apply: "Terapkan",
             saving: 'Menyimpan...',
             update: "Perbarui",
+            back: "Kembali",
+            loading: "Memuat"
         }
     }
 }

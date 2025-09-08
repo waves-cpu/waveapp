@@ -3,7 +3,7 @@
 
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { useInventory } from '@/hooks/use-inventory';
-import type { Sale } from '@/types';
+import type { Sale, Reseller } from '@/types';
 import { AppLayout } from '@/app/components/app-layout';
 import { useLanguage } from '@/hooks/use-language';
 import { translations } from '@/types/language';
@@ -26,13 +26,13 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
 import { History as HistoryIcon } from 'lucide-react';
 import { DailySalesDetailDialog } from '@/app/components/daily-sales-detail-dialog';
-import { PosReceipt, type ReceiptData } from '@/app/components/pos-receipt';
+import { ResellerInvoice, type InvoiceData } from '@/app/components/reseller-invoice';
+import { useInvoicePDF } from '@/hooks/use-invoice-pdf';
 
 
 type GroupedSale = {
@@ -43,19 +43,21 @@ type GroupedSale = {
     totalItems: number;
     paymentMethod?: string;
     resellerName?: string;
+    reseller?: Reseller;
 }
 
 export default function ResellerHistoryPage() {
-    const { allSales, fetchItems, cancelSaleTransaction, loading } = useInventory();
+    const { allSales, fetchItems, cancelSaleTransaction, loading, resellers } = useInventory();
     const { language } = useLanguage();
     const { toast } = useToast();
     const t = translations[language];
     const TReseller = t.reseller;
+    const { generatePDF } = useInvoicePDF();
 
     const [date, setDate] = useState<Date | undefined>(new Date());
     const [selectedSaleItems, setSelectedSaleItems] = useState<Sale[]>([]);
     const [isDetailOpen, setIsDetailOpen] = useState(false);
-    const [receiptToPrint, setReceiptToPrint] = useState<ReceiptData | null>(null);
+    const [invoiceForPreview, setInvoiceForPreview] = useState<InvoiceData | null>(null);
 
     useEffect(() => {
         fetchItems();
@@ -83,6 +85,7 @@ export default function ResellerHistoryPage() {
                     saleDate: sale.saleDate,
                     paymentMethod: sale.paymentMethod,
                     resellerName: sale.resellerName,
+                    reseller: resellers.find(r => r.name === sale.resellerName),
                     items: [],
                     totalAmount: 0,
                     totalItems: 0,
@@ -96,7 +99,7 @@ export default function ResellerHistoryPage() {
         });
 
         return Array.from(groups.values()).sort((a,b) => new Date(b.saleDate).getTime() - new Date(a.saleDate).getTime());
-    }, [posSales]);
+    }, [posSales, resellers]);
 
     const handleCancelTransaction = useCallback(async (transactionId: string) => {
         try {
@@ -120,36 +123,29 @@ export default function ResellerHistoryPage() {
         setIsDetailOpen(true);
     };
 
-    const triggerPrint = (group: GroupedSale) => {
-        const receiptData: ReceiptData = {
+    const handlePrintInvoice = (group: GroupedSale) => {
+        if (!group.reseller) return;
+
+        const invoiceData: InvoiceData = {
             items: group.items.map(item => ({
                 ...item,
-                productId: item.productId,
+                productId: item.productId!,
                 productName: item.productName,
                 quantity: item.quantity,
                 price: item.priceAtSale,
-                stock: 0, // Not relevant for receipt
-                id: item.variantId || item.productId,
+                stock: 0, // Not relevant for invoice
+                id: item.variantId || item.productId!,
             })),
             subtotal: group.totalAmount,
             discount: 0, // Assuming no discount data is stored for reprint
             total: group.totalAmount,
-            paymentMethod: group.paymentMethod || 'N/A',
-            cashReceived: group.totalAmount, // For non-cash, cash received equals total
-            change: 0,
             transactionId: group.transactionId,
+            reseller: group.reseller
         };
         
-        setReceiptToPrint(receiptData);
+        setInvoiceForPreview(invoiceData); // Set for preview
+        generatePDF(invoiceData); // Trigger PDF download
     };
-
-    useEffect(() => {
-        if (receiptToPrint) {
-            window.print();
-            setReceiptToPrint(null);
-        }
-    }, [receiptToPrint]);
-
 
     return (
         <>
@@ -228,7 +224,7 @@ export default function ResellerHistoryPage() {
                                                 {group.totalAmount.toLocaleString('id-ID', { style: 'currency', currency: 'IDR' })}
                                             </TableCell>
                                             <TableCell className="text-center">
-                                                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => triggerPrint(group)}>
+                                                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handlePrintInvoice(group)}>
                                                     <Printer className="h-4 w-4" />
                                                 </Button>
                                                 <AlertDialog>
@@ -279,8 +275,8 @@ export default function ResellerHistoryPage() {
                 description={`Detail item untuk transaksi #${selectedSaleItems[0]?.transactionId?.slice(-6) ?? 'N/A'}`}
             />
         </AppLayout>
-        <div className="print-only">
-            {receiptToPrint && <PosReceipt receipt={receiptToPrint} />}
+        <div className="hidden">
+            {invoiceForPreview && <ResellerInvoice invoice={invoiceForPreview} />}
         </div>
         </>
     );

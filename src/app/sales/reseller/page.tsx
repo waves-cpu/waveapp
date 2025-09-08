@@ -29,13 +29,13 @@ export default function ResellerPage() {
   return (
     <AppLayout>
       <div className="h-screen flex flex-col">
-         <header className="flex items-center justify-between p-4 border-b shrink-0">
+         <header className="flex items-center justify-between p-4 border-b shrink-0 no-print">
             <div className="flex items-center gap-4">
                 <SidebarTrigger className="md:hidden" />
                 <h1 className="text-lg font-bold">{t.sales.reseller}</h1>
             </div>
             <div className="flex items-center gap-2">
-                 <Link href="/sales/settings">
+                 <Link href="/sales/invoice-settings">
                     <Button variant="outline" size="icon">
                         <Settings className="h-4 w-4" />
                     </Button>

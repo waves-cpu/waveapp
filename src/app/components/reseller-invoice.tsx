@@ -7,7 +7,7 @@ import { translations } from '@/types/language';
 import type { CartItem } from './pos-cart';
 import type { Reseller } from '@/types';
 import { format } from 'date-fns';
-import { useReceiptSettings } from '@/hooks/use-receipt-settings';
+import { useInvoiceSettings } from '@/hooks/use-invoice-settings';
 import { Logo } from './logo';
 import { Table, TableBody, TableCell, TableHeader, TableRow, TableHead, TableFooter } from '@/components/ui/table';
 
@@ -35,7 +35,7 @@ const formatCurrency = (amount: number) => {
 
 export const ResellerInvoice = React.forwardRef<HTMLDivElement, ResellerInvoiceProps>((props, ref) => {
     const { invoice } = props;
-    const { settings } = useReceiptSettings();
+    const { settings } = useInvoiceSettings();
     const [displayDate, setDisplayDate] = React.useState('');
 
     React.useEffect(() => {
@@ -44,7 +44,7 @@ export const ResellerInvoice = React.forwardRef<HTMLDivElement, ResellerInvoiceP
     }, []);
 
     return (
-        <div ref={ref} className="bg-white text-black p-8 font-sans">
+        <div ref={ref} id={`invoice-${invoice.transactionId}`} className="bg-white text-black p-8 font-sans">
              <style type="text/css" media="print">
                 {`
                   @page { 
@@ -61,19 +61,26 @@ export const ResellerInvoice = React.forwardRef<HTMLDivElement, ResellerInvoiceP
                 <div className="flex items-center gap-4">
                     <Logo />
                 </div>
-                <div className="text-right">
-                    <h1 className="text-2xl font-bold uppercase">Invoice</h1>
-                    <p className="text-sm">No: {invoice.transactionId.slice(-8)}</p>
-                    <p className="text-sm">Tanggal: {displayDate}</p>
+                 <div className="text-right">
+                    <h1 className="text-3xl font-bold uppercase tracking-wider">Invoice</h1>
+                    <p className="text-sm mt-1">{settings.shopName}</p>
+                    <p className="text-xs text-gray-600">{settings.address}</p>
+                    <p className="text-xs text-gray-600">{settings.phone}</p>
                 </div>
             </header>
 
-            <section className="my-6 grid grid-cols-1 gap-8">
+            <section className="my-8 grid grid-cols-2 gap-8">
                 <div>
                     <h2 className="text-sm font-semibold uppercase mb-2 text-gray-600">Ditagih Kepada:</h2>
                     <p className="font-bold text-base">{invoice.reseller.name}</p>
                     <p className="text-sm">{invoice.reseller.address}</p>
                     <p className="text-sm">{invoice.reseller.phone}</p>
+                </div>
+                 <div className="text-right">
+                    <h2 className="text-sm font-semibold uppercase mb-2 text-gray-600">No. Invoice</h2>
+                    <p className="text-base">INV-{invoice.transactionId.slice(-8)}</p>
+                    <h2 className="text-sm font-semibold uppercase mt-4 mb-2 text-gray-600">Tanggal Invoice</h2>
+                    <p className="text-base">{displayDate}</p>
                 </div>
             </section>
             
@@ -119,17 +126,16 @@ export const ResellerInvoice = React.forwardRef<HTMLDivElement, ResellerInvoiceP
 
              <section className="mt-8">
                 <h3 className="font-semibold mb-2">Keterangan:</h3>
-                <div className="text-xs border p-4 rounded-md">
-                    <p>1. Pembayaran dapat dilakukan melalui transfer ke rekening berikut:</p>
-                    <p className="font-semibold ml-4">BCA - 1234567890 a/n {settings.shopName}</p>
-                    <p>2. Mohon lakukan konfirmasi pembayaran setelah transfer.</p>
-                    <p>3. Faktur ini sah dan diproses dengan komputer.</p>
+                <div className="text-xs border p-4 rounded-md space-y-1">
+                    <p className="font-semibold">Informasi Pembayaran:</p>
+                    <p>{settings.bankName}: <span className="font-bold">{settings.accountNumber}</span> a/n {settings.accountHolder}</p>
+                    <p className="pt-2">{settings.termsAndConditions}</p>
                 </div>
             </section>
 
              <footer className="text-center mt-10 pt-4 border-t">
                 <p className="text-sm font-semibold">Terima kasih atas kerja samanya.</p>
-                <p className="text-xs mt-1">{settings.shopName} - {settings.addressLine1} - {settings.phone}</p>
+                <p className="text-xs mt-1">{settings.shopName}</p>
              </footer>
         </div>
     );

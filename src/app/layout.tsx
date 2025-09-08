@@ -6,6 +6,7 @@ import { ThemeProvider } from './components/theme-provider';
 import { LanguageProvider } from '@/hooks/use-language';
 import { InventoryProvider } from '@/hooks/use-inventory';
 import { ReceiptSettingsProvider } from '@/hooks/use-receipt-settings';
+import { InvoiceSettingsProvider } from '@/hooks/use-invoice-settings';
 
 export const metadata: Metadata = {
   title: 'WaveApp',
@@ -23,6 +24,7 @@ export default function RootLayout({
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link href="https://fonts.googleapis.com/css2?family=Inter&display=swap" rel="stylesheet" />
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js" integrity="sha512-GsLlZN/3F2ErC5ifS5QtgpiJtWd43JWSuIgh7mbzZ8zBps+dvLusV+eBodNovCsvsQA5LTDy7iM4haeF6FcA5g==" crossOrigin="anonymous" referrerPolicy="no-referrer"></script>
       </head>
       <body className="font-body antialiased h-full">
         <ThemeProvider
@@ -34,7 +36,9 @@ export default function RootLayout({
           <LanguageProvider>
             <InventoryProvider>
                 <ReceiptSettingsProvider>
+                  <InvoiceSettingsProvider>
                     {children}
+                  </InvoiceSettingsProvider>
                 </ReceiptSettingsProvider>
             </InventoryProvider>
           </LanguageProvider>
