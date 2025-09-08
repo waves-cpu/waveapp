@@ -87,7 +87,7 @@ export const ResellerInvoice = React.forwardRef<HTMLDivElement, ResellerInvoiceP
             <section>
                 <Table>
                     <TableHeader>
-                        <TableRow className="bg-gray-100">
+                        <TableRow className="border-b-2 border-black">
                             <TableHead className="w-[50%] text-black font-semibold">Deskripsi</TableHead>
                             <TableHead className="text-center text-black font-semibold">Jumlah</TableHead>
                             <TableHead className="text-right text-black font-semibold">Harga Satuan</TableHead>
@@ -97,43 +97,53 @@ export const ResellerInvoice = React.forwardRef<HTMLDivElement, ResellerInvoiceP
                     <TableBody>
                         {invoice.items.map(item => (
                             <TableRow key={item.id} className="border-b">
-                                <TableCell>
+                                <TableCell className="py-3">
                                     <p className="font-medium">{item.productName}</p>
-                                    <p className="text-xs text-gray-600">{item.name} (SKU: {item.sku})</p>
+                                    <p className="text-xs text-gray-600">{item.name} (SKU: {item.sku || 'N/A'})</p>
                                 </TableCell>
-                                <TableCell className="text-center">{item.quantity}</TableCell>
-                                <TableCell className="text-right">{formatCurrency(item.price)}</TableCell>
-                                <TableCell className="text-right">{formatCurrency(item.quantity * item.price)}</TableCell>
+                                <TableCell className="text-center py-3">{item.quantity}</TableCell>
+                                <TableCell className="text-right py-3">{formatCurrency(item.price)}</TableCell>
+                                <TableCell className="text-right py-3">{formatCurrency(item.quantity * item.price)}</TableCell>
                             </TableRow>
                         ))}
                     </TableBody>
-                    <TableFooter>
-                        <TableRow>
-                            <TableCell colSpan={3} className="text-right font-semibold">Subtotal</TableCell>
-                            <TableCell className="text-right">{formatCurrency(invoice.subtotal)}</TableCell>
-                        </TableRow>
-                         <TableRow>
-                            <TableCell colSpan={3} className="text-right font-semibold">Diskon</TableCell>
-                            <TableCell className="text-right text-red-600">{formatCurrency(-invoice.discount)}</TableCell>
-                        </TableRow>
-                         <TableRow className="text-base font-bold bg-gray-100">
-                            <TableCell colSpan={3} className="text-right">Total Tagihan</TableCell>
-                            <TableCell className="text-right">{formatCurrency(invoice.total)}</TableCell>
-                        </TableRow>
-                    </TableFooter>
                 </Table>
-            </section>
-
-             <section className="mt-8">
-                <h3 className="font-semibold mb-2">Keterangan:</h3>
-                <div className="text-xs border p-4 rounded-md space-y-1">
-                    <p className="font-semibold">Informasi Pembayaran:</p>
-                    <p>{settings.bankName}: <span className="font-bold">{settings.accountNumber}</span> a/n {settings.accountHolder}</p>
-                    <p className="pt-2">{settings.termsAndConditions}</p>
+                 <div className="w-full flex justify-end pt-4">
+                    <div className="w-1/2">
+                        <div className="flex justify-between py-1">
+                            <span className="text-sm">Subtotal</span>
+                            <span className="text-sm">{formatCurrency(invoice.subtotal)}</span>
+                        </div>
+                        <div className="flex justify-between py-1">
+                            <span className="text-sm">Diskon</span>
+                            <span className="text-sm text-red-600">{formatCurrency(-invoice.discount)}</span>
+                        </div>
+                         <div className="border-t border-black my-2"></div>
+                        <div className="flex justify-between py-1 font-bold">
+                            <span className="text-base">Total Tagihan</span>
+                            <span className="text-base">{formatCurrency(invoice.total)}</span>
+                        </div>
+                    </div>
                 </div>
             </section>
 
-             <footer className="text-center mt-10 pt-4 border-t">
+             <section className="mt-12">
+                <h3 className="font-semibold mb-2">Keterangan:</h3>
+                <div className="text-xs border p-4 rounded-md space-y-2 bg-gray-50">
+                    <div>
+                        <p className="font-semibold">Informasi Pembayaran:</p>
+                        <p>{settings.bankName}: <span className="font-bold">{settings.accountNumber}</span> a/n {settings.accountHolder}</p>
+                    </div>
+                    {settings.termsAndConditions && (
+                         <div>
+                            <p className="font-semibold">Syarat & Ketentuan:</p>
+                            <p className="whitespace-pre-line">{settings.termsAndConditions}</p>
+                         </div>
+                    )}
+                </div>
+            </section>
+
+             <footer className="text-center mt-12 pt-4 border-t">
                 <p className="text-sm font-semibold">Terima kasih atas kerja samanya.</p>
                 <p className="text-xs mt-1">{settings.shopName}</p>
              </footer>
