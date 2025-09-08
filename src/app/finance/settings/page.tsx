@@ -58,7 +58,8 @@ const formSchema = z.object({
 
 const CHANNELS = ['pos', 'reseller', 'shopee', 'tiktok', 'lazada'];
 const ONLINE_CHANNELS = ['shopee', 'tiktok', 'lazada'];
-const PRICE_FIELDS = ['costPrice', 'price', 'pos', 'reseller', 'online'];
+const PRICE_FIELDS = ['costPrice', 'price', ...CHANNELS];
+
 
 const getOnlinePrice = (item: InventoryItem | InventoryItemVariant) => {
     // Return the first specific online channel price found, otherwise undefined.
@@ -86,7 +87,7 @@ export default function PriceSettingsPage() {
     const [searchTerm, setSearchTerm] = useState('');
 
     // Bulk update state
-    const [bulkUpdateChannel, setBulkUpdateChannel] = useState<'costPrice' | 'price' | 'pos' | 'reseller' | 'online'>('price');
+    const [bulkUpdateChannel, setBulkUpdateChannel] = useState<'costPrice' | 'price' | 'pos' | 'reseller' | 'shopee' | 'tiktok' | 'lazada'>('price');
     const [bulkUpdateValue, setBulkUpdateValue] = useState<string>('');
     const [selectedItemsForBulkUpdate, setSelectedItemsForBulkUpdate] = useState<Set<string>>(new Set());
 
@@ -148,8 +149,6 @@ export default function PriceSettingsPage() {
 
             const { item, type, parent } = allItemsMap.get(id)!;
             
-            const onlinePrice = getOnlinePrice(item);
-
             newItems.push({
                 id: item.id,
                 type: type,
@@ -241,21 +240,13 @@ export default function PriceSettingsPage() {
                         currentChannelPrices = CHANNELS.map(ch => ({ channel: ch, price: undefined }));
                     }
 
-                    const channelsToUpdate = bulkUpdateChannel === 'online' ? ONLINE_CHANNELS : [bulkUpdateChannel];
-                    
                     const newChannelPrices = currentChannelPrices.map(cp => {
-                         if (channelsToUpdate.includes(cp.channel)) {
+                         if (cp.channel === bulkUpdateChannel) {
                             return { ...cp, price: numericValue };
                         }
                         return cp;
                     });
                     
-                    channelsToUpdate.forEach(ch => {
-                        if (!newChannelPrices.some(cp => cp.channel === ch)) {
-                            newChannelPrices.push({ channel: ch, price: numericValue });
-                        }
-                    });
-
                     form.setValue(`items.${index}.channelPrices`, newChannelPrices, { shouldDirty: true });
                 }
             }
@@ -387,7 +378,9 @@ export default function PriceSettingsPage() {
                                                 <SelectItem value="price">{TPrice.defaultPrice}</SelectItem>
                                                 <SelectItem value="pos">{TSales.pos}</SelectItem>
                                                 <SelectItem value="reseller">{TSales.reseller}</SelectItem>
-                                                <SelectItem value="online">{TPrice.onlinePrice}</SelectItem>
+                                                <SelectItem value="shopee">{TSales.shopee}</SelectItem>
+                                                <SelectItem value="tiktok">{TSales.tiktok}</SelectItem>
+                                                <SelectItem value="lazada">{TSales.lazada}</SelectItem>
                                             </SelectContent>
                                         </Select>
                                         <Input
@@ -419,18 +412,20 @@ export default function PriceSettingsPage() {
                                                 <TableHead className="text-center">{TPrice.defaultPrice}</TableHead>
                                                 <TableHead className="text-center">{TSales.pos}</TableHead>
                                                 <TableHead className="text-center">{TSales.reseller}</TableHead>
-                                                <TableHead className="text-center">{TPrice.onlinePrice}</TableHead>
+                                                <TableHead className="text-center">{TSales.shopee}</TableHead>
+                                                <TableHead className="text-center">{TSales.tiktok}</TableHead>
+                                                <TableHead className="text-center">{TSales.lazada}</TableHead>
                                                 <TableHead className="w-[50px]"></TableHead>
                                             </TableRow>
                                         </TableHeader>
                                         <TableBody>
                                             {loading ? (
                                                  <TableRow>
-                                                    <TableCell colSpan={8} className="text-center h-24">Memuat...</TableCell>
+                                                    <TableCell colSpan={10} className="text-center h-24">Memuat...</TableCell>
                                                  </TableRow>
                                             ) : fields.length === 0 ? (
                                                 <TableRow>
-                                                    <TableCell colSpan={8} className="text-center h-48">
+                                                    <TableCell colSpan={10} className="text-center h-48">
                                                         <div className="flex flex-col items-center justify-center gap-4 text-muted-foreground">
                                                             <ShoppingBag className="h-16 w-16" />
                                                             <div className="text-center">
@@ -486,7 +481,7 @@ export default function PriceSettingsPage() {
                                                                         }}
                                                                     />
                                                                  </TableCell>
-                                                                <TableCell colSpan={6} className="font-semibold text-primary">
+                                                                <TableCell colSpan={8} className="font-semibold text-primary">
                                                                     <div className="flex items-center gap-4">
                                                                         <Image src={header.imageUrl || 'https://placehold.co/40x40.png'} alt={header.name} width={40} height={40} className="rounded-sm" data-ai-hint="product image" />
                                                                         <div>
@@ -575,55 +570,6 @@ const PriceRowFields = ({
     const { language } = useLanguage();
     const TPrice = translations[language].finance.priceSettingsPage;
     
-    const channelPrices = useWatch({
-        control,
-        name: `items.${index}.channelPrices`,
-    });
-
-    const getChannelPriceComponent = (channel: string, colIndex: number) => {
-        const flatIndex = rowIndex * PRICE_FIELDS.length + colIndex;
-        const cPrices = Array.isArray(channelPrices) ? channelPrices : [];
-        const channelIndex = cPrices.findIndex(p => p.channel === channel);
-        
-        const effectiveChannelIndex = ONLINE_CHANNELS.includes(channel) 
-            ? cPrices.findIndex(p => p.channel === ONLINE_CHANNELS[0])
-            : channelIndex;
-        
-        if (effectiveChannelIndex === -1 && !ONLINE_CHANNELS.includes(channel)) {
-             return <TableCell key={channel}></TableCell>;
-        }
-
-        const priceFieldName = ONLINE_CHANNELS.includes(channel) 
-            ? `items.${index}.channelPrices.2.price` // Assume shopee is always the first online channel
-            : `items.${index}.channelPrices.${channelIndex}.price`;
-
-
-        return (
-            <TableCell key={channel}>
-                <FormField
-                    control={control}
-                    name={priceFieldName as any}
-                    render={({ field: formField }) => (
-                        <FormItem>
-                            <FormControl>
-                                <Input 
-                                    type="number" 
-                                    placeholder="0" 
-                                    {...formField} 
-                                    value={formField.value ?? ''} 
-                                    className="h-8 w-24 text-center"
-                                    ref={el => inputRefs.current[flatIndex] = el}
-                                    onKeyDown={e => onKeyDown(e, flatIndex)}
-                                />
-                            </FormControl>
-                            <FormMessage/>
-                        </FormItem>
-                    )}
-                />
-            </TableCell>
-        );
-    };
-
     return (
         <>
             <TableCell>
@@ -660,9 +606,41 @@ const PriceRowFields = ({
                     )}
                 />
             </TableCell>
-            {getChannelPriceComponent('pos', 2)}
-            {getChannelPriceComponent('reseller', 3)}
-            {getChannelPriceComponent('shopee', 4)}
+            {CHANNELS.map((channel, colIndex) => {
+                const channelIndex = form.getValues(`items.${index}.channelPrices`)?.findIndex(p => p.channel === channel) ?? -1;
+                
+                if (channelIndex === -1) {
+                    // This case should ideally not happen if data is structured correctly on add.
+                    // But as a fallback, we render an empty cell.
+                    return <TableCell key={channel}></TableCell>;
+                }
+                 const flatIndex = rowIndex * PRICE_FIELDS.length + 2 + colIndex;
+
+                return (
+                    <TableCell key={channel}>
+                        <FormField
+                            control={control}
+                            name={`items.${index}.channelPrices.${channelIndex}.price`}
+                            render={({ field: formField }) => (
+                                <FormItem>
+                                    <FormControl>
+                                        <Input 
+                                            type="number" 
+                                            placeholder="0" 
+                                            {...formField} 
+                                            value={formField.value ?? ''} 
+                                            className="h-8 w-24 text-center"
+                                            ref={el => inputRefs.current[flatIndex] = el}
+                                            onKeyDown={e => onKeyDown(e, flatIndex)}
+                                        />
+                                    </FormControl>
+                                    <FormMessage/>
+                                </FormItem>
+                            )}
+                        />
+                    </TableCell>
+                )
+            })}
             <TableCell className="p-1.5">
                 <Button type="button" variant="ghost" size="icon" className="text-destructive hover:text-destructive-foreground hover:bg-destructive h-8 w-8" onClick={onRemove}>
                     <Trash2 className="h-4 w-4" />

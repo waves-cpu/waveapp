@@ -931,9 +931,7 @@ export async function updatePrices(updates: { id: string, type: 'product' | 'var
     
     const getProductStmt = db.prepare('SELECT * FROM products WHERE id = ?');
     const getVariantStmt = db.prepare('SELECT * FROM variants WHERE id = ?');
-    const ALL_CHANNELS = ['pos', 'reseller', 'shopee', 'tiktok', 'lazada'];
-    const ONLINE_CHANNELS = ['shopee', 'tiktok', 'lazada'];
-
+    
     db.transaction(() => {
         updates.forEach(update => {
             const itemBefore: any = update.type === 'product'
@@ -969,31 +967,22 @@ export async function updatePrices(updates: { id: string, type: 'product' | 'var
             }
 
             // Handle channel prices
-            const onlinePriceInfo = update.channelPrices?.find(p => ONLINE_CHANNELS.includes(p.channel));
-
-            ALL_CHANNELS.forEach(channel => {
-                let priceInfo = update.channelPrices?.find(p => p.channel === channel);
-
-                // If a specific online channel price is missing, use the general online price as fallback
-                if (ONLINE_CHANNELS.includes(channel) && (priceInfo?.price === undefined || priceInfo?.price === null)) {
-                    priceInfo = onlinePriceInfo;
-                }
-
-                const priceIsValid = priceInfo && priceInfo.price !== undefined && priceInfo.price !== null && priceInfo.price >= 0;
-
+            update.channelPrices?.forEach(channelPrice => {
                 const params = {
                     productId: update.type === 'product' ? update.id : null,
                     variantId: update.type === 'variant' ? update.id : null,
-                    channel: channel
+                    channel: channelPrice.channel,
                 };
+                
+                const priceIsValid = channelPrice.price !== undefined && channelPrice.price !== null && channelPrice.price >= 0;
 
                 if (priceIsValid) {
-                    upsertChannelPriceStmt.run({ ...params, price: priceInfo.price });
+                    upsertChannelPriceStmt.run({ ...params, price: channelPrice.price });
                 } else {
                     if (update.type === 'product') {
-                        deleteChannelPriceStmtProduct.run({ id: update.id, channel: channel });
+                        deleteChannelPriceStmtProduct.run({ id: update.id, channel: channelPrice.channel });
                     } else {
-                        deleteChannelPriceStmtVariant.run({ id: update.id, channel: channel });
+                        deleteChannelPriceStmtVariant.run({ id: update.id, channel: channelPrice.channel });
                     }
                 }
             });
@@ -1129,6 +1118,7 @@ export async function deleteProductPermanently(itemId: string) {
     // ON DELETE CASCADE will handle variants, history, and channel_prices
     db.prepare('DELETE FROM products WHERE id = ?').run(itemId);
 }
+
 
 
 
