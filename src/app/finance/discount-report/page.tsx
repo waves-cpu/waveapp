@@ -164,16 +164,16 @@ export default function DiscountReportPage() {
                     {groupedProducts.length > 0 ? (
                         groupedProducts.map(({ category, products }) => (
                              <Collapsible key={category} defaultOpen className="border rounded-md">
-                                <CollapsibleTrigger className="flex justify-between items-center p-4 w-full cursor-pointer hover:bg-muted/50">
-                                    <div className="flex items-center gap-2">
+                                <div className="flex justify-between items-center p-4 hover:bg-muted/50">
+                                    <CollapsibleTrigger className="flex items-center gap-2 flex-grow text-left">
                                         <ChevronDown className="h-4 w-4 transition-transform [&[data-state=open]]:rotate-180" />
                                         <h2 className="font-semibold text-base">{category}</h2>
                                         <Badge variant="secondary">{products.length} Produk</Badge>
-                                    </div>
-                                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); handleEditCategoryPrices(products)}}>
+                                    </CollapsibleTrigger>
+                                    <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={(e) => { e.stopPropagation(); handleEditCategoryPrices(products)}}>
                                         <Edit className="h-4 w-4" />
                                     </Button>
-                                </CollapsibleTrigger>
+                                </div>
                                 <CollapsibleContent>
                                     <div className="border-t">
                                         <Table>
@@ -250,4 +250,3 @@ export default function DiscountReportPage() {
         </AppLayout>
     );
 }
-
