@@ -925,13 +925,13 @@ export async function updatePrices(updates: { id: string, type: 'product' | 'var
         INSERT INTO channel_prices (product_id, variant_id, channel, price)
         VALUES (@productId, @variantId, @channel, @price)
         ON CONFLICT(product_id, variant_id, channel) DO UPDATE SET price = excluded.price
-        WHERE excluded.price IS NOT NULL
     `);
-    const deleteChannelPriceStmtProduct = db.prepare('DELETE FROM channel_prices WHERE product_id = @id AND channel = @channel');
+     const deleteChannelPriceStmtProduct = db.prepare('DELETE FROM channel_prices WHERE product_id = @id AND channel = @channel');
     const deleteChannelPriceStmtVariant = db.prepare('DELETE FROM channel_prices WHERE variant_id = @id AND channel = @channel');
     
     const getProductStmt = db.prepare('SELECT * FROM products WHERE id = ?');
     const getVariantStmt = db.prepare('SELECT * FROM variants WHERE id = ?');
+    const ALL_CHANNELS = ['pos', 'reseller', 'shopee', 'tiktok', 'lazada'];
     const ONLINE_CHANNELS = ['shopee', 'tiktok', 'lazada'];
 
     db.transaction(() => {
@@ -971,37 +971,32 @@ export async function updatePrices(updates: { id: string, type: 'product' | 'var
             // Handle channel prices
             const onlinePriceInfo = update.channelPrices?.find(p => ONLINE_CHANNELS.includes(p.channel));
 
-            const processChannel = (channel: string, priceInfo: { price?: number } | undefined) => {
-                 const priceIsValid = priceInfo && priceInfo.price !== undefined && priceInfo.price !== null && priceInfo.price >= 0;
-                 
-                 const params = {
+            ALL_CHANNELS.forEach(channel => {
+                let priceInfo = update.channelPrices?.find(p => p.channel === channel);
+
+                // If a specific online channel price is missing, use the general online price as fallback
+                if (ONLINE_CHANNELS.includes(channel) && (priceInfo?.price === undefined || priceInfo?.price === null)) {
+                    priceInfo = onlinePriceInfo;
+                }
+
+                const priceIsValid = priceInfo && priceInfo.price !== undefined && priceInfo.price !== null && priceInfo.price >= 0;
+
+                const params = {
                     productId: update.type === 'product' ? update.id : null,
                     variantId: update.type === 'variant' ? update.id : null,
-                    channel: channel,
-                    price: priceIsValid ? priceInfo.price : null
-                 };
+                    channel: channel
+                };
 
-                 if (priceIsValid) {
-                    upsertChannelPriceStmt.run(params);
-                 } else {
+                if (priceIsValid) {
+                    upsertChannelPriceStmt.run({ ...params, price: priceInfo.price });
+                } else {
                     if (update.type === 'product') {
                         deleteChannelPriceStmtProduct.run({ id: update.id, channel: channel });
                     } else {
                         deleteChannelPriceStmtVariant.run({ id: update.id, channel: channel });
                     }
-                 }
-            }
-
-            // Process POS and Reseller prices
-            processChannel('pos', update.channelPrices?.find(p => p.channel === 'pos'));
-            processChannel('reseller', update.channelPrices?.find(p => p.channel === 'reseller'));
-
-            // Process Online prices
-            if (onlinePriceInfo) {
-                ONLINE_CHANNELS.forEach(channel => {
-                    processChannel(channel, onlinePriceInfo);
-                });
-            }
+                }
+            });
         });
     })();
 }
@@ -1134,6 +1129,7 @@ export async function deleteProductPermanently(itemId: string) {
     // ON DELETE CASCADE will handle variants, history, and channel_prices
     db.prepare('DELETE FROM products WHERE id = ?').run(itemId);
 }
+
 
 
 
