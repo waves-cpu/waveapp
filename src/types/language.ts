@@ -146,6 +146,7 @@ export const translations = {
                 successToastDesc: "All price changes have been saved successfully.",
                 errorToast: "Update Failed",
                 channelPriceDetails: "Channel Price Details",
+                allPrices: "All Price Settings"
             },
             assetReportPage: {
                 totalAssetValue: "Total Asset Value",
@@ -173,7 +174,8 @@ export const translations = {
                 discountPrice: "Discount Price",
                 discount: "Discount",
                 noDiscounts: "No Active Discounts",
-                noDiscountsDesc: "No products with channel-specific discounts were found."
+                noDiscountsDesc: "No products with channel-specific discounts were found.",
+                allPrices: "All Price Settings"
             }
         },
         inventoryTable: {
@@ -621,6 +623,7 @@ export const translations = {
                 successToastDesc: "Semua perubahan harga telah berhasil disimpan.",
                 errorToast: "Pembaruan Gagal",
                 channelPriceDetails: "Rincian Harga Kanal",
+                allPrices: "Semua Pengaturan Harga"
             },
             assetReportPage: {
                 totalAssetValue: "Total Nilai Aset",
@@ -640,7 +643,7 @@ export const translations = {
             discountReportPage: {
                 title: "Laporan Diskon",
                 description: "Lihat semua produk yang sedang diskon di berbagai kanal.",
-                channel: "Kanal",
+                channel: "Kanal Penjualan",
                 category: "Kategori",
                 all: "Semua",
                 product: "Produk",
@@ -648,7 +651,8 @@ export const translations = {
                 discountPrice: "Harga Diskon",
                 discount: "Diskon",
                 noDiscounts: "Tidak Ada Diskon Aktif",
-                noDiscountsDesc: "Tidak ditemukan produk dengan harga diskon pada kanal penjualan."
+                noDiscountsDesc: "Tidak ditemukan produk dengan harga diskon pada kanal penjualan.",
+                allPrices: "Semua Pengaturan Harga"
             }
         },
         inventoryTable: {

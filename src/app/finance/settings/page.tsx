@@ -30,6 +30,7 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@
 import { cn } from '@/lib/utils';
 import { Checkbox } from '@/components/ui/checkbox';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 
 
 const channelPriceSchema = z.object({
@@ -72,6 +73,7 @@ export default function PriceSettingsPage() {
     const TSales = t.sales;
     const { items: allInventoryItems, categories, updatePrices, loading } = useInventory();
     const { toast } = useToast();
+    const searchParams = useSearchParams();
     const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
     
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -104,6 +106,7 @@ export default function PriceSettingsPage() {
 
     const availableItems = useMemo(() => {
         return allInventoryItems.filter(item => {
+            if (item.isArchived) return false;
             if (item.variants && item.variants.length > 0) {
                 return item.variants.some(v => !existingItemIds.has(v.id));
             }
@@ -132,6 +135,56 @@ export default function PriceSettingsPage() {
         });
         return map;
     }, [allInventoryItems]);
+    
+    const itemToPriceSettingItem = (item: InventoryItem | InventoryItemVariant, type: 'product' | 'variant', parent?: InventoryItem): PriceSettingItem => {
+         return {
+            id: item.id,
+            type: type,
+            name: item.name,
+            sku: item.sku,
+            imageUrl: parent?.imageUrl || (item as InventoryItem).imageUrl,
+            parentName: parent?.name,
+            costPrice: item.costPrice,
+            price: item.price,
+            channelPrices: CHANNELS.map(ch => ({
+                channel: ch,
+                price: getChannelPrice(item, ch)
+            }))
+        };
+    }
+
+
+    useEffect(() => {
+        if (loading || fields.length > 0) return;
+
+        const productIdsParam = searchParams.get('products');
+        if (productIdsParam) {
+            const productIds = productIdsParam.split(',');
+            const itemsToAdd: PriceSettingItem[] = [];
+            
+            productIds.forEach(id => {
+                const parentItem = allInventoryItems.find(item => item.id === id);
+                if (parentItem) {
+                    if (parentItem.variants && parentItem.variants.length > 0) {
+                        parentItem.variants.forEach(variant => {
+                            if (!existingItemIds.has(variant.id)) {
+                                itemsToAdd.push(itemToPriceSettingItem(variant, 'variant', parentItem));
+                            }
+                        });
+                    } else {
+                         if (!existingItemIds.has(parentItem.id)) {
+                             itemsToAdd.push(itemToPriceSettingItem(parentItem, 'product'));
+                         }
+                    }
+                }
+            });
+            
+            if (itemsToAdd.length > 0) {
+                append(itemsToAdd);
+            }
+        }
+    }, [searchParams, allInventoryItems, loading, append, existingItemIds]);
+
 
     const handleProductsSelected = (selectedIds: string[]) => {
         const newItems: PriceSettingItem[] = [];
@@ -140,21 +193,7 @@ export default function PriceSettingsPage() {
             if (existingItemIds.has(id) || !allItemsMap.has(id)) return;
 
             const { item, type, parent } = allItemsMap.get(id)!;
-            
-            newItems.push({
-                id: item.id,
-                type: type,
-                name: item.name,
-                sku: item.sku,
-                imageUrl: parent?.imageUrl || (item as InventoryItem).imageUrl,
-                parentName: parent?.name,
-                costPrice: item.costPrice,
-                price: item.price,
-                channelPrices: CHANNELS.map(ch => ({
-                    channel: ch,
-                    price: getChannelPrice(item, ch)
-                }))
-            });
+            newItems.push(itemToPriceSettingItem(item, type, parent));
         });
         append(newItems);
     };
@@ -605,8 +644,6 @@ const PriceRowFields = ({
                 const channelIndex = form.getValues(`items.${index}.channelPrices`)?.findIndex(p => p.channel === channel) ?? -1;
                 
                 if (channelIndex === -1) {
-                    // This case should ideally not happen if data is structured correctly on add.
-                    // But as a fallback, we render an empty cell.
                     return <TableCell key={channel}></TableCell>;
                 }
                  const flatIndex = rowIndex * PRICE_FIELDS.length + 2 + colIndex;
@@ -644,6 +681,3 @@ const PriceRowFields = ({
         </>
     )
 }
-
-
-    
