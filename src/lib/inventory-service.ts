@@ -258,7 +258,15 @@ export async function fetchInventoryData() {
 
     const channelPriceMap = new Map<string, ChannelPrice[]>();
     for (const cp of fetchedChannelPrices) {
-        const key = cp.variant_id ? cp.variant_id.toString() : cp.product_id.toString();
+        let key: string;
+        if (cp.variant_id) {
+            key = cp.variant_id.toString();
+        } else if (cp.product_id) {
+            key = cp.product_id.toString();
+        } else {
+            continue;
+        }
+
         if (!channelPriceMap.has(key)) {
             channelPriceMap.set(key, []);
         }
@@ -1126,6 +1134,7 @@ export async function deleteProductPermanently(itemId: string) {
     // ON DELETE CASCADE will handle variants, history, and channel_prices
     db.prepare('DELETE FROM products WHERE id = ?').run(itemId);
 }
+
 
 
 
