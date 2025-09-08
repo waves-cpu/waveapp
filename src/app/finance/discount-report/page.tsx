@@ -11,28 +11,25 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import type { InventoryItem } from '@/types';
+import type { InventoryItem, InventoryItemVariant } from '@/types';
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { MoreVertical, Pencil, Tag, ChevronDown, Edit } from "lucide-react";
+import { MoreVertical, Pencil, Tag } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import Link from 'next/link';
-import Image from 'next/image';
-import { useRouter } from "next/navigation";
 
-interface DiscountedParentProduct {
+interface DiscountedItem {
     id: string;
     name: string;
+    channel: string;
     category: string;
-    imageUrl?: string;
-    sku?: string;
-    channels: string[];
+    basePrice: number;
+    discountedPrice: number;
 }
 
 function DiscountReportSkeleton() {
@@ -44,19 +41,32 @@ function DiscountReportSkeleton() {
                         <Skeleton className="h-6 w-48" />
                         <Skeleton className="h-4 w-64" />
                     </div>
+                    <Skeleton className="h-9 w-32" />
                 </div>
             </CardHeader>
-            <CardContent className="space-y-4">
-                {[...Array(3)].map((_, i) => (
-                    <div key={i} className="border rounded-md">
-                         <div className="p-4 border-b">
-                            <Skeleton className="h-6 w-1/4" />
-                         </div>
-                         <div className="p-4">
-                            <Skeleton className="h-10 w-full" />
-                         </div>
-                    </div>
-                ))}
+            <CardContent>
+                <div className="border rounded-md">
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead><Skeleton className="h-5 w-[100px]" /></TableHead>
+                                <TableHead><Skeleton className="h-5 w-[100px]" /></TableHead>
+                                <TableHead><Skeleton className="h-5 w-[250px]" /></TableHead>
+                                <TableHead className="text-right"><Skeleton className="h-5 w-[100px]" /></TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {[...Array(5)].map((_, i) => (
+                                <TableRow key={i}>
+                                    <TableCell><Skeleton className="h-4 w-full" /></TableCell>
+                                    <TableCell><Skeleton className="h-4 w-full" /></TableCell>
+                                    <TableCell><Skeleton className="h-4 w-full" /></TableCell>
+                                    <TableCell className="text-right"><Skeleton className="h-4 w-[50px]" /></TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                </div>
             </CardContent>
         </Card>
     );
@@ -67,68 +77,48 @@ export default function DiscountReportPage() {
     const t = translations[language];
     const TFinance = t.finance.discountReportPage;
     const { items, accessories, loading } = useInventory();
-    const router = useRouter();
+    const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
+    const [channelFilter, setChannelFilter] = useState<string | null>(null);
 
-    const groupedProducts = useMemo(() => {
-        const parentProductMap = new Map<string, DiscountedParentProduct>();
+    const allDiscountedItems = useMemo(() => {
+        const discounted: DiscountedItem[] = [];
         const allItems = [...items, ...accessories];
 
         allItems.forEach(item => {
             if(item.isArchived) return;
-
-            const processItem = (subItem: any, parent: InventoryItem) => {
-                const hasSpecialPrice = subItem.channelPrices?.some((cp: any) => cp.price !== undefined && cp.price !== null && cp.price > 0);
-                if (hasSpecialPrice) {
-                    if (!parentProductMap.has(parent.id)) {
-                        parentProductMap.set(parent.id, {
-                            id: parent.id,
-                            name: parent.name,
-                            category: parent.category,
-                            imageUrl: parent.imageUrl,
-                            sku: parent.sku,
-                            channels: []
-                        });
-                    }
-                    const entry = parentProductMap.get(parent.id)!;
-                    const channelsWithPrice = subItem.channelPrices
-                        .filter((cp: any) => cp.price !== undefined && cp.price !== null && cp.price > 0)
-                        .map((cp: any) => cp.channel);
-                    
-                    channelsWithPrice.forEach((channel: string) => {
-                        if (!entry.channels.includes(channel)) {
-                            entry.channels.push(channel);
+            
+            const processItem = (subItem: InventoryItem | InventoryItemVariant, parentCategory: string) => {
+                 if (subItem.channelPrices && subItem.price) {
+                    subItem.channelPrices.forEach(cp => {
+                        if (cp.price !== undefined && cp.price !== null && cp.price > 0 && cp.price !== subItem.price) {
+                            discounted.push({
+                                id: subItem.id,
+                                name: item.variants ? `${item.name} - ${subItem.name}` : subItem.name,
+                                channel: cp.channel,
+                                category: parentCategory,
+                                basePrice: subItem.price!,
+                                discountedPrice: cp.price,
+                            });
                         }
                     });
                 }
             };
             
             if (item.variants && item.variants.length > 0) {
-                item.variants.forEach(variant => processItem(variant, item));
+                item.variants.forEach(variant => processItem(variant, item.category));
             } else {
-                processItem(item, item);
+                processItem(item, item.category);
             }
         });
 
-        const productsByCategory = new Map<string, DiscountedParentProduct[]>();
-        parentProductMap.forEach(product => {
-            if (!productsByCategory.has(product.category)) {
-                productsByCategory.set(product.category, []);
-            }
-            productsByCategory.get(product.category)!.push(product);
-        });
-
-        return Array.from(productsByCategory.entries())
-            .map(([category, products]) => ({ category, products }))
-            .sort((a, b) => a.category.localeCompare(b.category));
-
+        return discounted;
     }, [items, accessories]);
 
-    const handleEditCategoryPrices = (products: DiscountedParentProduct[]) => {
-        const productIds = products.map(p => p.id);
-        const query = new URLSearchParams({ products: productIds.join(',') });
-        router.push(`/finance/settings?${query.toString()}`);
-    };
-
+    const filteredItems = useMemo(() => {
+        return allDiscountedItems
+            .filter(item => !categoryFilter || item.category === categoryFilter)
+            .filter(item => !channelFilter || item.channel === channelFilter);
+    }, [allDiscountedItems, categoryFilter, channelFilter]);
 
     if (loading) {
         return (
@@ -160,92 +150,71 @@ export default function DiscountReportPage() {
                     </Link>
                 </div>
                 
-                <div className="space-y-4">
-                    {groupedProducts.length > 0 ? (
-                        groupedProducts.map(({ category, products }) => (
-                             <Collapsible key={category} defaultOpen className="border rounded-md">
-                                <div className="flex justify-between items-center p-4 hover:bg-muted/50">
-                                    <CollapsibleTrigger className="flex items-center gap-2 flex-grow text-left">
-                                        <ChevronDown className="h-4 w-4 transition-transform [&[data-state=open]]:rotate-180" />
-                                        <h2 className="font-semibold text-base">{category}</h2>
-                                        <Badge variant="secondary">{products.length} Produk</Badge>
-                                    </CollapsibleTrigger>
-                                    <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={(e) => { e.stopPropagation(); handleEditCategoryPrices(products)}}>
-                                        <Edit className="h-4 w-4" />
-                                    </Button>
-                                </div>
-                                <CollapsibleContent>
-                                    <div className="border-t">
-                                        <Table>
-                                            <TableHeader>
-                                                <TableRow>
-                                                    <TableHead className="w-[45%]">{TFinance.product}</TableHead>
-                                                    <TableHead>{TFinance.channel}</TableHead>
-                                                    <TableHead className="text-center w-[100px]">Aksi</TableHead>
-                                                </TableRow>
-                                            </TableHeader>
-                                            <TableBody>
-                                                {products.map(p => (
-                                                    <TableRow key={p.id}>
-                                                        <TableCell>
-                                                            <div className="flex items-center gap-4">
-                                                                <Image 
-                                                                    src={p.imageUrl || 'https://placehold.co/40x40.png'} 
-                                                                    alt={p.name} 
-                                                                    width={40} height={40} 
-                                                                    className="rounded-sm" 
-                                                                    data-ai-hint="product image"
-                                                                />
-                                                                <div>
-                                                                    <div className="font-medium text-sm">{p.name}</div>
-                                                                    <div className="text-xs text-muted-foreground">{p.sku}</div>
-                                                                </div>
-                                                            </div>
-                                                        </TableCell>
-                                                        <TableCell>
-                                                            <div className="flex flex-wrap gap-1">
-                                                                {p.channels.map(channel => (
-                                                                    <Badge key={channel} variant="outline" className="capitalize">{channel}</Badge>
-                                                                ))}
-                                                            </div>
-                                                        </TableCell>
-                                                        <TableCell className="text-center">
-                                                            <DropdownMenu>
-                                                                <DropdownMenuTrigger asChild>
-                                                                    <Button variant="ghost" size="icon" className="h-8 w-8">
-                                                                        <MoreVertical className="h-4 w-4" />
-                                                                    </Button>
-                                                                </DropdownMenuTrigger>
-                                                                <DropdownMenuContent align="end">
-                                                                    <DropdownMenuItem asChild>
-                                                                        <Link href={`/finance/settings?products=${p.id}`}>
-                                                                            <Pencil className="mr-2 h-4 w-4" />
-                                                                            <span>Lihat/Ubah Harga</span>
-                                                                        </Link>
-                                                                    </DropdownMenuItem>
-                                                                </DropdownMenuContent>
-                                                            </DropdownMenu>
-                                                        </TableCell>
-                                                    </TableRow>
-                                                ))}
-                                            </TableBody>
-                                        </Table>
-                                    </div>
-                                </CollapsibleContent>
-                            </Collapsible>
-                        ))
-                    ) : (
-                        <Card>
-                            <CardContent className="h-48 flex flex-col items-center justify-center gap-4 text-muted-foreground">
-                                <Tag className="h-16 w-16" />
-                                <div className="text-center">
-                                <p className="font-semibold">{TFinance.noDiscounts}</p>
-                                <p className="text-sm">{TFinance.noDiscountsDesc}</p>
-                                </div>
-                            </CardContent>
-                        </Card>
-                    )}
-                </div>
+                <Card>
+                    <CardHeader>
+                        <CardDescription>{TFinance.description}</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>{TFinance.channel}</TableHead>
+                                    <TableHead>{TFinance.category}</TableHead>
+                                    <TableHead className="w-[40%]">{TFinance.product}</TableHead>
+                                    <TableHead>{TFinance.defaultPrice}</TableHead>
+                                    <TableHead>{TFinance.discountPrice}</TableHead>
+                                    <TableHead>{TFinance.discount}</TableHead>
+                                    <TableHead className="text-center w-[100px]">Aksi</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {filteredItems.length > 0 ? (
+                                    filteredItems.map(item => (
+                                        <TableRow key={`${item.id}-${item.channel}`}>
+                                            <TableCell className="capitalize">{item.channel}</TableCell>
+                                            <TableCell>{item.category}</TableCell>
+                                            <TableCell>{item.name}</TableCell>
+                                            <TableCell>Rp{item.basePrice.toLocaleString('id-ID')}</TableCell>
+                                            <TableCell>Rp{item.discountedPrice.toLocaleString('id-ID')}</TableCell>
+                                            <TableCell className="text-red-500">
+                                                -{Math.round(((item.basePrice - item.discountedPrice) / item.basePrice) * 100)}%
+                                            </TableCell>
+                                            <TableCell className="text-center">
+                                                <DropdownMenu>
+                                                    <DropdownMenuTrigger asChild>
+                                                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                                                            <MoreVertical className="h-4 w-4" />
+                                                        </Button>
+                                                    </DropdownMenuTrigger>
+                                                    <DropdownMenuContent align="end">
+                                                        <DropdownMenuItem asChild>
+                                                            <Link href={`/finance/settings?products=${item.id}`}>
+                                                                <Pencil className="mr-2 h-4 w-4" />
+                                                                <span>Lihat/Ubah Harga</span>
+                                                            </Link>
+                                                        </DropdownMenuItem>
+                                                    </DropdownMenuContent>
+                                                </DropdownMenu>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))
+                                ) : (
+                                    <TableRow>
+                                        <TableCell colSpan={7} className="h-48 text-center">
+                                            <div className="flex flex-col items-center justify-center gap-4 text-muted-foreground">
+                                                <Tag className="h-16 w-16" />
+                                                <div className="text-center">
+                                                <p className="font-semibold">{TFinance.noDiscounts}</p>
+                                                <p className="text-sm">{TFinance.noDiscountsDesc}</p>
+                                                </div>
+                                            </div>
+                                        </TableCell>
+                                    </TableRow>
+                                )}
+                            </TableBody>
+                        </Table>
+                    </CardContent>
+                </Card>
             </main>
         </AppLayout>
     );
