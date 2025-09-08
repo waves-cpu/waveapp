@@ -1,3 +1,4 @@
+
 'use client';
 
 import { AddProductForm } from "@/app/components/add-product-form";
@@ -43,18 +44,18 @@ export default function EditProductPage() {
 
     useEffect(() => {
         if (!inventoryLoading && id) {
-            let foundItem: InventoryItem | undefined;
-            // The ID could be a parent product or a variant
-            foundItem = items.find(i => i.id === id);
+            // First, try to find a direct match for a parent product.
+            let foundItem = items.find(i => i.id === id);
+
+            // If no parent product is found, check if the ID belongs to a variant.
             if (!foundItem) {
-                // If not found, it might be a variant ID. Find its parent.
-                 for (const parentItem of items) {
-                    if (parentItem.variants?.some(v => v.id === id)) {
-                        foundItem = parentItem;
-                        break;
-                    }
-                }
+                // Find the parent item whose variants array contains a variant with the matching ID.
+                const parentOfVariant = items.find(parent => 
+                    parent.variants?.some(variant => variant.id === id)
+                );
+                foundItem = parentOfVariant;
             }
+            
             setItem(foundItem);
             setPageLoading(false);
         }
