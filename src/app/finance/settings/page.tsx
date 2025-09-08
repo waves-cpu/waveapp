@@ -1,9 +1,8 @@
 
-
 'use client';
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { useForm, useFieldArray, Control, useWatch } from 'react-hook-form';
+import { useForm, useFieldArray, Control, useWatch, UseFormReturn } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Button } from '@/components/ui/button';
@@ -61,16 +60,9 @@ const ONLINE_CHANNELS = ['shopee', 'tiktok', 'lazada'];
 const PRICE_FIELDS = ['costPrice', 'price', ...CHANNELS];
 
 
-const getOnlinePrice = (item: InventoryItem | InventoryItemVariant) => {
-    // Return the first specific online channel price found, otherwise undefined.
-    for (const channel of ONLINE_CHANNELS) {
-        const channelPrice = item.channelPrices?.find(p => p.channel === channel);
-        if (channelPrice?.price !== undefined && channelPrice?.price !== null) {
-            return channelPrice.price;
-        }
-    }
-    return undefined;
-}
+const getChannelPrice = (item: InventoryItem | InventoryItemVariant, channel: string) => {
+    return item.channelPrices?.find(p => p.channel === channel)?.price;
+};
 
 
 export default function PriceSettingsPage() {
@@ -115,7 +107,7 @@ export default function PriceSettingsPage() {
             if (item.variants && item.variants.length > 0) {
                 return item.variants.some(v => !existingItemIds.has(v.id));
             }
-            return item.stock !== undefined && !existingItemIds.has(item.id);
+            return item.stock !== undefined && !item.isArchived;
         }).map(item => {
             if (item.variants) {
                 return {
@@ -158,10 +150,10 @@ export default function PriceSettingsPage() {
                 parentName: parent?.name,
                 costPrice: item.costPrice,
                 price: item.price,
-                channelPrices: CHANNELS.map(ch => {
-                    const channelPrice = item.channelPrices?.find(p => p.channel === ch);
-                    return { channel: ch, price: channelPrice?.price };
-                })
+                channelPrices: CHANNELS.map(ch => ({
+                    channel: ch,
+                    price: getChannelPrice(item, ch)
+                }))
             });
         });
         append(newItems);
@@ -455,6 +447,7 @@ export default function PriceSettingsPage() {
                                                                 </div>
                                                             </TableCell>
                                                             <PriceRowFields 
+                                                                form={form}
                                                                 control={form.control}
                                                                 index={field.originalIndex}
                                                                 onRemove={() => remove(field.originalIndex)}
@@ -518,6 +511,7 @@ export default function PriceSettingsPage() {
                                                                         </div>
                                                                     </TableCell>
                                                                     <PriceRowFields 
+                                                                        form={form}
                                                                         control={form.control}
                                                                         index={field.originalIndex}
                                                                         onRemove={() => remove(field.originalIndex)}
@@ -558,8 +552,9 @@ export default function PriceSettingsPage() {
 }
 
 const PriceRowFields = ({ 
-    control, index, onRemove, rowIndex, inputRefs, onKeyDown 
+    form, control, index, onRemove, rowIndex, inputRefs, onKeyDown 
 }: { 
+    form: UseFormReturn<z.infer<typeof formSchema>>,
     control: Control<z.infer<typeof formSchema>>, 
     index: number, 
     onRemove: () => void,
@@ -649,3 +644,6 @@ const PriceRowFields = ({
         </>
     )
 }
+
+
+    
