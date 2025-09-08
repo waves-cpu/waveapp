@@ -68,18 +68,12 @@ export const ResellerInvoice = React.forwardRef<HTMLDivElement, ResellerInvoiceP
                 </div>
             </header>
 
-            <section className="my-6 grid grid-cols-2 gap-8">
+            <section className="my-6 grid grid-cols-1 gap-8">
                 <div>
-                    <h2 className="text-sm font-semibold uppercase mb-2">Ditagih Kepada:</h2>
+                    <h2 className="text-sm font-semibold uppercase mb-2 text-gray-600">Ditagih Kepada:</h2>
                     <p className="font-bold text-base">{invoice.reseller.name}</p>
                     <p className="text-sm">{invoice.reseller.address}</p>
                     <p className="text-sm">{invoice.reseller.phone}</p>
-                </div>
-                <div>
-                    <h2 className="text-sm font-semibold uppercase mb-2">Dari:</h2>
-                    <p className="font-bold text-base">{settings.shopName}</p>
-                    <p className="text-sm">{settings.addressLine1}</p>
-                    <p className="text-sm">{settings.phone}</p>
                 </div>
             </section>
             
@@ -135,6 +129,7 @@ export const ResellerInvoice = React.forwardRef<HTMLDivElement, ResellerInvoiceP
 
              <footer className="text-center mt-10 pt-4 border-t">
                 <p className="text-sm font-semibold">Terima kasih atas kerja samanya.</p>
+                <p className="text-xs mt-1">{settings.shopName} - {settings.addressLine1} - {settings.phone}</p>
              </footer>
         </div>
     );
