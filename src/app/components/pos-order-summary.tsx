@@ -27,7 +27,7 @@ import { type ReceiptData } from './pos-receipt';
 
 interface PosOrderSummaryProps {
   cart: CartItem[];
-  onSaleComplete: (paymentMethod: string, receiptData: ReceiptData) => Promise<void>;
+  onSaleComplete: (paymentMethod: string, receiptData: ReceiptData, status?: string) => Promise<void>;
   clearCart: () => void;
   channel: 'pos' | 'reseller';
 }
@@ -71,11 +71,10 @@ export function PosOrderSummary({ cart, onSaleComplete, clearCart, channel }: Po
         };
         
         try {
-            await onSaleComplete(paymentMethod, saleData);
-            // The parent component (PosCart or ResellerCart) will handle the printing
+            const status = channel === 'reseller' ? 'Pending' : 'Completed';
+            await onSaleComplete(paymentMethod, saleData, status);
             resetForm();
         } catch (error) {
-            // Error toast is handled in the parent
             console.error("Sale failed, not resetting form.", error);
         } finally {
             setIsSubmitting(false);
@@ -133,7 +132,7 @@ export function PosOrderSummary({ cart, onSaleComplete, clearCart, channel }: Po
                         </RadioGroup>
                     )}
                 </div>
-                {paymentMethod === 'Cash' && (
+                {paymentMethod === 'Cash' && channel !== 'reseller' && (
                     <div className="space-y-2">
                         <Label htmlFor="cashReceived">{t.pos.cashReceived}</Label>
                         <Input id="cashReceived" type="number" placeholder="0" value={cashReceived || ''} onChange={(e) => setCashReceived(Number(e.target.value))} className="h-10 text-base" />
@@ -146,7 +145,7 @@ export function PosOrderSummary({ cart, onSaleComplete, clearCart, channel }: Po
                         <span>{t.pos.total}</span>
                         <span className="text-primary">{total.toLocaleString('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0, maximumFractionDigits: 0 })}</span>
                     </div>
-                     {paymentMethod === 'Cash' && (
+                     {paymentMethod === 'Cash' && channel !== 'reseller' && (
                         <div className="flex justify-between text-sm">
                             <span>{t.pos.change}</span>
                             <span>{change >= 0 ? change.toLocaleString('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0, maximumFractionDigits: 0 }) : '-'}</span>
@@ -179,7 +178,7 @@ export function PosOrderSummary({ cart, onSaleComplete, clearCart, channel }: Po
 
                     <Button size="lg" onClick={handleSale} disabled={cart.length === 0 || (paymentMethod === 'Cash' && change < 0) || isSubmitting}>
                         <Printer className="mr-2 h-4 w-4" />
-                        {isSubmitting ? 'Memproses...' : t.pos.completeSale}
+                        {isSubmitting ? 'Memproses...' : (channel === 'reseller' ? t.reseller.printInvoice : t.pos.completeSale)}
                     </Button>
                 </div>
             </CardFooter>

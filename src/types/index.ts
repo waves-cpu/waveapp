@@ -1,5 +1,4 @@
 
-
 export const categories = [
     "T-Shirt Oversize",
     "T-Shirt Boxy",
@@ -118,6 +117,7 @@ export interface Sale {
   productCategory: string;
   variantName?: string;
   sku?: string;
+  status?: 'Completed' | 'Pending' | 'Cancelled';
 }
 
 export interface Reseller {

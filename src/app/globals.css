@@ -90,15 +90,12 @@ body {
     @apply bg-background text-foreground;
   }
   
-  /* Hide arrows from number inputs */
-  /* Chrome, Safari, Edge, Opera */
   input::-webkit-outer-spin-button,
   input::-webkit-inner-spin-button {
     -webkit-appearance: none;
     margin: 0;
   }
 
-  /* Firefox */
   input[type=number] {
     -moz-appearance: textfield;
   }
@@ -110,6 +107,18 @@ body {
     margin: 0;
     padding: 0;
     background: white;
+    -webkit-print-color-adjust: exact;
+    color-adjust: exact;
+  }
+  .print-only-a4 {
+      display: block !important;
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 100%;
+  }
+  .print-only-a4 * {
+      visibility: visible;
   }
   body * {
     visibility: hidden;
@@ -137,7 +146,8 @@ body {
   }
   
   @page {
-    margin: 2mm;
+    size: A4 portrait;
+    margin: 0;
   }
 }
 
@@ -146,7 +156,7 @@ body {
     display: none;
   }
   .no-scrollbar {
-    -ms-overflow-style: none; /* IE and Edge */
-    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none;
+    scrollbar-width: none;
   }
 }

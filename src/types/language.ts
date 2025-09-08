@@ -325,6 +325,7 @@ export const translations = {
             cash: "Cash"
         },
         reseller: {
+            printInvoice: "Print Invoice",
             selectTitle: "Select Reseller",
             selectDescription: "Select a reseller to start a transaction.",
             selectOrCreate: "Select or Add Reseller",
@@ -802,6 +803,7 @@ export const translations = {
             cash: "Tunai",
         },
         reseller: {
+            printInvoice: "Cetak Invoice",
             selectTitle: "Pilih Reseller",
             selectDescription: "Pilih reseller untuk memulai transaksi.",
             selectOrCreate: "Pilih atau Tambah Reseller",

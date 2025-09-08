@@ -1,5 +1,4 @@
 
-
 'use server';
 
 import { db } from './db';
@@ -258,8 +257,6 @@ export async function fetchInventoryData() {
 
     const channelPriceMap = new Map<string, ChannelPrice[]>();
     for (const cp of fetchedChannelPrices) {
-        // Use variant_id as the primary key if it exists, otherwise use product_id.
-        // This correctly associates channel prices with either a variant or a simple product.
         const key = cp.variant_id ? cp.variant_id.toString() : cp.product_id.toString();
 
         if (!channelPriceMap.has(key)) {
@@ -642,34 +639,26 @@ export async function findProductBySku(sku: string): Promise<InventoryItem | nul
     const getProductByIdStmt = db.prepare('SELECT * FROM products WHERE id = ?');
     const getVariantsByProductIdStmt = db.prepare('SELECT * FROM variants WHERE productId = ?');
 
-    // First, check if the SKU belongs to a variant
     const variantResult: any = getVariantBySkuStmt.get(sku);
     if (variantResult) {
-        // If it's a variant, find its parent product
         const parent = getProductByIdStmt.get(variantResult.productId) as any;
-        // Return the parent, but only with the single variant that matched the SKU
         return {
             ...parent,
             id: parent.id.toString(),
-            // This structure indicates to the caller that a specific variant was found
             variants: [{...variantResult, id: variantResult.id.toString(), parentName: parent.name}] 
         };
     }
 
-    // If not a variant SKU, check if it's a parent product SKU
     const productResult: any = getProductBySkuStmt.get(sku);
     if (productResult) {
-        // If it's a parent product, check if it has variants
         if (productResult.hasVariants) {
             const variants = getVariantsByProductIdStmt.all(productResult.id) as any[];
-             // Return the parent with all its variants for selection
             return {
                  ...productResult,
                  id: productResult.id.toString(),
                  variants: variants.map(v => ({ ...v, id: v.id.toString() }))
             };
         }
-        // If it's a simple product (no variants), just return it
         return { ...productResult, id: productResult.id.toString() };
     }
 
@@ -686,7 +675,8 @@ export async function performSale(
         transactionId?: string, 
         paymentMethod?: string,
         resellerName?: string,
-        priceAtSale?: number
+        priceAtSale?: number,
+        status?: string
     }
 ) {
     const getProductStmt = db.prepare('SELECT * FROM products WHERE sku = ? AND hasVariants = 0');
@@ -708,6 +698,7 @@ export async function performSale(
         let cogsAtSale;
         let productNameForFee = '';
         let parentSkuForSale: string | null = null;
+        let saleStatus = options?.status || 'Completed';
 
 
         const variant = getVariantStmt.get(sku) as (InventoryItemVariant & { id: number, productId: number, costPrice?: number }) | undefined;
@@ -721,8 +712,18 @@ export async function performSale(
                 finalPriceAtSale = options.priceAtSale;
             } else {
                 const isOnlineChannel = ONLINE_MARKETPLACES.includes(channel.toLowerCase());
+                const resellerPriceResult = getChannelPriceStmt.get({ productId: null, variantId: variant.id, channel: 'reseller' }) as { price: number } | undefined;
                 const onlinePriceResult = getChannelPriceStmt.get({ productId: null, variantId: variant.id, channel: 'shopee' }) as { price: number } | undefined;
-                const specificChannelPriceResult = isOnlineChannel ? onlinePriceResult : getChannelPriceStmt.get({ productId: null, variantId: variant.id, channel: channel }) as { price: number } | undefined;
+                
+                let specificChannelPriceResult;
+                if (channel === 'reseller') {
+                    specificChannelPriceResult = resellerPriceResult;
+                } else if (isOnlineChannel) {
+                    specificChannelPriceResult = onlinePriceResult;
+                } else {
+                    specificChannelPriceResult = getChannelPriceStmt.get({ productId: null, variantId: variant.id, channel: channel }) as { price: number } | undefined;
+                }
+                
                 finalPriceAtSale = specificChannelPriceResult?.price ?? variant.price;
             }
 
@@ -732,8 +733,8 @@ export async function performSale(
             parentSkuForSale = parentProduct.sku;
 
             adjustStock(variant.id.toString(), -quantity, saleReason);
-            db.prepare('INSERT INTO sales (transactionId, paymentMethod, resellerName, productId, variantId, channel, quantity, priceAtSale, cogsAtSale, saleDate, parentSku) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
-              .run(options?.transactionId, options?.paymentMethod, options?.resellerName, variant.productId, variant.id, channel, quantity, finalPriceAtSale, cogsAtSale, saleDateString, parentSkuForSale);
+            db.prepare('INSERT INTO sales (transactionId, paymentMethod, resellerName, productId, variantId, channel, quantity, priceAtSale, cogsAtSale, saleDate, parentSku, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
+              .run(options?.transactionId, options?.paymentMethod, options?.resellerName, variant.productId, variant.id, channel, quantity, finalPriceAtSale, cogsAtSale, saleDateString, parentSkuForSale, saleStatus);
         } else {
             const product = getProductStmt.get(sku) as (InventoryItem & { id: number, costPrice?: number, sku: string }) | undefined;
             if (product) {
@@ -745,8 +746,18 @@ export async function performSale(
                     finalPriceAtSale = options.priceAtSale;
                 } else {
                     const isOnlineChannel = ONLINE_MARKETPLACES.includes(channel.toLowerCase());
+                    const resellerPriceResult = getChannelPriceStmt.get({ productId: product.id, variantId: null, channel: 'reseller' }) as { price: number } | undefined;
                     const onlinePriceResult = getChannelPriceStmt.get({ productId: product.id, variantId: null, channel: 'shopee' }) as { price: number } | undefined;
-                    const specificChannelPriceResult = isOnlineChannel ? onlinePriceResult : getChannelPriceStmt.get({ productId: product.id, variantId: null, channel: channel }) as { price: number } | undefined;
+
+                    let specificChannelPriceResult;
+                    if (channel === 'reseller') {
+                        specificChannelPriceResult = resellerPriceResult;
+                    } else if (isOnlineChannel) {
+                        specificChannelPriceResult = onlinePriceResult;
+                    } else {
+                        specificChannelPriceResult = getChannelPriceStmt.get({ productId: product.id, variantId: null, channel: channel }) as { price: number } | undefined;
+                    }
+
                     finalPriceAtSale = specificChannelPriceResult?.price ?? product.price!;
                 }
 
@@ -755,14 +766,13 @@ export async function performSale(
                 parentSkuForSale = product.sku;
                 
                 adjustStock(product.id.toString(), -quantity, saleReason);
-                db.prepare('INSERT INTO sales (transactionId, paymentMethod, resellerName, productId, variantId, channel, quantity, priceAtSale, cogsAtSale, saleDate, parentSku) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
-                  .run(options?.transactionId, options?.paymentMethod, options?.resellerName, product.id, null, channel, quantity, finalPriceAtSale, cogsAtSale, saleDateString, parentSkuForSale);
+                db.prepare('INSERT INTO sales (transactionId, paymentMethod, resellerName, productId, variantId, channel, quantity, priceAtSale, cogsAtSale, saleDate, parentSku, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
+                  .run(options?.transactionId, options?.paymentMethod, options?.resellerName, product.id, null, channel, quantity, finalPriceAtSale, cogsAtSale, saleDateString, parentSkuForSale, saleStatus);
             } else {
                 throw new Error('Product or variant with specified SKU not found or has variants.');
             }
         }
 
-        // Add journal entry for marketplace fee if applicable
         if (ONLINE_MARKETPLACES.includes(channel.toLowerCase())) {
             const adminFee = (finalPriceAtSale * quantity) * 0.15;
             if (adminFee > 0) {
@@ -786,7 +796,8 @@ export async function fetchAllSales(): Promise<Sale[]> {
             p.category as productCategory,
             s.parentSku,
             v.name as variantName,
-            COALESCE(v.sku, p.sku) as sku
+            COALESCE(v.sku, p.sku) as sku,
+            s.status
         FROM sales s
         LEFT JOIN products p ON s.productId = p.id
         LEFT JOIN variants v ON s.variantId = v.id
@@ -818,7 +829,8 @@ export async function getSalesByDate(channel: string, date: Date, page: number, 
             s.id, s.transactionId, s.paymentMethod, s.resellerName, s.productId, s.variantId, s.channel, s.quantity, s.priceAtSale, s.cogsAtSale, s.saleDate,
             p.name as productName,
             v.name as variantName,
-            COALESCE(v.sku, p.sku) as sku
+            COALESCE(v.sku, p.sku) as sku,
+            s.status
         FROM sales s
         JOIN products p ON s.productId = p.id
         LEFT JOIN variants v ON s.variantId = v.id
@@ -934,7 +946,6 @@ export async function updatePrices(updates: { id: string, type: 'product' | 'var
             
             if (!itemBefore) return;
 
-            // Update main cost price and default price
             const finalCostPrice = update.costPrice === undefined || update.costPrice === null ? itemBefore.costPrice : update.costPrice;
             const finalPrice = update.price === undefined || update.price === null ? itemBefore.price : update.price;
 
@@ -944,7 +955,6 @@ export async function updatePrices(updates: { id: string, type: 'product' | 'var
                 updateVariantStmt.run({ id: update.id, costPrice: finalCostPrice, price: finalPrice });
             }
 
-            // Journal entry for HPP/COGS adjustment
             const currentStock = itemBefore.stock || 0;
             const oldCostPrice = itemBefore.costPrice ?? 0;
             const newCostPrice = finalCostPrice ?? 0;
@@ -960,7 +970,6 @@ export async function updatePrices(updates: { id: string, type: 'product' | 'var
                 });
             }
 
-            // Handle channel prices using a delete-then-insert strategy
             const { id, type } = update;
             if (type === 'product') {
                 deleteChannelPricesByProduct.run(id);
@@ -982,9 +991,6 @@ export async function updatePrices(updates: { id: string, type: 'product' | 'var
         });
     })();
 }
-
-
-
 
 // Reseller functions
 export async function getResellers(): Promise<Reseller[]> {
@@ -1108,18 +1114,5 @@ export async function archiveProduct(itemId: string, isArchived: boolean) {
 }
 
 export async function deleteProductPermanently(itemId: string) {
-    // ON DELETE CASCADE will handle variants, history, and channel_prices
     db.prepare('DELETE FROM products WHERE id = ?').run(itemId);
 }
-
-
-
-
-
-
-
-
-
-
-
-

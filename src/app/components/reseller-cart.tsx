@@ -18,8 +18,9 @@ import { ShoppingCart, Trash2 } from 'lucide-react';
 import { useLanguage } from '@/hooks/use-language';
 import { translations } from '@/types/language';
 import { useScanSounds } from '@/hooks/use-scan-sounds';
-import { PosReceipt, type ReceiptData } from './pos-receipt';
+import { type ReceiptData } from './pos-receipt';
 import { useDebounce } from '@/hooks/use-debounce';
+import { ResellerInvoice } from './reseller-invoice';
 
 export interface CartItem extends InventoryItemVariant {
     productId: string;
@@ -42,8 +43,7 @@ export function ResellerCart({ reseller }: ResellerCartProps) {
     const [cart, setCart] = useState<CartItem[]>([]);
     const [productForVariantSelection, setProductForVariantSelection] = useState<InventoryItem | null>(null);
     const [isClient, setIsClient] = useState(false);
-    const [receiptToPrint, setReceiptToPrint] = useState<ReceiptData | null>(null);
-    const receiptRef = useRef<HTMLDivElement>(null);
+    const [invoiceToPrint, setInvoiceToPrint] = useState<ReceiptData & {reseller: Reseller} | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
     const debouncedSearchTerm = useDebounce(searchTerm, 300);
 
@@ -51,13 +51,11 @@ export function ResellerCart({ reseller }: ResellerCartProps) {
         if (debouncedSearchTerm.length < 3) return [];
         const lowercasedTerm = debouncedSearchTerm.toLowerCase();
         
-        // Prioritize SKU match
         const exactSkuMatch = inventoryItems.find(item => item.sku?.toLowerCase() === lowercasedTerm);
         if (exactSkuMatch) return [exactSkuMatch];
         const variantSkuMatch = inventoryItems.find(item => item.variants?.some(v => v.sku?.toLowerCase() === lowercasedTerm));
         if(variantSkuMatch) return [variantSkuMatch];
         
-        // Then search by name
         return inventoryItems.filter(item => 
             item.name.toLowerCase().includes(lowercasedTerm)
         ).slice(0, 10);
@@ -66,13 +64,12 @@ export function ResellerCart({ reseller }: ResellerCartProps) {
 
     useEffect(() => {
         setIsClient(true);
-        // Load cart from localStorage when reseller changes
         try {
             const savedCart = localStorage.getItem(LOCAL_STORAGE_KEY);
             if (savedCart) {
                 setCart(JSON.parse(savedCart));
             } else {
-                setCart([]); // Clear cart for new reseller
+                setCart([]); 
             }
         } catch (error) {
             console.error("Failed to load cart from localStorage", error);
@@ -81,7 +78,6 @@ export function ResellerCart({ reseller }: ResellerCartProps) {
     }, [reseller.id, LOCAL_STORAGE_KEY]);
 
     useEffect(() => {
-        // Save cart to localStorage whenever it changes
         if (isClient) {
             try {
                 localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(cart));
@@ -91,17 +87,15 @@ export function ResellerCart({ reseller }: ResellerCartProps) {
         }
     }, [cart, isClient, LOCAL_STORAGE_KEY]);
 
-     // This useEffect handles the printing after the state has been updated
     useEffect(() => {
-        if (receiptToPrint) {
-            // Timeout ensures the component has time to render before printing
+        if (invoiceToPrint) {
             const timer = setTimeout(() => {
                 window.print();
-                setReceiptToPrint(null); // Reset after printing
+                setInvoiceToPrint(null); 
             }, 100); 
             return () => clearTimeout(timer);
         }
-    }, [receiptToPrint]);
+    }, [invoiceToPrint]);
 
     const getPriceForChannel = (item: InventoryItem | InventoryItemVariant, channel: string): number => {
         const channelPrice = item.channelPrices?.find(p => p.channel === channel)?.price;
@@ -209,26 +203,27 @@ export function ResellerCart({ reseller }: ResellerCartProps) {
         localStorage.removeItem(LOCAL_STORAGE_KEY);
     };
 
-    const handleSaleComplete = async (paymentMethod: string, receiptData: ReceiptData) => {
+    const handleSaleComplete = async (paymentMethod: string, receiptData: ReceiptData, status?: string) => {
         try {
             const salePromises = cart.map(item =>
                 recordSale(item.sku!, 'reseller', item.quantity, {
                     transactionId: receiptData.transactionId,
                     paymentMethod,
                     resellerName: reseller.name,
+                    status: status, // Pass pending status
                 })
             );
             await Promise.all(salePromises);
             toast({
-                title: "Penjualan Berhasil",
-                description: "Transaksi telah berhasil dicatat."
+                title: "Invoice Dibuat",
+                description: "Invoice telah berhasil dibuat dan stok telah dipotong."
             });
-            setReceiptToPrint(receiptData);
+            setInvoiceToPrint({...receiptData, reseller});
         } catch (error) {
             console.error("Failed to complete sale:", error);
             toast({
                 variant: "destructive",
-                title: "Gagal Menyelesaikan Penjualan",
+                title: "Gagal Membuat Invoice",
                 description: "Terjadi kesalahan saat memproses transaksi.",
             });
             throw error;
@@ -324,8 +319,8 @@ export function ResellerCart({ reseller }: ResellerCartProps) {
                     />
                 )}
             </div>
-             <div className="print-only">
-                {receiptToPrint && <PosReceipt ref={receiptRef} receipt={receiptToPrint} />}
+             <div className="print-only-a4">
+                {invoiceToPrint && <ResellerInvoice invoice={invoiceToPrint} />}
             </div>
         </>
     );

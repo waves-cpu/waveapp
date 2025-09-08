@@ -1,5 +1,4 @@
 
-
 import Database from 'better-sqlite3';
 import path from 'path';
 import fs from 'fs';
@@ -9,7 +8,6 @@ if (!fs.existsSync(dbDir)) {
   fs.mkdirSync(dbDir, { recursive: true });
 }
 
-// Change database filename as requested by the user
 const dbPath = path.join(dbDir, 'waveapp.db');
 
 let db: Database.Database;
@@ -27,10 +25,8 @@ try {
 }
 
 
-// Simple migration logic
 const runMigrations = () => {
   try {
-    // Data cleanup for SKU with .0 suffix
     db.exec("UPDATE products SET sku = SUBSTR(sku, 1, LENGTH(sku) - 2) WHERE sku LIKE '%.0'");
     db.exec("UPDATE variants SET sku = SUBSTR(sku, 1, LENGTH(sku) - 2) WHERE sku LIKE '%.0'");
 
@@ -40,7 +36,6 @@ const runMigrations = () => {
         const hasProductId = channelPricesColumns.some((col: any) => col.name === 'product_id');
         const hasVariantId = channelPricesColumns.some((col: any) => col.name === 'variant_id');
         
-        // This is a simple migration strategy for this specific problem.
         if (!hasProductId || !hasVariantId) {
             console.log('Incorrect schema detected for channel_prices. Recreating table...');
             db.exec('DROP TABLE IF EXISTS channel_prices');
@@ -67,31 +62,31 @@ const runMigrations = () => {
     const hasResellerName = salesColumns.some((col: any) => col.name === 'resellerName');
     const hasCogs = salesColumns.some((col: any) => col.name === 'cogsAtSale');
     const hasParentSku = salesColumns.some((col: any) => col.name === 'parentSku');
+    const hasStatus = salesColumns.some((col: any) => col.name === 'status');
 
 
     if (!hasTransactionId) {
-      console.log('Adding transactionId column to sales table...');
       db.exec('ALTER TABLE sales ADD COLUMN transactionId TEXT');
     }
     
     if (!hasPaymentMethod) {
-      console.log('Adding paymentMethod column to sales table...');
       db.exec('ALTER TABLE sales ADD COLUMN paymentMethod TEXT');
     }
     
     if (!hasResellerName) {
-        console.log('Adding resellerName column to sales table...');
         db.exec('ALTER TABLE sales ADD COLUMN resellerName TEXT');
     }
     
     if (!hasCogs) {
-        console.log('Adding cogsAtSale column to sales table...');
         db.exec('ALTER TABLE sales ADD COLUMN cogsAtSale REAL');
     }
     
     if (!hasParentSku) {
-        console.log('Adding parentSku column to sales table...');
         db.exec('ALTER TABLE sales ADD COLUMN parentSku TEXT');
+    }
+    
+    if (!hasStatus) {
+        db.exec("ALTER TABLE sales ADD COLUMN status TEXT DEFAULT 'Completed'");
     }
 
     const resellerColumns = db.pragma('table_info(resellers)');
@@ -99,62 +94,47 @@ const runMigrations = () => {
     const hasAddress = resellerColumns.some((col: any) => col.name === 'address');
 
     if(!hasPhone) {
-        console.log('Adding phone column to resellers table...');
         db.exec('ALTER TABLE resellers ADD COLUMN phone TEXT');
     }
     if(!hasAddress) {
-        console.log('Adding address column to resellers table...');
         db.exec('ALTER TABLE resellers ADD COLUMN address TEXT');
     }
 
-    // Add costPrice to products and variants
     const productColumns = db.pragma('table_info(products)');
     if (!productColumns.some((col: any) => col.name === 'costPrice')) {
-        console.log('Adding costPrice column to products table...');
         db.exec('ALTER TABLE products ADD COLUMN costPrice REAL');
     }
      if (!productColumns.some((col: any) => col.name === 'isArchived')) {
-        console.log('Adding isArchived column to products table...');
         db.exec('ALTER TABLE products ADD COLUMN isArchived INTEGER DEFAULT 0');
     }
 
 
     const variantColumns = db.pragma('table_info(variants)');
     if (!variantColumns.some((col: any) => col.name === 'costPrice')) {
-        console.log('Adding costPrice column to variants table...');
         db.exec('ALTER TABLE variants ADD COLUMN costPrice REAL');
     }
 
-    // Add costPrice and category to accessories
     const accessoryColumns = db.pragma('table_info(accessories)');
     if (accessoryColumns && !accessoryColumns.some((col: any) => col.name === 'costPrice')) {
-        console.log('Adding costPrice column to accessories table...');
         db.exec('ALTER TABLE accessories ADD COLUMN costPrice REAL');
     }
     if (accessoryColumns && !accessoryColumns.some((col: any) => col.name === 'category')) {
-        console.log('Adding category column to accessories table...');
         db.exec('ALTER TABLE accessories ADD COLUMN category TEXT');
     }
     
-    // Backfill parentSku for existing sales
     const salesColumnsForBackfill = db.pragma('table_info(sales)');
     if (salesColumnsForBackfill.some((col: any) => col.name === 'parentSku')) {
-        console.log('Backfilling parentSku for existing sales records...');
         const stmt = db.prepare(`
             UPDATE sales
             SET parentSku = (SELECT sku FROM products WHERE products.id = sales.productId)
             WHERE parentSku IS NULL AND productId IS NOT NULL
         `);
-        const info = stmt.run();
-        if (info.changes > 0) {
-            console.log(`Backfill complete. ${info.changes} rows updated.`);
-        }
+        stmt.run();
     }
 
 
   } catch (error) {
     if (error instanceof Error && error.message.includes('no such table:')) {
-        // ignore if tables don't exist yet
     } else {
         console.error('Migration failed:', error);
     }
@@ -162,7 +142,6 @@ const runMigrations = () => {
 };
 
 
-// Create tables if they don't exist
 const createSchema = () => {
   db.exec(`
     CREATE TABLE IF NOT EXISTS products (
@@ -173,7 +152,6 @@ const createSchema = () => {
       imageUrl TEXT,
       hasVariants BOOLEAN NOT NULL DEFAULT 0,
       isArchived INTEGER DEFAULT 0,
-      -- For non-variant items
       stock INTEGER,
       price REAL,
       costPrice REAL,
@@ -248,6 +226,7 @@ const createSchema = () => {
         priceAtSale REAL NOT NULL,
         cogsAtSale REAL,
         saleDate TEXT NOT NULL,
+        status TEXT DEFAULT 'Completed',
         FOREIGN KEY (productId) REFERENCES products(id),
         FOREIGN KEY (variantId) REFERENCES variants(id),
         FOREIGN KEY (accessoryId) REFERENCES accessories(id)
@@ -321,24 +300,14 @@ const seedData = () => {
                 try {
                     insert.run(receipt);
                 } catch(e) {
-                    // ignore unique constraint errors for seeding
                 }
             }
         })();
 
     } catch (e) {
-        // ignore if table doesn't exist yet
     }
 };
 
 seedData();
 
 export { db };
-
-
-
-
-
-
-
-
