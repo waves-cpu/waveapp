@@ -61,7 +61,14 @@ const ONLINE_CHANNELS = ['shopee', 'tiktok', 'lazada'];
 const PRICE_FIELDS = ['costPrice', 'price', 'pos', 'reseller', 'online'];
 
 const getOnlinePrice = (item: InventoryItem | InventoryItemVariant) => {
-    return item.channelPrices?.find(p => ONLINE_CHANNELS.includes(p.channel))?.price;
+    // Return the first specific online channel price found, otherwise undefined.
+    for (const channel of ONLINE_CHANNELS) {
+        const channelPrice = item.channelPrices?.find(p => p.channel === channel);
+        if (channelPrice?.price !== undefined && channelPrice?.price !== null) {
+            return channelPrice.price;
+        }
+    }
+    return undefined;
 }
 
 
@@ -153,9 +160,6 @@ export default function PriceSettingsPage() {
                 costPrice: item.costPrice,
                 price: item.price,
                 channelPrices: CHANNELS.map(ch => {
-                    if (ONLINE_CHANNELS.includes(ch)) {
-                        return { channel: ch, price: onlinePrice };
-                    }
                     const channelPrice = item.channelPrices?.find(p => p.channel === ch);
                     return { channel: ch, price: channelPrice?.price };
                 })
@@ -585,11 +589,14 @@ const PriceRowFields = ({
             ? cPrices.findIndex(p => p.channel === ONLINE_CHANNELS[0])
             : channelIndex;
         
-        if (effectiveChannelIndex === -1) {
+        if (effectiveChannelIndex === -1 && !ONLINE_CHANNELS.includes(channel)) {
              return <TableCell key={channel}></TableCell>;
         }
 
-        const priceFieldName = `items.${index}.channelPrices.${effectiveChannelIndex}.price`;
+        const priceFieldName = ONLINE_CHANNELS.includes(channel) 
+            ? `items.${index}.channelPrices.2.price` // Assume shopee is always the first online channel
+            : `items.${index}.channelPrices.${channelIndex}.price`;
+
 
         return (
             <TableCell key={channel}>
