@@ -10,7 +10,7 @@ if (!fs.existsSync(dbDir)) {
 }
 
 // Change database filename as requested by the user
-const dbPath = path.join(dbDir, 'waves.db');
+const dbPath = path.join(dbDir, 'waveapp.db');
 
 let db: Database.Database;
 
@@ -334,6 +334,7 @@ const seedData = () => {
 seedData();
 
 export { db };
+
 
 
 
