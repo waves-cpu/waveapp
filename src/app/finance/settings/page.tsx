@@ -136,7 +136,7 @@ export default function PriceSettingsPage() {
         return map;
     }, [allInventoryItems]);
     
-    const itemToPriceSettingItem = (item: InventoryItem | InventoryItemVariant, type: 'product' | 'variant', parent?: InventoryItem): PriceSettingItem => {
+    const itemToPriceSettingItem = useCallback((item: InventoryItem | InventoryItemVariant, type: 'product' | 'variant', parent?: InventoryItem): PriceSettingItem => {
          return {
             id: item.id,
             type: type,
@@ -151,14 +151,14 @@ export default function PriceSettingsPage() {
                 price: getChannelPrice(item, ch)
             }))
         };
-    }
+    }, []);
 
 
     useEffect(() => {
-        if (loading || fields.length > 0) return;
+        if (loading) return;
 
         const productIdsParam = searchParams.get('products');
-        if (productIdsParam) {
+        if (productIdsParam && fields.length === 0) {
             const productIds = productIdsParam.split(',');
             const itemsToAdd: PriceSettingItem[] = [];
             
@@ -167,14 +167,10 @@ export default function PriceSettingsPage() {
                 if (parentItem) {
                     if (parentItem.variants && parentItem.variants.length > 0) {
                         parentItem.variants.forEach(variant => {
-                            if (!existingItemIds.has(variant.id)) {
-                                itemsToAdd.push(itemToPriceSettingItem(variant, 'variant', parentItem));
-                            }
+                            itemsToAdd.push(itemToPriceSettingItem(variant, 'variant', parentItem));
                         });
                     } else {
-                         if (!existingItemIds.has(parentItem.id)) {
-                             itemsToAdd.push(itemToPriceSettingItem(parentItem, 'product'));
-                         }
+                         itemsToAdd.push(itemToPriceSettingItem(parentItem, 'product'));
                     }
                 }
             });
@@ -183,7 +179,7 @@ export default function PriceSettingsPage() {
                 append(itemsToAdd);
             }
         }
-    }, [searchParams, allInventoryItems, loading, append, existingItemIds]);
+    }, [searchParams, allInventoryItems, loading, append, itemToPriceSettingItem, fields.length]);
 
 
     const handleProductsSelected = (selectedIds: string[]) => {
@@ -366,14 +362,6 @@ export default function PriceSettingsPage() {
                     <div className="flex items-center gap-4">
                         <SidebarTrigger className="md:hidden" />
                         <h1 className="text-lg font-bold">{t.finance.priceSettings}</h1>
-                    </div>
-                     <div className="flex items-center gap-2">
-                        <Link href="/finance/discount-report">
-                            <Button variant="outline" size="sm">
-                                <History className="mr-2 h-4 w-4" />
-                                {t.finance.discountReportPage.title}
-                            </Button>
-                        </Link>
                     </div>
                 </div>
                 
@@ -681,3 +669,5 @@ const PriceRowFields = ({
         </>
     )
 }
+
+    
