@@ -298,14 +298,6 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                                   </Link>
                               </SidebarMenuItem>
                                <SidebarMenuItem>
-                                  <Link href="/finance/discount-report">
-                                      <SidebarMenuButton variant="ghost" size="sm" isActive={pathname === '/finance/discount-report'}>
-                                          <TicketPercent />
-                                          {t.finance.discountReportPage.title}
-                                      </SidebarMenuButton>
-                                  </Link>
-                              </SidebarMenuItem>
-                               <SidebarMenuItem>
                                   <Link href="/finance/settings">
                                       <SidebarMenuButton variant="ghost" size="sm" isActive={pathname === '/finance/settings'}>
                                           <DollarSign />

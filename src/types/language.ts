@@ -163,20 +163,6 @@ export const translations = {
                 stockValueColumn: "Stock Value",
                 noProductsInCategory: "No products in this category."
             },
-            discountReportPage: {
-                title: "Discount Report",
-                description: "View all products currently on sale across different channels.",
-                channel: "Channel",
-                category: "Category",
-                all: "All",
-                product: "Product",
-                defaultPrice: "Default Price",
-                discountPrice: "Discount Price",
-                discount: "Discount",
-                noDiscounts: "No Active Discounts",
-                noDiscountsDesc: "No products with channel-specific discounts were found.",
-                allPrices: "All Price Settings"
-            }
         },
         inventoryTable: {
             searchPlaceholder: "Search for items...",
@@ -665,20 +651,6 @@ export const translations = {
                 stockValueColumn: "Nilai Stok",
                 noProductsInCategory: "Tidak ada produk di kategori ini."
             },
-            discountReportPage: {
-                title: "Laporan Diskon",
-                description: "Lihat semua produk yang sedang diskon di berbagai kanal.",
-                channel: "Kanal Penjualan",
-                category: "Kategori",
-                all: "Semua",
-                product: "Produk",
-                defaultPrice: "Harga Normal",
-                discountPrice: "Harga Diskon",
-                discount: "Diskon",
-                noDiscounts: "Tidak Ada Diskon Aktif",
-                noDiscountsDesc: "Tidak ditemukan produk dengan harga diskon pada kanal penjualan.",
-                allPrices: "Semua Pengaturan Harga"
-            }
         },
         inventoryTable: {
             searchPlaceholder: "Cari barang...",
