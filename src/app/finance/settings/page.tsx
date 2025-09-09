@@ -1,8 +1,8 @@
 
 'use client';
 
-import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { useForm, useFieldArray, Control, useWatch, UseFormReturn } from 'react-hook-form';
+import React, { useState, useMemo, useEffect, useRef, useCallback, Control, useWatch, UseFormReturn } from 'react';
+import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Button } from '@/components/ui/button';
@@ -167,10 +167,14 @@ export default function PriceSettingsPage() {
                 if (parentItem) {
                     if (parentItem.variants && parentItem.variants.length > 0) {
                         parentItem.variants.forEach(variant => {
-                            itemsToAdd.push(itemToPriceSettingItem(variant, 'variant', parentItem));
+                            if (!existingItemIds.has(variant.id)) {
+                                itemsToAdd.push(itemToPriceSettingItem(variant, 'variant', parentItem));
+                            }
                         });
                     } else {
-                         itemsToAdd.push(itemToPriceSettingItem(parentItem, 'product'));
+                         if (!existingItemIds.has(parentItem.id)) {
+                            itemsToAdd.push(itemToPriceSettingItem(parentItem, 'product'));
+                         }
                     }
                 }
             });
@@ -179,7 +183,7 @@ export default function PriceSettingsPage() {
                 append(itemsToAdd);
             }
         }
-    }, [searchParams, allInventoryItems, loading, append, itemToPriceSettingItem, fields.length]);
+    }, [searchParams, allInventoryItems, loading, append, itemToPriceSettingItem, fields.length, existingItemIds]);
 
 
     const handleProductsSelected = (selectedIds: string[]) => {
@@ -669,5 +673,3 @@ const PriceRowFields = ({
         </>
     )
 }
-
-    
