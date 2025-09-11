@@ -360,6 +360,7 @@ export default function SalesReportPage() {
       from: subDays(new Date(), 29),
       to: new Date(),
     });
+    const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
     const [isTopProductsDialogOpen, setIsTopProductsDialogOpen] = useState(false);
 
     const { 
@@ -371,6 +372,7 @@ export default function SalesReportPage() {
         totalUnitsSold
     } = useMemo(() => {
         const salesInDateRange = allSales.filter(sale => {
+            if (categoryFilter && sale.productCategory !== categoryFilter) return false;
             if (!dateRange || !dateRange.from) return true;
             const saleDate = parseISO(sale.saleDate);
             const toDate = dateRange.to || dateRange.from;
@@ -429,7 +431,7 @@ export default function SalesReportPage() {
             productProfitability: Array.from(profitabilityMap.values()).sort((a,b) => b.unitsSold - a.unitsSold),
         };
 
-    }, [allSales, dateRange]);
+    }, [allSales, dateRange, categoryFilter]);
 
 
     const pieChartConfig = useMemo(() => {
@@ -466,39 +468,54 @@ export default function SalesReportPage() {
                         <SidebarTrigger className="md:hidden" />
                         <h1 className="text-lg font-bold">{TFinance.salesReport}</h1>
                     </div>
-                     <Popover>
-                        <PopoverTrigger asChild>
-                        <Button
-                            id="date"
-                            variant={"outline"}
-                            className={cn(
-                            "w-full md:w-[300px] justify-start text-left font-normal",
-                            !dateRange && "text-muted-foreground"
-                            )}
-                        >
-                            <CalendarIcon className="mr-2 h-4 w-4" />
-                            {dateRange?.from ? (
-                            dateRange.to ? (
-                                <>{format(dateRange.from, "LLL dd, y")} - {format(dateRange.to, "LLL dd, y")}</>
-                            ) : (
-                                format(dateRange.from, "LLL dd, y")
-                            )
-                            ) : (
-                            <span>Pilih rentang tanggal</span>
-                            )}
-                        </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="end">
-                        <Calendar
-                            initialFocus
-                            mode="range"
-                            defaultMonth={dateRange?.from}
-                            selected={dateRange}
-                            onSelect={setDateRange}
-                            numberOfMonths={2}
-                        />
-                        </PopoverContent>
-                    </Popover>
+                    <div className='flex items-center gap-2'>
+                        <Select onValueChange={(value) => setCategoryFilter(value === 'all' ? null : value)} defaultValue="all">
+                            <SelectTrigger className="w-full md:w-[180px]">
+                            <SelectValue placeholder={t.inventoryTable.selectCategoryPlaceholder} />
+                            </SelectTrigger>
+                            <SelectContent>
+                            <SelectItem value="all">{t.inventoryTable.allCategories}</SelectItem>
+                            {categories.map((category) => (
+                                <SelectItem key={category} value={category}>
+                                {category}
+                                </SelectItem>
+                            ))}
+                            </SelectContent>
+                        </Select>
+                         <Popover>
+                            <PopoverTrigger asChild>
+                            <Button
+                                id="date"
+                                variant={"outline"}
+                                className={cn(
+                                "w-full md:w-[300px] justify-start text-left font-normal",
+                                !dateRange && "text-muted-foreground"
+                                )}
+                            >
+                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                {dateRange?.from ? (
+                                dateRange.to ? (
+                                    <>{format(dateRange.from, "LLL dd, y")} - {format(dateRange.to, "LLL dd, y")}</>
+                                ) : (
+                                    format(dateRange.from, "LLL dd, y")
+                                )
+                                ) : (
+                                <span>Pilih rentang tanggal</span>
+                                )}
+                            </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="end">
+                            <Calendar
+                                initialFocus
+                                mode="range"
+                                defaultMonth={dateRange?.from}
+                                selected={dateRange}
+                                onSelect={setDateRange}
+                                numberOfMonths={2}
+                            />
+                            </PopoverContent>
+                        </Popover>
+                    </div>
                 </div>
 
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-4">
@@ -575,7 +592,9 @@ export default function SalesReportPage() {
                     <Card className="md:col-span-3 flex flex-col">
                         <CardHeader className="flex flex-row items-center justify-between">
                             <div>
-                                <CardTitle className="text-base">Top 10 Produk Terlaris</CardTitle>
+                                <CardTitle className="text-base">
+                                  Top 10 {categoryFilter ? `${categoryFilter} ` : ''}Produk Terlaris
+                                </CardTitle>
                                 <CardDescription>Diurutkan berdasarkan unit terjual terbanyak</CardDescription>
                             </div>
                             <Button variant="ghost" size="icon" onClick={() => setIsTopProductsDialogOpen(true)}>
