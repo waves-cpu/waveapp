@@ -19,6 +19,7 @@ import type { InventoryItem, InventoryItemVariant } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { id as localeId } from 'date-fns/locale';
+import { categories as allCategories } from "@/types";
 
 const formatCurrency = (amount: number) => `Rp${Math.round(amount).toLocaleString('id-ID')}`;
 
@@ -32,6 +33,7 @@ interface RankedAsset {
     sku?: string;
     salesCount: number;
     stockValue: number;
+    category: string;
 }
 
 
@@ -114,6 +116,7 @@ export default function AssetReportPage() {
     
     const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
     const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+    const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
     const years = useMemo(() => {
         const allYears = new Set(allSales.map(s => parseISO(s.saleDate).getFullYear()));
@@ -155,6 +158,8 @@ export default function AssetReportPage() {
         let variantNonMovingValue = 0;
 
         items.forEach(item => {
+             if(selectedCategory && item.category !== selectedCategory) return;
+            
             if (item.variants && item.variants.length > 0) {
                 let totalSalesCount = 0;
                 let totalStockValue = 0;
@@ -186,6 +191,7 @@ export default function AssetReportPage() {
                         sku: item.sku,
                         salesCount: totalSalesCount,
                         stockValue: totalStockValue,
+                        category: item.category,
                     });
                 }
             } else { // Simple product
@@ -198,6 +204,7 @@ export default function AssetReportPage() {
                         sku: item.sku,
                         salesCount: salesCount,
                         stockValue: stockValue,
+                        category: item.category,
                     });
                 }
             }
@@ -237,7 +244,7 @@ export default function AssetReportPage() {
             slowMovingProducts: slow.sort((a,b) => b.salesCount - a.salesCount).slice(0, 20),
             nonMovingProducts: non.sort((a,b) => b.stockValue - a.stockValue).slice(0, 20),
         };
-    }, [items, allSales, selectedMonth, selectedYear, TAsset.fastLabel, TAsset.slowLabel, TAsset.nonMovingLabel]);
+    }, [items, allSales, selectedMonth, selectedYear, selectedCategory, TAsset.fastLabel, TAsset.slowLabel, TAsset.nonMovingLabel]);
 
     const chartData = [
         {
@@ -284,7 +291,7 @@ export default function AssetReportPage() {
                     </div>
                     <div className="flex items-center gap-2">
                          <Select value={selectedMonth.toString()} onValueChange={(value) => setSelectedMonth(parseInt(value))}>
-                            <SelectTrigger className="w-full md:w-[180px]">
+                            <SelectTrigger className="w-full md:w-[150px]">
                                 <SelectValue placeholder="Pilih Bulan" />
                             </SelectTrigger>
                             <SelectContent>
@@ -296,7 +303,7 @@ export default function AssetReportPage() {
                             </SelectContent>
                         </Select>
                         <Select value={selectedYear.toString()} onValueChange={(value) => setSelectedYear(parseInt(value))}>
-                            <SelectTrigger className="w-full md:w-[120px]">
+                            <SelectTrigger className="w-full md:w-[110px]">
                                 <SelectValue placeholder="Pilih Tahun" />
                             </SelectTrigger>
                             <SelectContent>
@@ -305,6 +312,19 @@ export default function AssetReportPage() {
                                         {year}
                                     </SelectItem>
                                 ))}
+                            </SelectContent>
+                        </Select>
+                        <Select onValueChange={(value) => setSelectedCategory(value === 'all' ? null : value)} defaultValue="all">
+                            <SelectTrigger className="w-full md:w-[180px]">
+                            <SelectValue placeholder={t.inventoryTable.selectCategoryPlaceholder} />
+                            </SelectTrigger>
+                            <SelectContent>
+                            <SelectItem value="all">{t.inventoryTable.allCategories}</SelectItem>
+                            {allCategories.map((category) => (
+                                <SelectItem key={category} value={category}>
+                                {category}
+                                </SelectItem>
+                            ))}
                             </SelectContent>
                         </Select>
                     </div>
