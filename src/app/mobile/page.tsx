@@ -58,12 +58,13 @@ export default function MobileScanReceiptPage() {
         if (isSubmitting) return;
 
         // Client-side duplicate check
-        if (recentlyAdded.some(receipt => receipt.awb === trimmedAwb)) {
+        const recentDuplicate = recentlyAdded.find(receipt => receipt.awb === trimmedAwb);
+        if (recentDuplicate) {
             playErrorSound();
             toast({
                 variant: 'destructive',
                 title: 'Resi Duplikat',
-                description: `Resi ${trimmedAwb} sudah pernah di-scan sesi ini.`,
+                description: `Resi ini sudah discan pada ${format(parseISO(recentDuplicate.date), 'dd MMM yyyy, HH:mm')}`,
             });
              if (isCameraOpen) {
                 // Allow for next scan without closing camera
@@ -90,9 +91,16 @@ export default function MobileScanReceiptPage() {
             setAwb('');
         } catch (error) {
             playErrorSound();
-            const errorMessage = error instanceof Error && error.message.includes('DUPLICATE_AWB')
-                ? `Resi ${trimmedAwb} sudah pernah di-scan.`
-                : 'Gagal menyimpan resi.';
+            let errorMessage = 'Gagal menyimpan resi.';
+            if (error instanceof Error) {
+                if (error.message.startsWith('DUPLICATE_AWB_DATE::')) {
+                    const dateStr = error.message.split('::')[1];
+                    errorMessage = `Resi ini sudah discan pada ${format(parseISO(dateStr), 'dd MMM yyyy, HH:mm')}`;
+                } else if (error.message.includes('DUPLICATE_AWB')) {
+                    errorMessage = `Resi ${trimmedAwb} sudah ada di database.`;
+                }
+            }
+
             toast({
                 variant: 'destructive',
                 title: 'Input Gagal',

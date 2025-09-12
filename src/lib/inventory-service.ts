@@ -1,5 +1,4 @@
 
-
 'use server';
 
 import { db } from './db';
@@ -163,6 +162,12 @@ export async function fetchShippingReceiptCountsByChannel(dateString?: string, s
 
 
 export async function addShippingReceipt(receipt: Omit<ShippingReceipt, 'id'>): Promise<ShippingReceipt> {
+    const existingReceipt = db.prepare('SELECT * FROM shipping_receipts WHERE awb = ?').get(receipt.awb) as ShippingReceipt | undefined;
+
+    if (existingReceipt) {
+        throw new Error(`DUPLICATE_AWB_DATE::${existingReceipt.date}`);
+    }
+
     try {
         const result = db.prepare('INSERT INTO shipping_receipts (awb, date, channel, status) VALUES (@awb, @date, @channel, @status)').run({
             ...receipt
@@ -170,8 +175,9 @@ export async function addShippingReceipt(receipt: Omit<ShippingReceipt, 'id'>): 
         const newReceipt = db.prepare('SELECT * FROM shipping_receipts WHERE id = ?').get(result.lastInsertRowid) as ShippingReceipt;
         return newReceipt;
     } catch (error) {
+        // This catch block might be redundant if the check above is perfect, but it's a good safeguard.
         if (error instanceof Error && error.message.includes('UNIQUE constraint failed')) {
-            throw new Error(`DUPLICATE_AWB: Resi ${receipt.awb} sudah ada di database.`);
+            throw new Error(`DUPLICATE_AWB`);
         }
         throw error;
     }
