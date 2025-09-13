@@ -26,11 +26,15 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { AppLayout } from "../components/app-layout";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/hooks/use-auth";
+import { Palette, Languages, Users, UserPlus } from 'lucide-react';
+import { UserManagementCard } from "../components/user-management-card";
 
 
 function SettingsContent() {
     const { theme, setTheme } = useTheme();
     const { language, setLanguage } = useLanguage();
+    const { user } = useAuth();
     const t = translations[language];
     const [mounted, setMounted] = useState(false);
 
@@ -52,7 +56,7 @@ function SettingsContent() {
                 <div className="grid gap-6">
                     <Card>
                         <CardHeader>
-                            <CardTitle className="text-base">{t.settings.appearance}</CardTitle>
+                            <CardTitle className="flex items-center gap-2 text-base"><Palette /> {t.settings.appearance}</CardTitle>
                             <CardDescription>
                                 {t.settings.appearanceDescription}
                             </CardDescription>
@@ -79,7 +83,7 @@ function SettingsContent() {
                     </Card>
                     <Card>
                         <CardHeader>
-                            <CardTitle className="text-base">{t.settings.language}</CardTitle>
+                            <CardTitle className="flex items-center gap-2 text-base"><Languages /> {t.settings.language}</CardTitle>
                             <CardDescription>
                                 {t.settings.languageDescription}
                             </CardDescription>
@@ -103,31 +107,10 @@ function SettingsContent() {
                             </div>
                         </CardContent>
                     </Card>
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="text-base">Pengaturan Pengguna</CardTitle>
-                            <CardDescription>
-                                Kelola informasi akun dan kata sandi Anda.
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                            <div className="space-y-2">
-                                <Label htmlFor="username">Nama Pengguna</Label>
-                                <Input id="username" value="admin" disabled />
-                            </div>
-                             <div className="space-y-2">
-                                <Label htmlFor="current-password">Kata Sandi Saat Ini</Label>
-                                <Input id="current-password" type="password" disabled />
-                            </div>
-                             <div className="space-y-2">
-                                <Label htmlFor="new-password">Kata Sandi Baru</Label>
-                                <Input id="new-password" type="password" disabled />
-                            </div>
-                        </CardContent>
-                         <CardFooter className="border-t px-6 py-4">
-                            <Button disabled>Simpan Perubahan</Button>
-                        </CardFooter>
-                    </Card>
+
+                    {user?.username === 'admin' && (
+                        <UserManagementCard />
+                    )}
                 </div>
             </div>
         </main>

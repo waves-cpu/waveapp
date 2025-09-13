@@ -144,6 +144,13 @@ const runMigrations = () => {
 
 const createSchema = () => {
   db.exec(`
+    CREATE TABLE IF NOT EXISTS users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT NOT NULL UNIQUE,
+        password TEXT NOT NULL,
+        role TEXT NOT NULL DEFAULT 'user'
+    );
+
     CREATE TABLE IF NOT EXISTS products (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT NOT NULL,
@@ -282,29 +289,33 @@ runMigrations();
 
 const seedData = () => {
     try {
-        const count = db.prepare('SELECT COUNT(*) as count FROM shipping_receipts').get() as { count: number };
-        if (count.count > 0) {
-            return;
+        const userCount = db.prepare('SELECT COUNT(*) as count FROM users').get() as { count: number };
+        if (userCount.count === 0) {
+            // NOTE: Storing plain text passwords is a major security risk.
+            // This is for demonstration purposes only. Use a hashing library like bcrypt in production.
+            db.prepare('INSERT INTO users (username, password, role) VALUES (?, ?, ?)')
+              .run('admin', 'admin123', 'admin');
         }
 
-        const mockReceipts = [
-          { awb: 'SPXID0123456789A', date: '2024-08-01 10:00:00', channel: 'Shopee', status: 'Dikirim' },
-          { awb: 'SPXID0123456789B', date: '2024-08-01 11:00:00', channel: 'Shopee', status: 'Perlu Diproses' },
-          { awb: 'JP1234567890', date: '2024-07-31 15:00:00', channel: 'Tokopedia', status: 'Selesai' },
-        ];
+        const receiptCount = db.prepare('SELECT COUNT(*) as count FROM shipping_receipts').get() as { count: number };
+        if (receiptCount.count === 0) {
+             const mockReceipts = [
+              { awb: 'SPXID0123456789A', date: '2024-08-01 10:00:00', channel: 'Shopee', status: 'Dikirim' },
+              { awb: 'SPXID0123456789B', date: '2024-08-01 11:00:00', channel: 'Shopee', status: 'Perlu Diproses' },
+              { awb: 'JP1234567890', date: '2024-07-31 15:00:00', channel: 'Tokopedia', status: 'Selesai' },
+            ];
 
-        const insert = db.prepare('INSERT INTO shipping_receipts (awb, date, channel, status) VALUES (@awb, @date, @channel, @status)');
+            const insert = db.prepare('INSERT INTO shipping_receipts (awb, date, channel, status) VALUES (@awb, @date, @channel, @status)');
 
-        db.transaction(() => {
-            for (const receipt of mockReceipts) {
-                try {
-                    insert.run(receipt);
-                } catch(e) {
+            db.transaction(() => {
+                for (const receipt of mockReceipts) {
+                    try { insert.run(receipt); } catch (e) {}
                 }
-            }
-        })();
+            })();
+        }
 
     } catch (e) {
+        // console.error("Seeding failed", e);
     }
 };
 

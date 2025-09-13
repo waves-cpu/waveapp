@@ -157,3 +157,9 @@ export interface BulkImportHistory {
     skippedSkus?: { sku: string, name: string }[];
     error?: string;
 }
+
+export interface User {
+  id: number;
+  username: string;
+  role: 'admin' | 'user';
+}
