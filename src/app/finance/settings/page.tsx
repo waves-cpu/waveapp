@@ -237,7 +237,7 @@ export default function PriceSettingsPage() {
         
         return { groups: Array.from(groups.values()), simpleItems };
 
-    }, [fields, searchTerm, allInventoryItems, allItemsMap]);
+    }, [fields, searchTerm, allInventoryItems]);
     
     useEffect(() => {
         // Reset selections when filters change
@@ -390,33 +390,35 @@ export default function PriceSettingsPage() {
                                             {TPrice.selectProduct}
                                         </Button>
                                     </div>
-                                    <div className="p-2 border-t border-dashed flex flex-col md:flex-row items-center gap-2">
-                                        <p className="text-sm font-medium mr-2 whitespace-nowrap">Ubah Masal:</p>
-                                        <Select value={bulkUpdateChannel} onValueChange={(v) => setBulkUpdateChannel(v as any)}>
-                                            <SelectTrigger className="w-full md:w-[160px]">
-                                                <SelectValue />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="costPrice">{TPrice.costPrice}</SelectItem>
-                                                <SelectItem value="price">{TPrice.defaultPrice}</SelectItem>
-                                                <SelectItem value="pos">{TSales.pos}</SelectItem>
-                                                <SelectItem value="reseller">{TSales.reseller}</SelectItem>
-                                                <SelectItem value="shopee">{TSales.shopee}</SelectItem>
-                                                <SelectItem value="tiktok">{TSales.tiktok}</SelectItem>
-                                                <SelectItem value="lazada">{TSales.lazada}</SelectItem>
-                                            </SelectContent>
-                                        </Select>
-                                        <Input
-                                            type="number"
-                                            placeholder="Masukkan harga"
-                                            value={bulkUpdateValue}
-                                            onChange={(e) => setBulkUpdateValue(e.target.value)}
-                                            className="w-full md:w-[160px]"
-                                        />
-                                        <Button type="button" variant="outline" onClick={handleBulkUpdate} disabled={selectedItemsForBulkUpdate.size === 0}>
-                                            Terapkan ke {selectedItemsForBulkUpdate.size} item
-                                        </Button>
-                                    </div>
+                                    {fields.length > 0 && (
+                                        <div className="p-2 border-t border-dashed flex flex-col md:flex-row items-center gap-2">
+                                            <p className="text-sm font-medium mr-2 whitespace-nowrap">Ubah Masal:</p>
+                                            <Select value={bulkUpdateChannel} onValueChange={(v) => setBulkUpdateChannel(v as any)}>
+                                                <SelectTrigger className="w-full md:w-[160px]">
+                                                    <SelectValue />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="costPrice">{TPrice.costPrice}</SelectItem>
+                                                    <SelectItem value="price">{TPrice.defaultPrice}</SelectItem>
+                                                    <SelectItem value="pos">{TSales.pos}</SelectItem>
+                                                    <SelectItem value="reseller">{TSales.reseller}</SelectItem>
+                                                    <SelectItem value="shopee">{TSales.shopee}</SelectItem>
+                                                    <SelectItem value="tiktok">{TSales.tiktok}</SelectItem>
+                                                    <SelectItem value="lazada">{TSales.lazada}</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                            <Input
+                                                type="number"
+                                                placeholder="Masukkan harga"
+                                                value={bulkUpdateValue}
+                                                onChange={(e) => setBulkUpdateValue(e.target.value)}
+                                                className="w-full md:w-[160px]"
+                                            />
+                                            <Button type="button" variant="outline" onClick={handleBulkUpdate} disabled={selectedItemsForBulkUpdate.size === 0}>
+                                                Terapkan ke {selectedItemsForBulkUpdate.size} item
+                                            </Button>
+                                        </div>
+                                    )}
                                 </div>
                             </CardHeader>
                             <CardContent className="p-0">
