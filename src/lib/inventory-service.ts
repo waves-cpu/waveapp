@@ -2,8 +2,33 @@
 'use server';
 
 import { db } from './db';
-import type { InventoryItem, AdjustmentHistory, InventoryItemVariant, Sale, Reseller, ChannelPrice, ManualJournalEntry, Accessory, ShippingReceipt, BulkImportHistory } from '@/types';
+import type { InventoryItem, AdjustmentHistory, InventoryItemVariant, Sale, Reseller, ChannelPrice, ManualJournalEntry, Accessory, ShippingReceipt, BulkImportHistory, User } from '@/types';
 import { format as formatDate, parseISO, startOfDay, endOfDay } from 'date-fns';
+
+// User functions
+export async function authenticateUser(username: string, password: string): Promise<User | null> {
+    const user = db.prepare('SELECT * FROM users WHERE username = ? AND password = ?').get(username, password) as User | undefined;
+    if (user) {
+        return { id: user.id, username: user.username, role: user.role };
+    }
+    return null;
+}
+
+export async function addUser(username: string, password: string): Promise<User> {
+    // NOTE: Storing plain text passwords is a major security risk.
+    // This is for demonstration purposes only. Use a hashing library like bcrypt in production.
+    const result = db.prepare('INSERT INTO users (username, password, role) VALUES (?, ?, ?)')
+      .run(username, password, 'user');
+    
+    const newUser = db.prepare('SELECT id, username, role FROM users WHERE id = ?').get(result.lastInsertRowid) as User;
+    return newUser;
+}
+
+export async function fetchAllUsers(): Promise<User[]> {
+    const users = db.prepare('SELECT id, username, role FROM users').all() as User[];
+    return users;
+}
+
 
 // Settings Functions
 export async function saveSetting(key: string, value: any) {
@@ -175,7 +200,6 @@ export async function addShippingReceipt(receipt: Omit<ShippingReceipt, 'id'>): 
         const newReceipt = db.prepare('SELECT * FROM shipping_receipts WHERE id = ?').get(result.lastInsertRowid) as ShippingReceipt;
         return newReceipt;
     } catch (error) {
-        // This catch block might be redundant if the check above is perfect, but it's a good safeguard.
         if (error instanceof Error && error.message.includes('UNIQUE constraint failed')) {
             throw new Error(`DUPLICATE_AWB`);
         }
