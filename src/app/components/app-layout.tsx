@@ -1,10 +1,9 @@
 
-
 'use client';
 
 import React, { useState, useMemo } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import {
   SidebarProvider,
   Sidebar,
@@ -47,6 +46,7 @@ import {
   TicketPercent,
   Activity,
   BarChart,
+  LogOut,
 } from 'lucide-react';
 import { Logo } from './logo';
 import { Separator } from '@/components/ui/separator';
@@ -55,18 +55,37 @@ import { translations } from '@/types/language';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { cn } from '@/lib/utils';
 import { useInventory } from '@/hooks/use-inventory';
+import { useAuth } from '@/hooks/use-auth';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
     const { language } = useLanguage();
     const t = translations[language];
     const pathname = usePathname();
+    const router = useRouter();
     const { items } = useInventory();
+    const { logout } = useAuth();
     const [isSalesOpen, setSalesOpen] = useState(true);
     const [isShippingOpen, setShippingOpen] = useState(true);
     const [isInventoryOpen, setInventoryOpen] = useState(true);
     const [isFinanceOpen, setFinanceOpen] = useState(true);
     
     const hasArchivedItems = useMemo(() => items.some(item => item.isArchived), [items]);
+
+    const handleLogout = () => {
+        logout();
+        router.push('/login');
+    }
 
   return (
     <div className="flex h-full">
@@ -321,6 +340,30 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                               {t.sidebar.settings}
                           </SidebarMenuButton>
                       </Link>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <SidebarMenuButton variant="ghost" className="text-destructive hover:text-destructive-foreground hover:bg-destructive">
+                          <LogOut />
+                          <span>Logout</span>
+                        </SidebarMenuButton>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Are you sure you want to log out?</AlertDialogTitle>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction
+                            className="bg-destructive hover:bg-destructive/90"
+                            onClick={handleLogout}
+                          >
+                            Logout
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
                   </SidebarMenuItem>
               </SidebarMenu>
           </SidebarFooter>

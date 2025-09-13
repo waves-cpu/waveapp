@@ -7,21 +7,28 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { AppLayout } from './components/app-layout';
 import Dashboard from './components/dashboard';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useAuth } from '@/hooks/use-auth';
 
 export default function Home() {
   const isMobile = useIsMobile();
   const router = useRouter();
+  const { isAuthenticated, loading: authLoading } = useAuth();
 
   useEffect(() => {
-    // This effect should only run on the client after `isMobile` has been determined.
+    if (authLoading) return; // Wait for auth state to be determined
+
+    if (!isAuthenticated) {
+      router.replace('/login');
+      return;
+    }
+    
     if (isMobile === true) {
       router.replace('/mobile');
     }
-  }, [isMobile, router]);
+  }, [isMobile, router, isAuthenticated, authLoading]);
 
-  // If isMobile is still undefined, it means we are either on the server or in the initial client render.
-  // Show a loader to prevent a flash of the wrong content.
-  if (isMobile === undefined) {
+  // If auth is loading, or mobile state is undetermined, show a loader.
+  if (authLoading || isMobile === undefined) {
     return (
         <div className="flex h-screen items-center justify-center">
             <Skeleton className="h-full w-full" />
@@ -29,8 +36,7 @@ export default function Home() {
     );
   }
 
-  // If it's mobile, we show a loader while the redirect is happening.
-  // The redirect itself is triggered by the useEffect.
+  // If it's mobile and authenticated, show loader while redirecting.
   if (isMobile === true) {
     return (
         <div className="flex items-center justify-center h-screen">
@@ -39,10 +45,15 @@ export default function Home() {
     );
   }
   
-  // If it's not mobile (and not undefined), show the full desktop dashboard.
-  return (
-    <AppLayout>
-        <Dashboard />
-    </AppLayout>
-  );
+  // If authenticated and not mobile, show the desktop dashboard.
+  if (isAuthenticated) {
+    return (
+      <AppLayout>
+          <Dashboard />
+      </AppLayout>
+    );
+  }
+
+  // Fallback, though the useEffect should handle the redirect.
+  return null;
 }
