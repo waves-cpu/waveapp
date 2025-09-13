@@ -33,10 +33,15 @@ import {
 } from "@/components/ui/dialog"
 import React, { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { useLanguage } from "@/hooks/use-language";
+import { translations } from "@/types/language";
 
 
 function AddUserDialog() {
     const { createUser } = useAuth();
+    const { language } = useLanguage();
+    const t = translations[language].settings.userManagement;
+
     const [isOpen, setIsOpen] = useState(false);
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
@@ -51,8 +56,8 @@ function AddUserDialog() {
         try {
             await createUser(username, password);
             toast({
-                title: "Pengguna Ditambahkan",
-                description: `Pengguna '${username}' telah berhasil dibuat.`
+                title: t.toast.successTitle,
+                description: t.toast.successDescription.replace('{username}', username),
             });
             setIsOpen(false);
             setUsername('');
@@ -60,8 +65,8 @@ function AddUserDialog() {
         } catch (error) {
             toast({
                 variant: 'destructive',
-                title: 'Gagal Menambah Pengguna',
-                description: error instanceof Error ? error.message : 'Terjadi kesalahan.'
+                title: t.toast.errorTitle,
+                description: error instanceof Error ? error.message : t.toast.errorDescription,
             });
         } finally {
             setIsSubmitting(false);
@@ -73,21 +78,21 @@ function AddUserDialog() {
             <DialogTrigger asChild>
                 <Button>
                     <UserPlus className="mr-2 h-4 w-4" />
-                    Tambah Pengguna
+                    {t.addUser}
                 </Button>
             </DialogTrigger>
             <DialogContent>
                 <DialogHeader>
-                    <DialogTitle>Tambah Pengguna Baru</DialogTitle>
+                    <DialogTitle>{t.dialog.title}</DialogTitle>
                     <DialogDescription>
-                        Buat akun pengguna baru untuk mengakses aplikasi.
+                        {t.dialog.description}
                     </DialogDescription>
                 </DialogHeader>
                 <form onSubmit={handleSubmit}>
                     <div className="grid gap-4 py-4">
                         <div className="grid grid-cols-4 items-center gap-4">
                             <Label htmlFor="new-username" className="text-right">
-                                Username
+                                {t.username}
                             </Label>
                             <Input
                                 id="new-username"
@@ -99,7 +104,7 @@ function AddUserDialog() {
                         </div>
                         <div className="grid grid-cols-4 items-center gap-4">
                             <Label htmlFor="new-password" className="text-right">
-                                Password
+                                {t.dialog.password}
                             </Label>
                             <Input
                                 id="new-password"
@@ -112,9 +117,9 @@ function AddUserDialog() {
                         </div>
                     </div>
                     <DialogFooter>
-                         <Button type="button" variant="ghost" onClick={() => setIsOpen(false)}>Batal</Button>
+                         <Button type="button" variant="ghost" onClick={() => setIsOpen(false)}>{t.dialog.cancel}</Button>
                         <Button type="submit" disabled={isSubmitting}>
-                            {isSubmitting ? 'Menyimpan...' : 'Simpan Pengguna'}
+                            {isSubmitting ? t.dialog.saving : t.dialog.save}
                         </Button>
                     </DialogFooter>
                 </form>
@@ -125,21 +130,23 @@ function AddUserDialog() {
 
 export function UserManagementCard() {
     const { users } = useAuth();
+    const { language } = useLanguage();
+    const t = translations[language].settings.userManagement;
     
     return (
         <Card>
             <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-base"><Users /> Pengaturan Pengguna</CardTitle>
+                <CardTitle className="flex items-center gap-2 text-base"><Users /> {t.title}</CardTitle>
                 <CardDescription>
-                    Kelola pengguna yang dapat mengakses aplikasi. Hanya admin yang bisa melihat menu ini.
+                    {t.description}
                 </CardDescription>
             </CardHeader>
             <CardContent>
                 <Table>
                     <TableHeader>
                         <TableRow>
-                            <TableHead>Username</TableHead>
-                            <TableHead>Role</TableHead>
+                            <TableHead>{t.username}</TableHead>
+                            <TableHead>{t.role}</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>

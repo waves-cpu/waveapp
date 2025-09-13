@@ -422,6 +422,27 @@ export const translations = {
             language: "Language",
             languageDescription: "Choose your preferred language.",
             selectLanguagePlaceholder: "Select language",
+            userManagement: {
+                title: "User Management",
+                description: "Manage users who can access the application. Only admins can see this menu.",
+                addUser: "Add User",
+                username: "Username",
+                role: "Role",
+                dialog: {
+                    title: "Add New User",
+                    description: "Create a new user account to access the application.",
+                    password: "Password",
+                    cancel: "Cancel",
+                    saving: "Saving...",
+                    save: "Save User",
+                },
+                toast: {
+                    successTitle: "User Added",
+                    successDescription: "User '{username}' has been created successfully.",
+                    errorTitle: "Failed to Add User",
+                    errorDescription: "An error occurred.",
+                }
+            }
         },
         bulkEditDialog: {
             title: "Adjust Stock",
@@ -910,6 +931,27 @@ export const translations = {
             language: "Bahasa",
             languageDescription: "Pilih bahasa pilihan Anda.",
             selectLanguagePlaceholder: "Pilih bahasa",
+            userManagement: {
+                title: "Pengaturan Pengguna",
+                description: "Kelola pengguna yang dapat mengakses aplikasi. Hanya admin yang bisa melihat menu ini.",
+                addUser: "Tambah Pengguna",
+                username: "Username",
+                role: "Peran",
+                dialog: {
+                    title: "Tambah Pengguna Baru",
+                    description: "Buat akun pengguna baru untuk mengakses aplikasi.",
+                    password: "Password",
+                    cancel: "Batal",
+                    saving: "Menyimpan...",
+                    save: "Simpan Pengguna",
+                },
+                toast: {
+                    successTitle: "Pengguna Ditambahkan",
+                    successDescription: "Pengguna '{username}' telah berhasil dibuat.",
+                    errorTitle: "Gagal Menambah Pengguna",
+                    errorDescription: "Terjadi kesalahan.",
+                }
+            }
         },
         bulkEditDialog: {
             title: "Atur Stok",
