@@ -6,6 +6,7 @@ import {
   Card,
   CardContent,
   CardDescription,
+  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
@@ -23,6 +24,8 @@ import { useLanguage, Language } from "@/hooks/use-language";
 import { translations } from "@/types/language";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AppLayout } from "../components/app-layout";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 
 
 function SettingsContent() {
@@ -99,6 +102,31 @@ function SettingsContent() {
                                 )}
                             </div>
                         </CardContent>
+                    </Card>
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="text-base">Pengaturan Pengguna</CardTitle>
+                            <CardDescription>
+                                Kelola informasi akun dan kata sandi Anda.
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="username">Nama Pengguna</Label>
+                                <Input id="username" value="admin" disabled />
+                            </div>
+                             <div className="space-y-2">
+                                <Label htmlFor="current-password">Kata Sandi Saat Ini</Label>
+                                <Input id="current-password" type="password" disabled />
+                            </div>
+                             <div className="space-y-2">
+                                <Label htmlFor="new-password">Kata Sandi Baru</Label>
+                                <Input id="new-password" type="password" disabled />
+                            </div>
+                        </CardContent>
+                         <CardFooter className="border-t px-6 py-4">
+                            <Button disabled>Simpan Perubahan</Button>
+                        </CardFooter>
                     </Card>
                 </div>
             </div>
