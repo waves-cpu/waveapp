@@ -31,6 +31,15 @@ const nextConfig: NextConfig = {
       }
     ],
   },
+  webpack: (config, { isServer }) => {
+    if (!isServer) {
+      // Exclude better-sqlite3 from client-side bundles
+      config.externals.push({
+        'better-sqlite3': 'commonjs better-sqlite3',
+      });
+    }
+    return config;
+  }
 };
 
 export default nextConfig;
