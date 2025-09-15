@@ -56,6 +56,8 @@ type AggregatedSalesEntry = {
     channel: string;
     totalItems: number;
     sales: Sale[];
+    // Add categories to allow filtering
+    productCategories: string[];
 };
 
 type BeginningBalanceEntry = {
@@ -90,10 +92,16 @@ export default function HistoryPage() {
 
         const processItem = (subItem: InventoryItem | InventoryItemVariant) => {
             let lastKnownStock = 0;
-            const lastHistoryEntry = subItem.history?.find(h => new Date(h.date) < beginningOfMonth);
-            if(lastHistoryEntry) {
-                lastKnownStock = lastHistoryEntry.newStockLevel;
+            if (subItem.history && subItem.history.length > 0) {
+                 const historyBeforeMonth = subItem.history
+                    .filter(h => new Date(h.date) < beginningOfMonth)
+                    .sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+                
+                if (historyBeforeMonth.length > 0) {
+                     lastKnownStock = historyBeforeMonth[0].newStockLevel;
+                }
             }
+           
             stock += lastKnownStock;
         };
 
@@ -150,7 +158,7 @@ export default function HistoryPage() {
     });
 
     // Group and aggregate sales for the selected month
-    const groupedSales = new Map<string, { date: Date; channel: string; totalItems: number; sales: Sale[] }>();
+    const groupedSales = new Map<string, { date: Date; channel: string; totalItems: number; sales: Sale[], categories: Set<string> }>();
     
     allSales.forEach(sale => {
         const saleDate = parseISO(sale.saleDate);
@@ -166,11 +174,15 @@ export default function HistoryPage() {
                 channel: sale.channel,
                 totalItems: 0,
                 sales: [],
+                categories: new Set()
             });
         }
         const group = groupedSales.get(key)!;
         group.totalItems += sale.quantity;
         group.sales.push(sale);
+        if(sale.productCategory) {
+            group.categories.add(sale.productCategory);
+        }
     });
 
     groupedSales.forEach(group => {
@@ -180,6 +192,7 @@ export default function HistoryPage() {
             channel: group.channel,
             totalItems: group.totalItems,
             sales: group.sales,
+            productCategories: Array.from(group.categories),
         });
     });
 
@@ -196,15 +209,16 @@ export default function HistoryPage() {
   const baseFilteredHistory = useMemo(() => {
     return allHistoryForMonth
       .filter(entry => {
-        if (!categoryFilter || entry.type !== 'adjustment') return true;
-        return entry.itemCategory === categoryFilter;
+        if (!categoryFilter) return true;
+        if (entry.type === 'adjustment') return entry.itemCategory === categoryFilter;
+        if (entry.type === 'sales') return entry.productCategories.includes(categoryFilter);
+        return true;
       })
       .filter(entry => {
         const lowerSearchTerm = searchTerm.toLowerCase();
         if(!lowerSearchTerm) return true;
         if (entry.type === 'sales') {
-            // For sales, we can't filter by category directly, so we just check search term
-            return entry.channel.toLowerCase().includes(lowerSearchTerm) || `sales ${entry.channel}`.includes(lowerSearchTerm);
+            return entry.channel.toLowerCase().includes(lowerSearchTerm) || `penjualan ${entry.channel}`.toLowerCase().includes(lowerSearchTerm);
         }
         return (
             (entry.itemName && entry.itemName.toLowerCase().includes(lowerSearchTerm)) ||
@@ -273,10 +287,8 @@ export default function HistoryPage() {
     let totalIn = 0;
     let totalOut = 0;
     
-    // Total in starts with the beginning balance of the month, which is already filtered by category
     totalIn += beginningBalance;
 
-    // We calculate totals based on the entire filtered list for the month, not just the current page
     baseFilteredHistory.forEach(entry => {
         if (entry.type === 'adjustment') {
             if (entry.change > 0) {
@@ -285,11 +297,7 @@ export default function HistoryPage() {
                 totalOut += Math.abs(entry.change);
             }
         } else if (entry.type === 'sales') {
-            // Sales can't be filtered by category in this structure,
-            // so we only include them if no category is selected.
-             if(!categoryFilter) {
-                totalOut += entry.totalItems;
-             }
+             totalOut += entry.totalItems;
         }
     });
     
@@ -329,7 +337,7 @@ export default function HistoryPage() {
                 `Penjualan ${entry.channel}`,
                 '',
                 '',
-                'Penjualan Online',
+                entry.productCategories.join(', '),
                 `Total ${entry.totalItems} item terjual`,
                 -entry.totalItems,
                 'N/A'
