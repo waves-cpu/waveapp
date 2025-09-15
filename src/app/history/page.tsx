@@ -80,23 +80,21 @@ export default function HistoryPage() {
   const [isSalesDetailOpen, setSalesDetailOpen] = useState(false);
   const [itemsPerPage, setItemsPerPage] = useState(20);
   const [currentPage, setCurrentPage] = useState(1);
-
-  const allHistory = useMemo((): HistoryEntry[] => {
-    const historyList: HistoryEntry[] = [];
-
-    // --- 1. Calculate Beginning Balance ---
+  
+  const beginningBalance = useMemo(() => {
     const beginningOfMonth = startOfMonth(new Date(selectedYear, selectedMonth));
-    let beginningStock = 0;
+    let stock = 0;
     
     items.forEach(item => {
+        if (categoryFilter && item.category !== categoryFilter) return;
+
         const processItem = (subItem: InventoryItem | InventoryItemVariant) => {
             let lastKnownStock = 0;
-            // History is sorted descending, find the first entry before the current month
             const lastHistoryEntry = subItem.history?.find(h => new Date(h.date) < beginningOfMonth);
             if(lastHistoryEntry) {
                 lastKnownStock = lastHistoryEntry.newStockLevel;
             }
-            beginningStock += lastKnownStock;
+            stock += lastKnownStock;
         };
 
         if (item.variants && item.variants.length > 0) {
@@ -105,14 +103,15 @@ export default function HistoryPage() {
             processItem(item);
         }
     });
+    return stock;
 
-    historyList.push({
-        type: 'balance',
-        date: beginningOfMonth,
-        totalStock: beginningStock
-    });
+  }, [items, selectedYear, selectedMonth, categoryFilter]);
 
-    // --- 2. Process Adjustments for the selected month ---
+
+  const allHistoryForMonth = useMemo((): Exclude<HistoryEntry, BeginningBalanceEntry>[] => {
+    const historyList: Exclude<HistoryEntry, BeginningBalanceEntry>[] = [];
+
+    // Process Adjustments for the selected month
     items.forEach(item => {
       const processHistory = (history: AdjustmentHistory[], parentItem: InventoryItem, variant?: InventoryItemVariant) => {
         history.forEach(entry => {
@@ -150,7 +149,7 @@ export default function HistoryPage() {
       }
     });
 
-    // --- 3. Group and aggregate sales for the selected month ---
+    // Group and aggregate sales for the selected month
     const groupedSales = new Map<string, { date: Date; channel: string; totalItems: number; sales: Sale[] }>();
     
     allSales.forEach(sale => {
@@ -188,14 +187,14 @@ export default function HistoryPage() {
   }, [items, allSales, selectedMonth, selectedYear]);
 
   const years = useMemo(() => {
-    const allYears = new Set(allHistory.map(h => h.date.getFullYear()));
+    const allYears = new Set(allHistoryForMonth.map(h => h.date.getFullYear()));
     if (allYears.size === 0) allYears.add(new Date().getFullYear());
     return Array.from(allYears).sort((a, b) => b - a);
-  }, [allHistory]);
+  }, [allHistoryForMonth]);
 
 
   const baseFilteredHistory = useMemo(() => {
-    return allHistory
+    return allHistoryForMonth
       .filter(entry => {
         if (!categoryFilter || entry.type !== 'adjustment') return true;
         return entry.itemCategory === categoryFilter;
@@ -204,47 +203,64 @@ export default function HistoryPage() {
         const lowerSearchTerm = searchTerm.toLowerCase();
         if(!lowerSearchTerm) return true;
         if (entry.type === 'sales') {
+            // For sales, we can't filter by category directly, so we just check search term
             return entry.channel.toLowerCase().includes(lowerSearchTerm) || `sales ${entry.channel}`.includes(lowerSearchTerm);
         }
-        if (entry.type === 'balance') return 'saldo awal'.includes(lowerSearchTerm);
         return (
             (entry.itemName && entry.itemName.toLowerCase().includes(lowerSearchTerm)) ||
             (entry.variantName && entry.variantName.toLowerCase().includes(lowerSearchTerm)) ||
             entry.reason.toLowerCase().includes(lowerSearchTerm)
         );
       });
-  }, [allHistory, categoryFilter, searchTerm]);
+  }, [allHistoryForMonth, categoryFilter, searchTerm]);
 
   const adjustmentCounts = useMemo(() => {
     const counts = { all: 0, in: 0, out: 0 };
     baseFilteredHistory.forEach(entry => {
+      counts.all++;
       if (entry.type === 'adjustment') {
-        counts.all++;
         if (entry.change > 0) counts.in += entry.change;
         else if (entry.change < 0) counts.out += Math.abs(entry.change);
       } else if (entry.type === 'sales') {
-        counts.all++;
         counts.out += entry.totalItems;
-      } else {
-        counts.all++;
       }
     });
     return counts;
   }, [baseFilteredHistory]);
   
-  const filteredHistory = useMemo(() => {
-    const filtered = baseFilteredHistory.filter(entry => {
-        if (adjustmentTypeFilter === 'all') return true;
-        if (entry.type === 'balance') return false; // Hide balance from in/out filters
-        const change = entry.type === 'adjustment' ? entry.change : -entry.totalItems;
-        if (adjustmentTypeFilter === 'in') return change > 0;
-        if (adjustmentTypeFilter === 'out') return change < 0;
-        return true;
-      });
+  const filteredHistory = useMemo((): HistoryEntry[] => {
+    const balanceEntry: BeginningBalanceEntry = {
+        type: 'balance',
+        date: startOfMonth(new Date(selectedYear, selectedMonth)),
+        totalStock: beginningBalance,
+    };
+    
+    let filtered: Exclude<HistoryEntry, BeginningBalanceEntry>[] = baseFilteredHistory;
 
-      setCurrentPage(1);
-      return filtered;
-  }, [baseFilteredHistory, adjustmentTypeFilter]);
+    if (adjustmentTypeFilter !== 'all') {
+      filtered = baseFilteredHistory.filter(entry => {
+          if (entry.type === 'adjustment') {
+              const change = entry.change;
+              if (adjustmentTypeFilter === 'in') return change > 0;
+              if (adjustmentTypeFilter === 'out') return change < 0;
+          }
+          if (entry.type === 'sales') {
+              if (adjustmentTypeFilter === 'out') return true;
+              return false;
+          }
+          return false;
+      });
+    }
+
+    setCurrentPage(1);
+
+    // Only add balance entry if not filtering by in/out and on first page
+    if (adjustmentTypeFilter === 'all') {
+      return [balanceEntry, ...filtered];
+    }
+    return filtered;
+
+  }, [baseFilteredHistory, adjustmentTypeFilter, beginningBalance, selectedYear, selectedMonth]);
 
   const totalPages = Math.ceil(filteredHistory.length / itemsPerPage);
   
@@ -257,13 +273,11 @@ export default function HistoryPage() {
     let totalIn = 0;
     let totalOut = 0;
     
-    const balanceEntry = allHistory.find(entry => entry.type === 'balance') as BeginningBalanceEntry | undefined;
-    const beginningBalance = balanceEntry?.totalStock || 0;
-
+    // Total in starts with the beginning balance of the month, which is already filtered by category
     totalIn += beginningBalance;
 
-    filteredHistory.forEach(entry => {
-        if(entry.type === 'balance') return;
+    // We calculate totals based on the entire filtered list for the month, not just the current page
+    baseFilteredHistory.forEach(entry => {
         if (entry.type === 'adjustment') {
             if (entry.change > 0) {
                 totalIn += entry.change;
@@ -271,12 +285,17 @@ export default function HistoryPage() {
                 totalOut += Math.abs(entry.change);
             }
         } else if (entry.type === 'sales') {
-            totalOut += entry.totalItems;
+            // Sales can't be filtered by category in this structure,
+            // so we only include them if no category is selected.
+             if(!categoryFilter) {
+                totalOut += entry.totalItems;
+             }
         }
     });
+    
     const netChange = totalIn - totalOut;
     return { totalIn, totalOut, netChange };
-  }, [filteredHistory, allHistory]);
+  }, [baseFilteredHistory, beginningBalance, categoryFilter]);
   
   const uniqueCategoriesWithSales = useMemo(() => {
       return [...categories].sort()
