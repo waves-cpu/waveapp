@@ -104,7 +104,6 @@ function AllProductsDialog({
     const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [dateRange, setDateRange] = useState<DateRange | undefined>(initialDateRange);
-    const [openVariants, setOpenVariants] = useState<Record<string, boolean>>({});
 
     const productMap = useMemo(() => {
         const map = new Map<string, InventoryItem>();
@@ -202,10 +201,6 @@ function AllProductsDialog({
 
     }, [productProfitability, categoryFilter, searchTerm]);
 
-    const toggleVariantVisibility = (productId: string) => {
-        setOpenVariants(prev => ({ ...prev, [productId]: !prev[productId] }));
-    };
-
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="max-w-4xl h-[90vh] flex flex-col">
@@ -279,62 +274,48 @@ function AllProductsDialog({
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {filteredData.map((p) => {
+                                {filteredData.flatMap((p) => {
                                     const hasVariants = p.variants && p.variants.length > 0;
-                                    return (
-                                        <Collapsible asChild key={`collapsible-${p.productId}`} open={openVariants[p.productId] || false} onOpenChange={() => toggleVariantVisibility(p.productId)}>
-                                            <React.Fragment>
-                                                <CollapsibleTrigger asChild>
-                                                    <TableRow className="cursor-pointer">
-                                                        <TableCell className="py-2">
-                                                            <div className="flex items-center gap-2">
-                                                                {hasVariants && (
-                                                                    <ChevronDown className={cn("h-4 w-4 transition-transform", openVariants[p.productId] && "rotate-180")} />
-                                                                )}
-                                                                <div className={cn(!hasVariants && "pl-6")}>
-                                                                    <div className="font-medium text-sm">{p.name}</div>
-                                                                    <div className="text-muted-foreground font-normal text-xs">SKU: {p.sku || '-'}</div>
-                                                                </div>
-                                                            </div>
-                                                        </TableCell>
-                                                        <TableCell className="text-center text-xs font-medium py-2">{p.unitsSold}</TableCell>
-                                                        <TableCell className="text-left text-xs font-medium py-2">{formatCurrency(p.totalRevenue)}</TableCell>
-                                                        <TableCell className="text-left text-xs font-medium py-2">{formatCurrency(p.totalCogs)}</TableCell>
-                                                        <TableCell className="text-left font-medium text-xs py-2">{formatCurrency(p.grossProfit)}</TableCell>
-                                                    </TableRow>
-                                                </CollapsibleTrigger>
-                                                {hasVariants && (
-                                                    <CollapsibleContent asChild>
-                                                        <>
-                                                        {(p.variants || []).filter(v => {
-                                                            if (!searchTerm) return true;
-                                                            const lowerSearch = searchTerm.toLowerCase();
-                                                            return v.name.toLowerCase().includes(lowerSearch) || (v.sku && v.sku.toLowerCase().includes(lowerSearch));
-                                                        }).map((v, variantIndex, variantsArray) => (
-                                                            <TableRow key={`variant-${v.variantId}`} className="bg-muted/30 hover:bg-muted/50">
-                                                                <TableCell className="py-2">
-                                                                    <div className="flex items-center gap-4">
-                                                                        <div className="flex h-10 w-10 items-center justify-center rounded-sm pl-6">
-                                                                            <Store className="h-5 w-5 text-gray-400" />
-                                                                        </div>
-                                                                        <div>
-                                                                            <div className="font-medium text-sm">{v.name}</div>
-                                                                            <div className="text-xs text-muted-foreground">SKU: {v.sku || '-'}</div>
-                                                                        </div>
-                                                                    </div>
-                                                                </TableCell>
-                                                                <TableCell className="text-center text-xs py-2">{v.unitsSold}</TableCell>
-                                                                <TableCell className="text-left text-xs py-2">{formatCurrency(v.totalRevenue)}</TableCell>
-                                                                <TableCell className="text-left text-xs py-2">{formatCurrency(v.totalCogs)}</TableCell>
-                                                                <TableCell className="text-left font-semibold text-xs py-2">{formatCurrency(v.grossProfit)}</TableCell>
-                                                            </TableRow>
-                                                        ))}
-                                                        </>
-                                                    </CollapsibleContent>
-                                                )}
-                                            </React.Fragment>
-                                        </Collapsible>
-                                    )
+                                    const productRow = (
+                                        <TableRow key={p.productId} className={hasVariants ? "bg-muted/30" : ""}>
+                                            <TableCell className="py-2">
+                                                <div className="font-medium text-sm">{p.name}</div>
+                                                <div className="text-muted-foreground font-normal text-xs">SKU: {p.sku || '-'}</div>
+                                            </TableCell>
+                                            <TableCell className="text-center text-xs font-medium py-2">{p.unitsSold}</TableCell>
+                                            <TableCell className="text-left text-xs font-medium py-2">{formatCurrency(p.totalRevenue)}</TableCell>
+                                            <TableCell className="text-left text-xs font-medium py-2">{formatCurrency(p.totalCogs)}</TableCell>
+                                            <TableCell className="text-left font-medium text-xs py-2">{formatCurrency(p.grossProfit)}</TableCell>
+                                        </TableRow>
+                                    );
+
+                                    const variantRows = hasVariants ? (p.variants || [])
+                                        .filter(v => {
+                                            if (!searchTerm) return true;
+                                            const lowerSearch = searchTerm.toLowerCase();
+                                            return v.name.toLowerCase().includes(lowerSearch) || (v.sku && v.sku.toLowerCase().includes(lowerSearch));
+                                        })
+                                        .map(v => (
+                                            <TableRow key={`variant-${v.variantId}`} className="hover:bg-muted/50">
+                                                <TableCell className="py-2">
+                                                    <div className="flex items-center gap-4">
+                                                        <div className="flex h-10 w-10 items-center justify-center rounded-sm pl-6">
+                                                            <Store className="h-5 w-5 text-gray-400" />
+                                                        </div>
+                                                        <div>
+                                                            <div className="font-medium text-sm">{v.name}</div>
+                                                            <div className="text-xs text-muted-foreground">SKU: {v.sku || '-'}</div>
+                                                        </div>
+                                                    </div>
+                                                </TableCell>
+                                                <TableCell className="text-center text-xs py-2">{v.unitsSold}</TableCell>
+                                                <TableCell className="text-left text-xs py-2">{formatCurrency(v.totalRevenue)}</TableCell>
+                                                <TableCell className="text-left text-xs py-2">{formatCurrency(v.totalCogs)}</TableCell>
+                                                <TableCell className="text-left font-semibold text-xs py-2">{formatCurrency(v.grossProfit)}</TableCell>
+                                            </TableRow>
+                                        )) : [];
+                                    
+                                    return [productRow, ...variantRows];
                                 })}
                             </TableBody>
                         </Table>
@@ -648,3 +629,4 @@ export default function SalesReportPage() {
         </AppLayout>
     );
 }
+
