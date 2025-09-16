@@ -299,7 +299,7 @@ function AllProductsDialog({
                                             <TableRow key={`variant-${v.variantId}`} className="hover:bg-muted/50">
                                                 <TableCell className="py-2">
                                                     <div className="flex items-center gap-4">
-                                                        <div className="flex h-10 w-10 items-center justify-center rounded-sm pl-6">
+                                                        <div className="flex h-10 w-10 items-center justify-center rounded-sm">
                                                             <Store className="h-5 w-5 text-gray-400" />
                                                         </div>
                                                         <div>
@@ -630,3 +630,6 @@ export default function SalesReportPage() {
     );
 }
 
+
+
+    
