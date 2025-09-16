@@ -279,10 +279,10 @@ function AllProductsDialog({
                                 {filteredData.flatMap((p) => {
                                     const hasVariants = p.variants && p.variants.length > 0;
                                     const productRow = (
-                                        <TableRow key={p.productId} className={hasVariants ? "bg-muted/30" : ""}>
+                                        <TableRow key={p.productId}>
                                             <TableCell className="py-2">
                                                 <div className="flex items-center gap-3">
-                                                    <Image src={p.imageUrl || 'https://placehold.co/30x30.png'} alt={p.name} width={30} height={30} className="rounded-md" />
+                                                    <Image src={p.imageUrl || 'https://placehold.co/30x30.png'} alt={p.name} width={30} height={30} className="rounded-md" data-ai-hint="product image" />
                                                     <div>
                                                         <div className="font-medium text-sm">{p.name}</div>
                                                         <div className="text-muted-foreground font-normal text-xs">SKU: {p.sku || '-'}</div>
