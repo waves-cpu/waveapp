@@ -26,7 +26,7 @@ import { DateRange } from "react-day-picker";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import Image from 'next/image';
 
 
 const formatCurrency = (amount: number) => `Rp${Math.round(amount).toLocaleString('id-ID')}`;
@@ -50,6 +50,7 @@ interface ProfitabilityData {
     totalRevenue: number;
     totalCogs: number;
     grossProfit: number;
+    imageUrl?: string;
     variants?: VariantProfitabilityData[];
 }
 
@@ -133,6 +134,7 @@ function AllProductsDialog({
                     name: productDetails?.name || sale.productName,
                     sku: sale.parentSku || productDetails?.sku || sale.sku,
                     category: productDetails?.category || sale.productCategory,
+                    imageUrl: productDetails?.imageUrl,
                     unitsSold: 0,
                     totalRevenue: 0,
                     totalCogs: 0,
@@ -279,8 +281,13 @@ function AllProductsDialog({
                                     const productRow = (
                                         <TableRow key={p.productId} className={hasVariants ? "bg-muted/30" : ""}>
                                             <TableCell className="py-2">
-                                                <div className="font-medium text-sm">{p.name}</div>
-                                                <div className="text-muted-foreground font-normal text-xs">SKU: {p.sku || '-'}</div>
+                                                <div className="flex items-center gap-3">
+                                                    <Image src={p.imageUrl || 'https://placehold.co/40x40.png'} alt={p.name} width={40} height={40} className="rounded-md" />
+                                                    <div>
+                                                        <div className="font-medium text-sm">{p.name}</div>
+                                                        <div className="text-muted-foreground font-normal text-xs">SKU: {p.sku || '-'}</div>
+                                                    </div>
+                                                </div>
                                             </TableCell>
                                             <TableCell className="text-center text-xs font-medium py-2">{p.unitsSold}</TableCell>
                                             <TableCell className="text-left text-xs font-medium py-2">{formatCurrency(p.totalRevenue)}</TableCell>
@@ -298,8 +305,8 @@ function AllProductsDialog({
                                         .map(v => (
                                             <TableRow key={`variant-${v.variantId}`} className="hover:bg-muted/50">
                                                 <TableCell className="py-2">
-                                                    <div className="flex items-center gap-4">
-                                                        <div className="flex h-10 w-10 items-center justify-center rounded-sm">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="flex h-10 w-10 items-center justify-center rounded-sm shrink-0">
                                                             <Store className="h-5 w-5 text-gray-400" />
                                                         </div>
                                                         <div>
