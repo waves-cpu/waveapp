@@ -269,10 +269,34 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                       <CollapsibleContent>
                           <SidebarMenu className="ml-4 mt-2 border-l border-muted-foreground/20 pl-4">
                                 <SidebarMenuItem>
+                                  <Link href="/finance/profit-loss">
+                                      <SidebarMenuButton variant="ghost" size="sm" isActive={pathname === '/finance/profit-loss'}>
+                                          <FileBarChart />
+                                          {t.finance.profitLossReport}
+                                      </SidebarMenuButton>
+                                  </Link>
+                              </SidebarMenuItem>
+                              <SidebarMenuItem>
+                                  <Link href="/finance/balance-sheet">
+                                      <SidebarMenuButton variant="ghost" size="sm" isActive={pathname === '/finance/balance-sheet'}>
+                                          <Scale />
+                                          {t.finance.balanceSheet}
+                                      </SidebarMenuButton>
+                                  </Link>
+                              </SidebarMenuItem>
+                              <SidebarMenuItem>
                                   <Link href="/finance/statements">
                                       <SidebarMenuButton variant="ghost" size="sm" isActive={pathname === '/finance/statements'}>
                                           <BarChart />
                                           {t.finance.salesReport}
+                                      </SidebarMenuButton>
+                                  </Link>
+                              </SidebarMenuItem>
+                               <SidebarMenuItem>
+                                  <Link href="/finance/assets">
+                                      <SidebarMenuButton variant="ghost" size="sm" isActive={pathname === '/finance/assets'}>
+                                          <ArchiveIcon />
+                                          {t.finance.assetReport}
                                       </SidebarMenuButton>
                                   </Link>
                               </SidebarMenuItem>
@@ -289,30 +313,6 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                                       <SidebarMenuButton variant="ghost" size="sm" isActive={pathname === '/finance/general-ledger'}>
                                           <FileText />
                                           {t.finance.generalLedger}
-                                      </SidebarMenuButton>
-                                  </Link>
-                              </SidebarMenuItem>
-                               <SidebarMenuItem>
-                                  <Link href="/finance/balance-sheet">
-                                      <SidebarMenuButton variant="ghost" size="sm" isActive={pathname === '/finance/balance-sheet'}>
-                                          <Scale />
-                                          {t.finance.balanceSheet}
-                                      </SidebarMenuButton>
-                                  </Link>
-                              </SidebarMenuItem>
-                              <SidebarMenuItem>
-                                  <Link href="/finance/assets">
-                                      <SidebarMenuButton variant="ghost" size="sm" isActive={pathname === '/finance/assets'}>
-                                          <ArchiveIcon />
-                                          {t.finance.assetReport}
-                                      </SidebarMenuButton>
-                                  </Link>
-                              </SidebarMenuItem>
-                              <SidebarMenuItem>
-                                  <Link href="/finance/profit-loss">
-                                      <SidebarMenuButton variant="ghost" size="sm" isActive={pathname === '/finance/profit-loss'}>
-                                          <FileBarChart />
-                                          {t.finance.profitLossReport}
                                       </SidebarMenuButton>
                                   </Link>
                               </SidebarMenuItem>
