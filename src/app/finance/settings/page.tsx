@@ -67,12 +67,12 @@ const getChannelPrice = (item: InventoryItem | InventoryItemVariant, channel: st
 };
 
 function PriceSettingsContent() {
-    const { language } } from useLanguage();
+    const { language } = useLanguage();
     const t = translations[language];
     const TPrice = t.finance.priceSettingsPage;
     const TSales = t.sales;
-    const { items: allInventoryItems, categories, updatePrices, loading } } = useInventory();
-    const { toast } } = useToast();
+    const { items: allInventoryItems, categories, updatePrices, loading } = useInventory();
+    const { toast } = useToast();
     const searchParams = useSearchParams();
     const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
     
@@ -93,7 +93,7 @@ function PriceSettingsContent() {
         },
     });
 
-    const { fields, append, remove, replace } } = useFieldArray({
+    const { fields, append, remove, replace } = useFieldArray({
         control: form.control,
         name: "items"
     });
@@ -593,7 +593,7 @@ const PriceRowFields = ({
     inputRefs: React.MutableRefObject<(HTMLInputElement | null)[]>,
     onKeyDown: (e: React.KeyboardEvent, flatIndex: number) => void
 }) => {
-    const { language } } = useLanguage();
+    const { language } = useLanguage();
     const TPrice = translations[language].finance.priceSettingsPage;
     
     return (
@@ -713,5 +713,3 @@ export default function PriceSettingsPage() {
         </AppLayout>
     )
 }
-
-    
