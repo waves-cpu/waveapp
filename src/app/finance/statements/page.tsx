@@ -105,17 +105,6 @@ function AllProductsDialog({
     const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [dateRange, setDateRange] = useState<DateRange | undefined>(initialDateRange);
-
-    const productMap = useMemo(() => {
-        const map = new Map<string, {name: string, sku?: string, category: string, imageUrl?: string}>();
-        initialAllProducts.forEach(p => map.set(p.id, {
-            name: p.name,
-            sku: p.sku,
-            category: p.category,
-            imageUrl: p.imageUrl,
-        }));
-        return map;
-    }, [initialAllProducts]);
     
     const productProfitability = useMemo(() => {
         const salesInDateRange = allSales.filter(sale => {
@@ -130,16 +119,14 @@ function AllProductsDialog({
         salesInDateRange.forEach(sale => {
             const parentProductId = sale.productId;
             if (!parentProductId) return;
-
-            const productDetails = productMap.get(parentProductId);
             
             if (!profitabilityMap.has(parentProductId)) {
                  profitabilityMap.set(parentProductId, {
                     productId: parentProductId,
-                    name: productDetails?.name || sale.productName,
-                    sku: sale.parentSku || productDetails?.sku || sale.sku,
-                    category: productDetails?.category || sale.productCategory,
-                    imageUrl: productDetails?.imageUrl,
+                    name: sale.productName,
+                    sku: sale.parentSku,
+                    category: sale.productCategory,
+                    imageUrl: sale.parentImageUrl,
                     unitsSold: 0,
                     totalRevenue: 0,
                     totalCogs: 0,
@@ -188,7 +175,7 @@ function AllProductsDialog({
         });
 
         return Array.from(profitabilityMap.values()).sort((a,b) => b.unitsSold - a.unitsSold);
-    }, [allSales, dateRange, productMap]);
+    }, [allSales, dateRange]);
 
 
     const filteredData = useMemo(() => {
@@ -645,3 +632,4 @@ export default function SalesReportPage() {
 
 
     
+

@@ -1,4 +1,5 @@
 
+
 'use server';
 
 import { db } from './db';
@@ -825,6 +826,7 @@ export async function fetchAllSales(): Promise<Sale[]> {
             s.id, s.transactionId, s.paymentMethod, s.resellerName, s.productId, s.variantId, s.channel, s.quantity, s.priceAtSale, s.cogsAtSale, s.saleDate,
             p.name as productName,
             p.category as productCategory,
+            p.imageUrl as parentImageUrl,
             s.parentSku,
             v.name as variantName,
             COALESCE(v.sku, p.sku) as sku,
@@ -1147,3 +1149,4 @@ export async function archiveProduct(itemId: string, isArchived: boolean) {
 export async function deleteProductPermanently(itemId: string) {
     db.prepare('DELETE FROM products WHERE id = ?').run(itemId);
 }
+
