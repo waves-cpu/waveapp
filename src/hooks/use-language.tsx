@@ -12,19 +12,19 @@ interface LanguageContextType {
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
 
-// Helper function to get language from localStorage safely on the client
-const getInitialLanguage = (): Language => {
-  if (typeof window !== 'undefined') {
+export const LanguageProvider = ({ children }: { children: ReactNode }) => {
+  // Start with a default language, and don't try to access localStorage yet.
+  const [language, setLanguageState] = useState<Language>('en');
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    // This effect runs only on the client.
+    setIsClient(true);
     const storedLanguage = localStorage.getItem('language') as Language | null;
     if (storedLanguage && ['en', 'id'].includes(storedLanguage)) {
-      return storedLanguage;
+      setLanguageState(storedLanguage);
     }
-  }
-  return 'en'; // Default language
-};
-
-export const LanguageProvider = ({ children }: { children: ReactNode }) => {
-  const [language, setLanguageState] = useState<Language>(getInitialLanguage);
+  }, []);
 
   useEffect(() => {
     // This effect ensures that if the language is changed in another tab, it syncs up.
@@ -33,7 +33,6 @@ export const LanguageProvider = ({ children }: { children: ReactNode }) => {
         setLanguageState(event.newValue as Language);
       }
     };
-
     window.addEventListener('storage', handleStorageChange);
     return () => {
       window.removeEventListener('storage', handleStorageChange);
@@ -49,8 +48,15 @@ export const LanguageProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  // On the server, and on the very first client render, `isClient` will be false.
+  // We provide a stable 'en' value until the client-side effect can run.
+  const contextValue = {
+    language: isClient ? language : 'en',
+    setLanguage,
+  };
+
   return (
-    <LanguageContext.Provider value={{ language, setLanguage }}>
+    <LanguageContext.Provider value={contextValue}>
       {children}
     </LanguageContext.Provider>
   );
