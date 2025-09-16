@@ -282,7 +282,7 @@ function AllProductsDialog({
                                         <TableRow key={p.productId} className={hasVariants ? "bg-muted/30" : ""}>
                                             <TableCell className="py-2">
                                                 <div className="flex items-center gap-3">
-                                                    <Image src={p.imageUrl || 'https://placehold.co/40x40.png'} alt={p.name} width={40} height={40} className="rounded-md" />
+                                                    <Image src={p.imageUrl || 'https://placehold.co/30x30.png'} alt={p.name} width={30} height={30} className="rounded-md" />
                                                     <div>
                                                         <div className="font-medium text-sm">{p.name}</div>
                                                         <div className="text-muted-foreground font-normal text-xs">SKU: {p.sku || '-'}</div>
