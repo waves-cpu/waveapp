@@ -163,18 +163,10 @@ function PriceSettingsContent() {
             const itemsToAdd: PriceSettingItem[] = [];
             
             productIds.forEach(id => {
-                const parentItem = allInventoryItems.find(item => item.id === id);
-                if (parentItem) {
-                    if (parentItem.variants && parentItem.variants.length > 0) {
-                        parentItem.variants.forEach(variant => {
-                            if (!existingItemIds.has(variant.id)) {
-                                itemsToAdd.push(itemToPriceSettingItem(variant, 'variant', parentItem));
-                            }
-                        });
-                    } else {
-                         if (!existingItemIds.has(parentItem.id)) {
-                            itemsToAdd.push(itemToPriceSettingItem(parentItem, 'product'));
-                         }
+                if(allItemsMap.has(id)) {
+                    const { item, type, parent } = allItemsMap.get(id)!;
+                    if (!existingItemIds.has(id)) {
+                        itemsToAdd.push(itemToPriceSettingItem(item, type, parent));
                     }
                 }
             });
@@ -183,7 +175,7 @@ function PriceSettingsContent() {
                 append(itemsToAdd);
             }
         }
-    }, [searchParams, allInventoryItems, loading, append, itemToPriceSettingItem, fields.length, existingItemIds]);
+    }, [searchParams, allInventoryItems, allItemsMap, loading, append, itemToPriceSettingItem, fields.length, existingItemIds]);
 
 
     const handleProductsSelected = (selectedIds: string[]) => {
