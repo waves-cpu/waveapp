@@ -107,8 +107,13 @@ function AllProductsDialog({
     const [dateRange, setDateRange] = useState<DateRange | undefined>(initialDateRange);
 
     const productMap = useMemo(() => {
-        const map = new Map<string, InventoryItem>();
-        initialAllProducts.forEach(p => map.set(p.id, p));
+        const map = new Map<string, {name: string, sku?: string, category: string, imageUrl?: string}>();
+        initialAllProducts.forEach(p => map.set(p.id, {
+            name: p.name,
+            sku: p.sku,
+            category: p.category,
+            imageUrl: p.imageUrl,
+        }));
         return map;
     }, [initialAllProducts]);
     
