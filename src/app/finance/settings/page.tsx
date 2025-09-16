@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState, useMemo, useEffect, useRef, useCallback, Control, useWatch, UseFormReturn } from 'react';
+import React, { useState, useMemo, useEffect, useRef, useCallback, Control, useWatch, UseFormReturn, Suspense } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -31,6 +31,7 @@ import { cn } from '@/lib/utils';
 import { Checkbox } from '@/components/ui/checkbox';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
+import { Skeleton } from '@/components/ui/skeleton';
 
 
 const channelPriceSchema = z.object({
@@ -65,14 +66,13 @@ const getChannelPrice = (item: InventoryItem | InventoryItemVariant, channel: st
     return item.channelPrices?.find(p => p.channel === channel)?.price;
 };
 
-
-export default function PriceSettingsPage() {
-    const { language } = useLanguage();
+function PriceSettingsContent() {
+    const { language } } from useLanguage();
     const t = translations[language];
     const TPrice = t.finance.priceSettingsPage;
     const TSales = t.sales;
-    const { items: allInventoryItems, categories, updatePrices, loading } = useInventory();
-    const { toast } = useToast();
+    const { items: allInventoryItems, categories, updatePrices, loading } } = useInventory();
+    const { toast } } = useToast();
     const searchParams = useSearchParams();
     const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
     
@@ -93,7 +93,7 @@ export default function PriceSettingsPage() {
         },
     });
 
-    const { fields, append, remove, replace } = useFieldArray({
+    const { fields, append, remove, replace } } = useFieldArray({
         control: form.control,
         name: "items"
     });
@@ -360,227 +360,225 @@ export default function PriceSettingsPage() {
     };
 
     return (
-        <AppLayout>
-            <main className="flex-1 p-4 md:p-10">
-                <div className="flex items-center justify-between gap-4 mb-6">
-                    <div className="flex items-center gap-4">
-                        <SidebarTrigger className="md:hidden" />
-                        <h1 className="text-lg font-bold">{t.finance.priceSettings}</h1>
-                    </div>
+        <main className="flex-1 p-4 md:p-10">
+            <div className="flex items-center justify-between gap-4 mb-6">
+                <div className="flex items-center gap-4">
+                    <SidebarTrigger className="md:hidden" />
+                    <h1 className="text-lg font-bold">{t.finance.priceSettings}</h1>
                 </div>
-                
-                <Form {...form}>
-                    <form onSubmit={form.handleSubmit(onSubmit)}>
-                        <Card>
-                            <CardHeader>
-                                <CardDescription>{TPrice.description}</CardDescription>
-                                <div className="flex flex-col gap-4 pt-2">
-                                    <div className="flex flex-col sm:flex-row items-center gap-4">
-                                        <div className="relative flex-grow w-full">
-                                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                            <Input
-                                                placeholder={TPrice.searchPlaceholder}
-                                                value={searchTerm}
-                                                onChange={(e) => setSearchTerm(e.target.value)}
-                                                className="pl-10 w-full"
-                                            />
-                                        </div>
-                                        <Button type="button" onClick={() => setProductSelectionOpen(true)} className="w-full sm:w-auto">
-                                            <PlusCircle className="mr-2 h-4 w-4" />
-                                            {TPrice.selectProduct}
+            </div>
+            
+            <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)}>
+                    <Card>
+                        <CardHeader>
+                            <CardDescription>{TPrice.description}</CardDescription>
+                            <div className="flex flex-col gap-4 pt-2">
+                                <div className="flex flex-col sm:flex-row items-center gap-4">
+                                    <div className="relative flex-grow w-full">
+                                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                        <Input
+                                            placeholder={TPrice.searchPlaceholder}
+                                            value={searchTerm}
+                                            onChange={(e) => setSearchTerm(e.target.value)}
+                                            className="pl-10 w-full"
+                                        />
+                                    </div>
+                                    <Button type="button" onClick={() => setProductSelectionOpen(true)} className="w-full sm:w-auto">
+                                        <PlusCircle className="mr-2 h-4 w-4" />
+                                        {TPrice.selectProduct}
+                                    </Button>
+                                </div>
+                                {fields.length > 0 && (
+                                    <div className="p-2 border-t border-dashed flex flex-col md:flex-row items-center gap-2">
+                                        <p className="text-sm font-medium mr-2 whitespace-nowrap">Ubah Masal:</p>
+                                        <Select value={bulkUpdateChannel} onValueChange={(v) => setBulkUpdateChannel(v as any)}>
+                                            <SelectTrigger className="w-full md:w-[160px]">
+                                                <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="costPrice">{TPrice.costPrice}</SelectItem>
+                                                <SelectItem value="price">{TPrice.defaultPrice}</SelectItem>
+                                                <SelectItem value="pos">{TSales.pos}</SelectItem>
+                                                <SelectItem value="reseller">{TSales.reseller}</SelectItem>
+                                                <SelectItem value="shopee">{TSales.shopee}</SelectItem>
+                                                <SelectItem value="tiktok">{TSales.tiktok}</SelectItem>
+                                                <SelectItem value="lazada">{TSales.lazada}</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                        <Input
+                                            type="number"
+                                            placeholder="Masukkan harga"
+                                            value={bulkUpdateValue}
+                                            onChange={(e) => setBulkUpdateValue(e.target.value)}
+                                            className="w-full md:w-[160px]"
+                                        />
+                                        <Button type="button" variant="outline" onClick={handleBulkUpdate} disabled={selectedItemsForBulkUpdate.size === 0}>
+                                            Terapkan ke {selectedItemsForBulkUpdate.size} item
                                         </Button>
                                     </div>
-                                    {fields.length > 0 && (
-                                        <div className="p-2 border-t border-dashed flex flex-col md:flex-row items-center gap-2">
-                                            <p className="text-sm font-medium mr-2 whitespace-nowrap">Ubah Masal:</p>
-                                            <Select value={bulkUpdateChannel} onValueChange={(v) => setBulkUpdateChannel(v as any)}>
-                                                <SelectTrigger className="w-full md:w-[160px]">
-                                                    <SelectValue />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    <SelectItem value="costPrice">{TPrice.costPrice}</SelectItem>
-                                                    <SelectItem value="price">{TPrice.defaultPrice}</SelectItem>
-                                                    <SelectItem value="pos">{TSales.pos}</SelectItem>
-                                                    <SelectItem value="reseller">{TSales.reseller}</SelectItem>
-                                                    <SelectItem value="shopee">{TSales.shopee}</SelectItem>
-                                                    <SelectItem value="tiktok">{TSales.tiktok}</SelectItem>
-                                                    <SelectItem value="lazada">{TSales.lazada}</SelectItem>
-                                                </SelectContent>
-                                            </Select>
-                                            <Input
-                                                type="number"
-                                                placeholder="Masukkan harga"
-                                                value={bulkUpdateValue}
-                                                onChange={(e) => setBulkUpdateValue(e.target.value)}
-                                                className="w-full md:w-[160px]"
-                                            />
-                                            <Button type="button" variant="outline" onClick={handleBulkUpdate} disabled={selectedItemsForBulkUpdate.size === 0}>
-                                                Terapkan ke {selectedItemsForBulkUpdate.size} item
-                                            </Button>
-                                        </div>
-                                    )}
-                                </div>
-                            </CardHeader>
-                            <CardContent className="p-0">
-                                <div className="border rounded-md">
-                                    <Table>
-                                        <TableHeader>
+                                )}
+                            </div>
+                        </CardHeader>
+                        <CardContent className="p-0">
+                            <div className="border rounded-md">
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead className="w-[50px]">
+                                                <Checkbox
+                                                    checked={isAllVisibleSelected}
+                                                    onCheckedChange={toggleAllForBulkUpdate}
+                                                />
+                                            </TableHead>
+                                            <TableHead>{TPrice.product}</TableHead>
+                                            <TableHead className="text-center">{TPrice.costPrice}</TableHead>
+                                            <TableHead className="text-center">{TPrice.defaultPrice}</TableHead>
+                                            <TableHead className="text-center">{TSales.pos}</TableHead>
+                                            <TableHead className="text-center">{TSales.reseller}</TableHead>
+                                            <TableHead className="text-center">{TSales.shopee}</TableHead>
+                                            <TableHead className="text-center">{TSales.tiktok}</TableHead>
+                                            <TableHead className="text-center">{TSales.lazada}</TableHead>
+                                            <TableHead className="w-[50px]"></TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {loading ? (
+                                             <TableRow>
+                                                <TableCell colSpan={10} className="text-center h-24">Memuat...</TableCell>
+                                             </TableRow>
+                                        ) : fields.length === 0 ? (
                                             <TableRow>
-                                                <TableHead className="w-[50px]">
-                                                    <Checkbox
-                                                        checked={isAllVisibleSelected}
-                                                        onCheckedChange={toggleAllForBulkUpdate}
-                                                    />
-                                                </TableHead>
-                                                <TableHead>{TPrice.product}</TableHead>
-                                                <TableHead className="text-center">{TPrice.costPrice}</TableHead>
-                                                <TableHead className="text-center">{TPrice.defaultPrice}</TableHead>
-                                                <TableHead className="text-center">{TSales.pos}</TableHead>
-                                                <TableHead className="text-center">{TSales.reseller}</TableHead>
-                                                <TableHead className="text-center">{TSales.shopee}</TableHead>
-                                                <TableHead className="text-center">{TSales.tiktok}</TableHead>
-                                                <TableHead className="text-center">{TSales.lazada}</TableHead>
-                                                <TableHead className="w-[50px]"></TableHead>
-                                            </TableRow>
-                                        </TableHeader>
-                                        <TableBody>
-                                            {loading ? (
-                                                 <TableRow>
-                                                    <TableCell colSpan={10} className="text-center h-24">Memuat...</TableCell>
-                                                 </TableRow>
-                                            ) : fields.length === 0 ? (
-                                                <TableRow>
-                                                    <TableCell colSpan={10} className="text-center h-48">
-                                                        <div className="flex flex-col items-center justify-center gap-4 text-muted-foreground">
-                                                            <ShoppingBag className="h-16 w-16" />
-                                                            <div className="text-center">
-                                                                <p className="font-semibold">{TPrice.noProducts}</p>
-                                                                <p className="text-sm">{TPrice.selectProductsCta}</p>
-                                                            </div>
+                                                <TableCell colSpan={10} className="text-center h-48">
+                                                    <div className="flex flex-col items-center justify-center gap-4 text-muted-foreground">
+                                                        <ShoppingBag className="h-16 w-16" />
+                                                        <div className="text-center">
+                                                            <p className="font-semibold">{TPrice.noProducts}</p>
+                                                            <p className="text-sm">{TPrice.selectProductsCta}</p>
                                                         </div>
-                                                    </TableCell>
-                                                </TableRow>
-                                            ) : (
-                                                <>
-                                                    {groupedAndFilteredItems.simpleItems.map((field, rowIndex) => (
-                                                        <TableRow key={field.id}>
-                                                            <TableCell>
-                                                                <Checkbox
-                                                                    checked={selectedItemsForBulkUpdate.has(field.id)}
-                                                                    onCheckedChange={() => toggleItemForBulkUpdate(field.id)}
-                                                                />
-                                                            </TableCell>
+                                                    </div>
+                                                </TableCell>
+                                            </TableRow>
+                                        ) : (
+                                            <>
+                                                {groupedAndFilteredItems.simpleItems.map((field, rowIndex) => (
+                                                    <TableRow key={field.id}>
+                                                        <TableCell>
+                                                            <Checkbox
+                                                                checked={selectedItemsForBulkUpdate.has(field.id)}
+                                                                onCheckedChange={() => toggleItemForBulkUpdate(field.id)}
+                                                            />
+                                                        </TableCell>
+                                                         <TableCell>
+                                                            <div className="flex items-center gap-4">
+                                                                <Image src={field.imageUrl || 'https://placehold.co/40x40.png'} alt={field.name} width={40} height={40} className="rounded-sm" data-ai-hint="product image" />
+                                                                <div>
+                                                                    <span className="font-medium text-sm">{field.name}</span>
+                                                                    <div className="text-xs text-muted-foreground">SKU: {field.sku}</div>
+                                                                </div>
+                                                            </div>
+                                                        </TableCell>
+                                                        <PriceRowFields 
+                                                            form={form}
+                                                            control={form.control}
+                                                            index={field.originalIndex}
+                                                            onRemove={() => remove(field.originalIndex)}
+                                                            rowIndex={rowIndex}
+                                                            inputRefs={inputRefs}
+                                                            onKeyDown={handleKeyDown}
+                                                        />
+                                                    </TableRow>
+                                                ))}
+                                                 {groupedAndFilteredItems.groups.map(({ header, variants }, groupIndex) => (
+                                                    <React.Fragment key={header.id}>
+                                                        <TableRow className="bg-muted/20 hover:bg-muted/40">
                                                              <TableCell>
+                                                                <Checkbox
+                                                                    checked={variants.every(v => selectedItemsForBulkUpdate.has(v.id))}
+                                                                    onCheckedChange={(checked) => {
+                                                                        const newSet = new Set(selectedItemsForBulkUpdate);
+                                                                        if (checked) {
+                                                                            variants.forEach(v => newSet.add(v.id));
+                                                                        } else {
+                                                                            variants.forEach(v => newSet.delete(v.id));
+                                                                        }
+                                                                        setSelectedItemsForBulkUpdate(newSet);
+                                                                    }}
+                                                                />
+                                                             </TableCell>
+                                                            <TableCell colSpan={8} className="font-semibold text-primary">
                                                                 <div className="flex items-center gap-4">
-                                                                    <Image src={field.imageUrl || 'https://placehold.co/40x40.png'} alt={field.name} width={40} height={40} className="rounded-sm" data-ai-hint="product image" />
+                                                                    <Image src={header.imageUrl || 'https://placehold.co/40x40.png'} alt={header.name} width={40} height={40} className="rounded-sm" data-ai-hint="product image" />
                                                                     <div>
-                                                                        <span className="font-medium text-sm">{field.name}</span>
-                                                                        <div className="text-xs text-muted-foreground">SKU: {field.sku}</div>
+                                                                        <span className="text-sm">{header.name}</span>
+                                                                        <div className="text-xs text-muted-foreground font-normal">SKU: {header.sku}</div>
                                                                     </div>
                                                                 </div>
                                                             </TableCell>
-                                                            <PriceRowFields 
-                                                                form={form}
-                                                                control={form.control}
-                                                                index={field.originalIndex}
-                                                                onRemove={() => remove(field.originalIndex)}
-                                                                rowIndex={rowIndex}
-                                                                inputRefs={inputRefs}
-                                                                onKeyDown={handleKeyDown}
-                                                            />
+                                                            <TableCell className="p-1.5">
+                                                                <Button type="button" variant="ghost" size="icon" className="text-destructive hover:text-destructive-foreground hover:bg-destructive h-8 w-8" onClick={() => remove(variants.map(v => v.originalIndex))}>
+                                                                    <Trash2 className="h-4 w-4" />
+                                                                </Button>
+                                                            </TableCell>
                                                         </TableRow>
-                                                    ))}
-                                                     {groupedAndFilteredItems.groups.map(({ header, variants }, groupIndex) => (
-                                                        <React.Fragment key={header.id}>
-                                                            <TableRow className="bg-muted/20 hover:bg-muted/40">
-                                                                 <TableCell>
+                                                        {variants.map((field, variantRowIndex) => {
+                                                            const rowIndex = groupedAndFilteredItems.simpleItems.length + groupIndex + variantRowIndex;
+                                                            return (
+                                                            <TableRow key={field.id} className="hover:bg-muted/50">
+                                                                <TableCell>
                                                                     <Checkbox
-                                                                        checked={variants.every(v => selectedItemsForBulkUpdate.has(v.id))}
-                                                                        onCheckedChange={(checked) => {
-                                                                            const newSet = new Set(selectedItemsForBulkUpdate);
-                                                                            if (checked) {
-                                                                                variants.forEach(v => newSet.add(v.id));
-                                                                            } else {
-                                                                                variants.forEach(v => newSet.delete(v.id));
-                                                                            }
-                                                                            setSelectedItemsForBulkUpdate(newSet);
-                                                                        }}
+                                                                        checked={selectedItemsForBulkUpdate.has(field.id)}
+                                                                        onCheckedChange={() => toggleItemForBulkUpdate(field.id)}
                                                                     />
-                                                                 </TableCell>
-                                                                <TableCell colSpan={8} className="font-semibold text-primary">
-                                                                    <div className="flex items-center gap-4">
-                                                                        <Image src={header.imageUrl || 'https://placehold.co/40x40.png'} alt={header.name} width={40} height={40} className="rounded-sm" data-ai-hint="product image" />
+                                                                </TableCell>
+                                                                <TableCell>
+                                                                    <div className="flex items-center gap-4 pl-4">
+                                                                        <div className="flex h-10 w-10 items-center justify-center rounded-sm shrink-0">
+                                                                            <Store className="h-5 w-5 text-gray-400" />
+                                                                        </div>
                                                                         <div>
-                                                                            <span className="text-sm">{header.name}</span>
-                                                                            <div className="text-xs text-muted-foreground font-normal">SKU: {header.sku}</div>
+                                                                            <div className="font-medium text-sm">{field.name}</div>
+                                                                            <div className="text-xs text-muted-foreground">SKU: {field.sku}</div>
                                                                         </div>
                                                                     </div>
                                                                 </TableCell>
-                                                                <TableCell className="p-1.5">
-                                                                    <Button type="button" variant="ghost" size="icon" className="text-destructive hover:text-destructive-foreground hover:bg-destructive h-8 w-8" onClick={() => remove(variants.map(v => v.originalIndex))}>
-                                                                        <Trash2 className="h-4 w-4" />
-                                                                    </Button>
-                                                                </TableCell>
+                                                                <PriceRowFields 
+                                                                    form={form}
+                                                                    control={form.control}
+                                                                    index={field.originalIndex}
+                                                                    onRemove={() => remove(field.originalIndex)}
+                                                                    rowIndex={rowIndex}
+                                                                    inputRefs={inputRefs}
+                                                                    onKeyDown={handleKeyDown}
+                                                                />
                                                             </TableRow>
-                                                            {variants.map((field, variantRowIndex) => {
-                                                                const rowIndex = groupedAndFilteredItems.simpleItems.length + groupIndex + variantRowIndex;
-                                                                return (
-                                                                <TableRow key={field.id} className="hover:bg-muted/50">
-                                                                    <TableCell>
-                                                                        <Checkbox
-                                                                            checked={selectedItemsForBulkUpdate.has(field.id)}
-                                                                            onCheckedChange={() => toggleItemForBulkUpdate(field.id)}
-                                                                        />
-                                                                    </TableCell>
-                                                                    <TableCell>
-                                                                        <div className="flex items-center gap-4 pl-4">
-                                                                            <div className="flex h-10 w-10 items-center justify-center rounded-sm shrink-0">
-                                                                                <Store className="h-5 w-5 text-gray-400" />
-                                                                            </div>
-                                                                            <div>
-                                                                                <div className="font-medium text-sm">{field.name}</div>
-                                                                                <div className="text-xs text-muted-foreground">SKU: {field.sku}</div>
-                                                                            </div>
-                                                                        </div>
-                                                                    </TableCell>
-                                                                    <PriceRowFields 
-                                                                        form={form}
-                                                                        control={form.control}
-                                                                        index={field.originalIndex}
-                                                                        onRemove={() => remove(field.originalIndex)}
-                                                                        rowIndex={rowIndex}
-                                                                        inputRefs={inputRefs}
-                                                                        onKeyDown={handleKeyDown}
-                                                                    />
-                                                                </TableRow>
-                                                            )})}
-                                                        </React.Fragment>
-                                                     ))}
-                                                </>
-                                            )}
-                                        </TableBody>
-                                    </Table>
-                                </div>
-                            </CardContent>
-                            {fields.length > 0 && (
-                                <CardFooter className="justify-end gap-2 pt-6">
-                                    <Button type="submit" disabled={isSubmitting}>
-                                        {isSubmitting ? t.common.saving : TPrice.saveAll}
-                                    </Button>
-                                </CardFooter>
-                            )}
-                        </Card>
-                    </form>
-                </Form>
-                 <ProductSelectionDialog
-                    open={isProductSelectionOpen}
-                    onOpenChange={setProductSelectionOpen}
-                    onSelect={handleProductsSelected}
-                    availableItems={availableItems}
-                    categories={categories}
-                />
-            </main>
-        </AppLayout>
+                                                        )})}
+                                                    </React.Fragment>
+                                                 ))}
+                                            </>
+                                        )}
+                                    </TableBody>
+                                </Table>
+                            </div>
+                        </CardContent>
+                        {fields.length > 0 && (
+                            <CardFooter className="justify-end gap-2 pt-6">
+                                <Button type="submit" disabled={isSubmitting}>
+                                    {isSubmitting ? t.common.saving : TPrice.saveAll}
+                                </Button>
+                            </CardFooter>
+                        )}
+                    </Card>
+                </form>
+            </Form>
+             <ProductSelectionDialog
+                open={isProductSelectionOpen}
+                onOpenChange={setProductSelectionOpen}
+                onSelect={handleProductsSelected}
+                availableItems={availableItems}
+                categories={categories}
+            />
+        </main>
     );
 }
 
@@ -595,7 +593,7 @@ const PriceRowFields = ({
     inputRefs: React.MutableRefObject<(HTMLInputElement | null)[]>,
     onKeyDown: (e: React.KeyboardEvent, flatIndex: number) => void
 }) => {
-    const { language } = useLanguage();
+    const { language } } = useLanguage();
     const TPrice = translations[language].finance.priceSettingsPage;
     
     return (
@@ -675,3 +673,45 @@ const PriceRowFields = ({
         </>
     )
 }
+
+function PriceSettingsPageSkeleton() {
+  return (
+    <main className="flex-1 p-4 md:p-10">
+      <div className="flex items-center justify-between gap-4 mb-6">
+        <div className="flex items-center gap-4">
+          <Skeleton className="h-9 w-9 md:hidden" />
+          <Skeleton className="h-7 w-48" />
+        </div>
+      </div>
+      <Card>
+        <CardHeader>
+          <Skeleton className="h-4 w-3/4" />
+          <div className="flex flex-col gap-4 pt-2">
+            <div className="flex flex-col sm:flex-row items-center gap-4">
+              <Skeleton className="h-9 flex-grow" />
+              <Skeleton className="h-9 w-36" />
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="p-0">
+          <div className="border rounded-md p-4">
+            <Skeleton className="h-96 w-full" />
+          </div>
+        </CardContent>
+      </Card>
+    </main>
+  );
+}
+
+
+export default function PriceSettingsPage() {
+    return (
+        <AppLayout>
+            <Suspense fallback={<PriceSettingsPageSkeleton />}>
+                <PriceSettingsContent />
+            </Suspense>
+        </AppLayout>
+    )
+}
+
+    
