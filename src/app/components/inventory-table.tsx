@@ -37,6 +37,7 @@ import {
   Edit,
   Tags,
   Archive,
+  DollarSign,
 } from 'lucide-react';
 import type { InventoryItem, InventoryItemVariant } from '@/types';
 import { categories as allCategories } from '@/types';
@@ -66,6 +67,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useToast } from '@/hooks/use-toast';
 import { UpdateStockDialogAccessories } from './update-stock-dialog-accessories';
+import { Checkbox } from '@/components/ui/checkbox';
 
 interface InventoryTableProps {
   onUpdateStock: (itemId: string) => void;
@@ -211,8 +213,13 @@ export function InventoryTable({ onUpdateStock, isAccessoryTable = false }: Inve
   const [isBulkEditDialogOpen, setBulkEditDialogOpen] = useState(false);
   const [selectedBulkEditItem, setSelectedBulkEditItem] = useState<InventoryItem | null>(null);
   const router = useRouter();
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   const inventorySource = isAccessoryTable ? accessories : items;
+
+  useEffect(() => {
+    setSelectedIds(new Set());
+  }, [categoryFilter, searchTerm, stockFilter, currentPage, itemsPerPage]);
 
   const handleBulkEdit = (item: InventoryItem) => {
     setSelectedBulkEditItem(item);
@@ -280,6 +287,42 @@ export function InventoryTable({ onUpdateStock, isAccessoryTable = false }: Inve
     return filteredItems.slice(startIndex, startIndex + itemsPerPage);
   }, [filteredItems, currentPage, itemsPerPage]);
 
+  const handleSelectAll = (checked: boolean) => {
+    const newSelectedIds = new Set<string>();
+    if (checked) {
+        paginatedItems.forEach(item => {
+            if (item.variants && item.variants.length > 0) {
+                item.variants.forEach(v => newSelectedIds.add(v.id));
+            } else {
+                newSelectedIds.add(item.id);
+            }
+        });
+    }
+    setSelectedIds(newSelectedIds);
+  };
+  
+  const handleSelectRow = (item: InventoryItem, checked: boolean) => {
+    const newSelectedIds = new Set(selectedIds);
+    const idsToToggle = item.variants && item.variants.length > 0
+        ? item.variants.map(v => v.id)
+        : [item.id];
+    
+    if (checked) {
+        idsToToggle.forEach(id => newSelectedIds.add(id));
+    } else {
+        idsToToggle.forEach(id => newSelectedIds.delete(id));
+    }
+    setSelectedIds(newSelectedIds);
+  };
+
+  const isAllOnPageSelected = useMemo(() => {
+    if (paginatedItems.length === 0) return false;
+    const allPageItemIds = paginatedItems.flatMap(item => 
+        item.variants && item.variants.length > 0 ? item.variants.map(v => v.id) : [item.id]
+    );
+    return allPageItemIds.every(id => selectedIds.has(id));
+  }, [paginatedItems, selectedIds]);
+
   const stockFilterCounts = useMemo(() => {
     const source = isAccessoryTable ? accessories : (categoryFilter ? items.filter(i => i.category === categoryFilter && !i.isArchived) : items.filter(i => !i.isArchived));
     const counts = { all: 0, low: 0, empty: 0 };
@@ -330,6 +373,14 @@ export function InventoryTable({ onUpdateStock, isAccessoryTable = false }: Inve
                         </SelectContent>
                     </Select>
                 )}
+                 {selectedIds.size > 0 && !isAccessoryTable && (
+                    <Button asChild>
+                        <Link href={`/finance/settings?products=${Array.from(selectedIds).join(',')}`}>
+                            <DollarSign className="mr-2 h-4 w-4" />
+                            Atur Harga ({selectedIds.size})
+                        </Link>
+                    </Button>
+                )}
             </div>
         </div>
         <div className="px-4 py-2 flex items-center gap-2 border-b border-dashed">
@@ -348,6 +399,14 @@ export function InventoryTable({ onUpdateStock, isAccessoryTable = false }: Inve
         <Table>
           <TableHeader className="sticky top-0 bg-card">
             <TableRow>
+              {!isAccessoryTable && (
+                <TableHead className="w-12">
+                  <Checkbox 
+                      checked={isAllOnPageSelected}
+                      onCheckedChange={handleSelectAll}
+                  />
+                </TableHead>
+              )}
               <TableHead className="w-[40%]">{t.inventoryTable.name}</TableHead>
               <TableHead>{t.inventoryTable.price}</TableHead>
               <TableHead>{t.inventoryTable.currentStock}</TableHead>
@@ -367,10 +426,22 @@ export function InventoryTable({ onUpdateStock, isAccessoryTable = false }: Inve
                             : `${formatCurrency(minPrice)} - ${formatCurrency(maxPrice)}`
                         : '-';
                     const totalStock = item.variants.reduce((sum, v) => sum + v.stock, 0);
+                    const variantIds = item.variants.map(v => v.id);
+                    const isSelected = variantIds.every(id => selectedIds.has(id));
+                    const isIndeterminate = !isSelected && variantIds.some(id => selectedIds.has(id));
+
 
                     return (
                         <React.Fragment key={item.id}>
                             <TableRow className="bg-muted/20 hover:bg-muted/40" noBorder>
+                                {!isAccessoryTable && (
+                                  <TableCell>
+                                    <Checkbox 
+                                        checked={isSelected ? true : isIndeterminate ? "indeterminate" : false}
+                                        onCheckedChange={(checked) => handleSelectRow(item, !!checked)}
+                                    />
+                                  </TableCell>
+                                )}
                                 <TableCell>
                                     <div className="flex items-center gap-4 group">
                                         <Image 
@@ -440,6 +511,19 @@ export function InventoryTable({ onUpdateStock, isAccessoryTable = false }: Inve
                                     )}
                                     noBorder
                                 >
+                                     {!isAccessoryTable && (
+                                        <TableCell>
+                                            <Checkbox
+                                                checked={selectedIds.has(variant.id)}
+                                                onCheckedChange={(checked) => {
+                                                    const newSet = new Set(selectedIds);
+                                                    if(checked) newSet.add(variant.id);
+                                                    else newSet.delete(variant.id);
+                                                    setSelectedIds(newSet);
+                                                }}
+                                            />
+                                        </TableCell>
+                                     )}
                                     <TableCell>
                                         <div className="flex items-center gap-4">
                                             <div className="flex h-10 w-10 items-center justify-center rounded-sm shrink-0">
@@ -466,6 +550,19 @@ export function InventoryTable({ onUpdateStock, isAccessoryTable = false }: Inve
                 } else {
                     return (
                         <TableRow key={item.id} noBorder className="border-b">
+                            {!isAccessoryTable && (
+                              <TableCell>
+                                <Checkbox
+                                    checked={selectedIds.has(item.id)}
+                                    onCheckedChange={(checked) => {
+                                        const newSet = new Set(selectedIds);
+                                        if (checked) newSet.add(item.id);
+                                        else newSet.delete(item.id);
+                                        setSelectedIds(newSet);
+                                    }}
+                                />
+                              </TableCell>
+                            )}
                             <TableCell>
                                 <div className="flex items-center gap-4">
                                     {isAccessoryTable ? (
@@ -536,7 +633,7 @@ export function InventoryTable({ onUpdateStock, isAccessoryTable = false }: Inve
             })
             ) : (
               <TableRow>
-                <TableCell colSpan={4} className="h-48 text-center">
+                <TableCell colSpan={isAccessoryTable ? 4 : 5} className="h-48 text-center">
                   <div className="flex flex-col items-center justify-center gap-4 text-muted-foreground">
                     <ShoppingBag className="h-16 w-16" />
                     <div className="text-center">
@@ -588,3 +685,4 @@ export function InventoryTable({ onUpdateStock, isAccessoryTable = false }: Inve
     </>
   );
 }
+
