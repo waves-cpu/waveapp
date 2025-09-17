@@ -21,7 +21,8 @@ import { Undo2, Truck, CheckCircle, XCircle, Package, Trash2, Search, Minus, Plu
 import { Badge } from '@/components/ui/badge';
 import { useInventory } from '@/hooks/use-inventory';
 import type { ShippingReceipt, InventoryItem, InventoryItemVariant } from '@/types';
-import { format } from 'date-fns';
+import { format, startOfMonth, endOfMonth } from 'date-fns';
+import { id as localeId } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
 import { Pagination } from '@/components/ui/pagination';
 import {
@@ -48,6 +49,7 @@ import { Dialog, DialogHeader, DialogTitle, DialogContent, DialogDescription, Di
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useScanSounds } from '@/hooks/use-scan-sounds';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 
 const getStatusVariant = (status: string) => {
@@ -271,17 +273,30 @@ export default function ReturnPage() {
     const [activeChannel, setActiveChannel] = useState<string | null>(null);
     const [channelCounts, setChannelCounts] = useState<Record<string, number> | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
+    
+    const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
+    const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+
+    const years = useMemo(() => {
+        const currentYear = new Date().getFullYear();
+        return Array.from({ length: 6 }, (_, i) => currentYear - i);
+    }, []);
 
 
     const fetchReturns = useCallback(async () => {
         setLoading(true);
         try {
+            const date = new Date(selectedYear, selectedMonth);
+            const firstDay = startOfMonth(date);
+            const lastDay = endOfMonth(date);
+
             const { receipts, total } = await fetchShippingReceipts({
                 page: currentPage,
                 limit: itemsPerPage,
                 status: ['Return', 'Dibatalkan', 'Diantar', 'Tidak Sampai', 'Return Selesai'],
                 channel: activeChannel ?? undefined,
                 awb: searchTerm || undefined,
+                date_range: { from: firstDay, to: lastDay }
             });
             setReturns(receipts);
             setTotalReturns(total);
@@ -291,7 +306,7 @@ export default function ReturnPage() {
         } finally {
             setLoading(false);
         }
-    }, [currentPage, itemsPerPage, activeChannel, searchTerm, toast, t.fetchError, fetchShippingReceipts]);
+    }, [currentPage, itemsPerPage, activeChannel, searchTerm, toast, t.fetchError, fetchShippingReceipts, selectedMonth, selectedYear]);
     
     const fetchCounts = useCallback(async () => {
         try {
@@ -379,14 +394,40 @@ export default function ReturnPage() {
                            {t.title}
                         </h1>
                     </div>
-                     <div className="relative">
-                        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                        <Input
-                            placeholder="Cari No. Resi..."
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            className="pl-8 h-9 w-full md:w-64"
-                        />
+                     <div className="flex items-center gap-2">
+                         <div className="relative">
+                            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                            <Input
+                                placeholder="Cari No. Resi..."
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                className="pl-8 h-9 w-full md:w-48"
+                            />
+                        </div>
+                        <Select value={selectedMonth.toString()} onValueChange={(value) => setSelectedMonth(parseInt(value))}>
+                            <SelectTrigger className="w-[150px] h-9">
+                                <SelectValue placeholder="Pilih Bulan" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {Array.from({ length: 12 }).map((_, i) => (
+                                    <SelectItem key={i} value={i.toString()}>
+                                        {format(new Date(0, i), 'MMMM', { locale: localeId })}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                        <Select value={selectedYear.toString()} onValueChange={(value) => setSelectedYear(parseInt(value))}>
+                            <SelectTrigger className="w-[100px] h-9">
+                                <SelectValue placeholder="Pilih Tahun" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {years.map(year => (
+                                    <SelectItem key={year} value={year.toString()}>
+                                        {year}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
                     </div>
                 </div>
                  <div className="flex flex-col gap-2">
@@ -459,15 +500,15 @@ export default function ReturnPage() {
                                                         </Button>
                                                     </DropdownMenuTrigger>
                                                     <DropdownMenuContent>
-                                                        <DropdownMenuItem onClick={() => handleReturnReceived(item)}>
+                                                        <DropdownMenuItem onClick={() => handleReturnReceived(item)} disabled={item.status === 'Return Selesai'}>
                                                             <CheckCircle className="mr-2 h-4 w-4 text-green-500" />
                                                             <span>{t.actions.itemArrived}</span>
                                                         </DropdownMenuItem>
-                                                         <DropdownMenuItem onClick={() => handleChangeStatus(item.id, 'Diantar')}>
+                                                         <DropdownMenuItem onClick={() => handleChangeStatus(item.id, 'Diantar')} disabled={item.status === 'Diantar' || item.status === 'Return Selesai'}>
                                                             <Truck className="mr-2 h-4 w-4" />
                                                             <span>{t.actions.itemInTransit}</span>
                                                         </DropdownMenuItem>
-                                                        <DropdownMenuItem onClick={() => handleChangeStatus(item.id, 'Tidak Sampai')} className="text-destructive">
+                                                        <DropdownMenuItem onClick={() => handleChangeStatus(item.id, 'Tidak Sampai')} className="text-destructive" disabled={item.status === 'Return Selesai'}>
                                                             <XCircle className="mr-2 h-4 w-4" />
                                                             <span>{t.actions.itemNotArrived}</span>
                                                         </DropdownMenuItem>
