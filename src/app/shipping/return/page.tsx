@@ -279,7 +279,7 @@ export default function ReturnPage() {
             const { receipts, total } = await fetchShippingReceipts({
                 page: currentPage,
                 limit: itemsPerPage,
-                status: ['Return', 'Dibatalkan', 'Diantar', 'Tidak Sampai'],
+                status: ['Return', 'Dibatalkan', 'Diantar', 'Tidak Sampai', 'Return Selesai'],
                 channel: activeChannel ?? undefined,
                 awb: searchTerm || undefined,
             });
@@ -295,7 +295,7 @@ export default function ReturnPage() {
     
     const fetchCounts = useCallback(async () => {
         try {
-            const allReturnReceipts = await fetchShippingReceipts({ page: 1, limit: 10000, status: ['Return', 'Dibatalkan', 'Diantar', 'Tidak Sampai'] });
+            const allReturnReceipts = await fetchShippingReceipts({ page: 1, limit: 10000, status: ['Return', 'Dibatalkan', 'Diantar', 'Tidak Sampai', 'Return Selesai'] });
             const countsByChannel: Record<string, number> = {};
             allReturnReceipts.receipts.forEach(r => {
                 countsByChannel[r.channel] = (countsByChannel[r.channel] || 0) + 1;
