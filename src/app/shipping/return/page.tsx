@@ -17,7 +17,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Undo2, Truck, CheckCircle, XCircle, Package, Trash2, Search, Minus, Plus } from 'lucide-react';
+import { Undo2, Truck, CheckCircle, XCircle, Package, Trash2, Search } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { useInventory } from '@/hooks/use-inventory';
 import type { ShippingReceipt, InventoryItem, InventoryItemVariant } from '@/types';
@@ -41,6 +41,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
+  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { VariantSelectionDialog } from '@/app/components/variant-selection-dialog';
 import { useLanguage } from '@/hooks/use-language';
@@ -262,7 +263,7 @@ export default function ReturnPage() {
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(25);
     const { toast } = useToast();
-    const { updateStock, fetchShippingReceipts, deleteShippingReceipt } = useInventory();
+    const { updateStock, fetchShippingReceipts, deleteShippingReceipt, updateShippingReceiptStatus } = useInventory();
     const { language } = useLanguage();
     const t = translations[language].shipping.returnPage;
     const tCommon = translations[language].common;
