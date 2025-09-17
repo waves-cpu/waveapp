@@ -17,14 +17,16 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Undo2, Truck, CheckCircle, XCircle, Package, Trash2, Search } from 'lucide-react';
+import { Undo2, Truck, CheckCircle, XCircle, Package, Trash2, Search, FileDown } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { useInventory } from '@/hooks/use-inventory';
 import type { ShippingReceipt, InventoryItem, InventoryItemVariant } from '@/types';
-import { format, startOfMonth, endOfMonth } from 'date-fns';
+import { format, startOfMonth, endOfMonth, parseISO } from 'date-fns';
 import { id as localeId } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
 import { Pagination } from '@/components/ui/pagination';
+import * as XLSX from 'xlsx';
+import { saveAs } from 'file-saver';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -294,7 +296,7 @@ export default function ReturnPage() {
             const { receipts, total } = await fetchShippingReceipts({
                 page: currentPage,
                 limit: itemsPerPage,
-                status: ['Return', 'Dibatalkan', 'Diantar', 'Tidak Sampai', 'Return Selesai'],
+                status: ['Return', 'Return Selesai', 'Dibatalkan', 'Diantar', 'Tidak Sampai'],
                 channel: activeChannel ?? undefined,
                 awb: searchTerm || undefined,
                 date_range: { from: firstDay, to: lastDay }
@@ -311,7 +313,7 @@ export default function ReturnPage() {
     
     const fetchCounts = useCallback(async () => {
         try {
-            const allReturnReceipts = await fetchShippingReceipts({ page: 1, limit: 10000, status: ['Return', 'Dibatalkan', 'Diantar', 'Tidak Sampai', 'Return Selesai'] });
+            const allReturnReceipts = await fetchShippingReceipts({ page: 1, limit: 10000, status: ['Return', 'Return Selesai', 'Dibatalkan', 'Diantar', 'Tidak Sampai'] });
             const countsByChannel: Record<string, number> = {};
             allReturnReceipts.receipts.forEach(r => {
                 countsByChannel[r.channel] = (countsByChannel[r.channel] || 0) + 1;
@@ -384,6 +386,22 @@ export default function ReturnPage() {
             throw error; // Re-throw to keep dialog open on failure
         }
     };
+    
+    const downloadExcel = useCallback(() => {
+        const dataToExport = returns.map(item => ({
+            'No. Resi': item.awb,
+            'Tanggal': format(parseISO(item.date), 'dd MMM yyyy HH:mm'),
+            'Kanal': item.channel,
+            'Status': item.status
+        }));
+        
+        const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, 'Data Return');
+
+        const monthName = format(new Date(selectedYear, selectedMonth), 'MMMM-yyyy', { locale: localeId });
+        XLSX.writeFile(workbook, `Laporan_Return_${monthName}.xlsx`);
+    }, [returns, selectedMonth, selectedYear]);
 
     return (
         <AppLayout>
@@ -429,6 +447,10 @@ export default function ReturnPage() {
                                 ))}
                             </SelectContent>
                         </Select>
+                        <Button onClick={downloadExcel} variant="outline" size="sm">
+                            <FileDown className="mr-2 h-4 w-4" />
+                            Download Return
+                        </Button>
                     </div>
                 </div>
                  <div className="flex flex-col gap-2">
@@ -529,8 +551,8 @@ export default function ReturnPage() {
                                                                     </AlertDialogDescription>
                                                                 </AlertDialogHeader>
                                                                 <AlertDialogFooter>
-                                                                    <AlertDialogCancel onClick={() => setReceiptToDelete(null)}>{tCommon.cancel}</AlertDialogCancel>
-                                                                    <AlertDialogAction onClick={() => {setReceiptToDelete(item); handleDelete();}} className="bg-destructive hover:bg-destructive/90">
+                                                                    <AlertDialogCancel>{tCommon.cancel}</AlertDialogCancel>
+                                                                    <AlertDialogAction onClick={() => handleDelete()} className="bg-destructive hover:bg-destructive/90">
                                                                         {t.deleteConfirmAction}
                                                                     </AlertDialogAction>
                                                                 </AlertDialogFooter>
