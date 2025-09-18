@@ -194,18 +194,11 @@ export async function addShippingReceipt(receipt: Omit<ShippingReceipt, 'id'>): 
         throw new Error(`DUPLICATE_AWB_DATE::${existingReceipt.date}`);
     }
 
-    try {
-        const result = db.prepare('INSERT INTO shipping_receipts (awb, date, channel, status) VALUES (@awb, @date, @channel, @status)').run({
-            ...receipt
-        });
-        const newReceipt = db.prepare('SELECT * FROM shipping_receipts WHERE id = ?').get(result.lastInsertRowid) as ShippingReceipt;
-        return newReceipt;
-    } catch (error) {
-        if (error instanceof Error && error.message.includes('UNIQUE constraint failed')) {
-            throw new Error(`DUPLICATE_AWB`);
-        }
-        throw error;
-    }
+    const result = db.prepare('INSERT INTO shipping_receipts (awb, date, channel, status) VALUES (@awb, @date, @channel, @status)').run({
+        ...receipt
+    });
+    const newReceipt = db.prepare('SELECT * FROM shipping_receipts WHERE id = ?').get(result.lastInsertRowid) as ShippingReceipt;
+    return newReceipt;
 }
 
 export async function deleteShippingReceipt(id: number) {
@@ -269,7 +262,7 @@ export async function fetchInventoryData() {
         historyMap.get(key)!.push({
             ...entry,
             id: entry.id.toString(),
-            date: new Date(entry.date)
+            date: entry.date
         });
     }
 
@@ -282,7 +275,7 @@ export async function fetchInventoryData() {
         accessoryHistoryMap.get(key)!.push({
             ...entry,
             id: entry.id.toString(),
-            date: new Date(entry.date)
+            date: entry.date
         });
     }
 
@@ -1149,4 +1142,5 @@ export async function archiveProduct(itemId: string, isArchived: boolean) {
 export async function deleteProductPermanently(itemId: string) {
     db.prepare('DELETE FROM products WHERE id = ?').run(itemId);
 }
+
 

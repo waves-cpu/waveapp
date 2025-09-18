@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
@@ -96,8 +97,6 @@ export default function MobileScanReceiptPage() {
                 if (error.message.startsWith('DUPLICATE_AWB_DATE::')) {
                     const dateStr = error.message.split('::')[1];
                     errorMessage = `Resi ini sudah discan pada ${format(parseISO(dateStr), 'dd MMM yyyy, HH:mm')}`;
-                } else if (error.message.includes('DUPLICATE_AWB')) {
-                    errorMessage = `Resi ${trimmedAwb} sudah ada di database.`;
                 }
             }
 
@@ -255,3 +254,4 @@ export default function MobileScanReceiptPage() {
         </div>
     );
 }
+
