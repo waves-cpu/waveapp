@@ -42,6 +42,7 @@ export default function MobileScanReceiptPage() {
     const [recentlyAdded, setRecentlyAdded] = useState<ShippingReceipt[]>([]);
     const inputRef = useRef<HTMLInputElement>(null);
     const [isCameraOpen, setIsCameraOpen] = useState(false);
+    const [isScanningPaused, setIsScanningPaused] = useState(false);
 
     useEffect(() => {
         initializeAudio();
@@ -95,12 +96,10 @@ export default function MobileScanReceiptPage() {
             let title = 'Input Gagal';
             let errorMessage = 'Gagal menyimpan resi.';
 
-            if (error instanceof Error) {
-                if (error.message.startsWith('DUPLICATE_AWB_DATE::')) {
-                    const dateStr = error.message.split('::')[1];
-                    title = 'Resi Duplikat';
-                    errorMessage = `Resi ini sudah discan pada ${format(parseISO(dateStr), 'dd MMM yyyy, HH:mm')}`;
-                }
+            if (error instanceof Error && error.message.startsWith('DUPLICATE_AWB_DATE::')) {
+                const dateStr = error.message.split('::')[1];
+                title = 'Resi Duplikat';
+                errorMessage = `Resi ini sudah discan pada ${format(parseISO(dateStr), 'dd MMM yyyy, HH:mm')}`;
             }
 
             toast({
@@ -125,7 +124,14 @@ export default function MobileScanReceiptPage() {
     }
     
     const handleDecode = (result: string) => {
+        if (isScanningPaused) return;
+
+        setIsScanningPaused(true);
         handleSubmit(result);
+
+        setTimeout(() => {
+            setIsScanningPaused(false);
+        }, 2000); // 2 second delay
     };
     
     if (isCameraOpen) {
@@ -257,5 +263,6 @@ export default function MobileScanReceiptPage() {
         </div>
     );
 }
+
 
 
