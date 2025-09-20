@@ -36,7 +36,6 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -108,13 +107,19 @@ export default function ReceiptPage() {
     const fetchReceipts = useCallback(async () => {
         setLoading(true);
         try {
-            const { receipts, total } = await fetchShippingReceipts({
+            const searchOptions: any = {
                 page: currentPage,
                 limit: itemsPerPage,
                 channel: activeTab,
-                dateString: currentDateString,
                 awb: searchTerm,
-            });
+            };
+
+            // Only add dateString if searchTerm is empty
+            if (!searchTerm) {
+                searchOptions.dateString = currentDateString;
+            }
+
+            const { receipts, total } = await fetchShippingReceipts(searchOptions);
             setReceipts(receipts);
             setTotalReceipts(total);
         } catch (error) {
