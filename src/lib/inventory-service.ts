@@ -282,7 +282,8 @@ export async function fetchInventoryData() {
 
     const channelPriceMap = new Map<string, ChannelPrice[]>();
     for (const cp of fetchedChannelPrices) {
-        const key = cp.variant_id ? cp.variant_id.toString() : cp.product_id.toString();
+        const key = cp.variant_id ? cp.variant_id.toString() : (cp.product_id ? cp.product_id.toString() : '');
+        if (!key) continue;
 
         if (!channelPriceMap.has(key)) {
             channelPriceMap.set(key, []);
@@ -1142,6 +1143,7 @@ export async function archiveProduct(itemId: string, isArchived: boolean) {
 export async function deleteProductPermanently(itemId: string) {
     db.prepare('DELETE FROM products WHERE id = ?').run(itemId);
 }
+
 
 
 
