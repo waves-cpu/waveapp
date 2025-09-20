@@ -268,10 +268,18 @@ function AllProductsDialog({
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {filteredData.flatMap((p) => {
+                                {filteredData.map((p) => {
                                     const hasVariants = p.variants && p.variants.length > 0;
-                                    const productRow = (
-                                        <TableRow key={p.productId}>
+                                    const lowerSearch = searchTerm.toLowerCase();
+                                    const parentMatches = !searchTerm || p.name.toLowerCase().includes(lowerSearch) || (p.sku && p.sku.toLowerCase().includes(lowerSearch));
+                                    
+                                    const visibleVariants = parentMatches 
+                                        ? p.variants || []
+                                        : (p.variants || []).filter(v => v.name.toLowerCase().includes(lowerSearch) || (v.sku && v.sku.toLowerCase().includes(lowerSearch)));
+
+                                    return (
+                                    <React.Fragment key={`product-fragment-${p.productId}`}>
+                                        <TableRow>
                                             <TableCell className="py-2">
                                                 <div className="flex items-center gap-3">
                                                     <Image src={p.imageUrl || 'https://placehold.co/30x30.png'} alt={p.name} width={30} height={30} className="rounded-md" data-ai-hint="product image" />
@@ -286,15 +294,8 @@ function AllProductsDialog({
                                             <TableCell className="text-left text-xs font-medium py-2">{formatCurrency(p.totalCogs)}</TableCell>
                                             <TableCell className="text-left font-medium text-xs py-2">{formatCurrency(p.grossProfit)}</TableCell>
                                         </TableRow>
-                                    );
 
-                                    const variantRows = hasVariants ? (p.variants || [])
-                                        .filter(v => {
-                                            if (!searchTerm) return true;
-                                            const lowerSearch = searchTerm.toLowerCase();
-                                            return v.name.toLowerCase().includes(lowerSearch) || (v.sku && v.sku.toLowerCase().includes(lowerSearch));
-                                        })
-                                        .map(v => (
+                                        {hasVariants && visibleVariants.map(v => (
                                             <TableRow key={`variant-${v.variantId}`} className="hover:bg-muted/50">
                                                 <TableCell className="py-2">
                                                     <div className="flex items-center gap-3 pl-4">
@@ -312,9 +313,9 @@ function AllProductsDialog({
                                                 <TableCell className="text-left text-xs py-2">{formatCurrency(v.totalCogs)}</TableCell>
                                                 <TableCell className="text-left font-semibold text-xs py-2">{formatCurrency(v.grossProfit)}</TableCell>
                                             </TableRow>
-                                        )) : [];
-                                    
-                                    return [productRow, ...variantRows];
+                                        ))}
+                                    </React.Fragment>
+                                    )
                                 })}
                             </TableBody>
                         </Table>
