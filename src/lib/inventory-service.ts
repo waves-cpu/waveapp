@@ -659,7 +659,7 @@ export async function adjustStock(itemId: string, change: number, reason: string
 }
 
 export async function findProductBySku(sku: string): Promise<InventoryItem | null> {
-    const getProductBySkuStmt = db.prepare('SELECT * FROM products WHERE sku = ?');
+    const getProductBySkuStmt = db.prepare('SELECT * FROM products WHERE sku = ? AND hasVariants = 0');
     const getVariantBySkuStmt = db.prepare('SELECT * FROM variants WHERE sku = ?');
     const getProductByIdStmt = db.prepare('SELECT * FROM products WHERE id = ?');
     const getVariantsByProductIdStmt = db.prepare('SELECT * FROM variants WHERE productId = ?');
@@ -1142,5 +1142,6 @@ export async function archiveProduct(itemId: string, isArchived: boolean) {
 export async function deleteProductPermanently(itemId: string) {
     db.prepare('DELETE FROM products WHERE id = ?').run(itemId);
 }
+
 
 

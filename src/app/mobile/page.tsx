@@ -92,17 +92,20 @@ export default function MobileScanReceiptPage() {
             setAwb('');
         } catch (error) {
             playErrorSound();
+            let title = 'Input Gagal';
             let errorMessage = 'Gagal menyimpan resi.';
+
             if (error instanceof Error) {
                 if (error.message.startsWith('DUPLICATE_AWB_DATE::')) {
                     const dateStr = error.message.split('::')[1];
+                    title = 'Resi Duplikat';
                     errorMessage = `Resi ini sudah discan pada ${format(parseISO(dateStr), 'dd MMM yyyy, HH:mm')}`;
                 }
             }
 
             toast({
                 variant: 'destructive',
-                title: 'Input Gagal',
+                title: title,
                 description: errorMessage,
             });
         } finally {
@@ -254,4 +257,5 @@ export default function MobileScanReceiptPage() {
         </div>
     );
 }
+
 
