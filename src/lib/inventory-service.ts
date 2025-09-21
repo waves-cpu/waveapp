@@ -188,17 +188,19 @@ export async function fetchShippingReceiptCountsByChannel(dateString?: string, s
 
 
 export async function addShippingReceipt(receipt: Omit<ShippingReceipt, 'id'>): Promise<ShippingReceipt> {
-    const existingReceipt = db.prepare('SELECT * FROM shipping_receipts WHERE awb = ?').get(receipt.awb) as ShippingReceipt | undefined;
-
-    if (existingReceipt) {
-        throw new Error(`DUPLICATE_AWB_DATE::${existingReceipt.date}`);
+    try {
+        const result = db.prepare('INSERT INTO shipping_receipts (awb, date, channel, status) VALUES (@awb, @date, @channel, @status)').run({
+            ...receipt
+        });
+        const newReceipt = db.prepare('SELECT * FROM shipping_receipts WHERE id = ?').get(result.lastInsertRowid) as ShippingReceipt;
+        return newReceipt;
+    } catch (error: any) {
+        if (error.code === 'SQLITE_CONSTRAINT_UNIQUE') {
+            const existingReceipt = db.prepare('SELECT date FROM shipping_receipts WHERE awb = ?').get(receipt.awb) as { date: string };
+            throw new Error(`DUPLICATE_AWB_DATE::${existingReceipt.date}`);
+        }
+        throw error;
     }
-
-    const result = db.prepare('INSERT INTO shipping_receipts (awb, date, channel, status) VALUES (@awb, @date, @channel, @status)').run({
-        ...receipt
-    });
-    const newReceipt = db.prepare('SELECT * FROM shipping_receipts WHERE id = ?').get(result.lastInsertRowid) as ShippingReceipt;
-    return newReceipt;
 }
 
 export async function deleteShippingReceipt(id: number) {
@@ -282,7 +284,7 @@ export async function fetchInventoryData() {
 
     const channelPriceMap = new Map<string, ChannelPrice[]>();
     for (const cp of fetchedChannelPrices) {
-        const key = cp.variant_id ? cp.variant_id.toString() : (cp.product_id ? cp.product_id.toString() : '');
+        const key = cp.variant_id ? cp.variant_id.toString() : (cp.product_id ? cp.product_id.toString() : null);
         if (!key) continue;
 
         if (!channelPriceMap.has(key)) {
@@ -1143,6 +1145,7 @@ export async function archiveProduct(itemId: string, isArchived: boolean) {
 export async function deleteProductPermanently(itemId: string) {
     db.prepare('DELETE FROM products WHERE id = ?').run(itemId);
 }
+
 
 
 
