@@ -111,7 +111,7 @@ export async function fetchShippingReceipts(options: {
         whereClauses.push("channel = @channel");
         params.channel = channel;
     }
-    if (dateString) {
+    if (dateString && !awb) { // Only apply dateString if not searching by AWB
         whereClauses.push("DATE(date) = @dateString");
         params.dateString = dateString;
     }
@@ -1150,3 +1150,8 @@ export async function deleteProductPermanently(itemId: string) {
 
 
 
+
+
+    
+
+    
