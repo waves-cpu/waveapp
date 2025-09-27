@@ -27,6 +27,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogD
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import Image from 'next/image';
+import { Pagination } from '@/components/ui/pagination';
 
 
 const formatCurrency = (amount: number) => `Rp${Math.round(amount).toLocaleString('id-ID')}`;
@@ -102,10 +103,23 @@ function AllProductsDialog({
     initialDateRange: DateRange | undefined;
     initialAllProducts: InventoryItem[];
 }) {
+    const { language } = useLanguage();
+    const t = translations[language];
     const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [dateRange, setDateRange] = useState<DateRange | undefined>(initialDateRange);
+    const [currentPage, setCurrentPage] = useState(1);
+    const [itemsPerPage, setItemsPerPage] = useState(10);
     
+    useEffect(() => {
+        if (open) {
+            setCurrentPage(1);
+            setSearchTerm('');
+            setCategoryFilter(null);
+            setDateRange(initialDateRange);
+        }
+    }, [open, initialDateRange]);
+
     const productProfitability = useMemo(() => {
         const salesInDateRange = allSales.filter(sale => {
             if (!dateRange || !dateRange.from) return true;
@@ -179,7 +193,7 @@ function AllProductsDialog({
 
 
     const filteredData = useMemo(() => {
-        return productProfitability
+        const filtered = productProfitability
             .filter(p => !categoryFilter || p.category === categoryFilter)
             .filter(p => {
                 if (!searchTerm) return true;
@@ -193,7 +207,17 @@ function AllProductsDialog({
             })
             .sort((a,b) => b.unitsSold - a.unitsSold);
 
+        setCurrentPage(1);
+        return filtered;
+
     }, [productProfitability, categoryFilter, searchTerm]);
+
+    const totalPages = Math.ceil(filteredData.length / itemsPerPage);
+
+    const paginatedData = useMemo(() => {
+        const startIndex = (currentPage - 1) * itemsPerPage;
+        return filteredData.slice(startIndex, startIndex + itemsPerPage);
+    }, [filteredData, currentPage, itemsPerPage]);
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
@@ -268,7 +292,7 @@ function AllProductsDialog({
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {filteredData.map((p) => {
+                                {paginatedData.map((p) => {
                                     const hasVariants = p.variants && p.variants.length > 0;
                                     const lowerSearch = searchTerm.toLowerCase();
                                     const parentMatches = !searchTerm || p.name.toLowerCase().includes(lowerSearch) || (p.sku && p.sku.toLowerCase().includes(lowerSearch));
@@ -321,10 +345,37 @@ function AllProductsDialog({
                         </Table>
                     </ScrollArea>
                 </div>
-                 <DialogFooter className="border-t pt-4">
-                     {filteredData.length > 1 && (
-                        <p className="text-sm text-muted-foreground">Menampilkan {filteredData.length} dari {productProfitability.length} produk.</p>
-                     )}
+                 <DialogFooter className="border-t pt-4 flex-wrap justify-between sm:justify-between">
+                     <p className="text-sm text-muted-foreground">
+                        Menampilkan {paginatedData.length} dari {filteredData.length} produk.
+                     </p>
+                    {totalPages > 1 && (
+                         <div className="flex items-center gap-4">
+                            <Pagination
+                                totalPages={totalPages}
+                                currentPage={currentPage}
+                                onPageChange={setCurrentPage}
+                            />
+                            <Select
+                                value={`${itemsPerPage}`}
+                                onValueChange={(value) => {
+                                    setItemsPerPage(Number(value))
+                                    setCurrentPage(1)
+                                }}
+                                >
+                                <SelectTrigger className="h-8 w-[150px]">
+                                    <SelectValue placeholder={itemsPerPage} />
+                                </SelectTrigger>
+                                <SelectContent side="top">
+                                    {[10, 20, 50].map((pageSize) => (
+                                    <SelectItem key={pageSize} value={`${pageSize}`}>
+                                        {`${pageSize} / ${t.productSelectionDialog.page}`}
+                                    </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    )}
                 </DialogFooter>
             </DialogContent>
         </Dialog>
