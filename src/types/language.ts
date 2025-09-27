@@ -1,4 +1,5 @@
 
+
 export const translations = {
     en: {
         sidebar: {
@@ -93,7 +94,7 @@ export const translations = {
                 processReturn: "Process Return",
                 selectReturnedItem: "Select the returned product to add it back to stock.",
                 stockReturnedSuccess: "Stock Returned",
-                stockReturnedSuccessDesc: "1 unit of {name} has been added back to stock.",
+                stockReturnedSuccessDesc: "{count} jenis produk telah dikembalikan ke stok.",
                 stockReturnedError: "Failed to return stock.",
                 deleteConfirmTitle: "Delete This Return?",
                 deleteConfirmDesc: "Are you sure you want to delete the return record for {awb}? This action cannot be undone.",
@@ -130,6 +131,19 @@ export const translations = {
             profitLossReport: "Profit & Loss Report",
             priceSettings: "Price Settings",
             balanceSheet: "Balance Sheet",
+            salesReportPage: {
+                totalRevenue: "Total Revenue",
+                totalCogs: "Total COGS",
+                grossProfit: "Gross Profit",
+                unitsSold: "Units Sold",
+                receiptsShipped: "Receipts Shipped",
+                revenueByChannel: "Revenue by Channel",
+                noSalesData: "No sales data for this period.",
+                topProductsPrefix: "Top 10",
+                topProductsSuffix: "Best-Selling Products",
+                topProductsDescription: "Sorted by most units sold.",
+                noProfitabilityData: "No profitability data to display."
+            },
             priceSettingsPage: {
                 description: "Select products to set their cost price, default selling price, and channel-specific prices.",
                 selectProduct: "Select Products",
@@ -639,6 +653,19 @@ export const translations = {
             profitLossReport: "Laporan Laba Rugi",
             priceSettings: "Pengaturan Harga",
             balanceSheet: "Neraca Keuangan",
+            salesReportPage: {
+                totalRevenue: "Total Omzet",
+                totalCogs: "Total HPP",
+                grossProfit: "Laba Kotor",
+                unitsSold: "Unit Terjual",
+                receiptsShipped: "Resi Terkirim",
+                revenueByChannel: "Omzet per Kanal",
+                noSalesData: "Tidak ada data penjualan pada periode ini.",
+                topProductsPrefix: "10",
+                topProductsSuffix: "Produk Terlaris",
+                topProductsDescription: "Diurutkan berdasarkan unit terjual terbanyak.",
+                noProfitabilityData: "Tidak ada data profitabilitas untuk ditampilkan."
+            },
             priceSettingsPage: {
                 description: "Pilih produk untuk mengatur harga modal (HPP), harga jual default, dan harga spesifik per kanal penjualan.",
                 selectProduct: "Pilih Produk",

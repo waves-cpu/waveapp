@@ -37,6 +37,7 @@ import {
   updateShippingReceiptsStatus,
   updateShippingReceiptStatus,
   fetchShippingReceiptCountsByChannel,
+  getReceiptCountByStatus as getReceiptCountByStatusDb,
   addBulkImportHistory,
   updateBulkImportHistory,
   fetchBulkImportHistory,
@@ -86,6 +87,7 @@ interface InventoryContextType {
   updateShippingReceiptsStatus: (ids: number[], status: string) => Promise<void>;
   updateShippingReceiptStatus: (id: number, status: string) => Promise<void>;
   fetchShippingReceiptCountsByChannel: (dateString?: string, status?: string[]) => Promise<Record<string, number>>;
+  getReceiptCountByStatus: (status: string[], dateRange: { from: Date, to: Date }) => Promise<number>;
   // Bulk Import History
   fetchImportHistory: () => Promise<BulkImportHistory[]>;
   deleteImportHistory: (id: number) => Promise<void>;
@@ -313,6 +315,10 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
     await deleteBulkImportHistoryDb(id);
   }
 
+  const getReceiptCountByStatus = async (status: string[], dateRange: { from: Date, to: Date }) => {
+    return await getReceiptCountByStatusDb(status, dateRange);
+  }
+
   return (
     <InventoryContext.Provider value={{ 
         items, 
@@ -354,6 +360,7 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
         updateShippingReceiptsStatus,
         updateShippingReceiptStatus,
         fetchShippingReceiptCountsByChannel,
+        getReceiptCountByStatus,
         fetchImportHistory: fetchBulkImportHistory,
         deleteImportHistory,
       }}>

@@ -10,7 +10,7 @@ import { translations } from "@/types/language";
 import { useInventory } from "@/hooks/use-inventory";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { DollarSign, Package, TrendingUp, ShoppingCart, Activity, Eye, Search, Store, ChevronDown } from "lucide-react";
+import { DollarSign, Package, TrendingUp, ShoppingCart, Activity, Eye, Search, Store, ChevronDown, TruckIcon } from "lucide-react";
 import { Pie, PieChart as RechartsPieChart, Cell, Tooltip, ResponsiveContainer, Legend } from "recharts";
 import { ChartConfig, ChartContainer, ChartTooltipContent } from "@/components/ui/chart";
 import { subDays, isWithinInterval, startOfDay, endOfDay, format, parseISO } from "date-fns";
@@ -335,7 +335,7 @@ export default function SalesReportPage() {
     const { language } = useLanguage();
     const t = translations[language];
     const TFinance = t.finance;
-    const { items, allSales, loading, categories } = useInventory();
+    const { items, allSales, loading, categories, getReceiptCountByStatus } = useInventory();
 
     const [dateRange, setDateRange] = useState<DateRange | undefined>({
       from: subDays(new Date(), 29),
@@ -343,6 +343,18 @@ export default function SalesReportPage() {
     });
     const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
     const [isTopProductsDialogOpen, setIsTopProductsDialogOpen] = useState(false);
+    const [shippedCount, setShippedCount] = useState(0);
+
+    useEffect(() => {
+        const fetchShippedCount = async () => {
+            if (dateRange?.from) {
+                const count = await getReceiptCountByStatus(['Dikirim'], { from: dateRange.from, to: dateRange.to || dateRange.from });
+                setShippedCount(count);
+            }
+        };
+        fetchShippedCount();
+    }, [dateRange, getReceiptCountByStatus]);
+
 
     const { 
         totalRevenue,
@@ -481,7 +493,7 @@ export default function SalesReportPage() {
                                     format(dateRange.from, "LLL dd, y")
                                 )
                                 ) : (
-                                <span>Pilih rentang tanggal</span>
+                                <span>{t.stockHistory.dateRange}</span>
                                 )}
                             </Button>
                             </PopoverTrigger>
@@ -499,28 +511,19 @@ export default function SalesReportPage() {
                     </div>
                 </div>
 
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-4">
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5 mb-4">
                     <Card>
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">Total Omzet</CardTitle>
+                            <CardTitle className="text-sm font-medium">{TFinance.salesReportPage.totalRevenue}</CardTitle>
                             <DollarSign className="h-4 w-4 text-muted-foreground" />
                         </CardHeader>
                         <CardContent>
                             <div className="text-2xl font-bold">{formatCurrency(totalRevenue)}</div>
                         </CardContent>
                     </Card>
-                    <Card>
+                     <Card>
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">Total HPP</CardTitle>
-                            <ShoppingCart className="h-4 w-4 text-muted-foreground" />
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-2xl font-bold">{formatCurrency(totalCogs)}</div>
-                        </CardContent>
-                    </Card>
-                    <Card>
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">Laba Kotor</CardTitle>
+                            <CardTitle className="text-sm font-medium">{TFinance.salesReportPage.grossProfit}</CardTitle>
                             <TrendingUp className="h-4 w-4 text-muted-foreground" />
                         </CardHeader>
                         <CardContent>
@@ -529,11 +532,29 @@ export default function SalesReportPage() {
                     </Card>
                     <Card>
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">Unit Terjual</CardTitle>
+                            <CardTitle className="text-sm font-medium">{TFinance.salesReportPage.totalCogs}</CardTitle>
+                            <ShoppingCart className="h-4 w-4 text-muted-foreground" />
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-2xl font-bold">{formatCurrency(totalCogs)}</div>
+                        </CardContent>
+                    </Card>
+                    <Card>
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-sm font-medium">{TFinance.salesReportPage.unitsSold}</CardTitle>
                             <Package className="h-4 w-4 text-muted-foreground" />
                         </CardHeader>
                         <CardContent>
                             <div className="text-2xl font-bold">{totalUnitsSold.toLocaleString('id-ID')}</div>
+                        </CardContent>
+                    </Card>
+                     <Card>
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-sm font-medium">{TFinance.salesReportPage.receiptsShipped}</CardTitle>
+                            <TruckIcon className="h-4 w-4 text-muted-foreground" />
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-2xl font-bold">{shippedCount.toLocaleString('id-ID')}</div>
                         </CardContent>
                     </Card>
                 </div>
@@ -541,7 +562,7 @@ export default function SalesReportPage() {
                 <div className="grid md:grid-cols-5 gap-4">
                      <Card className="md:col-span-2">
                         <CardHeader>
-                            <CardTitle className="text-base">Omzet per Kanal</CardTitle>
+                            <CardTitle className="text-base">{TFinance.salesReportPage.revenueByChannel}</CardTitle>
                         </CardHeader>
                         <CardContent>
                             {salesByChannel.length > 0 ? (
@@ -566,7 +587,7 @@ export default function SalesReportPage() {
                                     </RechartsPieChart>
                                 </ChartContainer>
                             ) : (
-                                <div className="h-[250px] flex items-center justify-center text-muted-foreground text-sm">Tidak ada data penjualan</div>
+                                <div className="h-[250px] flex items-center justify-center text-muted-foreground text-sm">{TFinance.salesReportPage.noSalesData}</div>
                             )}
                         </CardContent>
                     </Card>
@@ -574,9 +595,9 @@ export default function SalesReportPage() {
                         <CardHeader className="flex flex-row items-center justify-between">
                             <div>
                                 <CardTitle className="text-base">
-                                  Top 10 {categoryFilter ? `${categoryFilter} ` : ''}Produk Terlaris
+                                  {TFinance.salesReportPage.topProductsPrefix} {categoryFilter ? `${categoryFilter} ` : ''}{TFinance.salesReportPage.topProductsSuffix}
                                 </CardTitle>
-                                <CardDescription>Diurutkan berdasarkan unit terjual terbanyak</CardDescription>
+                                <CardDescription>{TFinance.salesReportPage.topProductsDescription}</CardDescription>
                             </div>
                             <Button variant="ghost" size="icon" onClick={() => setIsTopProductsDialogOpen(true)}>
                                 <Eye className="h-4 w-4" />
@@ -587,10 +608,10 @@ export default function SalesReportPage() {
                                 <Table>
                                     <TableHeader className="sticky top-0 bg-card">
                                         <TableRow>
-                                            <TableHead className="text-xs">Produk</TableHead>
-                                            <TableHead className="text-center text-xs">Terjual</TableHead>
-                                            <TableHead className="text-left text-xs">Omzet</TableHead>
-                                            <TableHead className="text-left text-xs">Laba Kotor</TableHead>
+                                            <TableHead className="text-xs">{t.inventoryTable.name}</TableHead>
+                                            <TableHead className="text-center text-xs">{TFinance.salesReportPage.unitsSold}</TableHead>
+                                            <TableHead className="text-left text-xs">{TFinance.salesReportPage.totalRevenue}</TableHead>
+                                            <TableHead className="text-left text-xs">{TFinance.salesReportPage.grossProfit}</TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
@@ -607,7 +628,7 @@ export default function SalesReportPage() {
                                         )) : (
                                             <TableRow>
                                                 <TableCell colSpan={4} className="h-24 text-center text-sm text-muted-foreground">
-                                                    Tidak ada data profitabilitas untuk ditampilkan.
+                                                    {TFinance.salesReportPage.noProfitabilityData}
                                                 </TableCell>
                                             </TableRow>
                                         )}

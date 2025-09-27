@@ -185,6 +185,27 @@ export async function fetchShippingReceiptCountsByChannel(dateString?: string, s
     return counts;
 }
 
+export async function getReceiptCountByStatus(status: string[], dateRange: { from: Date, to: Date }): Promise<number> {
+    const { from, to } = dateRange;
+    const whereClauses: string[] = ["date BETWEEN @from AND @to"];
+    const params: any = {
+        from: from.toISOString(),
+        to: endOfDay(to).toISOString(),
+    };
+
+    if (status && status.length > 0) {
+        whereClauses.push(`status IN (${status.map((_, i) => `@status${i}`).join(',')})`);
+        status.forEach((s, i) => {
+            params[`status${i}`] = s;
+        });
+    }
+    
+    const whereString = `WHERE ${whereClauses.join(' AND ')}`;
+    const query = db.prepare(`SELECT COUNT(*) as count FROM shipping_receipts ${whereString}`);
+    const result = query.get(params) as { count: number };
+    return result.count;
+}
+
 
 
 export async function addShippingReceipt(receipt: Omit<ShippingReceipt, 'id'>): Promise<ShippingReceipt> {
