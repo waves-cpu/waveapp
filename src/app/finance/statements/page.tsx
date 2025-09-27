@@ -345,10 +345,7 @@ function AllProductsDialog({
                         </Table>
                     </ScrollArea>
                 </div>
-                 <DialogFooter className="border-t pt-4 flex-wrap justify-between sm:justify-between">
-                     <p className="text-sm text-muted-foreground">
-                        Menampilkan {paginatedData.length} dari {filteredData.length} produk.
-                     </p>
+                 <DialogFooter className="border-t pt-4 flex-wrap justify-end sm:justify-end">
                     {totalPages > 1 && (
                          <div className="flex items-center gap-4">
                             <Pagination
