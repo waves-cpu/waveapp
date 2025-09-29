@@ -10,11 +10,29 @@ declare global {
   }
 }
 
+const checkHtml2Pdf = (resolve: () => void, reject: (reason?: any) => void, maxRetries = 10, interval = 300) => {
+  if (window.html2pdf) {
+    resolve();
+  } else if (maxRetries > 0) {
+    setTimeout(() => checkHtml2Pdf(resolve, reject, maxRetries - 1, interval), interval);
+  } else {
+    reject(new Error('html2pdf is not loaded after multiple retries.'));
+  }
+};
+
 export function useInvoicePDF() {
-  const generatePDF = useCallback((invoiceData: InvoiceData) => {
-    if (typeof window === 'undefined' || !window.html2pdf) {
-      console.error('html2pdf is not loaded');
+  const generatePDF = useCallback(async (invoiceData: InvoiceData) => {
+    if (typeof window === 'undefined') {
       return;
+    }
+
+    try {
+      await new Promise<void>((resolve, reject) => checkHtml2Pdf(resolve, reject));
+    } catch (error: any) {
+       console.error(error.message);
+       // Optionally, show a toast to the user
+       // toast({ variant: 'destructive', title: 'Print Error', description: 'Could not load printing library. Please try again.' });
+       return;
     }
 
     const element = document.getElementById(`invoice-${invoiceData.transactionId}`);
