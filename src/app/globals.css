@@ -145,6 +145,11 @@ body {
       font-size: 8px;
   }
   
+  table { page-break-inside:auto }
+  tr { page-break-inside:avoid; page-break-after:auto }
+  thead { display:table-header-group }
+  tfoot { display:table-footer-group }
+
   @page {
     size: A4 portrait;
     margin: 0;

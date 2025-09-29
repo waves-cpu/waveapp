@@ -29,7 +29,7 @@ export function Logo() {
             <path d="M17 7h.01" />
             <path d="M21 7h.01" />
         </svg>
-      <span className="font-headline">WaveApp</span>
+      <span className="font-headline">Waveblast</span>
     </div>
   );
 }
