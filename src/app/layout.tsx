@@ -8,9 +8,10 @@ import { InventoryProvider } from '@/hooks/use-inventory';
 import { ReceiptSettingsProvider } from '@/hooks/use-receipt-settings';
 import { InvoiceSettingsProvider } from '@/hooks/use-invoice-settings';
 import { AuthProvider } from '@/hooks/use-auth';
+import Script from 'next/script';
 
 export const metadata: Metadata = {
-  title: 'WaveApp',
+  title: 'Waveblast',
   description: 'Smart Inventory Management',
 };
 
@@ -46,6 +47,7 @@ export default function RootLayout({
           </LanguageProvider>
         </ThemeProvider>
         <Toaster />
+        <Script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js" integrity="sha512-GsLlZN/3F2ErC5ifS5QtgpiJtWd43JWSuIgh7mbzZ8zBYbUbenjAaPCTSonSanMiCPhCurdSgjPcALIBa2l+g==" crossOrigin="anonymous" referrerPolicy="no-referrer" strategy="afterInteractive"></Script>
       </body>
     </html>
   );
