@@ -26,7 +26,7 @@ export default function RootLayout({
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link href="https://fonts.googleapis.com/css2?family=Inter&display=swap" rel="stylesheet" />
-        <script defer src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js" integrity="sha512-GsLlZN/3F2ErC5ifS5QtgpiJtWd43JWSuIgh7mbzZ8zBYbUbenjAaPCTSonSanMiCPhCurdSgjPcALIBa2l+g==" crossOrigin="anonymous" referrerPolicy="no-referrer"></script>
+        {/* The script is now loaded dynamically by the hook, so we remove it from here. */}
       </head>
       <body className="font-body antialiased h-full">
         <ThemeProvider

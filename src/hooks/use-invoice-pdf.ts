@@ -10,15 +10,38 @@ declare global {
   }
 }
 
-const checkHtml2Pdf = (resolve: () => void, reject: (reason?: any) => void, maxRetries = 10, interval = 300) => {
-  if (window.html2pdf) {
-    resolve();
-  } else if (maxRetries > 0) {
-    setTimeout(() => checkHtml2Pdf(resolve, reject, maxRetries - 1, interval), interval);
-  } else {
-    reject(new Error('html2pdf is not loaded after multiple retries.'));
+const SCRIPT_URL = "https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js";
+let scriptPromise: Promise<void> | null = null;
+
+const loadScript = (): Promise<void> => {
+  if (scriptPromise) {
+    return scriptPromise;
   }
+  
+  scriptPromise = new Promise((resolve, reject) => {
+    // If script is already loaded, resolve immediately.
+    if (window.html2pdf) {
+      resolve();
+      return;
+    }
+
+    const script = document.createElement('script');
+    script.src = SCRIPT_URL;
+    script.async = true;
+    script.defer = true;
+    
+    script.onload = () => resolve();
+    script.onerror = () => {
+      scriptPromise = null; // Reset promise on error to allow retries
+      reject(new Error('Failed to load html2pdf.js script.'));
+    };
+    
+    document.head.appendChild(script);
+  });
+  
+  return scriptPromise;
 };
+
 
 export function useInvoicePDF() {
   const generatePDF = useCallback(async (invoiceData: InvoiceData) => {
@@ -27,7 +50,7 @@ export function useInvoicePDF() {
     }
 
     try {
-      await new Promise<void>((resolve, reject) => checkHtml2Pdf(resolve, reject));
+      await loadScript();
     } catch (error: any) {
        console.error(error.message);
        // Optionally, show a toast to the user
