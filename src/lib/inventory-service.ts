@@ -158,16 +158,9 @@ export async function fetchShippingReceiptCountsByChannel(dateString?: string, s
         params.push(dateString);
     }
     
-    if (status && status.length > 0) {
-        whereClauses.push(`status IN (${status.map(() => '?').join(',')})`);
-        params.push(...status);
-    } else {
-        // Default to 'Perlu Diproses' if no status is provided but date is
-        if(dateString) {
-            whereClauses.push("status = ?");
-            params.push('Perlu Diproses');
-        }
-    }
+    const statusToQuery = status || ['Perlu Diproses'];
+    whereClauses.push(`status IN (${statusToQuery.map(() => '?').join(',')})`);
+    params.push(...statusToQuery);
     
     const whereString = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
     
@@ -1177,5 +1170,6 @@ export async function deleteProductPermanently(itemId: string) {
     
 
     
+
 
 
