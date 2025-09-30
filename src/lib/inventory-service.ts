@@ -140,7 +140,7 @@ export async function fetchShippingReceipts(options: {
     const dataQuery = db.prepare(`
         SELECT * FROM shipping_receipts
         ${whereString}
-        ORDER BY date DESC, id DESC
+        ORDER BY CASE status WHEN 'Perlu Diproses' THEN 0 ELSE 1 END, date DESC, id DESC
         LIMIT @limit OFFSET @offset
     `);
     
@@ -1177,4 +1177,5 @@ export async function deleteProductPermanently(itemId: string) {
     
 
     
+
 
