@@ -36,6 +36,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
+  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -114,7 +115,7 @@ export default function ReceiptPage() {
                 awb: searchTerm,
             };
 
-            // Only add dateString if searchTerm is empty
+            // Only add dateString if not searching by AWB
             if (!searchTerm) {
                 searchOptions.dateString = currentDateString;
             }
