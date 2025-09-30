@@ -118,7 +118,7 @@ export async function fetchShippingReceipts(options: {
     if (date_range) {
         whereClauses.push("date BETWEEN @from AND @to");
         params.from = date_range.from.toISOString();
-        params.to = date_range.to.toISOString();
+        params.to = endOfDay(date_range.to).toISOString();
     }
     if (status && status.length > 0) {
         whereClauses.push(`status IN (${status.map((_, i) => `@status${i}`).join(',')})`);
@@ -157,6 +157,7 @@ export async function fetchShippingReceiptCountsByChannel(dateString?: string, s
         whereClauses.push("DATE(date) = ?");
         params.push(dateString);
     }
+    
     if (status && status.length > 0) {
         whereClauses.push(`status IN (${status.map(() => '?').join(',')})`);
         params.push(...status);
@@ -1176,3 +1177,4 @@ export async function deleteProductPermanently(itemId: string) {
     
 
     
+

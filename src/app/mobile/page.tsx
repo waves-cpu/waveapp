@@ -100,6 +100,8 @@ export default function MobileScanReceiptPage() {
                 const dateStr = error.message.split('::')[1];
                 title = 'Resi Duplikat';
                 errorMessage = `Resi ini sudah discan pada ${format(parseISO(dateStr), 'dd MMM yyyy, HH:mm')}`;
+            } else if (error instanceof Error) {
+                errorMessage = error.message;
             }
 
             toast({
@@ -263,6 +265,7 @@ export default function MobileScanReceiptPage() {
         </div>
     );
 }
+
 
 
 
