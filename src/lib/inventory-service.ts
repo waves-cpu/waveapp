@@ -107,14 +107,22 @@ export async function fetchShippingReceipts(options: {
     let whereClauses: string[] = [];
     let params: any = {};
 
-    if (channel && channel !== 'all') {
-        whereClauses.push("channel = @channel");
-        params.channel = channel;
+    if (awb) {
+        whereClauses.push("awb LIKE @awb");
+        params.awb = `%${awb}%`;
+        // When searching by AWB, we might ignore other filters like date or channel
+        // to find the AWB across all records. Let's adjust this logic.
+    } else {
+        if (channel && channel !== 'all') {
+            whereClauses.push("channel = @channel");
+            params.channel = channel;
+        }
+        if (dateString) {
+            whereClauses.push("DATE(date) = @dateString");
+            params.dateString = dateString;
+        }
     }
-    if (dateString && !awb) { // Only apply dateString if not searching by AWB
-        whereClauses.push("DATE(date) = @dateString");
-        params.dateString = dateString;
-    }
+    
     if (date_range) {
         whereClauses.push("date BETWEEN @from AND @to");
         params.from = date_range.from.toISOString();
@@ -126,10 +134,7 @@ export async function fetchShippingReceipts(options: {
             params[`status${i}`] = s;
         });
     }
-    if (awb) {
-        whereClauses.push("awb LIKE @awb");
-        params.awb = `%${awb}%`;
-    }
+
 
     const whereString = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
     
@@ -149,25 +154,24 @@ export async function fetchShippingReceipts(options: {
     return { receipts, total };
 }
 
-export async function fetchShippingReceiptCountsByChannel(dateString?: string, status?: string[]): Promise<Record<string, number>> {
-    let whereClauses = [];
+export async function fetchShippingReceiptCountsByChannel(dateString?: string): Promise<Record<string, number>> {
+    let whereClause = "";
     const params: any[] = [];
-
+    
+    const statusToQuery = ['Perlu Diproses'];
+    
     if (dateString) {
-        whereClauses.push("DATE(date) = ?");
-        params.push(dateString);
+        whereClause = `WHERE DATE(date) = ? AND status IN (${statusToQuery.map(() => '?').join(',')})`;
+        params.push(dateString, ...statusToQuery);
+    } else {
+        whereClause = `WHERE status IN (${statusToQuery.map(() => '?').join(',')})`;
+        params.push(...statusToQuery);
     }
-    
-    const statusToQuery = status || ['Perlu Diproses'];
-    whereClauses.push(`status IN (${statusToQuery.map(() => '?').join(',')})`);
-    params.push(...statusToQuery);
-    
-    const whereString = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
     
     const query = db.prepare(`
         SELECT channel, COUNT(*) as count 
         FROM shipping_receipts 
-        ${whereString}
+        ${whereClause}
         GROUP BY channel
     `);
 
@@ -1170,6 +1174,7 @@ export async function deleteProductPermanently(itemId: string) {
     
 
     
+
 
 
 
