@@ -313,7 +313,16 @@ export default function ReturnPage() {
     
     const fetchCounts = useCallback(async () => {
         try {
-            const allReturnReceipts = await fetchShippingReceipts({ page: 1, limit: 10000, status: ['Return', 'Return Selesai', 'Dibatalkan', 'Diantar', 'Tidak Sampai'] });
+            const date = new Date(selectedYear, selectedMonth);
+            const firstDay = startOfMonth(date);
+            const lastDay = endOfMonth(date);
+
+            const allReturnReceipts = await fetchShippingReceipts({
+                page: 1,
+                limit: 10000,
+                status: ['Return', 'Return Selesai', 'Dibatalkan', 'Diantar', 'Tidak Sampai'],
+                date_range: { from: firstDay, to: lastDay }
+            });
             const countsByChannel: Record<string, number> = {};
             allReturnReceipts.receipts.forEach(r => {
                 countsByChannel[r.channel] = (countsByChannel[r.channel] || 0) + 1;
@@ -323,7 +332,7 @@ export default function ReturnPage() {
         } catch (error) {
              console.error("Failed to fetch channel counts:", error);
         }
-    }, [fetchShippingReceipts]);
+    }, [fetchShippingReceipts, selectedMonth, selectedYear]);
 
 
     useEffect(() => {
@@ -552,7 +561,7 @@ export default function ReturnPage() {
                                                                 </AlertDialogHeader>
                                                                 <AlertDialogFooter>
                                                                     <AlertDialogCancel>{tCommon.cancel}</AlertDialogCancel>
-                                                                    <AlertDialogAction onClick={() => handleDelete()} className="bg-destructive hover:bg-destructive/90">
+                                                                    <AlertDialogAction onClick={handleDelete} className="bg-destructive hover:bg-destructive/90">
                                                                         {t.deleteConfirmAction}
                                                                     </AlertDialogAction>
                                                                 </AlertDialogFooter>
