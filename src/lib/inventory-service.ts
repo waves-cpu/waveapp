@@ -110,21 +110,20 @@ export async function fetchShippingReceipts(options: {
     if (awb) {
         whereClauses.push("awb LIKE @awb");
         params.awb = `%${awb}%`;
-        // When searching by AWB, we might ignore other filters like date or channel
-        // to find the AWB across all records. Let's adjust this logic.
     } else {
         if (channel && channel !== 'all') {
             whereClauses.push("channel = @channel");
             params.channel = channel;
         }
         if (dateString) {
-            whereClauses.push("DATE(date) = @dateString");
+            whereClauses.push("strftime('%Y-%m-%d', date) = @dateString");
             params.dateString = dateString;
         }
     }
     
     if (date_range) {
-        whereClauses.push("date BETWEEN @from AND @to");
+        // Use ISO string for consistent date handling across timezones
+        whereClauses.push("date >= @from AND date <= @to");
         params.from = date_range.from.toISOString();
         params.to = endOfDay(date_range.to).toISOString();
     }
@@ -134,7 +133,6 @@ export async function fetchShippingReceipts(options: {
             params[`status${i}`] = s;
         });
     }
-
 
     const whereString = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
     
@@ -155,26 +153,15 @@ export async function fetchShippingReceipts(options: {
 }
 
 export async function fetchShippingReceiptCountsByChannel(dateString?: string): Promise<Record<string, number>> {
-    let whereClause = "";
-    const params: any[] = [];
-    
     const statusToQuery = ['Perlu Diproses'];
-    
-    if (dateString) {
-        whereClause = `WHERE DATE(date) = ? AND status IN (${statusToQuery.map(() => '?').join(',')})`;
-        params.push(dateString, ...statusToQuery);
-    } else {
-        whereClause = `WHERE status IN (${statusToQuery.map(() => '?').join(',')})`;
-        params.push(...statusToQuery);
-    }
-    
     const query = db.prepare(`
         SELECT channel, COUNT(*) as count 
         FROM shipping_receipts 
-        ${whereClause}
+        WHERE strftime('%Y-%m-%d', date) = ? AND status IN (${statusToQuery.map(() => '?').join(',')})
         GROUP BY channel
     `);
-
+    const params = [dateString, ...statusToQuery];
+    
     const results = query.all(...params) as { channel: string, count: number }[];
     const counts: Record<string, number> = {};
     results.forEach(row => {
@@ -1174,6 +1161,7 @@ export async function deleteProductPermanently(itemId: string) {
     
 
     
+
 
 
 
