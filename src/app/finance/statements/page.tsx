@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
@@ -576,8 +577,8 @@ export default function SalesReportPage() {
                         </Popover>
                     </div>
                 </div>
-
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                <div className="overflow-x-auto pb-4 -mb-4 no-scrollbar">
+                    <div className="inline-grid w-max grid-flow-col gap-4">
                     <Card>
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                             <CardTitle className="text-sm font-medium">{TFinance.salesReportPage.totalRevenue}</CardTitle>
@@ -616,7 +617,7 @@ export default function SalesReportPage() {
                     </Card>
                     <Card>
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">Nilai Jumlah Retur</CardTitle>
+                            <CardTitle className="text-sm font-medium">Jumlah Retur</CardTitle>
                             <Undo2 className="h-4 w-4 text-muted-foreground" />
                         </CardHeader>
                         <CardContent>
@@ -632,6 +633,7 @@ export default function SalesReportPage() {
                             <div className="text-2xl font-bold">{formatCurrency(totalCancelledValue)}</div>
                         </CardContent>
                     </Card>
+                </div>
                 </div>
 
                 <div className="grid md:grid-cols-5 gap-4 mt-4">
