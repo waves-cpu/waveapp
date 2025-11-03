@@ -580,7 +580,7 @@ export default function SalesReportPage() {
 
                 <div className="overflow-x-auto pb-4 no-scrollbar">
                     <div className="inline-grid w-max gap-4 grid-flow-col">
-                        <Card>
+                        <Card className="min-w-48">
                             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                                 <CardTitle className="text-sm font-medium">{TFinance.salesReportPage.totalRevenue}</CardTitle>
                                 <DollarSign className="h-4 w-4 text-muted-foreground" />
@@ -589,7 +589,7 @@ export default function SalesReportPage() {
                                 <div className="text-2xl font-bold">{formatCurrency(totalRevenue)}</div>
                             </CardContent>
                         </Card>
-                        <Card>
+                        <Card className="min-w-48">
                             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                                 <CardTitle className="text-sm font-medium">{TFinance.salesReportPage.grossProfit}</CardTitle>
                                 <TrendingUp className="h-4 w-4 text-muted-foreground" />
@@ -598,7 +598,7 @@ export default function SalesReportPage() {
                                 <div className="text-2xl font-bold">{formatCurrency(grossProfit)}</div>
                             </CardContent>
                         </Card>
-                        <Card>
+                        <Card className="min-w-48">
                             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                                 <CardTitle className="text-sm font-medium">Produk Terjual</CardTitle>
                                 <ShoppingCart className="h-4 w-4 text-muted-foreground" />
@@ -607,7 +607,7 @@ export default function SalesReportPage() {
                                 <div className="text-2xl font-bold">{totalUnitsSold.toLocaleString('id-ID')}</div>
                             </CardContent>
                         </Card>
-                        <Card>
+                        <Card className="min-w-48">
                             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                                 <CardTitle className="text-sm font-medium">Resi Terkirim</CardTitle>
                                 <Truck className="h-4 w-4 text-muted-foreground" />
@@ -616,7 +616,7 @@ export default function SalesReportPage() {
                                 <div className="text-2xl font-bold">{shippedCount.toLocaleString('id-ID')}</div>
                             </CardContent>
                         </Card>
-                        <Card>
+                        <Card className="min-w-48">
                             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                                 <CardTitle className="text-sm font-medium">Nilai Jumlah Retur</CardTitle>
                                 <Undo2 className="h-4 w-4 text-muted-foreground" />
@@ -625,7 +625,7 @@ export default function SalesReportPage() {
                                 <div className="text-2xl font-bold">{formatCurrency(totalReturnedValue)}</div>
                             </CardContent>
                         </Card>
-                        <Card>
+                        <Card className="min-w-48">
                             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                                 <CardTitle className="text-sm font-medium">Nilai Pembatalan</CardTitle>
                                 <Ban className="h-4 w-4 text-muted-foreground" />
@@ -728,3 +728,5 @@ export default function SalesReportPage() {
         </AppLayout>
     );
 }
+
+    
