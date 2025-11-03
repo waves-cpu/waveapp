@@ -899,27 +899,7 @@ export async function getSalesByDate(channel: string, date: Date, page: number, 
     return { sales: mappedSales, total };
 }
 
-export async function revertSaleItem(transactionId: string, sku: string) {
-    const getSaleStmt = db.prepare(`
-        SELECT s.*, v.sku as variantSku, p.sku as productSku
-        FROM sales s
-        LEFT JOIN variants v ON s.variantId = v.id
-        LEFT JOIN products p ON s.productId = p.id
-        WHERE s.transactionId = @transactionId AND (v.sku = @sku OR (s.variantId IS NULL AND p.sku = @sku))
-        AND s.status = 'Completed'
-    `);
-    
-    const sale = getSaleStmt.get({ transactionId, sku }) as Sale | undefined;
-
-    if (sale) {
-        revertSale(sale.id, sale.transactionId);
-    } else {
-        throw new Error('Sale item not found in transaction');
-    }
-}
-
-
-export async function revertSale(saleId: string, transactionId?: string) {
+export async function revertSale(saleId: string) {
     const getSaleStmt = db.prepare('SELECT * FROM sales WHERE id = ?');
     const updateSaleStatusStmt = db.prepare("UPDATE sales SET status = 'Cancelled' WHERE id = ?");
     
@@ -932,21 +912,19 @@ export async function revertSale(saleId: string, transactionId?: string) {
         const idToAdjust = sale.variantId ? sale.variantId.toString() : (sale.productId ? sale.productId.toString() : '');
         if (!idToAdjust) return;
 
-        const reason = transactionId 
-            ? `Return for transaction #${transactionId.slice(-6)}` 
-            : `Cancelled Sale (${sale.channel})` + (sale.resellerName ? ` - ${sale.resellerName}` : '');
+        const reason = `Cancelled Sale: ${sale.transactionId || `ID ${sale.id}`}`;
 
         adjustStock(idToAdjust, sale.quantity, reason);
         
         updateSaleStatusStmt.run(saleId);
 
         // --- Reversing Journal Entries ---
-        const journalDesc = `Penjualan ${sale.productName}${sale.variantName ? ` - ${sale.variantName}` : ''}`;
+        const journalDesc = `Pembatalan: Penjualan ${sale.productName}${sale.variantName ? ` - ${sale.variantName}` : ''}`;
         
         // Reverse Revenue
         addManualJournalEntry({
             date: new Date().toISOString(),
-            description: `Pembatalan: ${journalDesc}`,
+            description: journalDesc,
             debitAccount: 'Pendapatan Penjualan',
             creditAccount: 'Piutang Usaha / Kas',
             amount: sale.priceAtSale * sale.quantity
@@ -965,35 +943,65 @@ export async function revertSale(saleId: string, transactionId?: string) {
     })();
 }
 
+export async function revertSaleItem(transactionId: string, sku: string) {
+    const getSaleStmt = db.prepare(`
+        SELECT s.*
+        FROM sales s
+        LEFT JOIN variants v ON s.variantId = v.id
+        LEFT JOIN products p ON s.productId = p.id
+        WHERE s.transactionId = @transactionId 
+        AND (v.sku = @sku OR (s.variantId IS NULL AND p.sku = @sku))
+        AND s.status = 'Completed'
+        ORDER BY s.id DESC
+        LIMIT 1
+    `);
+    
+    const sale = getSaleStmt.get({ transactionId, sku }) as Sale | undefined;
 
-export async function revertSaleByTransaction(id: string) {
-    const isSingleSale = id.startsWith('sale-');
-
-    if (isSingleSale) {
-        const saleId = id.replace('sale-', '');
-        revertSale(saleId);
+    if (sale) {
+        revertSale(sale.id);
     } else {
-        const getSalesStmt = db.prepare('SELECT * FROM sales WHERE transactionId = ?');
-        const sales = getSalesStmt.all(id) as Sale[];
-        
-        if (!sales || sales.length === 0) {
-            const getReceiptStmt = db.prepare('SELECT * FROM shipping_receipts WHERE awb = ?');
-            const receipt = getReceiptStmt.get(id) as ShippingReceipt;
-            if (receipt) {
-                updateShippingReceiptStatus(receipt.id, 'Return Selesai');
-                adjustStockByReason(receipt.awb, 'Return (transaksi tidak ditemukan)');
-                throw new Error('TRANSACTION_NOT_FOUND');
-            } else {
-               throw new Error('Transaction or Receipt not found.');
-            }
-        }
+        // Attempt a looser search for older data that might not have a transactionId link
+        const fallbackSale = db.prepare(`
+            SELECT s.*
+            FROM sales s
+            LEFT JOIN variants v ON s.variantId = v.id
+            LEFT JOIN products p ON s.productId = p.id
+            WHERE (v.sku = @sku OR (s.variantId IS NULL AND p.sku = @sku))
+            AND s.status != 'Cancelled'
+            ORDER BY s.id DESC
+            LIMIT 1
+        `).get({ sku }) as Sale | undefined;
 
-        db.transaction(() => {
-            sales.forEach(sale => {
-                revertSale(sale.id, sale.transactionId);
-            });
-        })();
+        if (fallbackSale) {
+            revertSale(fallbackSale.id);
+        } else {
+            throw new Error('Sale item not found in transaction');
+        }
     }
+}
+
+
+export async function revertSaleByTransaction(transactionId: string) {
+    const getSalesStmt = db.prepare("SELECT * FROM sales WHERE transactionId = ? AND status = 'Completed'");
+    const sales = getSalesStmt.all(transactionId) as Sale[];
+
+    if (!sales || sales.length === 0) {
+        const getReceiptStmt = db.prepare('SELECT * FROM shipping_receipts WHERE awb = ?');
+        const receipt = getReceiptStmt.get(transactionId) as ShippingReceipt;
+        if (receipt) {
+            updateShippingReceiptStatus(receipt.id, 'Return Selesai');
+            adjustStockByReason(receipt.awb, 'Return (transaksi tidak ditemukan)');
+        }
+        // This throw will be caught by the calling function to provide a user-friendly toast
+        throw new Error('TRANSACTION_NOT_FOUND');
+    }
+
+    db.transaction(() => {
+        sales.forEach(sale => {
+            revertSale(sale.id);
+        });
+    })();
 }
 
 function adjustStockByReason(identifier: string, reason: string) {
@@ -1208,6 +1216,7 @@ export async function deleteProductPermanently(itemId: string) {
     
 
     
+
 
 
 
