@@ -577,63 +577,61 @@ export default function SalesReportPage() {
                     </div>
                 </div>
 
-                <div className="overflow-x-auto pb-4 -mb-4 no-scrollbar">
-                    <div className="inline-grid w-max grid-flow-col gap-4">
-                        <Card className="min-w-48">
-                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                <CardTitle className="text-sm font-medium">{TFinance.salesReportPage.totalRevenue}</CardTitle>
-                                <DollarSign className="h-4 w-4 text-muted-foreground" />
-                            </CardHeader>
-                            <CardContent>
-                                <div className="text-2xl font-bold">{formatCurrency(totalRevenue)}</div>
-                            </CardContent>
-                        </Card>
-                        <Card className="min-w-48">
-                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                <CardTitle className="text-sm font-medium">{TFinance.salesReportPage.grossProfit}</CardTitle>
-                                <TrendingUp className="h-4 w-4 text-muted-foreground" />
-                            </CardHeader>
-                            <CardContent>
-                                <div className="text-2xl font-bold">{formatCurrency(grossProfit)}</div>
-                            </CardContent>
-                        </Card>
-                        <Card className="min-w-48">
-                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                <CardTitle className="text-sm font-medium">Produk Terjual</CardTitle>
-                                <ShoppingCart className="h-4 w-4 text-muted-foreground" />
-                            </CardHeader>
-                            <CardContent>
-                                <div className="text-2xl font-bold">{totalUnitsSold.toLocaleString('id-ID')}</div>
-                            </CardContent>
-                        </Card>
-                        <Card className="min-w-48">
-                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                <CardTitle className="text-sm font-medium">Resi Terkirim</CardTitle>
-                                <Truck className="h-4 w-4 text-muted-foreground" />
-                            </CardHeader>
-                            <CardContent>
-                                <div className="text-2xl font-bold">{shippedCount.toLocaleString('id-ID')}</div>
-                            </CardContent>
-                        </Card>
-                        <Card className="min-w-48">
-                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                <CardTitle className="text-sm font-medium">Nilai Jumlah Retur</CardTitle>
-                                <Undo2 className="h-4 w-4 text-muted-foreground" />
-                            </CardHeader>
-                            <CardContent>
-                                <div className="text-2xl font-bold">{formatCurrency(totalReturnedValue)}</div>
-                            </CardContent>
-                        </Card>
-                        <Card className="min-w-48">
-                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                <CardTitle className="text-sm font-medium">Nilai Pembatalan</CardTitle>
-                                <Ban className="h-4 w-4 text-muted-foreground" />
-                            </CardHeader>
-                            <CardContent>
-                                <div className="text-2xl font-bold">{formatCurrency(totalCancelledValue)}</div>
-                            </CardContent>
-                        </Card>
-                    </div>
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                    <Card>
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-sm font-medium">{TFinance.salesReportPage.totalRevenue}</CardTitle>
+                            <DollarSign className="h-4 w-4 text-muted-foreground" />
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-2xl font-bold">{formatCurrency(totalRevenue)}</div>
+                        </CardContent>
+                    </Card>
+                    <Card>
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-sm font-medium">{TFinance.salesReportPage.grossProfit}</CardTitle>
+                            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-2xl font-bold">{formatCurrency(grossProfit)}</div>
+                        </CardContent>
+                    </Card>
+                     <Card>
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-sm font-medium">Produk Terjual</CardTitle>
+                            <ShoppingCart className="h-4 w-4 text-muted-foreground" />
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-2xl font-bold">{totalUnitsSold.toLocaleString('id-ID')}</div>
+                        </CardContent>
+                    </Card>
+                    <Card>
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-sm font-medium">Resi Terkirim</CardTitle>
+                            <Truck className="h-4 w-4 text-muted-foreground" />
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-2xl font-bold">{shippedCount.toLocaleString('id-ID')}</div>
+                        </CardContent>
+                    </Card>
+                    <Card>
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-sm font-medium">Nilai Jumlah Retur</CardTitle>
+                            <Undo2 className="h-4 w-4 text-muted-foreground" />
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-2xl font-bold">{formatCurrency(totalReturnedValue)}</div>
+                        </CardContent>
+                    </Card>
+                    <Card>
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-sm font-medium">Nilai Pembatalan</CardTitle>
+                            <Ban className="h-4 w-4 text-muted-foreground" />
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-2xl font-bold">{formatCurrency(totalCancelledValue)}</div>
+                        </CardContent>
+                    </Card>
                 </div>
 
                 <div className="grid md:grid-cols-5 gap-4 mt-4">
@@ -727,9 +725,3 @@ export default function SalesReportPage() {
         </AppLayout>
     );
 }
-
-    
-
-    
-
-    
