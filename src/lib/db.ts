@@ -131,6 +131,21 @@ const runMigrations = () => {
         `);
         stmt.run();
     }
+    
+    const shippingReceiptColumns = db.pragma('table_info(shipping_receipts)');
+    if (shippingReceiptColumns && !shippingReceiptColumns.some((col: any) => col.name === 'transactionId')) {
+        db.exec('ALTER TABLE shipping_receipts ADD COLUMN transactionId TEXT');
+    }
+    
+    const receiptsToUpdate = db.prepare('SELECT id, awb FROM shipping_receipts WHERE transactionId IS NULL OR transactionId = ""').all();
+    if (receiptsToUpdate.length > 0) {
+        const updateStmt = db.prepare('UPDATE shipping_receipts SET transactionId = ? WHERE id = ?');
+        db.transaction(() => {
+            for (const receipt of receiptsToUpdate as any[]) {
+                updateStmt.run(receipt.awb, receipt.id);
+            }
+        })();
+    }
 
 
   } catch (error) {
@@ -266,7 +281,8 @@ const createSchema = () => {
         awb TEXT NOT NULL UNIQUE,
         date TEXT NOT NULL,
         channel TEXT NOT NULL,
-        status TEXT NOT NULL
+        status TEXT NOT NULL,
+        transactionId TEXT
     );
 
     CREATE TABLE IF NOT EXISTS bulk_import_history (

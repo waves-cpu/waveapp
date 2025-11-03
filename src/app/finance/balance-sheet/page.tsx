@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { AppLayout } from "@/app/components/app-layout";
@@ -116,7 +117,7 @@ export default function BalanceSheetPage() {
             return isWithinInterval(date, { start: startDate, end: endDate });
         };
         
-        const salesInDateRange = allSales.filter(sale => isInDateRange(sale.saleDate));
+        const salesInDateRange = allSales.filter(sale => sale.status === 'Completed' && isInDateRange(sale.saleDate));
         const manualEntriesInDateRange = manualJournalEntries.filter(entry => isInDateRange(entry.date));
 
         // ASET

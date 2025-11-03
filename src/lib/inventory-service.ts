@@ -899,49 +899,31 @@ export async function getSalesByDate(channel: string, date: Date, page: number, 
 }
 
 export async function revertSaleItem(transactionId: string, sku: string) {
-    db.transaction(() => {
-        let getSaleItemStmt = db.prepare(`
-            SELECT s.*
-            FROM sales s
-            LEFT JOIN variants v ON s.variantId = v.id
-            LEFT JOIN products p ON s.productId = p.id
-            WHERE s.transactionId = @transactionId 
-              AND COALESCE(v.sku, p.sku) = @sku
-            LIMIT 1
-        `);
+    const getSaleItemStmt = db.prepare(`
+        SELECT s.*, v.sku as variantSku, p.sku as productSku
+        FROM sales s
+        LEFT JOIN variants v ON s.variantId = v.id
+        LEFT JOIN products p ON s.productId = p.id
+        WHERE s.transactionId = @transactionId AND (v.sku = @sku OR (s.variantId IS NULL AND p.sku = @sku))
+    `);
 
-        let sale = getSaleItemStmt.get({ transactionId, sku }) as Sale | undefined;
+    const sale = getSaleItemStmt.get({ transactionId, sku }) as Sale | undefined;
 
-        // Fallback for sales that might not be completed, e.g. from returns
-        if (!sale) {
-            getSaleItemStmt = db.prepare(`
-                SELECT s.*
-                FROM sales s
-                LEFT JOIN variants v ON s.variantId = v.id
-                LEFT JOIN products p ON s.productId = p.id
-                WHERE COALESCE(v.sku, p.sku) = @sku AND s.status != 'Completed'
-                LIMIT 1
-            `);
-            sale = getSaleItemStmt.get({ sku }) as Sale | undefined;
-        }
+    if (!sale) {
+        throw new Error('Sale item not found in transaction');
+    }
 
-        if (!sale) {
-            throw new Error('Sale item not found in transaction');
-        }
-
-        revertSale(sale.id, transactionId);
-    })();
+    revertSale(sale.id, transactionId);
 }
 
 export async function revertSale(saleId: string, transactionId?: string) {
     const getSaleStmt = db.prepare('SELECT * FROM sales WHERE id = ?');
-    const deleteSaleStmt = db.prepare('DELETE FROM sales WHERE id = ?');
-    const deleteJournalStmt = db.prepare("DELETE FROM manual_journal_entries WHERE description LIKE ?");
+    const updateSaleStatusStmt = db.prepare("UPDATE sales SET status = 'Cancelled' WHERE id = ?");
     
     db.transaction(() => {
         const sale = getSaleStmt.get(saleId) as Sale | undefined;
-        if (!sale) {
-            throw new Error('Sale not found.');
+        if (!sale || sale.status === 'Cancelled') {
+            return; // Or throw an error if needed
         }
 
         const idToAdjust = sale.variantId ? sale.variantId.toString() : (sale.productId ? sale.productId.toString() : '');
@@ -953,7 +935,10 @@ export async function revertSale(saleId: string, transactionId?: string) {
 
         adjustStock(idToAdjust, sale.quantity, reason);
         
-        // Reverse journal entries
+        // Mark the sale as cancelled instead of deleting it
+        updateSaleStatusStmt.run(saleId);
+
+        // Keep the journal reversal for financial accuracy
         const journalDesc = `Penjualan ${sale.productName}${sale.variantName ? ` - ${sale.variantName}` : ''}`;
         
         addManualJournalEntry({
@@ -973,13 +958,6 @@ export async function revertSale(saleId: string, transactionId?: string) {
                 amount: sale.cogsAtSale * sale.quantity
             });
         }
-        
-        deleteSaleStmt.run(saleId);
-
-        if (['shopee', 'tiktok', 'lazada'].includes(sale.channel.toLowerCase())) {
-            const adminFeeJournalDesc = `Biaya admin marketplace untuk ${sale.productName}${sale.variantName ? ` - ${sale.variantName}` : ''}`;
-            deleteJournalStmt.run(adminFeeJournalDesc);
-        }
     })();
 }
 
@@ -995,15 +973,17 @@ export async function revertSaleByTransaction(id: string) {
         
         const sales = getSalesStmt.all(id) as Sale[];
         if (!sales || sales.length === 0) {
-             const getReceiptStmt = db.prepare('SELECT * FROM shipping_receipts WHERE awb = ?');
-             const receipt = getReceiptStmt.get(id) as ShippingReceipt;
-             if (receipt) {
-                 adjustStockByReason(id, 'Return (transaksi tidak ditemukan)');
-                 updateShippingReceiptStatus(receipt.id, 'Return Selesai');
-             } else {
+            const getReceiptStmt = db.prepare('SELECT * FROM shipping_receipts WHERE awb = ?');
+            const receipt = getReceiptStmt.get(id) as ShippingReceipt;
+            if (receipt) {
+                // If transaction not found, we can't revert stock automatically based on sales data.
+                // However, we can still mark the receipt as processed.
+                // The stock adjustment must be done manually by the user via the UI.
+                updateShippingReceiptStatus(receipt.id, 'Return Selesai');
                 throw new Error('TRANSACTION_NOT_FOUND');
-             }
-             return;
+            } else {
+               throw new Error('Transaction or Receipt not found.');
+            }
         }
 
         db.transaction(() => {
@@ -1226,6 +1206,7 @@ export async function deleteProductPermanently(itemId: string) {
     
 
     
+
 
 
 

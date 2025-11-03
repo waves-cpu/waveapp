@@ -122,6 +122,7 @@ function AllProductsDialog({
 
     const productProfitability = useMemo(() => {
         const salesInDateRange = allSales.filter(sale => {
+            if (sale.status !== 'Completed') return false;
             if (!dateRange || !dateRange.from) return true;
             const saleDate = parseISO(sale.saleDate);
             const toDate = dateRange.to || dateRange.from;
@@ -413,6 +414,7 @@ export default function SalesReportPage() {
         totalUnitsSold
     } = useMemo(() => {
         const salesInDateRange = allSales.filter(sale => {
+            if (sale.status !== 'Completed') return false;
             if (categoryFilter && sale.productCategory !== categoryFilter) return false;
             if (!dateRange || !dateRange.from) return true;
             const saleDate = parseISO(sale.saleDate);
