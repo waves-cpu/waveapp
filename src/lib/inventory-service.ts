@@ -1,5 +1,4 @@
 
-
 'use server';
 
 import { db } from './db';
@@ -122,7 +121,6 @@ export async function fetchShippingReceipts(options: {
     }
     
     if (date_range) {
-        // Use ISO string for consistent date handling across timezones
         whereClauses.push("date >= @from AND date <= @to");
         params.from = date_range.from.toISOString();
         params.to = endOfDay(date_range.to).toISOString();
@@ -152,15 +150,23 @@ export async function fetchShippingReceipts(options: {
     return { receipts, total };
 }
 
-export async function fetchShippingReceiptCountsByChannel(dateString?: string): Promise<Record<string, number>> {
-    const statusToQuery = ['Perlu Diproses'];
+export async function fetchShippingReceiptCountsByChannel(dateString?: string, status?: string[]): Promise<Record<string, number>> {
+    const statusToQuery = status || ['Perlu Diproses'];
+
+    let whereClause = `status IN (${statusToQuery.map(() => '?').join(',')})`;
+    const params: any[] = [...statusToQuery];
+
+    if (dateString) {
+        whereClause += ` AND strftime('%Y-%m-%d', date) = ?`;
+        params.push(dateString);
+    }
+    
     const query = db.prepare(`
         SELECT channel, COUNT(*) as count 
         FROM shipping_receipts 
-        WHERE strftime('%Y-%m-%d', date) = ? AND status IN (${statusToQuery.map(() => '?').join(',')})
+        WHERE ${whereClause}
         GROUP BY channel
     `);
-    const params = [dateString, ...statusToQuery];
     
     const results = query.all(...params) as { channel: string, count: number }[];
     const counts: Record<string, number> = {};
@@ -195,7 +201,7 @@ export async function getReceiptCountByStatus(status: string[], dateRange: { fro
 
 export async function addShippingReceipt(receipt: Omit<ShippingReceipt, 'id'>): Promise<ShippingReceipt> {
     try {
-        const result = db.prepare('INSERT INTO shipping_receipts (awb, date, channel, status) VALUES (@awb, @date, @channel, @status)').run({
+        const result = db.prepare('INSERT INTO shipping_receipts (awb, date, channel, status, transactionId) VALUES (@awb, @date, @channel, @status, @transactionId)').run({
             ...receipt
         });
         const newReceipt = db.prepare('SELECT * FROM shipping_receipts WHERE id = ?').get(result.lastInsertRowid) as ShippingReceipt;
@@ -891,6 +897,27 @@ export async function getSalesByDate(channel: string, date: Date, page: number, 
     return { sales: mappedSales, total };
 }
 
+export async function revertSaleItem(transactionId: string, sku: string) {
+    db.transaction(() => {
+        const getSaleItemStmt = db.prepare(`
+            SELECT s.*
+            FROM sales s
+            LEFT JOIN variants v ON s.variantId = v.id
+            LEFT JOIN products p ON s.productId = p.id
+            WHERE s.transactionId = @transactionId 
+              AND COALESCE(v.sku, p.sku) = @sku
+            LIMIT 1
+        `);
+        const sale = getSaleItemStmt.get({ transactionId, sku }) as Sale | undefined;
+
+        if (!sale) {
+            throw new Error('Sale item not found in transaction');
+        }
+
+        revertSale(sale.id);
+    })();
+}
+
 export async function revertSale(saleId: string) {
     const getSaleStmt = db.prepare('SELECT * FROM sales WHERE id = ?');
     const deleteSaleStmt = db.prepare('DELETE FROM sales WHERE id = ?');
@@ -934,7 +961,9 @@ export async function revertSaleByTransaction(id: string) {
         db.transaction(() => {
             const sales = getSalesStmt.all(id) as Sale[];
             if (!sales || sales.length === 0) {
-                throw new Error('Transaction not found.');
+                 // Don't throw error, just mark as processed. The caller will handle UI.
+                console.warn(`Transaction not found for ID: ${id}. Cannot revert.`);
+                return;
             }
 
             sales.forEach(sale => {
@@ -1161,6 +1190,7 @@ export async function deleteProductPermanently(itemId: string) {
     
 
     
+
 
 
 

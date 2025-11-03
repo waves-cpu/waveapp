@@ -43,7 +43,6 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { VariantSelectionDialog } from '@/app/components/variant-selection-dialog';
 import { useLanguage } from '@/hooks/use-language';
@@ -68,16 +67,23 @@ const getStatusVariant = (status: string) => {
     }
 };
 
-type ReturnedItem = InventoryItemVariant & { quantity: number; parentName?: string };
+type ReturnedItem = {
+    sku: string;
+    name: string;
+    quantity: number;
+};
+
 
 const ReturnProductDialog = ({
     open,
     onOpenChange,
-    onProcessReturn
+    onProcessReturn,
+    receipt,
 }: {
     open: boolean;
     onOpenChange: (open: boolean) => void;
-    onProcessReturn: (items: ReturnedItem[]) => Promise<void>;
+    onProcessReturn: (transactionId: string, items: ReturnedItem[]) => Promise<void>;
+    receipt: ShippingReceipt | null;
 }) => {
     const { getProductBySku } = useInventory();
     const [searchTerm, setSearchTerm] = useState('');
@@ -99,14 +105,20 @@ const ReturnProductDialog = ({
     }, [open]);
 
     const addOrUpdateReturnedItem = (variant: InventoryItemVariant, parentName?: string) => {
+        if (!variant.sku) {
+            playErrorSound();
+            toast({ variant: "destructive", title: "SKU Tidak Ada", description: "Varian ini tidak memiliki SKU." });
+            return;
+        }
+
         setReturnedItems(prevItems => {
-            const existingItem = prevItems.find(item => item.id === variant.id);
+            const existingItem = prevItems.find(item => item.sku === variant.sku);
             if (existingItem) {
                 return prevItems.map(item =>
-                    item.id === variant.id ? { ...item, quantity: item.quantity + 1 } : item
+                    item.sku === variant.sku ? { ...item, quantity: item.quantity + 1 } : item
                 );
             }
-            return [...prevItems, { ...variant, quantity: 1, parentName }];
+            return [...prevItems, { sku: variant.sku!, name: `${parentName} - ${variant.name}`, quantity: 1 }];
         });
         playSuccessSound();
         setSearchTerm('');
@@ -122,9 +134,19 @@ const ReturnProductDialog = ({
                 setProductForVariantSelection(product);
             } else if (product.variants && product.variants.length === 1) {
                 addOrUpdateReturnedItem(product.variants[0], product.name);
+            } else if (product.sku) { // Simple product
+                setReturnedItems(prev => {
+                     const existing = prev.find(item => item.sku === product.sku);
+                     if (existing) {
+                         return prev.map(item => item.sku === product.sku ? {...item, quantity: item.quantity + 1} : item);
+                     }
+                     return [...prev, { sku: product.sku!, name: product.name, quantity: 1 }];
+                });
+                playSuccessSound();
+                setSearchTerm('');
             } else {
                  playErrorSound();
-                 toast({ variant: "destructive", title: "Produk Tunggal", description: "Produk ini tidak memiliki varian untuk dipilih." });
+                 toast({ variant: "destructive", title: "Produk Tidak Valid", description: "Produk ini tidak memiliki SKU." });
             }
         } else {
             playErrorSound();
@@ -141,24 +163,24 @@ const ReturnProductDialog = ({
         inputRef.current?.focus();
     }
     
-    const updateQuantity = (id: string, newQuantity: number) => {
+    const updateQuantity = (sku: string, newQuantity: number) => {
         setReturnedItems(prevItems => {
             if (newQuantity <= 0) {
-                return prevItems.filter(item => item.id !== id);
+                return prevItems.filter(item => item.sku !== sku);
             }
-            return prevItems.map(item => (item.id === id ? { ...item, quantity: newQuantity } : item));
+            return prevItems.map(item => (item.sku === sku ? { ...item, quantity: newQuantity } : item));
         });
     };
     
-    const removeItem = (id: string) => {
-        setReturnedItems(prevItems => prevItems.filter(item => item.id !== id));
+    const removeItem = (sku: string) => {
+        setReturnedItems(prevItems => prevItems.filter(item => item.sku !== sku));
     };
 
     const handleFinalizeReturn = async () => {
-        if (returnedItems.length === 0) return;
+        if (returnedItems.length === 0 || !receipt || !receipt.transactionId) return;
         setIsSubmitting(true);
         try {
-            await onProcessReturn(returnedItems);
+            await onProcessReturn(receipt.transactionId, returnedItems);
             onOpenChange(false);
         } finally {
             setIsSubmitting(false);
@@ -171,7 +193,11 @@ const ReturnProductDialog = ({
                 <DialogContent className="sm:max-w-xl">
                     <DialogHeader>
                         <DialogTitle>Proses Barang Return</DialogTitle>
-                        <DialogDescription>Scan atau cari produk yang dikembalikan untuk dimasukkan kembali ke stok.</DialogDescription>
+                        <DialogDescription>
+                            Scan atau cari produk yang dikembalikan untuk membatalkan penjualan dan memasukkan kembali ke stok.
+                            <br />
+                            Resi: <span className="font-semibold">{receipt?.awb}</span>
+                        </DialogDescription>
                     </DialogHeader>
                     <div className="space-y-4">
                         <form onSubmit={handleSearch}>
@@ -200,9 +226,9 @@ const ReturnProductDialog = ({
                                         </TableHeader>
                                         <TableBody>
                                             {returnedItems.length > 0 ? returnedItems.map(item => (
-                                                <TableRow key={item.id}>
+                                                <TableRow key={item.sku}>
                                                     <TableCell>
-                                                        <p className="font-medium text-sm">{item.parentName} - {item.name}</p>
+                                                        <p className="font-medium text-sm">{item.name}</p>
                                                         <p className="text-xs text-muted-foreground">SKU: {item.sku}</p>
                                                     </TableCell>
                                                     <TableCell>
@@ -210,13 +236,13 @@ const ReturnProductDialog = ({
                                                             <Input
                                                                 type="number"
                                                                 value={item.quantity}
-                                                                onChange={(e) => updateQuantity(item.id, parseInt(e.target.value) || 0)}
+                                                                onChange={(e) => updateQuantity(item.sku, parseInt(e.target.value) || 0)}
                                                                 className="w-20 h-8 text-center"
                                                             />
                                                          </div>
                                                     </TableCell>
                                                     <TableCell>
-                                                        <Button variant="ghost" size="icon" className="text-destructive h-8 w-8" onClick={() => removeItem(item.id)}>
+                                                        <Button variant="ghost" size="icon" className="text-destructive h-8 w-8" onClick={() => removeItem(item.sku)}>
                                                             <Trash2 className="h-4 w-4" />
                                                         </Button>
                                                     </TableCell>
@@ -238,7 +264,7 @@ const ReturnProductDialog = ({
                     <DialogFooter>
                         <Button variant="ghost" onClick={() => onOpenChange(false)}>Batal</Button>
                         <Button onClick={handleFinalizeReturn} disabled={returnedItems.length === 0 || isSubmitting}>
-                            {isSubmitting ? 'Memproses...' : 'Masukkan Barang ke Stok'}
+                            {isSubmitting ? 'Memproses...' : 'Proses Pengembalian'}
                         </Button>
                     </DialogFooter>
                 </DialogContent>
@@ -265,7 +291,7 @@ export default function ReturnPage() {
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(25);
     const { toast } = useToast();
-    const { updateStock, fetchShippingReceipts, deleteShippingReceipt, updateShippingReceiptStatus } = useInventory();
+    const { updateStock, fetchShippingReceipts, deleteShippingReceipt, updateShippingReceiptStatus, revertSaleItem } = useInventory();
     const { language } = useLanguage();
     const t = translations[language].shipping.returnPage;
     const tCommon = translations[language].common;
@@ -372,27 +398,44 @@ export default function ReturnPage() {
     };
 
     const handleReturnReceived = (receipt: ShippingReceipt) => {
+        if (!receipt.transactionId) {
+            toast({
+                variant: 'destructive',
+                title: 'Transaksi Tidak Tertaut',
+                description: 'Resi ini tidak terhubung ke transaksi penjualan. Tidak dapat memproses return otomatis.'
+            });
+            return;
+        }
         setSelectedReceipt(receipt);
         setIsProductSelectionDialogOpen(true);
     };
     
-    const handleVariantReturned = async (returnedItems: ReturnedItem[]) => {
-        if (!selectedReceipt) return;
-        
+    const handleProcessReturn = async (transactionId: string, returnedItems: ReturnedItem[]) => {
         try {
-            const stockUpdatePromises = returnedItems.map(item => 
-                updateStock(item.id, item.quantity, `Return dari resi ${selectedReceipt.awb}`)
-            );
+            for (const item of returnedItems) {
+                for (let i = 0; i < item.quantity; i++) {
+                    await revertSaleItem(transactionId, item.sku);
+                }
+            }
             
-            await Promise.all(stockUpdatePromises);
-            await handleChangeStatus(selectedReceipt.id, 'Return Selesai');
-            
-            toast({ title: t.stockReturnedSuccess, description: `${returnedItems.length} jenis produk telah dikembalikan ke stok.` });
+            if (selectedReceipt) {
+                await handleChangeStatus(selectedReceipt.id, 'Return Selesai');
+            }
+
+            toast({ title: t.stockReturnedSuccess, description: `${returnedItems.reduce((acc, item) => acc + item.quantity, 0)} item telah dikembalikan ke stok.` });
             fetchReturns();
             fetchCounts();
         } catch (error) {
-            toast({ variant: 'destructive', title: t.stockReturnedError });
-            throw error; // Re-throw to keep dialog open on failure
+            let errorMessage = t.stockReturnedError;
+             if (error instanceof Error) {
+                if (error.message.includes('Sale item not found in transaction')) {
+                    errorMessage = "Item yang di-scan tidak ditemukan di transaksi penjualan asli.";
+                } else {
+                    errorMessage = error.message;
+                }
+            }
+            toast({ variant: 'destructive', title: 'Gagal Memproses', description: errorMessage });
+            throw error;
         }
     };
     
@@ -561,7 +604,7 @@ export default function ReturnPage() {
                                                                 </AlertDialogHeader>
                                                                 <AlertDialogFooter>
                                                                     <AlertDialogCancel>{tCommon.cancel}</AlertDialogCancel>
-                                                                    <AlertDialogAction onClick={handleDelete} className="bg-destructive hover:bg-destructive/90">
+                                                                    <AlertDialogAction onClick={() => { setReceiptToDelete(item); handleDelete(); }} className="bg-destructive hover:bg-destructive/90">
                                                                         {t.deleteConfirmAction}
                                                                     </AlertDialogAction>
                                                                 </AlertDialogFooter>
@@ -600,7 +643,8 @@ export default function ReturnPage() {
             <ReturnProductDialog
                 open={isProductSelectionDialogOpen}
                 onOpenChange={setIsProductSelectionDialogOpen}
-                onProcessReturn={handleVariantReturned}
+                onProcessReturn={handleProcessReturn}
+                receipt={selectedReceipt}
             />
         </AppLayout>
     );

@@ -1,9 +1,8 @@
 
-
 'use client';
 
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
-import type { InventoryItem, AdjustmentHistory, InventoryItemVariant, Sale, Reseller, ManualJournalEntry, Accessory, ShippingReceipt, BulkImportHistory } from '@/types';
+import type { InventoryItem, AdjustmentHistory, InventoryItemVariant, Sale, Reseller, ManualJournalEntry, Accessory, ShippingReceipt, BulkImportHistory, User } from '@/types';
 import { categories as allCategories } from '@/types';
 import {
   fetchInventoryData,
@@ -18,6 +17,7 @@ import {
   findProductBySku,
   fetchAllSales,
   revertSaleByTransaction,
+  revertSaleItem,
   getResellers,
   addReseller as addResellerDb,
   editReseller as editResellerDb,
@@ -61,6 +61,7 @@ interface InventoryContextType {
   fetchSales: (channel: string, date: Date, page: number, limit: number) => Promise<{sales: Sale[], total: number}>;
   cancelSale: (saleId: string) => Promise<void>;
   cancelSaleTransaction: (transactionId: string) => Promise<void>;
+  revertSaleItem: (transactionId: string, sku: string) => Promise<void>;
   getProductBySku: (sku: string) => Promise<InventoryItem | null>;
   allSales: Sale[];
   resellers: Reseller[];
@@ -264,6 +265,11 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
     await revertSaleByTransaction(transactionId);
     await fetchAllData();
   }
+  
+  const _revertSaleItem = async (transactionId: string, sku: string) => {
+      await revertSaleItem(transactionId, sku);
+      await fetchAllData();
+  }
 
   const getProductBySku = async (sku: string) => {
     return await findProductBySku(sku);
@@ -336,6 +342,7 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
         fetchSales,
         cancelSale,
         cancelSaleTransaction,
+        revertSaleItem: _revertSaleItem,
         getProductBySku,
         allSales,
         resellers,
