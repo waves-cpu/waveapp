@@ -43,6 +43,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
+  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { VariantSelectionDialog } from '@/app/components/variant-selection-dialog';
 import { useLanguage } from '@/hooks/use-language';
