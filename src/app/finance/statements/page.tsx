@@ -579,7 +579,7 @@ export default function SalesReportPage() {
                 </div>
 
                 <div className="overflow-x-auto pb-4 no-scrollbar">
-                    <div className="inline-grid w-max gap-4 md:grid-cols-2 lg:grid-cols-6 mb-4">
+                    <div className="inline-grid w-max gap-4 grid-flow-col">
                         <Card>
                             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                                 <CardTitle className="text-sm font-medium">{TFinance.salesReportPage.totalRevenue}</CardTitle>
@@ -637,7 +637,7 @@ export default function SalesReportPage() {
                     </div>
                 </div>
 
-                <div className="grid md:grid-cols-5 gap-4">
+                <div className="grid md:grid-cols-5 gap-4 mt-4">
                      <Card className="md:col-span-2">
                         <CardHeader>
                             <CardTitle className="text-base">{TFinance.salesReportPage.revenueByChannel}</CardTitle>
