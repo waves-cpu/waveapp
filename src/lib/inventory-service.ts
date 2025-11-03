@@ -676,11 +676,12 @@ export async function adjustStock(itemId: string, change: number, reason: string
 }
 
 export async function findProductBySku(sku: string): Promise<InventoryItem | null> {
-    const getProductBySkuStmt = db.prepare('SELECT * FROM products WHERE sku = ? AND hasVariants = 0');
     const getVariantBySkuStmt = db.prepare('SELECT * FROM variants WHERE sku = ?');
+    const getProductBySkuStmt = db.prepare('SELECT * FROM products WHERE sku = ?');
     const getProductByIdStmt = db.prepare('SELECT * FROM products WHERE id = ?');
     const getVariantsByProductIdStmt = db.prepare('SELECT * FROM variants WHERE productId = ?');
 
+    // 1. Try to find an exact match in variants
     const variantResult: any = getVariantBySkuStmt.get(sku);
     if (variantResult) {
         const parent = getProductByIdStmt.get(variantResult.productId) as any;
@@ -691,6 +692,7 @@ export async function findProductBySku(sku: string): Promise<InventoryItem | nul
         };
     }
 
+    // 2. If not found in variants, try to find in products (could be a simple product or a parent)
     const productResult: any = getProductBySkuStmt.get(sku);
     if (productResult) {
         if (productResult.hasVariants) {
@@ -701,6 +703,7 @@ export async function findProductBySku(sku: string): Promise<InventoryItem | nul
                  variants: variants.map(v => ({ ...v, id: v.id.toString() }))
             };
         }
+        // It's a simple product
         return { ...productResult, id: productResult.id.toString() };
     }
 
@@ -1216,6 +1219,7 @@ export async function deleteProductPermanently(itemId: string) {
     
 
     
+
 
 
 
