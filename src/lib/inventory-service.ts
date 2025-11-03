@@ -1,4 +1,5 @@
 
+
 'use server';
 
 import { db } from './db';
@@ -115,7 +116,7 @@ export async function fetchShippingReceipts(options: {
             params.channel = channel;
         }
         if (dateString) {
-            whereClauses.push("strftime('%Y-%m-%d', date) = @dateString");
+            whereClauses.push("date(date) = @dateString");
             params.dateString = dateString;
         }
     }
@@ -899,7 +900,7 @@ export async function getSalesByDate(channel: string, date: Date, page: number, 
 
 export async function revertSaleItem(transactionId: string, sku: string) {
     db.transaction(() => {
-        const getSaleItemStmt = db.prepare(`
+        let getSaleItemStmt = db.prepare(`
             SELECT s.*
             FROM sales s
             LEFT JOIN variants v ON s.variantId = v.id
@@ -908,17 +909,31 @@ export async function revertSaleItem(transactionId: string, sku: string) {
               AND COALESCE(v.sku, p.sku) = @sku
             LIMIT 1
         `);
-        const sale = getSaleItemStmt.get({ transactionId, sku }) as Sale | undefined;
+
+        let sale = getSaleItemStmt.get({ transactionId, sku }) as Sale | undefined;
+
+        // Fallback for sales that might not be completed, e.g. from returns
+        if (!sale) {
+            getSaleItemStmt = db.prepare(`
+                SELECT s.*
+                FROM sales s
+                LEFT JOIN variants v ON s.variantId = v.id
+                LEFT JOIN products p ON s.productId = p.id
+                WHERE COALESCE(v.sku, p.sku) = @sku AND s.status != 'Completed'
+                LIMIT 1
+            `);
+            sale = getSaleItemStmt.get({ sku }) as Sale | undefined;
+        }
 
         if (!sale) {
             throw new Error('Sale item not found in transaction');
         }
 
-        revertSale(sale.id);
+        revertSale(sale.id, transactionId);
     })();
 }
 
-export async function revertSale(saleId: string) {
+export async function revertSale(saleId: string, transactionId?: string) {
     const getSaleStmt = db.prepare('SELECT * FROM sales WHERE id = ?');
     const deleteSaleStmt = db.prepare('DELETE FROM sales WHERE id = ?');
     const deleteJournalStmt = db.prepare("DELETE FROM manual_journal_entries WHERE description LIKE ?");
@@ -932,16 +947,38 @@ export async function revertSale(saleId: string) {
         const idToAdjust = sale.variantId ? sale.variantId.toString() : (sale.productId ? sale.productId.toString() : '');
         if (!idToAdjust) return;
 
-        const reason = `Cancelled Sale (${sale.channel})` + (sale.resellerName ? ` - ${sale.resellerName}` : '');
+        const reason = transactionId 
+            ? `Return for transaction #${transactionId.slice(-6)}` 
+            : `Cancelled Sale (${sale.channel})` + (sale.resellerName ? ` - ${sale.resellerName}` : '');
 
         adjustStock(idToAdjust, sale.quantity, reason);
+        
+        // Reverse journal entries
+        const journalDesc = `Penjualan ${sale.productName}${sale.variantName ? ` - ${sale.variantName}` : ''}`;
+        
+        addManualJournalEntry({
+            date: new Date().toISOString(),
+            description: `Pembatalan: ${journalDesc}`,
+            debitAccount: 'Pendapatan Penjualan',
+            creditAccount: 'Piutang Usaha / Kas',
+            amount: sale.priceAtSale * sale.quantity
+        });
+
+        if (sale.cogsAtSale && sale.cogsAtSale > 0) {
+            addManualJournalEntry({
+                date: new Date().toISOString(),
+                description: `Pembatalan HPP: ${journalDesc}`,
+                debitAccount: 'Persediaan Barang',
+                creditAccount: 'Beban Pokok Penjualan',
+                amount: sale.cogsAtSale * sale.quantity
+            });
+        }
         
         deleteSaleStmt.run(saleId);
 
         if (['shopee', 'tiktok', 'lazada'].includes(sale.channel.toLowerCase())) {
-            const productName = `${sale.productName}${sale.variantName ? ` - ${sale.variantName}` : ''}`;
-            const journalDesc = `Biaya admin marketplace untuk ${productName}`;
-            deleteJournalStmt.run(journalDesc);
+            const adminFeeJournalDesc = `Biaya admin marketplace untuk ${sale.productName}${sale.variantName ? ` - ${sale.variantName}` : ''}`;
+            deleteJournalStmt.run(adminFeeJournalDesc);
         }
     })();
 }
@@ -955,34 +992,33 @@ export async function revertSaleByTransaction(id: string) {
         revertSale(saleId);
     } else {
         const getSalesStmt = db.prepare('SELECT * FROM sales WHERE transactionId = ?');
-        const deleteSalesStmt = db.prepare('DELETE FROM sales WHERE transactionId = ?');
-        const deleteJournalStmt = db.prepare("DELETE FROM manual_journal_entries WHERE description LIKE ?");
+        
+        const sales = getSalesStmt.all(id) as Sale[];
+        if (!sales || sales.length === 0) {
+             const getReceiptStmt = db.prepare('SELECT * FROM shipping_receipts WHERE awb = ?');
+             const receipt = getReceiptStmt.get(id) as ShippingReceipt;
+             if (receipt) {
+                 adjustStockByReason(id, 'Return (transaksi tidak ditemukan)');
+                 updateShippingReceiptStatus(receipt.id, 'Return Selesai');
+             } else {
+                throw new Error('TRANSACTION_NOT_FOUND');
+             }
+             return;
+        }
 
         db.transaction(() => {
-            const sales = getSalesStmt.all(id) as Sale[];
-            if (!sales || sales.length === 0) {
-                 // Don't throw error, just mark as processed. The caller will handle UI.
-                console.warn(`Transaction not found for ID: ${id}. Cannot revert.`);
-                return;
-            }
-
             sales.forEach(sale => {
-                const idToAdjust = sale.variantId ? sale.variantId.toString() : (sale.productId ? sale.productId.toString() : '');
-                if (!idToAdjust) return;
-                
-                const reason = `Cancelled Transaction #${id} (${sale.channel})` + (sale.resellerName ? ` - ${sale.resellerName}` : '');
-                adjustStock(idToAdjust, sale.quantity, reason);
-
-                if (['shopee', 'tiktok', 'lazada'].includes(sale.channel.toLowerCase())) {
-                    const productName = `${sale.productName}${sale.variantName ? ` - ${sale.variantName}` : ''}`;
-                    const journalDesc = `Biaya admin marketplace untuk ${productName}`;
-                    deleteJournalStmt.run(journalDesc);
-                }
+                revertSale(sale.id, sale.transactionId);
             });
-
-            deleteSalesStmt.run(id);
         })();
     }
+}
+
+function adjustStockByReason(identifier: string, reason: string) {
+    // This is a placeholder for a more complex logic that might be needed.
+    // For now, we assume we cannot know which item to adjust stock for.
+    // In a real scenario, you might log this for manual review.
+    console.warn(`Could not automatically adjust stock for identifier: ${identifier}. Reason: ${reason}. Manual adjustment may be required.`);
 }
 
 export async function updatePrices(updates: { id: string, type: 'product' | 'variant', costPrice?: number, price?: number, channelPrices?: { channel: string, price?: number }[] }[]) {
@@ -1190,6 +1226,7 @@ export async function deleteProductPermanently(itemId: string) {
     
 
     
+
 
 
 

@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
@@ -183,7 +184,10 @@ const ReturnProductDialog = ({
         try {
             await onProcessReturn(receipt.transactionId, returnedItems);
             onOpenChange(false);
-        } finally {
+        } catch(e) {
+            // Error is handled in onProcessReturn, just prevent dialog from closing
+        }
+        finally {
             setIsSubmitting(false);
         }
     }
@@ -309,6 +313,7 @@ export default function ReturnPage() {
 
     const years = useMemo(() => {
         const currentYear = new Date().getFullYear();
+        // Show current year and last 5 years
         return Array.from({ length: 6 }, (_, i) => currentYear - i);
     }, []);
 
