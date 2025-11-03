@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
@@ -435,11 +434,11 @@ export default function SalesReportPage() {
 
             if (sale.status === 'Return' || sale.status === 'Return Selesai') {
                 returnedValue += saleValue;
-                return; // Do not include in revenue or other metrics
+                return;
             }
             if (sale.status === 'Cancelled' || sale.status === 'Dibatalkan') {
                 cancelledValue += saleValue;
-                return; // Do not include in revenue or other metrics
+                return;
             }
             if (sale.status !== 'Completed') return;
 
@@ -728,6 +727,8 @@ export default function SalesReportPage() {
         </AppLayout>
     );
 }
+
+    
 
     
 
