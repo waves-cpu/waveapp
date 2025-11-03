@@ -10,7 +10,7 @@ import { translations } from "@/types/language";
 import { useInventory } from "@/hooks/use-inventory";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { DollarSign, Package, TrendingUp, ShoppingCart, Activity, Eye, Search, Store, ChevronDown, TruckIcon } from "lucide-react";
+import { DollarSign, Package, TrendingUp, ShoppingCart, Activity, Eye, Search, Store, ChevronDown, TruckIcon, Undo2, Ban } from "lucide-react";
 import { Pie, PieChart as RechartsPieChart, Cell, Tooltip, ResponsiveContainer, Legend } from "recharts";
 import { ChartConfig, ChartContainer, ChartTooltipContent } from "@/components/ui/chart";
 import { subDays, isWithinInterval, startOfDay, endOfDay, format, parseISO } from "date-fns";
@@ -411,10 +411,11 @@ export default function SalesReportPage() {
         grossProfit,
         salesByChannel,
         productProfitability,
-        totalUnitsSold
+        totalUnitsSold,
+        totalReturnedValue,
+        totalCancelledValue,
     } = useMemo(() => {
         const salesInDateRange = allSales.filter(sale => {
-            if (sale.status !== 'Completed') return false;
             if (categoryFilter && sale.productCategory !== categoryFilter) return false;
             if (!dateRange || !dateRange.from) return true;
             const saleDate = parseISO(sale.saleDate);
@@ -425,13 +426,25 @@ export default function SalesReportPage() {
         let revenue = 0;
         let cogs = 0;
         let units = 0;
+        let returnedValue = 0;
+        let cancelledValue = 0;
         const channelSales: { [key: string]: number } = {};
         const profitabilityMap = new Map<string, ProfitabilityData>();
 
         salesInDateRange.forEach(sale => {
-            const parentProductId = sale.productId;
-             if (!parentProductId) return;
-            
+            const saleValue = sale.priceAtSale * sale.quantity;
+
+            if (sale.status === 'Return' || sale.status === 'Return Selesai') {
+                returnedValue += saleValue;
+                return; // Do not include in revenue or other metrics
+            }
+            if (sale.status === 'Cancelled' || sale.status === 'Dibatalkan') {
+                cancelledValue += saleValue;
+                return; // Do not include in revenue or other metrics
+            }
+            if (sale.status !== 'Completed') return;
+
+
             const saleRevenue = sale.priceAtSale * sale.quantity;
             const saleCogs = (sale.cogsAtSale || 0) * sale.quantity;
             
@@ -440,6 +453,9 @@ export default function SalesReportPage() {
             units += sale.quantity;
 
             channelSales[sale.channel] = (channelSales[sale.channel] || 0) + saleRevenue;
+
+            const parentProductId = sale.productId;
+             if (!parentProductId) return;
 
             if (!profitabilityMap.has(parentProductId)) {
                 profitabilityMap.set(parentProductId, {
@@ -472,6 +488,8 @@ export default function SalesReportPage() {
                 fill: CHANNEL_COLORS[name] || CHANNEL_COLORS.default 
             })).sort((a,b) => b.value - a.value),
             productProfitability: Array.from(profitabilityMap.values()).sort((a,b) => b.unitsSold - a.unitsSold),
+            totalReturnedValue: returnedValue,
+            totalCancelledValue: cancelledValue,
         };
 
     }, [allSales, dateRange, categoryFilter]);
@@ -561,7 +579,7 @@ export default function SalesReportPage() {
                     </div>
                 </div>
 
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5 mb-4">
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-4">
                     <Card>
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                             <CardTitle className="text-sm font-medium">{TFinance.salesReportPage.totalRevenue}</CardTitle>
@@ -580,31 +598,22 @@ export default function SalesReportPage() {
                             <div className="text-2xl font-bold">{formatCurrency(grossProfit)}</div>
                         </CardContent>
                     </Card>
-                    <Card>
+                     <Card>
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">{TFinance.salesReportPage.totalCogs}</CardTitle>
-                            <ShoppingCart className="h-4 w-4 text-muted-foreground" />
+                            <CardTitle className="text-sm font-medium">Nilai Jumlah Retur</CardTitle>
+                            <Undo2 className="h-4 w-4 text-muted-foreground" />
                         </CardHeader>
                         <CardContent>
-                            <div className="text-2xl font-bold">{formatCurrency(totalCogs)}</div>
-                        </CardContent>
-                    </Card>
-                    <Card>
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">{TFinance.salesReportPage.unitsSold}</CardTitle>
-                            <Package className="h-4 w-4 text-muted-foreground" />
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-2xl font-bold">{totalUnitsSold.toLocaleString('id-ID')}</div>
+                            <div className="text-2xl font-bold">{formatCurrency(totalReturnedValue)}</div>
                         </CardContent>
                     </Card>
                      <Card>
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">{TFinance.salesReportPage.receiptsShipped}</CardTitle>
-                            <TruckIcon className="h-4 w-4 text-muted-foreground" />
+                            <CardTitle className="text-sm font-medium">Nilai Pembatalan</CardTitle>
+                            <Ban className="h-4 w-4 text-muted-foreground" />
                         </CardHeader>
                         <CardContent>
-                            <div className="text-2xl font-bold">{shippedCount.toLocaleString('id-ID')}</div>
+                            <div className="text-2xl font-bold">{formatCurrency(totalCancelledValue)}</div>
                         </CardContent>
                     </Card>
                 </div>
@@ -704,3 +713,4 @@ export default function SalesReportPage() {
 
 
     
+
