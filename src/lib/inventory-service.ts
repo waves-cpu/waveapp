@@ -203,7 +203,8 @@ export async function getReceiptCountByStatus(status: string[], dateRange: { fro
 export async function addShippingReceipt(receipt: Omit<ShippingReceipt, 'id'>): Promise<ShippingReceipt> {
     try {
         const result = db.prepare('INSERT INTO shipping_receipts (awb, date, channel, status, transactionId) VALUES (@awb, @date, @channel, @status, @transactionId)').run({
-            ...receipt
+            ...receipt,
+            transactionId: receipt.transactionId || receipt.awb, // Use AWB if transactionId is not provided
         });
         const newReceipt = db.prepare('SELECT * FROM shipping_receipts WHERE id = ?').get(result.lastInsertRowid) as ShippingReceipt;
         return newReceipt;
@@ -899,22 +900,41 @@ export async function getSalesByDate(channel: string, date: Date, page: number, 
 }
 
 export async function revertSaleItem(transactionId: string, sku: string) {
-    const getSaleItemStmt = db.prepare(`
+    const getSaleStmt = db.prepare(`
         SELECT s.*, v.sku as variantSku, p.sku as productSku
         FROM sales s
         LEFT JOIN variants v ON s.variantId = v.id
         LEFT JOIN products p ON s.productId = p.id
         WHERE s.transactionId = @transactionId AND (v.sku = @sku OR (s.variantId IS NULL AND p.sku = @sku))
+        AND s.status = 'Completed'
     `);
 
-    const sale = getSaleItemStmt.get({ transactionId, sku }) as Sale | undefined;
+    const sale = getSaleStmt.get({ transactionId, sku }) as Sale | undefined;
 
-    if (!sale) {
-        throw new Error('Sale item not found in transaction');
+    if (sale) {
+        revertSale(sale.id, sale.transactionId);
+    } else {
+        // Try to find a sale that is not completed (e.g., from a return process that hasn't been finalized)
+        const getAnySaleStmt = db.prepare(`
+            SELECT s.*
+            FROM sales s
+            LEFT JOIN variants v ON s.variantId = v.id
+            LEFT JOIN products p ON s.productId = p.id
+            WHERE (v.sku = @sku OR (s.variantId IS NULL AND p.sku = @sku))
+            AND s.status != 'Completed'
+            ORDER BY s.saleDate DESC
+            LIMIT 1
+        `);
+        const anySale = getAnySaleStmt.get({ sku }) as Sale | undefined;
+
+        if (anySale) {
+            revertSale(anySale.id);
+        } else {
+            throw new Error('Sale item not found in transaction');
+        }
     }
-
-    revertSale(sale.id, transactionId);
 }
+
 
 export async function revertSale(saleId: string, transactionId?: string) {
     const getSaleStmt = db.prepare('SELECT * FROM sales WHERE id = ?');
@@ -970,8 +990,8 @@ export async function revertSaleByTransaction(id: string) {
         revertSale(saleId);
     } else {
         const getSalesStmt = db.prepare('SELECT * FROM sales WHERE transactionId = ?');
-        
         const sales = getSalesStmt.all(id) as Sale[];
+        
         if (!sales || sales.length === 0) {
             const getReceiptStmt = db.prepare('SELECT * FROM shipping_receipts WHERE awb = ?');
             const receipt = getReceiptStmt.get(id) as ShippingReceipt;
@@ -980,6 +1000,7 @@ export async function revertSaleByTransaction(id: string) {
                 // However, we can still mark the receipt as processed.
                 // The stock adjustment must be done manually by the user via the UI.
                 updateShippingReceiptStatus(receipt.id, 'Return Selesai');
+                adjustStockByReason(receipt.awb, 'Return (transaksi tidak ditemukan)');
                 throw new Error('TRANSACTION_NOT_FOUND');
             } else {
                throw new Error('Transaction or Receipt not found.');
@@ -1206,6 +1227,7 @@ export async function deleteProductPermanently(itemId: string) {
     
 
     
+
 
 
 

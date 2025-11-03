@@ -296,7 +296,7 @@ export default function ReturnPage() {
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(25);
     const { toast } = useToast();
-    const { updateStock, fetchShippingReceipts, deleteShippingReceipt, updateShippingReceiptStatus, revertSaleItem } = useInventory();
+    const { updateShippingReceiptStatus, fetchShippingReceipts, deleteShippingReceipt, revertSaleItem } = useInventory();
     const { language } = useLanguage();
     const t = translations[language].shipping.returnPage;
     const tCommon = translations[language].common;
@@ -436,6 +436,8 @@ export default function ReturnPage() {
              if (error instanceof Error) {
                 if (error.message.includes('Sale item not found in transaction')) {
                     errorMessage = "Item yang di-scan tidak ditemukan di transaksi penjualan asli.";
+                } else if (error.message.includes('TRANSACTION_NOT_FOUND')) {
+                    errorMessage = "Transaksi penjualan tidak ditemukan. Stok tidak dapat dikembalikan secara otomatis.";
                 } else {
                     errorMessage = error.message;
                 }
