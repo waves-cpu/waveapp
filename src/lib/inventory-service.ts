@@ -204,7 +204,7 @@ export async function addShippingReceipt(receipt: Omit<ShippingReceipt, 'id'>): 
     try {
         const result = db.prepare('INSERT INTO shipping_receipts (awb, date, channel, status, transactionId) VALUES (@awb, @date, @channel, @status, @transactionId)').run({
             ...receipt,
-            transactionId: receipt.transactionId || receipt.awb, // Use AWB if transactionId is not provided
+            transactionId: receipt.awb, // Use AWB as transactionId
         });
         const newReceipt = db.prepare('SELECT * FROM shipping_receipts WHERE id = ?').get(result.lastInsertRowid) as ShippingReceipt;
         return newReceipt;
@@ -776,7 +776,7 @@ export async function performSale(
 
             adjustStock(variant.id.toString(), -quantity, saleReason);
             db.prepare('INSERT INTO sales (transactionId, paymentMethod, resellerName, productId, variantId, channel, quantity, priceAtSale, cogsAtSale, saleDate, parentSku, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
-              .run(options?.transactionId, options?.paymentMethod, options?.resellerName, variant.productId, variant.id, channel, quantity, finalPriceAtSale, cogsAtSale, saleDateString, parentSkuForSale, saleStatus);
+              .run(options?.transactionId || `online-${Date.now()}`, options?.paymentMethod, options?.resellerName, variant.productId, variant.id, channel, quantity, finalPriceAtSale, cogsAtSale, saleDateString, parentSkuForSale, saleStatus);
         } else {
             const product = getProductStmt.get(sku) as (InventoryItem & { id: number, costPrice?: number, sku: string }) | undefined;
             if (product) {
@@ -809,7 +809,7 @@ export async function performSale(
                 
                 adjustStock(product.id.toString(), -quantity, saleReason);
                 db.prepare('INSERT INTO sales (transactionId, paymentMethod, resellerName, productId, variantId, channel, quantity, priceAtSale, cogsAtSale, saleDate, parentSku, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
-                  .run(options?.transactionId, options?.paymentMethod, options?.resellerName, product.id, null, channel, quantity, finalPriceAtSale, cogsAtSale, saleDateString, parentSkuForSale, saleStatus);
+                  .run(options?.transactionId || `online-${Date.now()}`, options?.paymentMethod, options?.resellerName, product.id, null, channel, quantity, finalPriceAtSale, cogsAtSale, saleDateString, parentSkuForSale, saleStatus);
             } else {
                 throw new Error('Product or variant with specified SKU not found or has variants.');
             }
@@ -908,30 +908,13 @@ export async function revertSaleItem(transactionId: string, sku: string) {
         WHERE s.transactionId = @transactionId AND (v.sku = @sku OR (s.variantId IS NULL AND p.sku = @sku))
         AND s.status = 'Completed'
     `);
-
+    
     const sale = getSaleStmt.get({ transactionId, sku }) as Sale | undefined;
 
     if (sale) {
         revertSale(sale.id, sale.transactionId);
     } else {
-        // Try to find a sale that is not completed (e.g., from a return process that hasn't been finalized)
-        const getAnySaleStmt = db.prepare(`
-            SELECT s.*
-            FROM sales s
-            LEFT JOIN variants v ON s.variantId = v.id
-            LEFT JOIN products p ON s.productId = p.id
-            WHERE (v.sku = @sku OR (s.variantId IS NULL AND p.sku = @sku))
-            AND s.status != 'Completed'
-            ORDER BY s.saleDate DESC
-            LIMIT 1
-        `);
-        const anySale = getAnySaleStmt.get({ sku }) as Sale | undefined;
-
-        if (anySale) {
-            revertSale(anySale.id);
-        } else {
-            throw new Error('Sale item not found in transaction');
-        }
+        throw new Error('Sale item not found in transaction');
     }
 }
 
@@ -943,7 +926,7 @@ export async function revertSale(saleId: string, transactionId?: string) {
     db.transaction(() => {
         const sale = getSaleStmt.get(saleId) as Sale | undefined;
         if (!sale || sale.status === 'Cancelled') {
-            return; // Or throw an error if needed
+            return;
         }
 
         const idToAdjust = sale.variantId ? sale.variantId.toString() : (sale.productId ? sale.productId.toString() : '');
@@ -955,12 +938,12 @@ export async function revertSale(saleId: string, transactionId?: string) {
 
         adjustStock(idToAdjust, sale.quantity, reason);
         
-        // Mark the sale as cancelled instead of deleting it
         updateSaleStatusStmt.run(saleId);
 
-        // Keep the journal reversal for financial accuracy
+        // --- Reversing Journal Entries ---
         const journalDesc = `Penjualan ${sale.productName}${sale.variantName ? ` - ${sale.variantName}` : ''}`;
         
+        // Reverse Revenue
         addManualJournalEntry({
             date: new Date().toISOString(),
             description: `Pembatalan: ${journalDesc}`,
@@ -969,6 +952,7 @@ export async function revertSale(saleId: string, transactionId?: string) {
             amount: sale.priceAtSale * sale.quantity
         });
 
+        // Reverse COGS
         if (sale.cogsAtSale && sale.cogsAtSale > 0) {
             addManualJournalEntry({
                 date: new Date().toISOString(),
@@ -996,9 +980,6 @@ export async function revertSaleByTransaction(id: string) {
             const getReceiptStmt = db.prepare('SELECT * FROM shipping_receipts WHERE awb = ?');
             const receipt = getReceiptStmt.get(id) as ShippingReceipt;
             if (receipt) {
-                // If transaction not found, we can't revert stock automatically based on sales data.
-                // However, we can still mark the receipt as processed.
-                // The stock adjustment must be done manually by the user via the UI.
                 updateShippingReceiptStatus(receipt.id, 'Return Selesai');
                 adjustStockByReason(receipt.awb, 'Return (transaksi tidak ditemukan)');
                 throw new Error('TRANSACTION_NOT_FOUND');
@@ -1227,6 +1208,7 @@ export async function deleteProductPermanently(itemId: string) {
     
 
     
+
 
 
 
