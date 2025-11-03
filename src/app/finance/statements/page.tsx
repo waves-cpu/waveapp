@@ -316,7 +316,7 @@ function AllProductsDialog({
                                             <TableCell className="text-center text-xs font-medium py-2">{p.unitsSold}</TableCell>
                                             <TableCell className="text-left text-xs font-medium py-2">{formatCurrency(p.totalRevenue)}</TableCell>
                                             <TableCell className="text-left text-xs font-medium py-2">{formatCurrency(p.totalCogs)}</TableCell>
-                                            <TableCell className="text-left font-medium text-xs py-2">{formatCurrency(p.grossProfit)}</TableCell>
+                                            <TableCell className="text-left font-semibold text-xs py-2">{formatCurrency(p.grossProfit)}</TableCell>
                                         </TableRow>
 
                                         {hasVariants && visibleVariants.map(v => (
@@ -578,8 +578,8 @@ export default function SalesReportPage() {
                     </div>
                 </div>
 
-                <div className="overflow-x-auto pb-4 no-scrollbar">
-                    <div className="inline-grid w-max gap-4 grid-flow-col">
+                <div className="overflow-x-auto pb-4 -mb-4 no-scrollbar">
+                    <div className="inline-grid w-max grid-flow-col gap-4">
                         <Card className="min-w-48">
                             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                                 <CardTitle className="text-sm font-medium">{TFinance.salesReportPage.totalRevenue}</CardTitle>
