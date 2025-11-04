@@ -18,7 +18,7 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-import { Calendar as CalendarIcon, ScanLine, Trash2, ShoppingCart } from 'lucide-react';
+import { Calendar as CalendarIcon, ScanLine, Trash2, ShoppingCart, Search } from 'lucide-react';
 import { format, parse, isValid } from 'date-fns';
 import { useInventory } from '@/hooks/use-inventory';
 import { useLanguage } from '@/hooks/use-language';
@@ -77,6 +77,7 @@ export default function LazadaSalesPage() {
   const [isDatePickerOpen, setDatePickerOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(50);
+  const [searchTerm, setSearchTerm] = useState('');
 
 
   const [productForVariantSelection, setProductForVariantSelection] = useState<InventoryItem | null>(null);
@@ -92,9 +93,10 @@ export default function LazadaSalesPage() {
   const loadSales = useCallback(async (selectedDate: Date) => {
     setLoading(true);
     try {
-      const { sales: salesData, total } = await fetchSales('lazada', selectedDate, currentPage, itemsPerPage);
+      // Fetch all sales for the day for client-side searching
+      const { sales: salesData, total } = await fetchSales('lazada', selectedDate, 1, 10000);
       setSales(salesData);
-      setTotalSales(total);
+      setTotalSales(salesData.length); // Total is now based on fetched data for filtering
     } catch (error) {
       console.error('Failed to fetch sales:', error);
       toast({
@@ -105,7 +107,7 @@ export default function LazadaSalesPage() {
     } finally {
       setLoading(false);
     }
-  }, [fetchSales, toast, currentPage, itemsPerPage]);
+  }, [fetchSales, toast]);
   
   // This effect reacts to changes in the URL parameter.
   useEffect(() => {
@@ -115,6 +117,27 @@ export default function LazadaSalesPage() {
   useEffect(() => {
     refocusInput();
   }, [refocusInput]);
+
+  const filteredSales = useMemo(() => {
+    if (!searchTerm) {
+      return sales;
+    }
+    const lowercasedFilter = searchTerm.toLowerCase();
+    return sales.filter(sale => 
+      sale.productName.toLowerCase().includes(lowercasedFilter) ||
+      (sale.sku && sale.sku.toLowerCase().includes(lowercasedFilter))
+    );
+  }, [sales, searchTerm]);
+
+  useEffect(() => {
+    setTotalSales(filteredSales.length);
+    setCurrentPage(1);
+  }, [filteredSales]);
+
+  const paginatedSales = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    return filteredSales.slice(startIndex, startIndex + itemsPerPage);
+  }, [filteredSales, currentPage, itemsPerPage]);
 
   // This function's only job is to change the URL.
   const handleDateChange = (newDate: Date | undefined) => {
@@ -268,29 +291,40 @@ export default function LazadaSalesPage() {
                       />
                   </div>
               </form>
-              <Popover open={isDatePickerOpen} onOpenChange={setDatePickerOpen}>
-                <PopoverTrigger asChild>
-                  <Button
-                    id="date"
-                    variant={'outline'}
-                    className={cn(
-                      'w-full md:w-[240px] justify-start text-left font-normal',
-                      !currentDate && 'text-muted-foreground'
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {currentDate ? format(currentDate, 'PP') : <span>{t.stockHistory.dateRange}</span>}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="end">
-                  <Calendar
-                    mode="single"
-                    selected={currentDate}
-                    onSelect={handleDateChange}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
+              <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                <div className="relative flex-grow">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                        placeholder="Cari transaksi..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="pl-10 w-full"
+                    />
+                </div>
+                <Popover open={isDatePickerOpen} onOpenChange={setDatePickerOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      id="date"
+                      variant={'outline'}
+                      className={cn(
+                        'w-full sm:w-[240px] justify-start text-left font-normal',
+                        !currentDate && 'text-muted-foreground'
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {currentDate ? format(currentDate, 'PP') : <span>{t.stockHistory.dateRange}</span>}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="end">
+                    <Calendar
+                      mode="single"
+                      selected={currentDate}
+                      onSelect={handleDateChange}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
           </div>
           <div className="flex-grow overflow-auto">
             <Table>
@@ -318,8 +352,8 @@ export default function LazadaSalesPage() {
                           </TableCell>
                       </TableRow>
                   ))
-                ) : sales.length > 0 ? (
-                  sales.map((sale) => (
+                ) : paginatedSales.length > 0 ? (
+                  paginatedSales.map((sale) => (
                     <TableRow key={sale.id}>
                       <TableCell>{format(new Date(sale.saleDate), 'PP')}</TableCell>
                       <TableCell>{sale.productName}</TableCell>
