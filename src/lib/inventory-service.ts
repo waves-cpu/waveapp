@@ -361,8 +361,8 @@ export async function fetchInventoryData() {
 
 export async function addProduct(itemData: any) {
     const addProductStmt = db.prepare(`
-        INSERT INTO products (name, category, sku, imageUrl, hasVariants, stock, price, size, costPrice)
-        VALUES (@name, @category, @sku, @imageUrl, @hasVariants, @stock, @price, @size, @costPrice)
+        INSERT INTO products (name, category, sku, releaseDate, imageUrl, hasVariants, stock, price, size, costPrice)
+        VALUES (@name, @category, @sku, @releaseDate, @imageUrl, @hasVariants, @stock, @price, @size, @costPrice)
     `);
     
     const addVariantStmt = db.prepare(`
@@ -382,6 +382,7 @@ export async function addProduct(itemData: any) {
             name: itemData.name,
             category: itemData.category,
             sku: itemData.sku || null,
+            releaseDate: itemData.releaseDate ? itemData.releaseDate.toISOString() : null,
             imageUrl: itemData.imageUrl || 'https://placehold.co/40x40.png',
             hasVariants: hasVariants ? 1 : 0,
             stock: hasVariants ? null : itemData.stock,
@@ -521,7 +522,7 @@ export async function bulkAddProducts(data: any[]): Promise<{ addedProducts: {sk
 
 export async function editProduct(itemId: string, itemData: any) {
     const updateProductStmt = db.prepare(`
-        UPDATE products SET name = @name, category = @category, sku = @sku, imageUrl = @imageUrl, hasVariants = @hasVariants, stock = @stock, price = @price, size = @size, costPrice = @costPrice
+        UPDATE products SET name = @name, category = @category, sku = @sku, releaseDate = @releaseDate, imageUrl = @imageUrl, hasVariants = @hasVariants, stock = @stock, price = @price, size = @size, costPrice = @costPrice
         WHERE id = @id
     `);
 
@@ -533,6 +534,7 @@ export async function editProduct(itemId: string, itemData: any) {
             name: itemData.name,
             category: itemData.category,
             sku: itemData.sku || null,
+            releaseDate: itemData.releaseDate ? itemData.releaseDate.toISOString() : null,
             imageUrl: itemData.imageUrl || 'https://placehold.co/40x40.png',
             hasVariants: hasVariants ? 1 : 0,
             stock: hasVariants ? null : itemData.stock,
@@ -1219,6 +1221,7 @@ export async function deleteProductPermanently(itemId: string) {
     
 
     
+
 
 
 

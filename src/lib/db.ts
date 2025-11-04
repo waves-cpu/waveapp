@@ -107,6 +107,9 @@ const runMigrations = () => {
      if (!productColumns.some((col: any) => col.name === 'isArchived')) {
         db.exec('ALTER TABLE products ADD COLUMN isArchived INTEGER DEFAULT 0');
     }
+    if (!productColumns.some((col: any) => col.name === 'releaseDate')) {
+        db.exec('ALTER TABLE products ADD COLUMN releaseDate TEXT');
+    }
 
 
     const variantColumns = db.pragma('table_info(variants)');
@@ -171,6 +174,7 @@ const createSchema = () => {
       name TEXT NOT NULL,
       category TEXT NOT NULL,
       sku TEXT,
+      releaseDate TEXT,
       imageUrl TEXT,
       hasVariants BOOLEAN NOT NULL DEFAULT 0,
       isArchived INTEGER DEFAULT 0,

@@ -29,11 +29,15 @@ import { translations } from '@/types/language';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { PlusCircle, Trash2 } from 'lucide-react';
+import { PlusCircle, Trash2, CalendarIcon } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 import type { InventoryItem } from '@/types';
 import { categories } from '@/types';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { cn } from '@/lib/utils';
+import { format } from 'date-fns';
 
 const variantSchema = z.object({
     id: z.string().optional(),
@@ -47,6 +51,7 @@ const formSchema = z.object({
   id: z.string().optional(),
   name: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
   category: z.string().min(2, { message: 'Category must be at least 2 characters.' }),
+  releaseDate: z.date().optional(),
   sku: z.string().optional(),
   imageUrl: z.string().url({ message: "Please enter a valid URL." }).optional().or(z.literal('')),
   hasVariants: z.boolean().default(false),
@@ -92,6 +97,7 @@ export function AddProductForm({ existingItem }: AddProductFormProps) {
         return {
             name: '',
             category: '',
+            releaseDate: new Date(),
             sku: '',
             imageUrl: '',
             hasVariants: false,
@@ -106,6 +112,7 @@ export function AddProductForm({ existingItem }: AddProductFormProps) {
         id: existingItem.id,
         name: existingItem.name,
         category: existingItem.category,
+        releaseDate: existingItem.releaseDate ? new Date(existingItem.releaseDate) : undefined,
         sku: existingItem.sku || '',
         imageUrl: existingItem.imageUrl || '',
         hasVariants: hasVariants,
@@ -215,19 +222,62 @@ export function AddProductForm({ existingItem }: AddProductFormProps) {
                       )}
                     />
                 </div>
-                 <FormField
-                  control={form.control}
-                  name="sku"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>SKU (Parent)</FormLabel>
-                      <FormControl>
-                        <Input placeholder="e.g., SKU-PARENT" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                   <FormField
+                    control={form.control}
+                    name="sku"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>SKU (Parent)</FormLabel>
+                        <FormControl>
+                          <Input placeholder="e.g., SKU-PARENT" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="releaseDate"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-col">
+                        <FormLabel>Tanggal Rilis</FormLabel>
+                        <Popover>
+                            <PopoverTrigger asChild>
+                            <FormControl>
+                                <Button
+                                variant={"outline"}
+                                className={cn(
+                                    "w-full pl-3 text-left font-normal",
+                                    !field.value && "text-muted-foreground"
+                                )}
+                                >
+                                {field.value ? (
+                                    format(field.value, "PPP")
+                                ) : (
+                                    <span>Pilih tanggal</span>
+                                )}
+                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                </Button>
+                            </FormControl>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                                mode="single"
+                                selected={field.value}
+                                onSelect={field.onChange}
+                                disabled={(date) =>
+                                date > new Date() || date < new Date("1900-01-01")
+                                }
+                                initialFocus
+                            />
+                            </PopoverContent>
+                        </Popover>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
                 <FormField
                   control={form.control}
                   name="imageUrl"
@@ -393,6 +443,7 @@ export function AddProductForm({ existingItem }: AddProductFormProps) {
     </Card>
   );
 }
+
 
 
 
