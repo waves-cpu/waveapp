@@ -26,9 +26,12 @@ import { id as localeId } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { FileText } from 'lucide-react';
+import { FileText, FileDown } from 'lucide-react';
 import { useLanguage } from '@/hooks/use-language';
 import { translations } from '@/types/language';
+import { Button } from '@/components/ui/button';
+import * as XLSX from 'xlsx';
+import { saveAs } from 'file-saver';
 
 type DailyReport = {
     date: string;
@@ -52,13 +55,13 @@ function ReportSkeleton() {
                 <Table>
                     <TableHeader>
                         <TableRow>
-                            {[...Array(7)].map((_,i) => <TableHead key={i}><Skeleton className="h-5" /></TableHead>)}
+                            {[...Array(8)].map((_,i) => <TableHead key={i}><Skeleton className="h-5" /></TableHead>)}
                         </TableRow>
                     </TableHeader>
                      <TableBody>
                         {[...Array(10)].map((_,i) => (
                             <TableRow key={i}>
-                                {[...Array(7)].map((_, j) => <TableCell key={j}><Skeleton className="h-4" /></TableCell>)}
+                                {[...Array(8)].map((_, j) => <TableCell key={j}><Skeleton className="h-4" /></TableCell>)}
                             </TableRow>
                         ))}
                     </TableBody>
@@ -77,6 +80,7 @@ export default function ShippingReportPage() {
     
     const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
     const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+    const [activeChannel, setActiveChannel] = useState<string | null>(null);
 
     const years = useMemo(() => {
         const currentYear = new Date().getFullYear();
@@ -100,7 +104,8 @@ export default function ShippingReportPage() {
                 const { receipts } = await fetchShippingReceipts({
                     page: currentPage,
                     limit: 1000, // Large limit to fetch all in one go if possible
-                    date_range: { from: firstDay, to: lastDay }
+                    date_range: { from: firstDay, to: lastDay },
+                    channel: activeChannel ?? undefined,
                 });
                 if (receipts.length > 0) {
                     allReceipts.push(...receipts);
@@ -160,11 +165,32 @@ export default function ShippingReportPage() {
         } finally {
             setLoading(false);
         }
-    }, [selectedMonth, selectedYear, toast, t.fetchError]);
+    }, [selectedMonth, selectedYear, activeChannel, toast, t.fetchError]);
 
     useEffect(() => {
         fetchReportData();
     }, [fetchReportData]);
+
+    const downloadExcel = useCallback(() => {
+        const dataToExport = reportData.map(item => ({
+            'Tanggal': format(parseISO(item.date), 'dd MMM yyyy', {locale: localeId}),
+            'Perlu Diproses': item.pending,
+            'Dikirim': item.shipped,
+            'Selesai': item.completed,
+            'Return Selesai': item.returnCompleted,
+            'Return': item.returned,
+            'Dibatalkan': item.cancelled,
+            'Total Resi': item.total
+        }));
+        
+        const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, 'Laporan Resi');
+
+        const channelName = activeChannel ? activeChannel : 'Semua';
+        const monthName = format(new Date(selectedYear, selectedMonth), 'MMMM-yyyy', { locale: localeId });
+        XLSX.writeFile(workbook, `Laporan_Resi_${channelName}_${monthName}.xlsx`);
+    }, [reportData, selectedMonth, selectedYear, activeChannel]);
 
     return (
         <AppLayout>
@@ -201,7 +227,25 @@ export default function ShippingReportPage() {
                                 ))}
                             </SelectContent>
                         </Select>
+                        <Button onClick={downloadExcel} variant="outline" size="sm">
+                            <FileDown className="mr-2 h-4 w-4" />
+                            Ekspor Excel
+                        </Button>
                     </div>
+                </div>
+                 <div className="flex items-center gap-2 border-b pb-2">
+                    <Button variant={activeChannel === null ? 'secondary' : 'ghost'} size="sm" onClick={() => setActiveChannel(null)}>Semua</Button>
+                    {(['Shopee', 'Tiktok', 'Lazada', 'Instant'] as const).map(tab => (
+                        <Button 
+                            key={tab}
+                            variant={activeChannel === tab ? 'secondary' : 'ghost'}
+                            size="sm"
+                            onClick={() => setActiveChannel(tab)}
+                            className="shrink-0"
+                        >
+                            {tab}
+                        </Button>
+                    ))}
                 </div>
 
                 <div className="grid gap-6">
