@@ -575,51 +575,75 @@ export default function ReturnPage() {
                                                 <Badge variant={getStatusVariant(item.status)}>{item.status}</Badge>
                                             </TableCell>
                                             <TableCell className="text-center">
-                                                <DropdownMenu>
-                                                    <DropdownMenuTrigger asChild>
-                                                        <Button variant="outline" size="sm">
-                                                            <Undo2 className="mr-2 h-3 w-3" />
-                                                            {t.actions.process}
-                                                        </Button>
-                                                    </DropdownMenuTrigger>
-                                                    <DropdownMenuContent>
-                                                        <DropdownMenuItem onClick={() => handleReturnReceived(item)} disabled={item.status === 'Return Selesai'}>
-                                                            <CheckCircle className="mr-2 h-4 w-4 text-green-500" />
-                                                            <span>{t.actions.itemArrived}</span>
-                                                        </DropdownMenuItem>
-                                                         <DropdownMenuItem onClick={() => handleChangeStatus(item.id, 'Diantar')} disabled={item.status === 'Diantar' || item.status === 'Return Selesai'}>
-                                                            <Truck className="mr-2 h-4 w-4" />
-                                                            <span>{t.actions.itemInTransit}</span>
-                                                        </DropdownMenuItem>
-                                                        <DropdownMenuItem onClick={() => handleChangeStatus(item.id, 'Tidak Sampai')} className="text-destructive" disabled={item.status === 'Return Selesai'}>
-                                                            <XCircle className="mr-2 h-4 w-4" />
-                                                            <span>{t.actions.itemNotArrived}</span>
-                                                        </DropdownMenuItem>
-                                                        <DropdownMenuSeparator />
-                                                        <AlertDialog>
-                                                            <AlertDialogTrigger asChild>
-                                                                <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-destructive">
-                                                                     <Trash2 className="mr-2 h-4 w-4" />
-                                                                    <span>{t.actions.delete}</span>
-                                                                </DropdownMenuItem>
-                                                            </AlertDialogTrigger>
-                                                            <AlertDialogContent>
-                                                                <AlertDialogHeader>
-                                                                    <AlertDialogTitle>{t.deleteConfirmTitle}</AlertDialogTitle>
-                                                                    <AlertDialogDescription>
-                                                                        {t.deleteConfirmDesc.replace('{awb}', item.awb)}
-                                                                    </AlertDialogDescription>
-                                                                </AlertDialogHeader>
-                                                                <AlertDialogFooter>
-                                                                    <AlertDialogCancel>{tCommon.cancel}</AlertDialogCancel>
-                                                                    <AlertDialogAction onClick={() => { setReceiptToDelete(item); handleDelete(); }} className="bg-destructive hover:bg-destructive/90">
-                                                                        {t.deleteConfirmAction}
-                                                                    </AlertDialogAction>
-                                                                </AlertDialogFooter>
-                                                            </AlertDialogContent>
-                                                        </AlertDialog>
-                                                    </DropdownMenuContent>
-                                                </DropdownMenu>
+                                                {item.status === 'Return Selesai' ? (
+                                                     <AlertDialog>
+                                                        <AlertDialogTrigger asChild>
+                                                             <Button variant="ghost" size="icon" className="text-destructive h-8 w-8" onClick={(e) => { e.stopPropagation(); setReceiptToDelete(item); }}>
+                                                                <Trash2 className="h-4 w-4" />
+                                                             </Button>
+                                                        </AlertDialogTrigger>
+                                                        <AlertDialogContent>
+                                                            <AlertDialogHeader>
+                                                                <AlertDialogTitle>{t.deleteConfirmTitle}</AlertDialogTitle>
+                                                                <AlertDialogDescription>
+                                                                    {t.deleteConfirmDesc.replace('{awb}', item.awb)}
+                                                                </AlertDialogDescription>
+                                                            </AlertDialogHeader>
+                                                            <AlertDialogFooter>
+                                                                <AlertDialogCancel onClick={() => setReceiptToDelete(null)}>{tCommon.cancel}</AlertDialogCancel>
+                                                                <AlertDialogAction onClick={handleDelete} className="bg-destructive hover:bg-destructive/90">
+                                                                    {t.deleteConfirmAction}
+                                                                </AlertDialogAction>
+                                                            </AlertDialogFooter>
+                                                        </AlertDialogContent>
+                                                    </AlertDialog>
+                                                ) : (
+                                                    <DropdownMenu>
+                                                        <DropdownMenuTrigger asChild>
+                                                            <Button variant="outline" size="sm">
+                                                                <Undo2 className="mr-2 h-3 w-3" />
+                                                                {t.actions.process}
+                                                            </Button>
+                                                        </DropdownMenuTrigger>
+                                                        <DropdownMenuContent>
+                                                            <DropdownMenuItem onClick={() => handleReturnReceived(item)} disabled={item.status === 'Return Selesai'}>
+                                                                <CheckCircle className="mr-2 h-4 w-4 text-green-500" />
+                                                                <span>{t.actions.itemArrived}</span>
+                                                            </DropdownMenuItem>
+                                                            <DropdownMenuItem onClick={() => handleChangeStatus(item.id, 'Diantar')} disabled={item.status === 'Diantar' || item.status === 'Return Selesai'}>
+                                                                <Truck className="mr-2 h-4 w-4" />
+                                                                <span>{t.actions.itemInTransit}</span>
+                                                            </DropdownMenuItem>
+                                                            <DropdownMenuItem onClick={() => handleChangeStatus(item.id, 'Tidak Sampai')} className="text-destructive" disabled={item.status === 'Return Selesai'}>
+                                                                <XCircle className="mr-2 h-4 w-4" />
+                                                                <span>{t.actions.itemNotArrived}</span>
+                                                            </DropdownMenuItem>
+                                                            <DropdownMenuSeparator />
+                                                            <AlertDialog>
+                                                                <AlertDialogTrigger asChild>
+                                                                    <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-destructive">
+                                                                        <Trash2 className="mr-2 h-4 w-4" />
+                                                                        <span>{t.actions.delete}</span>
+                                                                    </DropdownMenuItem>
+                                                                </AlertDialogTrigger>
+                                                                <AlertDialogContent>
+                                                                    <AlertDialogHeader>
+                                                                        <AlertDialogTitle>{t.deleteConfirmTitle}</AlertDialogTitle>
+                                                                        <AlertDialogDescription>
+                                                                            {t.deleteConfirmDesc.replace('{awb}', item.awb)}
+                                                                        </AlertDialogDescription>
+                                                                    </AlertDialogHeader>
+                                                                    <AlertDialogFooter>
+                                                                        <AlertDialogCancel onClick={() => setReceiptToDelete(null)}>{tCommon.cancel}</AlertDialogCancel>
+                                                                        <AlertDialogAction onClick={() => { setReceiptToDelete(item); handleDelete(); }} className="bg-destructive hover:bg-destructive/90">
+                                                                            {t.deleteConfirmAction}
+                                                                        </AlertDialogAction>
+                                                                    </AlertDialogFooter>
+                                                                </AlertDialogContent>
+                                                            </AlertDialog>
+                                                        </DropdownMenuContent>
+                                                    </DropdownMenu>
+                                                )}
                                             </TableCell>
                                         </TableRow>
                                     )) : (
