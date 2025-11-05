@@ -25,7 +25,7 @@ import { useRouter } from 'next/navigation';
 import type { InventoryItem } from '@/types';
 import { ProductSelectionDialog } from './product-selection-dialog';
 import Image from 'next/image';
-import { BulkStockInDialog } from './bulk-stock-in-dialog';
+import { BulkStockInDialog } from '@/components/ui/bulk-stock-in-dialog';
 import { Checkbox } from '@/components/ui/checkbox';
 
 const stockInItemSchema = z.object({
@@ -57,6 +57,8 @@ interface StockInFormProps {
     bulkSelectedIds: Set<string>;
     setBulkSelectedIds: React.Dispatch<React.SetStateAction<Set<string>>>;
     onFinalSubmit: (data: StockInSubmitData) => void;
+    dialogTitle: string;
+    dialogDescription: string;
 }
 
 export function StockInForm({
@@ -67,6 +69,8 @@ export function StockInForm({
     bulkSelectedIds,
     setBulkSelectedIds,
     onFinalSubmit,
+    dialogTitle,
+    dialogDescription,
 }: StockInFormProps) {
   const { language } = useLanguage();
   const t = translations[language];
@@ -131,7 +135,7 @@ export function StockInForm({
       if (item.variants && item.variants.length > 0) {
         return item.variants.some(v => !existingItemIds.has(v.id));
       }
-      return item.stock !== undefined && !existingItemIds.has(item.id);
+      return item.stock !== undefined && !item.isArchived;
     }).map(item => {
         if (item.variants) {
             return {
@@ -484,6 +488,8 @@ export function StockInForm({
         onSelect={handleProductsSelected}
         availableItems={availableItems}
         categories={categories}
+        title={dialogTitle}
+        description={dialogDescription}
     />
     <BulkStockInDialog
         open={isBulkStockInOpen}

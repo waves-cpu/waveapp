@@ -29,11 +29,13 @@ interface ProductSelectionDialogProps {
   onSelect: (selectedIds: string[]) => void;
   availableItems: InventoryItem[];
   categories: string[];
+  title: string;
+  description: string;
 }
 
 const ITEMS_PER_PAGE = 10;
 
-export function ProductSelectionDialog({ open, onOpenChange, onSelect, availableItems, categories }: ProductSelectionDialogProps) {
+export function ProductSelectionDialog({ open, onOpenChange, onSelect, availableItems, categories, title, description }: ProductSelectionDialogProps) {
   const { language } = useLanguage();
   const t = translations[language];
   
@@ -124,9 +126,9 @@ export function ProductSelectionDialog({ open, onOpenChange, onSelect, available
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl h-[90vh] flex flex-col">
         <DialogHeader>
-          <DialogTitle>{t.dashboard.stockIn}</DialogTitle>
+          <DialogTitle>{title}</DialogTitle>
           <DialogDescription>
-            {t.productSelectionDialog.description}
+            {description}
           </DialogDescription>
         </DialogHeader>
         <div className="flex flex-col md:flex-row gap-4 px-0 py-4">
