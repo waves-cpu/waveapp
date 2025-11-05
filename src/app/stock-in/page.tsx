@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState } from 'react';
@@ -9,7 +10,6 @@ import { useLanguage } from "@/hooks/use-language";
 import { translations } from "@/types/language";
 import { PackagePlus, PlusCircle } from 'lucide-react';
 import { AppLayout } from '../components/app-layout';
-import { BulkStockInDialog } from '@/components/ui/bulk-stock-in-dialog';
 import { ConfirmTransactionDialog } from '@/app/components/confirm-transaction-dialog';
 import { useInventory } from '@/hooks/use-inventory';
 import { useToast } from '@/hooks/use-toast';
@@ -89,18 +89,11 @@ export default function StockInPage() {
                         bulkSelectedIds={bulkSelectedIds}
                         setBulkSelectedIds={setBulkSelectedIds}
                         onFinalSubmit={handleFormSubmit}
+                        dialogTitle={t.stockInForm.title}
+                        dialogDescription={t.productSelectionDialog.description}
                     />
                 </div>
             </main>
-             <ProductSelectionDialog
-                open={isProductSelectionOpen}
-                onOpenChange={setProductSelectionOpen}
-                onSelect={console.log} // This needs to be wired up in StockInForm
-                availableItems={[]} // This should be passed down
-                categories={[]} // This should be passed down
-                title={t.stockInForm.title}
-                description={t.productSelectionDialog.description}
-            />
              <ConfirmTransactionDialog
                 open={isConfirmDialogOpen}
                 onOpenChange={setConfirmDialogOpen}

@@ -25,7 +25,7 @@ import { useRouter } from 'next/navigation';
 import type { InventoryItem } from '@/types';
 import { ProductSelectionDialog } from './product-selection-dialog';
 import Image from 'next/image';
-import { BulkStockInDialog } from '@/components/ui/bulk-stock-in-dialog';
+import { BulkStockInDialog } from '@/app/components/bulk-stock-in-dialog';
 import { Checkbox } from '@/components/ui/checkbox';
 
 const stockInItemSchema = z.object({
