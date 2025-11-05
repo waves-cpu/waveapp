@@ -47,6 +47,7 @@ import {
   Activity,
   BarChart,
   LogOut,
+  PackageMinus,
 } from 'lucide-react';
 import { Logo } from './logo';
 import { Separator } from '@/components/ui/separator';
@@ -235,6 +236,14 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                                       <SidebarMenuButton variant="ghost" size="sm" isActive={pathname === '/stock-in'}>
                                           <ArrowRightLeft />
                                           {t.dashboard.stockIn}
+                                      </SidebarMenuButton>
+                                  </Link>
+                              </SidebarMenuItem>
+                              <SidebarMenuItem>
+                                  <Link href="/stock-out">
+                                      <SidebarMenuButton variant="ghost" size="sm" isActive={pathname === '/stock-out'}>
+                                          <PackageMinus />
+                                          {t.dashboard.stockOut}
                                       </SidebarMenuButton>
                                   </Link>
                               </SidebarMenuItem>
