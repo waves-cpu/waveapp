@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState } from 'react';
@@ -10,7 +9,7 @@ import { translations } from "@/types/language";
 import { PackageMinus, PackagePlus, PlusCircle } from 'lucide-react';
 import { AppLayout } from '../components/app-layout';
 import { BulkStockInDialog } from '@/app/components/bulk-stock-in-dialog';
-import { ConfirmStockInDialog } from '@/app/components/confirm-stock-in-dialog';
+import { ConfirmTransactionDialog } from '@/app/components/confirm-transaction-dialog';
 import { useInventory } from '@/hooks/use-inventory';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
@@ -93,11 +92,16 @@ export default function StockOutPage() {
                     />
                 </div>
             </main>
-             <ConfirmStockInDialog
+             <ConfirmTransactionDialog
                 open={isConfirmDialogOpen}
                 onOpenChange={setConfirmDialogOpen}
                 onConfirm={handleConfirmStockOut}
                 itemCount={stockOutData?.stockInItems.filter(i => i.quantity > 0).length || 0}
+                title={TStockOut.title}
+                description={TStockOut.confirmDialogDescription.replace('{count}', (stockOutData?.stockInItems.filter(i => i.quantity > 0).length || 0).toString())}
+                submitText={TStockOut.submit}
+                reasonLabel={t.stockInForm.reason}
+                defaultReason={TStockOut.defaultReason}
             />
         </AppLayout>
     );

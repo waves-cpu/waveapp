@@ -10,7 +10,7 @@ import { translations } from "@/types/language";
 import { PackagePlus, PlusCircle } from 'lucide-react';
 import { AppLayout } from '../components/app-layout';
 import { BulkStockInDialog } from '@/app/components/bulk-stock-in-dialog';
-import { ConfirmStockInDialog } from '@/app/components/confirm-stock-in-dialog';
+import { ConfirmTransactionDialog } from '@/app/components/confirm-transaction-dialog';
 import { useInventory } from '@/hooks/use-inventory';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
@@ -92,11 +92,16 @@ export default function StockInPage() {
                     />
                 </div>
             </main>
-             <ConfirmStockInDialog
+             <ConfirmTransactionDialog
                 open={isConfirmDialogOpen}
                 onOpenChange={setConfirmDialogOpen}
                 onConfirm={handleConfirmStockIn}
                 itemCount={stockInData?.stockInItems.filter(i => i.quantity > 0).length || 0}
+                title={t.stockInForm.title}
+                description={t.stockInForm.confirmDialogDescription.replace('{count}', (stockInData?.stockInItems.filter(i => i.quantity > 0).length || 0).toString())}
+                submitText={t.stockInForm.submit}
+                reasonLabel={t.stockInForm.reason}
+                defaultReason={t.stockInForm.defaultReason}
             />
         </AppLayout>
     );
