@@ -397,15 +397,7 @@ export default function AssetReportPage() {
                             <ChartContainer config={chartConfig} className="w-full h-40">
                                 <RechartsBarChart accessibilityLayer data={chartData} layout="vertical">
                                     <XAxis type="number" hide />
-                                    <YAxis
-                                        dataKey="name"
-                                        type="category"
-                                        tickLine={false}
-                                        tickMargin={10}
-                                        axisLine={false}
-                                        className="text-xs"
-                                        width={80}
-                                    />
+                                    <YAxis type="category" hide />
                                     <ChartTooltip
                                         cursor={false}
                                         content={<ChartTooltipContent indicator="dot" formatter={(value) => formatCurrency(Number(value))}/>}
@@ -455,3 +447,4 @@ export default function AssetReportPage() {
     );
 
     
+
