@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import { AppLayout } from "@/app/components/app-layout";
@@ -111,9 +110,8 @@ const ProductListTable = ({ products, title, icon: Icon }: { products: RankedAss
 };
 
 const CustomTooltip = ({ active, payload, config }: TooltipProps & { config: ChartConfig }) => {
-    if (active && payload && payload.length && payload[0] && payload[0].payload) {
+    if (active && payload && payload.length) {
       // For a stacked bar chart, Recharts passes the segment being hovered as `payload[0]`.
-      // The `payload` object on that item contains the full data for that stack point.
       const hoveredSegment = payload[0];
       const dataKey = hoveredSegment.dataKey as keyof typeof config;
       
@@ -418,7 +416,15 @@ export default function AssetReportPage() {
                             <ChartContainer config={chartConfig} className="w-full h-40">
                                 <RechartsBarChart accessibilityLayer data={chartData} layout="vertical">
                                     <XAxis type="number" hide />
-                                    <YAxis type="category" dataKey="name" hide />
+                                    <YAxis
+                                        dataKey="name"
+                                        type="category"
+                                        tickLine={false}
+                                        tickMargin={10}
+                                        axisLine={false}
+                                        className="text-xs"
+                                        width={80}
+                                    />
                                     <Tooltip
                                         cursor={false}
                                         content={<CustomTooltip config={chartConfig} />}
@@ -433,9 +439,9 @@ export default function AssetReportPage() {
                                             ))}
                                         </div>
                                     )} />
-                                    <Bar dataKey="fast" stackId="a" fill="var(--color-fast)" radius={[4, 0, 0, 4]} />
-                                    <Bar dataKey="slow" stackId="a" fill="var(--color-slow)" />
-                                    <Bar dataKey="nonMoving" stackId="a" fill="var(--color-nonMoving)" radius={[0, 4, 4, 0]} />
+                                    <Bar dataKey="fast" stackId="a" fill="var(--color-fast)" radius={[4, 0, 0, 4]} barSize={60} />
+                                    <Bar dataKey="slow" stackId="a" fill="var(--color-slow)" barSize={60} />
+                                    <Bar dataKey="nonMoving" stackId="a" fill="var(--color-nonMoving)" radius={[0, 4, 4, 0]} barSize={60} />
                                 </RechartsBarChart>
                             </ChartContainer>
                         </CardContent>
