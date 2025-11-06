@@ -8,7 +8,7 @@ if (!fs.existsSync(dbDir)) {
   fs.mkdirSync(dbDir, { recursive: true });
 }
 
-const dbPath = path.join(dbDir, 'waveapp.db');
+const dbPath = path.join(dbDir, 'waves.db');
 
 let db: Database.Database;
 

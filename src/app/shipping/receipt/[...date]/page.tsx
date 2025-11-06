@@ -147,7 +147,7 @@ export default function ReceiptPage() {
 
     useEffect(() => {
         fetchCounts();
-    }, [currentDateString, fetchCounts]);
+    }, [currentDateString, fetchReceipts]);
     
     // Clear selection when filters change
     useEffect(() => {
