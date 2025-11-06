@@ -110,11 +110,14 @@ const ProductListTable = ({ products, title, icon: Icon }: { products: RankedAss
     );
 };
 
-const CustomTooltip = ({ active, payload, label, config }: TooltipProps & { config: ChartConfig }) => {
-    if (active && payload && payload.length) {
-      const data = payload[0];
-      const name = data.dataKey as keyof typeof config;
-      const itemConfig = config[name];
+const CustomTooltip = ({ active, payload, config }: TooltipProps & { config: ChartConfig }) => {
+    if (active && payload && payload.length && payload[0] && payload[0].payload) {
+      // For a stacked bar chart, Recharts passes the segment being hovered as `payload[0]`.
+      // The `payload` object on that item contains the full data for that stack point.
+      const hoveredSegment = payload[0];
+      const dataKey = hoveredSegment.dataKey as keyof typeof config;
+      
+      const itemConfig = config[dataKey];
       if (!itemConfig) return null;
 
       return (
@@ -122,10 +125,10 @@ const CustomTooltip = ({ active, payload, label, config }: TooltipProps & { conf
           <div className="grid grid-cols-1 gap-2">
             <div className="flex flex-col space-y-1">
               <span className="text-[0.70rem] uppercase text-muted-foreground">
-                {itemConfig?.label || name}
+                {itemConfig?.label || dataKey}
               </span>
               <span className="font-bold text-foreground">
-                {formatCurrency(data.value as number)}
+                {formatCurrency(hoveredSegment.value as number)}
               </span>
             </div>
           </div>
