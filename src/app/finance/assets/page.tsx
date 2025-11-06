@@ -113,11 +113,13 @@ const ProductListTable = ({ products, title, icon: Icon }: { products: RankedAss
 const CustomTooltip = ({ active, payload, label, config }: TooltipProps & { config: ChartConfig }) => {
     if (active && payload && payload.length) {
       const data = payload[0];
-      const name = data.name as keyof typeof config;
+      const name = data.dataKey as keyof typeof config;
       const itemConfig = config[name];
+      if (!itemConfig) return null;
+
       return (
         <div className="rounded-lg border bg-background p-2.5 shadow-sm">
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-1 gap-2">
             <div className="flex flex-col space-y-1">
               <span className="text-[0.70rem] uppercase text-muted-foreground">
                 {itemConfig?.label || name}
@@ -411,7 +413,7 @@ export default function AssetReportPage() {
                     <Card>
                         <CardContent className="pt-6">
                             <ChartContainer config={chartConfig} className="w-full h-40">
-                                <RechartsBarChart accessibilityLayer data={chartData} layout="vertical" stackOffset="expand">
+                                <RechartsBarChart accessibilityLayer data={chartData} layout="vertical">
                                     <XAxis type="number" hide />
                                     <YAxis type="category" dataKey="name" hide />
                                     <Tooltip
