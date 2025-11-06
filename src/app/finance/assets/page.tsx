@@ -404,8 +404,8 @@ export default function AssetReportPage() {
                     </Card>
                 </div>
 
-                <div className="grid md:grid-cols-2 gap-4 mb-4">
-                    <Card>
+                <div className="grid md:grid-cols-1 gap-4 mb-4">
+                    <Card className="md:col-span-2">
                         <CardContent className="pt-6">
                             <ChartContainer config={chartConfig} className="w-full h-40">
                                 <RechartsBarChart accessibilityLayer data={chartData} layout="vertical">
@@ -432,30 +432,6 @@ export default function AssetReportPage() {
                             </ChartContainer>
                         </CardContent>
                     </Card>
-                    <Card>
-                        <CardContent className="pt-6">
-                             <ChartContainer config={pieChartConfig} className="w-full h-40">
-                                <RechartsPieChart>
-                                    <ChartTooltip cursor={false} content={<ChartTooltipContent formatter={(value) => formatCurrency(Number(value))} hideLabel />} />
-                                    <Pie 
-                                      data={variantAssetClassification} 
-                                      dataKey="value" 
-                                      nameKey="name" 
-                                      cx="50%" 
-                                      cy="50%" 
-                                      outerRadius={80}
-                                      labelLine={false}
-                                      label={renderCustomizedLabel}
-                                    >
-                                         {variantAssetClassification.map((entry, index) => (
-                                            <Cell key={`cell-${index}`} fill={entry.fill} />
-                                        ))}
-                                    </Pie>
-                                    <Legend />
-                                </RechartsPieChart>
-                            </ChartContainer>
-                        </CardContent>
-                    </Card>
                 </div>
 
 
@@ -468,4 +444,3 @@ export default function AssetReportPage() {
         </AppLayout>
     );
 }
-
