@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { AppLayout } from "@/app/components/app-layout";
@@ -363,7 +364,7 @@ export default function AssetReportPage() {
                                     <YAxis type="category" dataKey="name" hide />
                                     <ChartTooltip
                                         cursor={false}
-                                        content={<ChartTooltipContent indicator="dot" formatter={(value, name) => <div><div class='font-medium'>{chartConfig[name as keyof typeof chartConfig]?.label}</div>{formatCurrency(Number(value))}</div>} />}
+                                        content={<ChartTooltipContent indicator="dot" formatter={(value, name) => <div><div className='font-medium'>{chartConfig[name as keyof typeof chartConfig]?.label}</div>{formatCurrency(Number(value))}</div>} />}
                                     />
                                     <Legend content={({ payload }) => (
                                         <div className="flex gap-4 justify-center mt-4">
@@ -394,3 +395,4 @@ export default function AssetReportPage() {
         </AppLayout>
     );
 }
+
