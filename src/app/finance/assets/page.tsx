@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { AppLayout } from "@/app/components/app-layout";
@@ -332,7 +333,7 @@ export default function AssetReportPage() {
                             <SelectItem value="all">{t.inventoryTable.allCategories}</SelectItem>
                             {allCategories.map((category) => (
                                 <SelectItem key={category} value={category}>
-                                {category}
+                                  {category}
                                 </SelectItem>
                             ))}
                             </SelectContent>
@@ -402,9 +403,9 @@ export default function AssetReportPage() {
                                             </div>
                                         )} />
                                     </div>
-                                    <Bar dataKey="fast" fill="var(--color-fast)" radius={4} />
-                                    <Bar dataKey="slow" fill="var(--color-slow)" radius={4} />
-                                    <Bar dataKey="nonMoving" fill="var(--color-nonMoving)" radius={4} />
+                                    <Bar dataKey="fast" fill="var(--color-fast)" radius={4} barSize={60} />
+                                    <Bar dataKey="slow" fill="var(--color-slow)" radius={4} barSize={60} />
+                                    <Bar dataKey="nonMoving" fill="var(--color-nonMoving)" radius={4} barSize={60} />
                                 </RechartsBarChart>
                             </ChartContainer>
                         </CardContent>
