@@ -72,7 +72,7 @@ const ProductListTable = ({ products, title, icon: Icon }: { products: RankedAss
     const t = translations[language].finance.assetReportPage;
 
     return (
-        <Card className="flex flex-col flex-1 min-w-[300px]">
+        <Card className="flex flex-col flex-grow-0 flex-shrink-0 w-full md:w-[48%] lg:w-[32%]">
             <CardHeader className="flex flex-row items-center gap-2 space-y-0 pb-2">
                 <Icon className="h-5 w-5" />
                 <CardTitle className="text-sm font-medium">{title}</CardTitle>
@@ -232,7 +232,7 @@ export default function AssetReportPage() {
             slowMovingProducts: slow.sort((a,b) => b.salesCount - a.salesCount).slice(0, 20),
             nonMovingProducts: non.sort((a,b) => b.stockValue - a.stockValue).slice(0, 20),
         };
-    }, [items, allSales, selectedMonth, selectedYear, selectedCategory, TAsset.fastLabel, TAsset.slowLabel, TAsset.nonMovingLabel]);
+    }, [items, allSales, selectedMonth, selectedYear, selectedCategory]);
 
     const chartData = [
         {
@@ -363,7 +363,7 @@ export default function AssetReportPage() {
                                     <YAxis type="category" dataKey="name" hide />
                                     <ChartTooltip
                                         cursor={false}
-                                        content={<ChartTooltipContent indicator="dot" formatter={(value) => formatCurrency(Number(value))}/>}
+                                        content={<ChartTooltipContent indicator="dot" formatter={(value, name) => <div><div class='font-medium'>{chartConfig[name as keyof typeof chartConfig]?.label}</div>{formatCurrency(Number(value))}</div>} />}
                                     />
                                     <Legend content={({ payload }) => (
                                         <div className="flex gap-4 justify-center mt-4">
