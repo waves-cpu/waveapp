@@ -387,25 +387,36 @@ export default function AssetReportPage() {
                     <Card>
                         <CardContent className="pt-6">
                             <ChartContainer config={chartConfig} className="w-full h-40">
-                                <RechartsBarChart accessibilityLayer data={chartData} margin={{ top: 20, left: 12, right: 12 }}>
-                                    <CartesianGrid vertical={false} />
-                                    <YAxis tickLine={false} axisLine={false} tickFormatter={(value) => `Rp${(Number(value) / 1000000).toLocaleString()} Jt`} width={80} />
-                                    <Tooltip cursor={false} content={<ChartTooltipContent formatter={(value) => formatCurrency(Number(value))} indicator="dot"/>} />
-                                    <div className="mt-4">
-                                        <Legend content={({ payload }) => (
-                                            <div className="flex gap-4 justify-center mt-4">
-                                                {payload?.map((entry) => (
-                                                    <div key={entry.value} className="flex items-center gap-2">
-                                                        <div className="w-3 h-3 rounded-full" style={{ backgroundColor: entry.color }}></div>
-                                                        <span className="text-sm text-muted-foreground">{chartConfig[entry.dataKey as keyof typeof chartConfig]?.label}</span>
+                                <RechartsBarChart accessibilityLayer data={chartData} layout="vertical" stackOffset="expand">
+                                    <XAxis type="number" hide />
+                                    <YAxis type="category" dataKey="name" hide />
+                                    <Tooltip
+                                        cursor={false}
+                                        content={
+                                            <ChartTooltipContent
+                                                formatter={(value, name) => (
+                                                    <div className="flex flex-col">
+                                                        <span>{chartConfig[name as keyof typeof chartConfig]?.label}</span>
+                                                        <span>{formatCurrency(Number(value))}</span>
                                                     </div>
-                                                ))}
-                                            </div>
-                                        )} />
-                                    </div>
-                                    <Bar dataKey="fast" fill="var(--color-fast)" radius={4} barSize={60} />
-                                    <Bar dataKey="slow" fill="var(--color-slow)" radius={4} barSize={60} />
-                                    <Bar dataKey="nonMoving" fill="var(--color-nonMoving)" radius={4} barSize={60} />
+                                                )}
+                                                hideLabel
+                                            />
+                                        }
+                                    />
+                                    <Legend content={({ payload }) => (
+                                        <div className="flex gap-4 justify-center mt-4">
+                                            {payload?.map((entry) => (
+                                                <div key={entry.value as string} className="flex items-center gap-2">
+                                                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: entry.color }}></div>
+                                                    <span className="text-sm text-muted-foreground">{chartConfig[entry.dataKey as keyof typeof chartConfig]?.label}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )} />
+                                    <Bar dataKey="fast" stackId="a" fill="var(--color-fast)" radius={[4, 0, 0, 4]} />
+                                    <Bar dataKey="slow" stackId="a" fill="var(--color-slow)" />
+                                    <Bar dataKey="nonMoving" stackId="a" fill="var(--color-nonMoving)" radius={[0, 4, 4, 0]} />
                                 </RechartsBarChart>
                             </ChartContainer>
                         </CardContent>
@@ -439,3 +450,4 @@ export default function AssetReportPage() {
         </AppLayout>
     );
 }
+
