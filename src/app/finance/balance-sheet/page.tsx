@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import { AppLayout } from "@/app/components/app-layout";
@@ -10,11 +9,13 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useInventory } from "@/hooks/use-inventory";
-import { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { id as localeId } from 'date-fns/locale';
 import { format, isWithinInterval, startOfMonth, endOfMonth, parseISO } from "date-fns";
+import { useAuth } from "@/hooks/use-auth";
+import { useRouter } from "next/navigation";
 
 const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('id-ID', {
@@ -97,10 +98,18 @@ function BalanceSheetSkeleton() {
 export default function BalanceSheetPage() {
     const { language } = useLanguage();
     const t = translations[language];
-    const { items, allSales, manualJournalEntries, loading } = useInventory();
+    const { items, allSales, manualJournalEntries, loading: inventoryLoading } = useInventory();
+    const { user, loading: authLoading } = useAuth();
+    const router = useRouter();
     
     const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
     const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+
+    useEffect(() => {
+        if (!authLoading && user?.role !== 'admin') {
+            router.replace('/');
+        }
+    }, [authLoading, user, router]);
 
     const years = useMemo(() => {
         const allYears = new Set(allSales.map(s => parseISO(s.saleDate).getFullYear()));
@@ -173,7 +182,7 @@ export default function BalanceSheetPage() {
 
     }, [items, allSales, manualJournalEntries, selectedMonth, selectedYear]);
 
-    if (loading) {
+    if (inventoryLoading || authLoading || user?.role !== 'admin') {
         return (
             <AppLayout>
                 <main className="flex-1 p-4 md:p-10">

@@ -30,8 +30,9 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@
 import { cn } from '@/lib/utils';
 import { Checkbox } from '@/components/ui/checkbox';
 import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useAuth } from '@/hooks/use-auth';
 
 
 const channelPriceSchema = z.object({
@@ -71,7 +72,7 @@ function PriceSettingsContent() {
     const t = translations[language];
     const TPrice = t.finance.priceSettingsPage;
     const TSales = t.sales;
-    const { items: allInventoryItems, categories, updatePrices, loading } = useInventory();
+    const { items: allInventoryItems, categories, updatePrices, loading: inventoryLoading } = useInventory();
     const { toast } = useToast();
     const searchParams = useSearchParams();
     const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
@@ -85,6 +86,9 @@ function PriceSettingsContent() {
     const [bulkUpdateValue, setBulkUpdateValue] = useState<string>('');
     const [selectedItemsForBulkUpdate, setSelectedItemsForBulkUpdate] = useState<Set<string>>(new Set());
 
+    const { user, loading: authLoading } = useAuth();
+    const router = useRouter();
+
 
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
@@ -97,6 +101,12 @@ function PriceSettingsContent() {
         control: form.control,
         name: "items"
     });
+
+    useEffect(() => {
+        if (!authLoading && user?.role !== 'admin') {
+            router.replace('/');
+        }
+    }, [authLoading, user, router]);
 
     useEffect(() => {
         inputRefs.current = [];
@@ -155,7 +165,7 @@ function PriceSettingsContent() {
 
 
     useEffect(() => {
-        if (loading) return;
+        if (inventoryLoading) return;
 
         const productIdsParam = searchParams.get('products');
         if (productIdsParam && fields.length === 0) {
@@ -175,7 +185,7 @@ function PriceSettingsContent() {
                 append(itemsToAdd);
             }
         }
-    }, [searchParams, allInventoryItems, allItemsMap, loading, append, itemToPriceSettingItem, fields.length, existingItemIds]);
+    }, [searchParams, allInventoryItems, allItemsMap, inventoryLoading, append, itemToPriceSettingItem, fields.length, existingItemIds]);
 
 
     const handleProductsSelected = (selectedIds: string[]) => {
@@ -350,6 +360,10 @@ function PriceSettingsContent() {
             if (prevRowInput) prevRowInput.focus();
         }
     };
+    
+    if (inventoryLoading || authLoading || user?.role !== 'admin') {
+        return <PriceSettingsPageSkeleton />;
+    }
 
     return (
         <main className="flex-1 p-4 md:p-10">
@@ -435,7 +449,7 @@ function PriceSettingsContent() {
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                        {loading ? (
+                                        {inventoryLoading ? (
                                              <TableRow>
                                                 <TableCell colSpan={10} className="text-center h-24">Memuat...</TableCell>
                                              </TableRow>
@@ -569,6 +583,8 @@ function PriceSettingsContent() {
                 onSelect={handleProductsSelected}
                 availableItems={availableItems}
                 categories={categories}
+                title={TPrice.selectProduct}
+                description=""
             />
         </main>
     );

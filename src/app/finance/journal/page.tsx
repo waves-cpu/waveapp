@@ -6,7 +6,7 @@ import { SidebarTrigger } from "@/components/ui/sidebar";
 import { useLanguage } from "@/hooks/use-language";
 import { translations } from "@/types/language";
 import { useInventory } from "@/hooks/use-inventory";
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
@@ -33,6 +33,8 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/use-auth";
+import { useRouter } from "next/navigation";
 
 
 type JournalEntry = {
@@ -93,10 +95,12 @@ function GeneralJournalSkeleton() {
 export default function GeneralJournalPage() {
     const { language } = useLanguage();
     const t = translations[language];
-    const { allSales, items: allProducts, manualJournalEntries, loading, deleteManualJournalEntry, cancelSaleTransaction, cancelSale } = useInventory();
+    const { allSales, items: allProducts, manualJournalEntries, loading: inventoryLoading, deleteManualJournalEntry, cancelSaleTransaction, cancelSale } = useInventory();
     const { toast } = useToast();
     const [isAddEntryDialogOpen, setAddEntryDialogOpen] = useState(false);
     const [entryToDelete, setEntryToDelete] = useState<JournalEntry | null>(null);
+    const { user, loading: authLoading } = useAuth();
+    const router = useRouter();
 
 
     const [dateRange, setDateRange] = useState<DateRange | undefined>({
@@ -106,6 +110,12 @@ export default function GeneralJournalPage() {
     const [transactionType, setTransactionType] = useState('all');
     const [itemsPerPage, setItemsPerPage] = useState(16);
     const [currentPage, setCurrentPage] = useState(1);
+
+    useEffect(() => {
+        if (!authLoading && user?.role !== 'admin') {
+            router.replace('/');
+        }
+    }, [authLoading, user, router]);
 
 
     const journalEntries = useMemo((): JournalEntry[] => {
@@ -234,7 +244,7 @@ export default function GeneralJournalPage() {
     }
 
 
-    if (loading) {
+    if (inventoryLoading || authLoading || user?.role !== 'admin') {
         return (
              <AppLayout>
                 <main className="flex-1 p-4 md:p-10">

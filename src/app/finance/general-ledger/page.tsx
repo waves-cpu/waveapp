@@ -6,7 +6,7 @@ import { SidebarTrigger } from "@/components/ui/sidebar";
 import { useLanguage } from "@/hooks/use-language";
 import { translations } from "@/types/language";
 import { useInventory } from "@/hooks/use-inventory";
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -18,6 +18,8 @@ import { chartOfAccounts } from "@/types";
 import { Button } from "@/components/ui/button";
 import { id as localeId } from 'date-fns/locale';
 import { BookText } from "lucide-react";
+import { useAuth } from "@/hooks/use-auth";
+import { useRouter } from "next/navigation";
 
 type JournalEntry = {
     date: Date;
@@ -68,10 +70,18 @@ function GeneralLedgerSkeleton() {
 export default function GeneralLedgerPage() {
     const { language } = useLanguage();
     const t = translations[language];
-    const { allSales, items: allProducts, manualJournalEntries, loading } = useInventory();
+    const { allSales, items: allProducts, manualJournalEntries, loading: inventoryLoading } = useInventory();
+    const { user, loading: authLoading } = useAuth();
+    const router = useRouter();
     const [selectedAccount, setSelectedAccount] = useState<string>(chartOfAccounts[0]);
     const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
     const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+
+    useEffect(() => {
+        if (!authLoading && user?.role !== 'admin') {
+            router.replace('/');
+        }
+    }, [authLoading, user, router]);
 
     const years = useMemo(() => {
         const allYears = new Set(allSales.map(s => parseISO(s.saleDate).getFullYear()));
@@ -182,7 +192,7 @@ export default function GeneralLedgerPage() {
         return ledgers.get(selectedAccount);
     }, [ledgers, selectedAccount]);
 
-    if (loading) {
+    if (inventoryLoading || authLoading || user?.role !== 'admin') {
         return (
              <AppLayout>
                 <main className="flex-1 p-4 md:p-10">

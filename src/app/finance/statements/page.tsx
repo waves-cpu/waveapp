@@ -27,6 +27,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input";
 import Image from 'next/image';
 import { Pagination } from '@/components/ui/pagination';
+import { useAuth } from '@/hooks/use-auth';
+import { useRouter } from 'next/navigation';
 
 
 const formatCurrency = (amount: number) => `Rp${Math.round(amount).toLocaleString('id-ID')}`;
@@ -383,7 +385,9 @@ export default function SalesReportPage() {
     const { language } = useLanguage();
     const t = translations[language];
     const TFinance = t.finance;
-    const { items, allSales, loading, categories, getReceiptCountByStatus } = useInventory();
+    const { items, allSales, loading: inventoryLoading, categories, getReceiptCountByStatus } = useInventory();
+    const { user, loading: authLoading } = useAuth();
+    const router = useRouter();
 
     const [dateRange, setDateRange] = useState<DateRange | undefined>({
       from: subDays(new Date(), 29),
@@ -392,6 +396,12 @@ export default function SalesReportPage() {
     const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
     const [isTopProductsDialogOpen, setIsTopProductsDialogOpen] = useState(false);
     const [shippedCount, setShippedCount] = useState(0);
+
+    useEffect(() => {
+        if (!authLoading && user?.role !== 'admin') {
+            router.replace('/');
+        }
+    }, [authLoading, user, router]);
 
     useEffect(() => {
         const fetchShippedCount = async () => {
@@ -506,7 +516,7 @@ export default function SalesReportPage() {
     }, [salesByChannel]);
 
 
-    if (loading) {
+    if (inventoryLoading || authLoading || user?.role !== 'admin') {
         return (
             <AppLayout>
                 <main className="flex-1 p-4 md:p-10">

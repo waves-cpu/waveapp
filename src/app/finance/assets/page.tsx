@@ -6,7 +6,7 @@ import { SidebarTrigger } from "@/components/ui/sidebar";
 import { useLanguage } from "@/hooks/use-language";
 import { translations } from "@/types/language";
 import { useInventory } from "@/hooks/use-inventory";
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DollarSign, Package, TrendingUp, TrendingDown, Hourglass, BarChart, PieChart, Calendar as CalendarIcon } from "lucide-react";
@@ -20,6 +20,8 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { id as localeId } from 'date-fns/locale';
 import { categories as allCategories } from "@/types";
+import { useAuth } from "@/hooks/use-auth";
+import { useRouter } from "next/navigation";
 
 const formatCurrency = (amount: number) => `Rp${Math.round(amount).toLocaleString('id-ID')}`;
 
@@ -112,11 +114,19 @@ export default function AssetReportPage() {
     const { language } = useLanguage();
     const t = translations[language];
     const TAsset = t.finance.assetReportPage;
-    const { items, allSales, loading } = useInventory();
+    const { items, allSales, loading: inventoryLoading } = useInventory();
+    const { user, loading: authLoading } = useAuth();
+    const router = useRouter();
     
     const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
     const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
     const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+
+    useEffect(() => {
+        if (!authLoading && user?.role !== 'admin') {
+            router.replace('/');
+        }
+    }, [authLoading, user, router]);
 
     const years = useMemo(() => {
         const allYears = new Set(allSales.map(s => parseISO(s.saleDate).getFullYear()));
@@ -267,7 +277,7 @@ export default function AssetReportPage() {
         nonMoving: { label: TAsset.nonMovingLabel, color: "hsl(var(--chart-5))", icon: TrendingDown },
     };
 
-    if (loading) {
+    if (inventoryLoading || authLoading || user?.role !== 'admin') {
         return (
             <AppLayout>
                 <main className="flex-1 p-4 md:p-10">
