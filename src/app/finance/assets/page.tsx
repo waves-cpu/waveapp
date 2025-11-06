@@ -72,7 +72,7 @@ const ProductListTable = ({ products, title, icon: Icon }: { products: RankedAss
     const t = translations[language].finance.assetReportPage;
 
     return (
-        <Card className="flex flex-col flex-1 min-w-[300px]">
+        <Card className="flex flex-col">
             <CardHeader className="flex flex-row items-center gap-2 space-y-0 pb-2">
                 <Icon className="h-5 w-5" />
                 <CardTitle className="text-sm font-medium">{title}</CardTitle>
@@ -274,12 +274,6 @@ export default function AssetReportPage() {
         }
     ];
     
-    const pieChartConfig: ChartConfig = {
-        fast: { label: TAsset.fastLabel, color: "hsl(var(--chart-2))" },
-        slow: { label: TAsset.slowLabel, color: "hsl(var(--chart-3))" },
-        nonMoving: { label: TAsset.nonMovingLabel, color: "hsl(var(--chart-5))" },
-    };
-
     const chartConfig: ChartConfig = {
         fast: { label: TAsset.fastLabel, color: "hsl(var(--chart-2))", icon: TrendingUp },
         slow: { label: TAsset.slowLabel, color: "hsl(var(--chart-3))", icon: Hourglass },
@@ -299,19 +293,6 @@ export default function AssetReportPage() {
             </AppLayout>
         )
     }
-    
-    const RADIAN = Math.PI / 180;
-    const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent, index, payload }: any) => {
-      const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
-      const x = cx + radius * Math.cos(-midAngle * RADIAN);
-      const y = cy + radius * Math.sin(-midAngle * RADIAN);
-    
-      return (
-        <text x={x} y={y} fill="white" textAnchor={x > cx ? 'start' : 'end'} dominantBaseline="central" className="text-xs font-bold">
-          {`${(percent * 100).toFixed(0)}%`}
-        </text>
-      );
-    };
 
     return (
         <AppLayout>
@@ -435,7 +416,7 @@ export default function AssetReportPage() {
                 </div>
 
 
-                <div className="flex flex-wrap gap-4">
+                <div className="grid md:grid-cols-1 lg:grid-cols-3 gap-4">
                     <ProductListTable products={fastMovingProducts} title={TAsset.topFastMoving} icon={TrendingUp} />
                     <ProductListTable products={slowMovingProducts} title={TAsset.topSlowMoving} icon={Hourglass} />
                     <ProductListTable products={nonMovingProducts} title={TAsset.topNonMoving} icon={TrendingDown} />
