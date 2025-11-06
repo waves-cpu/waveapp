@@ -392,17 +392,7 @@ export default function AssetReportPage() {
                                     <YAxis type="category" dataKey="name" hide />
                                     <Tooltip
                                         cursor={false}
-                                        content={
-                                            <ChartTooltipContent
-                                                formatter={(value, name) => (
-                                                    <div className="flex flex-col">
-                                                        <span>{chartConfig[name as keyof typeof chartConfig]?.label}</span>
-                                                        <span>{formatCurrency(Number(value))}</span>
-                                                    </div>
-                                                )}
-                                                hideLabel
-                                            />
-                                        }
+                                        content={<ChartTooltipContent indicator="dot" hideLabel />}
                                     />
                                     <Legend content={({ payload }) => (
                                         <div className="flex gap-4 justify-center mt-4">
@@ -450,4 +440,3 @@ export default function AssetReportPage() {
         </AppLayout>
     );
 }
-
