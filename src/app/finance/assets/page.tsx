@@ -11,7 +11,7 @@ import React, { useMemo, useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DollarSign, Package, TrendingUp, TrendingDown, Hourglass, BarChart, PieChart, Calendar as CalendarIcon } from "lucide-react";
-import { Bar, BarChart as RechartsBarChart, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, Pie, PieChart as RechartsPieChart, Cell } from "recharts";
+import { Bar, BarChart as RechartsBarChart, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, Pie, PieChart as RechartsPieChart, Cell, TooltipProps } from "recharts";
 import { ChartConfig, ChartContainer, ChartTooltipContent } from "@/components/ui/chart";
 import { subDays, isAfter, parseISO, isWithinInterval, startOfMonth, endOfMonth, format } from "date-fns";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -109,6 +109,30 @@ const ProductListTable = ({ products, title, icon: Icon }: { products: RankedAss
         </Card>
     );
 };
+
+const CustomTooltip = ({ active, payload, label, config }: TooltipProps & { config: ChartConfig }) => {
+    if (active && payload && payload.length) {
+      const data = payload[0];
+      const name = data.name as keyof typeof config;
+      const itemConfig = config[name];
+      return (
+        <div className="rounded-lg border bg-background p-2.5 shadow-sm">
+          <div className="grid grid-cols-2 gap-2">
+            <div className="flex flex-col space-y-1">
+              <span className="text-[0.70rem] uppercase text-muted-foreground">
+                {itemConfig?.label || name}
+              </span>
+              <span className="font-bold text-foreground">
+                {formatCurrency(data.value as number)}
+              </span>
+            </div>
+          </div>
+        </div>
+      );
+    }
+  
+    return null;
+  };
 
 
 export default function AssetReportPage() {
@@ -392,7 +416,7 @@ export default function AssetReportPage() {
                                     <YAxis type="category" dataKey="name" hide />
                                     <Tooltip
                                         cursor={false}
-                                        content={<ChartTooltipContent indicator="dot" hideLabel />}
+                                        content={<CustomTooltip config={chartConfig} />}
                                     />
                                     <Legend content={({ payload }) => (
                                         <div className="flex gap-4 justify-center mt-4">
