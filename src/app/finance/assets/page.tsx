@@ -389,7 +389,7 @@ export default function AssetReportPage() {
                             <ChartContainer config={chartConfig} className="w-full h-40">
                                 <RechartsBarChart accessibilityLayer data={chartData} margin={{ top: 20, left: 12, right: 12 }}>
                                     <CartesianGrid vertical={false} />
-                                    <YAxis tickLine={false} axisLine={false} tickFormatter={(value) => `Rp${(Number(value) / 1000000).toLocaleString()} Jt`} />
+                                    <YAxis tickLine={false} axisLine={false} tickFormatter={(value) => `Rp${(Number(value) / 1000000).toLocaleString()} Jt`} width={80} />
                                     <Tooltip cursor={false} content={<ChartTooltipContent formatter={(value) => formatCurrency(Number(value))} indicator="dot"/>} />
                                     <div className="mt-4">
                                         <Legend content={({ payload }) => (
