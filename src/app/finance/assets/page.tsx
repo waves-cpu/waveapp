@@ -178,18 +178,18 @@ export default function AssetReportPage() {
                     const salesCount = salesVolumeMap.get(variant.id.toString()) || 0;
                     const stockValue = (variant.costPrice && variant.costPrice > 0 && variant.stock && variant.stock > 0) ? variant.costPrice * variant.stock : 0;
                     
-                    // Accumulate for parent product
+                    // Accumulate for parent product (used for list tables)
                     totalSalesCount += salesCount;
                     totalStockValue += stockValue;
                     
-                    // Classify individual variant
+                    // Classify individual variant for pie chart
                     if (stockValue > 0) {
                         if (salesCount >= FAST_MOVING_THRESHOLD) {
                             variantFastValue += stockValue;
-                        } else if (salesCount >= SLOW_MOVING_THRESHOLD) {
-                            variantSlowValue += stockValue;
-                        } else {
+                        } else if (salesCount < SLOW_MOVING_THRESHOLD) {
                             variantNonMovingValue += stockValue;
+                        } else {
+                            variantSlowValue += stockValue;
                         }
                     }
                 });
@@ -216,6 +216,15 @@ export default function AssetReportPage() {
                         stockValue: stockValue,
                         category: item.category,
                     });
+
+                     // Classify simple product for pie chart
+                    if (salesCount >= FAST_MOVING_THRESHOLD) {
+                        variantFastValue += stockValue;
+                    } else if (salesCount < SLOW_MOVING_THRESHOLD) {
+                        variantNonMovingValue += stockValue;
+                    } else {
+                        variantSlowValue += stockValue;
+                    }
                 }
             }
         });
