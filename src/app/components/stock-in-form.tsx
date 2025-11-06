@@ -59,6 +59,7 @@ interface StockInFormProps {
     onFinalSubmit: (data: StockInSubmitData) => void;
     dialogTitle: string;
     dialogDescription: string;
+    submitButtonText: string;
 }
 
 export function StockInForm({
@@ -71,6 +72,7 @@ export function StockInForm({
     onFinalSubmit,
     dialogTitle,
     dialogDescription,
+    submitButtonText,
 }: StockInFormProps) {
   const { language } = useLanguage();
   const t = translations[language];
@@ -474,7 +476,7 @@ export function StockInForm({
                     <CardFooter className="justify-end gap-2 pt-6">
                         <Button type="button" variant="ghost" onClick={() => router.push('/')}>{t.common.cancel}</Button>
                         <Button type="submit">
-                            {t.stockInForm.submit}
+                            {submitButtonText}
                         </Button>
                     </CardFooter>
                 )}

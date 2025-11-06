@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState } from 'react';
@@ -9,7 +10,7 @@ import { useLanguage } from "@/hooks/use-language";
 import { translations } from "@/types/language";
 import { PackageMinus, PackagePlus, PlusCircle } from 'lucide-react';
 import { AppLayout } from '../components/app-layout';
-import { BulkStockInDialog } from '@/components/ui/bulk-stock-in-dialog';
+import { BulkStockInDialog } from '@/app/components/bulk-stock-in-dialog';
 import { ConfirmTransactionDialog } from '@/app/components/confirm-transaction-dialog';
 import { useInventory } from '@/hooks/use-inventory';
 import { useToast } from '@/hooks/use-toast';
@@ -92,6 +93,7 @@ export default function StockOutPage() {
                         onFinalSubmit={handleFormSubmit}
                         dialogTitle={TStockOut.selectProducts}
                         dialogDescription={t.productSelectionDialog.description}
+                        submitButtonText={TStockOut.submit}
                     />
                 </div>
             </main>

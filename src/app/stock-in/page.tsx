@@ -91,6 +91,7 @@ export default function StockInPage() {
                         onFinalSubmit={handleFormSubmit}
                         dialogTitle={t.stockInForm.title}
                         dialogDescription={t.productSelectionDialog.description}
+                        submitButtonText={t.stockInForm.submit}
                     />
                 </div>
             </main>
