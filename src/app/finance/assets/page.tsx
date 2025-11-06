@@ -11,7 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Skeleton } from "@/components/ui/skeleton";
 import { DollarSign, Package, TrendingUp, TrendingDown, Hourglass, BarChart, PieChart, Calendar as CalendarIcon } from "lucide-react";
 import { Bar, BarChart as RechartsBarChart, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, Pie, PieChart as RechartsPieChart, Cell, TooltipProps } from "recharts";
-import { ChartConfig, ChartContainer, ChartTooltipContent } from "@/components/ui/chart";
+import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { subDays, isAfter, parseISO, isWithinInterval, startOfMonth, endOfMonth, format } from "date-fns";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -108,34 +108,6 @@ const ProductListTable = ({ products, title, icon: Icon }: { products: RankedAss
         </Card>
     );
 };
-
-const CustomTooltip = ({ active, payload, config }: TooltipProps & { config: ChartConfig }) => {
-    if (active && payload && payload.length) {
-      // For a stacked bar chart, Recharts passes the segment being hovered as `payload[0]`.
-      const hoveredSegment = payload[0];
-      const dataKey = hoveredSegment.dataKey as keyof typeof config;
-      
-      const itemConfig = config[dataKey];
-      if (!itemConfig) return null;
-
-      return (
-        <div className="rounded-lg border bg-background p-2.5 shadow-sm">
-          <div className="grid grid-cols-1 gap-2">
-            <div className="flex flex-col space-y-1">
-              <span className="text-[0.70rem] uppercase text-muted-foreground">
-                {itemConfig?.label || dataKey}
-              </span>
-              <span className="font-bold text-foreground">
-                {formatCurrency(hoveredSegment.value as number)}
-              </span>
-            </div>
-          </div>
-        </div>
-      );
-    }
-  
-    return null;
-  };
 
 
 export default function AssetReportPage() {
@@ -425,9 +397,9 @@ export default function AssetReportPage() {
                                         className="text-xs"
                                         width={80}
                                     />
-                                    <Tooltip
+                                    <ChartTooltip
                                         cursor={false}
-                                        content={<CustomTooltip config={chartConfig} />}
+                                        content={<ChartTooltipContent indicator="dot" formatter={(value) => formatCurrency(Number(value))}/>}
                                     />
                                     <Legend content={({ payload }) => (
                                         <div className="flex gap-4 justify-center mt-4">
@@ -450,15 +422,13 @@ export default function AssetReportPage() {
                         <CardContent className="pt-6">
                             <ChartContainer config={pieChartConfig} className="w-full h-40">
                                 <RechartsPieChart>
-                                    <Tooltip cursor={false} content={<ChartTooltipContent formatter={(value) => formatCurrency(Number(value))} hideLabel />} />
+                                    <ChartTooltip cursor={false} content={<ChartTooltipContent formatter={(value) => formatCurrency(Number(value))} hideLabel />} />
                                     <Pie data={variantAssetClassification} dataKey="value" nameKey="name" innerRadius={40} outerRadius={60} strokeWidth={2}>
                                          {variantAssetClassification.map((entry, index) => (
                                             <Cell key={`cell-${index}`} fill={entry.fill} />
                                         ))}
                                     </Pie>
-                                    <div className="mt-4">
-                                        <Legend />
-                                    </div>
+                                    <Legend />
                                 </RechartsPieChart>
                             </ChartContainer>
                         </CardContent>
@@ -474,4 +444,5 @@ export default function AssetReportPage() {
             </main>
         </AppLayout>
     );
-}
+
+    
