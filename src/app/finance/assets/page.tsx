@@ -72,7 +72,7 @@ const ProductListTable = ({ products, title, icon: Icon }: { products: RankedAss
     const t = translations[language].finance.assetReportPage;
 
     return (
-        <Card className="flex flex-col">
+        <Card className="flex flex-col flex-1 min-w-[300px]">
             <CardHeader className="flex flex-row items-center gap-2 space-y-0 pb-2">
                 <Icon className="h-5 w-5" />
                 <CardTitle className="text-sm font-medium">{title}</CardTitle>
@@ -139,7 +139,6 @@ export default function AssetReportPage() {
         fastMovingProducts, 
         slowMovingProducts, 
         nonMovingProducts,
-        variantAssetClassification
     } = useMemo(() => {
         const startDate = startOfMonth(new Date(selectedYear, selectedMonth));
         const endDate = endOfMonth(new Date(selectedYear, selectedMonth));
@@ -162,11 +161,7 @@ export default function AssetReportPage() {
 
         // Product-level classification
         const allRankedAssets: RankedAsset[] = [];
-        // Variant-level classification
-        let variantFastValue = 0;
-        let variantSlowValue = 0;
-        let variantNonMovingValue = 0;
-
+        
         items.forEach(item => {
              if(selectedCategory && item.category !== selectedCategory) return;
             
@@ -178,20 +173,8 @@ export default function AssetReportPage() {
                     const salesCount = salesVolumeMap.get(variant.id.toString()) || 0;
                     const stockValue = (variant.costPrice && variant.costPrice > 0 && variant.stock && variant.stock > 0) ? variant.costPrice * variant.stock : 0;
                     
-                    // Accumulate for parent product (used for list tables)
                     totalSalesCount += salesCount;
                     totalStockValue += stockValue;
-                    
-                    // Classify individual variant for pie chart
-                    if (stockValue > 0) {
-                        if (salesCount >= FAST_MOVING_THRESHOLD) {
-                            variantFastValue += stockValue;
-                        } else if (salesCount < SLOW_MOVING_THRESHOLD) {
-                            variantNonMovingValue += stockValue;
-                        } else {
-                            variantSlowValue += stockValue;
-                        }
-                    }
                 });
                 
                 if (totalStockValue > 0) {
@@ -216,15 +199,6 @@ export default function AssetReportPage() {
                         stockValue: stockValue,
                         category: item.category,
                     });
-
-                     // Classify simple product for pie chart
-                    if (salesCount >= FAST_MOVING_THRESHOLD) {
-                        variantFastValue += stockValue;
-                    } else if (salesCount < SLOW_MOVING_THRESHOLD) {
-                        variantNonMovingValue += stockValue;
-                    } else {
-                        variantSlowValue += stockValue;
-                    }
                 }
             }
         });
@@ -254,11 +228,6 @@ export default function AssetReportPage() {
                 totalNonMovingValue,
                 totalAssetValue: totalFastMovingValue + totalSlowMovingValue + totalNonMovingValue,
             },
-            variantAssetClassification: [
-                { name: TAsset.fastLabel, value: variantFastValue, fill: 'var(--color-fast)' },
-                { name: TAsset.slowLabel, value: variantSlowValue, fill: 'var(--color-slow)' },
-                { name: TAsset.nonMovingLabel, value: variantNonMovingValue, fill: 'var(--color-nonMoving)' }
-            ].filter(d => d.value > 0),
             fastMovingProducts: fast.sort((a,b) => b.salesCount - a.salesCount).slice(0, 20),
             slowMovingProducts: slow.sort((a,b) => b.salesCount - a.salesCount).slice(0, 20),
             nonMovingProducts: non.sort((a,b) => b.stockValue - a.stockValue).slice(0, 20),
@@ -386,12 +355,12 @@ export default function AssetReportPage() {
                 </div>
 
                 <div className="grid md:grid-cols-1 gap-4 mb-4">
-                    <Card className="md:col-span-2">
+                    <Card>
                         <CardContent className="pt-6">
                             <ChartContainer config={chartConfig} className="w-full h-40">
                                 <RechartsBarChart accessibilityLayer data={chartData} layout="vertical">
                                     <XAxis type="number" hide />
-                                    <YAxis type="category" hide />
+                                    <YAxis type="category" dataKey="name" hide />
                                     <ChartTooltip
                                         cursor={false}
                                         content={<ChartTooltipContent indicator="dot" formatter={(value) => formatCurrency(Number(value))}/>}
@@ -416,7 +385,7 @@ export default function AssetReportPage() {
                 </div>
 
 
-                <div className="grid md:grid-cols-1 lg:grid-cols-3 gap-4">
+                <div className="flex flex-wrap gap-4">
                     <ProductListTable products={fastMovingProducts} title={TAsset.topFastMoving} icon={TrendingUp} />
                     <ProductListTable products={slowMovingProducts} title={TAsset.topSlowMoving} icon={Hourglass} />
                     <ProductListTable products={nonMovingProducts} title={TAsset.topNonMoving} icon={TrendingDown} />
