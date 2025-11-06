@@ -3,7 +3,7 @@
 'use server';
 
 import { db } from './db';
-import type { InventoryItem, AdjustmentHistory, InventoryItemVariant, Sale, Reseller, ChannelPrice, ManualJournalEntry, Accessory, ShippingReceipt, BulkImportHistory, User } from '@/types';
+import type { InventoryItem, AdjustmentHistory, InventoryItemVariant, Sale, Reseller, ChannelPrice, Accessory, ShippingReceipt, BulkImportHistory, User } from '@/types';
 import { format as formatDate, parseISO, startOfDay, endOfDay } from 'date-fns';
 
 // User functions
@@ -231,33 +231,6 @@ export async function updateShippingReceiptsStatus(ids: number[], status: string
 export async function updateShippingReceiptStatus(id: number, status: string) {
     const stmt = db.prepare(`UPDATE shipping_receipts SET status = ? WHERE id = ?`);
     stmt.run(status, id);
-}
-
-
-// Manual Journal Entry Functions
-export async function addManualJournalEntry(entry: Omit<ManualJournalEntry, 'id' | 'type'>) {
-    db.prepare(`
-        INSERT INTO manual_journal_entries (date, description, debitAccount, creditAccount, amount)
-        VALUES (@date, @description, @debitAccount, @creditAccount, @amount)
-    `).run({
-        date: entry.date,
-        description: entry.description,
-        debitAccount: entry.debitAccount,
-        creditAccount: entry.creditAccount,
-        amount: entry.amount
-    });
-}
-
-export async function fetchManualJournalEntries(): Promise<ManualJournalEntry[]> {
-    const entries = db.prepare('SELECT * FROM manual_journal_entries ORDER BY date DESC').all() as any[];
-    return entries.map(e => ({
-        ...e,
-        id: e.id.toString(),
-    }));
-}
-
-export async function deleteManualJournalEntry(id: string) {
-    db.prepare('DELETE FROM manual_journal_entries WHERE id = ?').run(id);
 }
 
 
@@ -729,11 +702,7 @@ export async function performSale(
     const getProductStmt = db.prepare('SELECT * FROM products WHERE sku = ? AND hasVariants = 0');
     const getVariantStmt = db.prepare('SELECT * FROM variants WHERE sku = ?');
     const getChannelPriceStmt = db.prepare('SELECT price FROM channel_prices WHERE (product_id = @productId OR variant_id = @variantId) AND channel = @channel');
-    const addJournalEntryStmt = db.prepare(`
-        INSERT INTO manual_journal_entries (date, description, debitAccount, creditAccount, amount)
-        VALUES (@date, @description, @debitAccount, @creditAccount, @amount)
-    `);
-
+    
     const ONLINE_MARKETPLACES = ['shopee', 'tiktok', 'lazada'];
     
     db.transaction(() => {
@@ -817,19 +786,6 @@ export async function performSale(
                   .run(options?.transactionId || `online-${Date.now()}`, options?.paymentMethod, options?.resellerName, product.id, null, channel, quantity, finalPriceAtSale, cogsAtSale, saleDateString, parentSkuForSale, saleStatus);
             } else {
                 throw new Error('Product or variant with specified SKU not found or has variants.');
-            }
-        }
-
-        if (ONLINE_MARKETPLACES.includes(channel.toLowerCase())) {
-            const adminFee = (finalPriceAtSale * quantity) * 0.15;
-            if (adminFee > 0) {
-                addJournalEntryStmt.run({
-                    date: saleDateString,
-                    description: `Biaya admin marketplace untuk ${productNameForFee}`,
-                    debitAccount: 'Biaya Administrasi Marketplace',
-                    creditAccount: 'Piutang Usaha / Kas',
-                    amount: adminFee
-                });
             }
         }
     })();
@@ -922,29 +878,6 @@ export async function revertSale(saleId: string) {
         adjustStock(idToAdjust, sale.quantity, reason);
         
         updateSaleStatusStmt.run(saleId);
-
-        // --- Reversing Journal Entries ---
-        const journalDesc = `Pembatalan: Penjualan ${sale.productName}${sale.variantName ? ` - ${sale.variantName}` : ''}`;
-        
-        // Reverse Revenue
-        addManualJournalEntry({
-            date: new Date().toISOString(),
-            description: journalDesc,
-            debitAccount: 'Pendapatan Penjualan',
-            creditAccount: 'Piutang Usaha / Kas',
-            amount: sale.priceAtSale * sale.quantity
-        });
-
-        // Reverse COGS
-        if (sale.cogsAtSale && sale.cogsAtSale > 0) {
-            addManualJournalEntry({
-                date: new Date().toISOString(),
-                description: `Pembatalan HPP: ${journalDesc}`,
-                debitAccount: 'Persediaan Barang',
-                creditAccount: 'Beban Pokok Penjualan',
-                amount: sale.cogsAtSale * sale.quantity
-            });
-        }
     })();
 }
 
@@ -1221,6 +1154,7 @@ export async function deleteProductPermanently(itemId: string) {
     
 
     
+
 
 
 

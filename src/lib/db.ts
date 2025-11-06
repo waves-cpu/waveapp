@@ -150,6 +150,12 @@ const runMigrations = () => {
         })();
     }
 
+    // Drop manual_journal_entries if it exists
+    const journalTable = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='manual_journal_entries'").get();
+    if (journalTable) {
+        db.exec('DROP TABLE manual_journal_entries');
+    }
+
 
   } catch (error) {
     if (error instanceof Error && error.message.includes('no such table:')) {
@@ -268,16 +274,6 @@ const createSchema = () => {
     CREATE TABLE IF NOT EXISTS settings (
         key TEXT PRIMARY KEY,
         value TEXT NOT NULL
-    );
-
-    CREATE TABLE IF NOT EXISTS manual_journal_entries (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        date TEXT NOT NULL,
-        description TEXT NOT NULL,
-        debitAccount TEXT NOT NULL,
-        creditAccount TEXT NOT NULL,
-        amount REAL NOT NULL,
-        type TEXT NOT NULL DEFAULT 'manual'
     );
 
     CREATE TABLE IF NOT EXISTS shipping_receipts (

@@ -31,20 +31,7 @@ export const chartOfAccounts = [
     "Pendapatan Penjualan",
     "Beban Pokok Penjualan",
     "Persediaan Barang",
-    "Kas / Utang Usaha",
-    "Penyesuaian Modal (Persediaan)",
-    // Manual Accounts
     "Biaya Administrasi Marketplace",
-    "Biaya Operasional",
-    "Biaya Gaji",
-    "Biaya Sewa",
-    "Biaya Pemasaran",
-    "Aset Tetap",
-    "Akumulasi Penyusutan",
-    "Utang Bank",
-    "Modal Disetor",
-    "Pendapatan Lain-lain",
-    "Biaya Lain-lain"
 ].sort();
 
 export interface AdjustmentHistory {
@@ -119,7 +106,7 @@ export interface Sale {
   productCategory: string;
   variantName?: string;
   sku?: string;
-  status?: 'Completed' | 'Pending' | 'Cancelled';
+  status?: 'Completed' | 'Pending' | 'Cancelled' | 'Return' | 'Return Selesai' | 'Diantar' | 'Tidak Sampai' | 'Dibatalkan';
 }
 
 export interface Reseller {
@@ -127,16 +114,6 @@ export interface Reseller {
     name: string;
     phone?: string;
     address?: string;
-}
-
-export interface ManualJournalEntry {
-    id: string;
-    date: string; // ISO string
-    description: string;
-    debitAccount: string;
-    creditAccount: string;
-    amount: number;
-    type: 'manual';
 }
 
 export interface ShippingReceipt {

@@ -1,8 +1,9 @@
 
+
 'use client';
 
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
-import type { InventoryItem, AdjustmentHistory, InventoryItemVariant, Sale, Reseller, ManualJournalEntry, Accessory, ShippingReceipt, BulkImportHistory, User } from '@/types';
+import type { InventoryItem, AdjustmentHistory, InventoryItemVariant, Sale, Reseller, Accessory, ShippingReceipt, BulkImportHistory, User } from '@/types';
 import { categories as allCategories } from '@/types';
 import {
   fetchInventoryData,
@@ -23,9 +24,6 @@ import {
   editReseller as editResellerDb,
   deleteReseller as deleteResellerDb,
   updatePrices as updatePricesDb,
-  addManualJournalEntry,
-  fetchManualJournalEntries,
-  deleteManualJournalEntry as deleteManualJournalEntryDb,
   addAccessory as addAccessoryDb,
   updateAccessory as updateAccessoryDb,
   adjustAccessoryStock as adjustAccessoryStockDb,
@@ -57,7 +55,7 @@ interface InventoryContextType {
   bulkUpdateVariants: (itemId: string, variants: InventoryItemVariant[], reason: string) => Promise<void>;
   fetchItems: () => Promise<void>;
   loading: boolean;
-  recordSale: (sku: string, channel: string, quantity: number, options?: { saleDate?: Date; transactionId?: string; paymentMethod?: string; resellerName?: string; priceAtSale?: number; }) => Promise<void>;
+  recordSale: (sku: string, channel: string, quantity: number, options?: { saleDate?: Date; transactionId?: string; paymentMethod?: string; resellerName?: string; priceAtSale?: number; status?: string; }) => Promise<void>;
   fetchSales: (channel: string, date: Date, page: number, limit: number) => Promise<{sales: Sale[], total: number}>;
   cancelSale: (saleId: string) => Promise<void>;
   cancelSaleTransaction: (transactionId: string) => Promise<void>;
@@ -72,9 +70,6 @@ interface InventoryContextType {
   updatePrices: (updates: any[]) => Promise<void>;
   archiveProduct: (itemId: string, isArchived: boolean) => Promise<void>;
   deleteProductPermanently: (itemId: string) => Promise<void>;
-  manualJournalEntries: ManualJournalEntry[];
-  createManualJournalEntry: (entry: Omit<ManualJournalEntry, 'id' | 'type'>) => Promise<void>;
-  deleteManualJournalEntry: (id: string) => Promise<void>;
   // Accessories
   accessories: Accessory[];
   addAccessory: (accessory: Omit<Accessory, 'id' | 'history'>) => Promise<void>;
@@ -102,18 +97,16 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
   const [categories, setCategories] = useState<string[]>(allCategories);
   const [allSales, setAllSales] = useState<Sale[]>([]);
   const [resellers, setResellers] = useState<Reseller[]>([]);
-  const [manualJournalEntries, setManualJournalEntries] = useState<ManualJournalEntry[]>([]);
   const [shippingReceipts, setShippingReceipts] = useState<ShippingReceipt[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchAllData = useCallback(async () => {
     setLoading(true);
     try {
-      const [inventoryData, salesData, resellerData, manualEntries, shippingData] = await Promise.all([
+      const [inventoryData, salesData, resellerData, shippingData] = await Promise.all([
         fetchInventoryData(),
         fetchAllSales(),
         getResellers(),
-        fetchManualJournalEntries(),
         fetchShippingReceiptsDb({ page: 1, limit: 1000 }), // Fetch initial receipts
       ]);
       
@@ -121,7 +114,6 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
       setAccessories(inventoryData.accessories);
       setAllSales(salesData);
       setResellers(resellerData);
-      setManualJournalEntries(manualEntries);
       setShippingReceipts(shippingData.receipts);
 
     } catch (error) {
@@ -136,16 +128,6 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
   }, [fetchAllData]);
 
   
-  const createManualJournalEntry = async (entry: Omit<ManualJournalEntry, 'id' | 'type'>) => {
-    await addManualJournalEntry(entry);
-    await fetchAllData();
-  }
-
-  const deleteManualJournalEntry = async (id: string) => {
-    await deleteManualJournalEntryDb(id);
-    await fetchAllData();
-  }
-
   const fetchResellers = useCallback(async () => {
     try {
       const resellerData = await getResellers();
@@ -247,7 +229,7 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
     return undefined;
   }, [items]);
 
-  const recordSale = async (sku: string, channel: string, quantity: number, options?: { saleDate?: Date, transactionId?: string, paymentMethod?: string, resellerName?: string, priceAtSale?: number }) => {
+  const recordSale = async (sku: string, channel: string, quantity: number, options?: { saleDate?: Date, transactionId?: string, paymentMethod?: string, resellerName?: string, priceAtSale?: number, status?: string }) => {
     await performSale(sku, channel, quantity, options);
     await fetchAllData();
   };
@@ -353,9 +335,6 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
         updatePrices,
         archiveProduct,
         deleteProductPermanently,
-        manualJournalEntries,
-        createManualJournalEntry,
-        deleteManualJournalEntry,
         accessories,
         addAccessory,
         updateAccessory,
