@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
@@ -152,14 +153,14 @@ export default function TiktokSalesPage() {
     if (!currentDate) return;
     setIsSubmitting(true);
     try {
-        await recordSale(saleSku, 'tiktok', 1, { saleDate: currentDate });
+        const { sale } = await recordSale(saleSku, 'tiktok', 1, { saleDate: currentDate });
         playSuccessSound();
         toast({
             title: 'Penjualan Berhasil',
             description: `1 item dengan SKU ${saleSku} berhasil terjual.`,
         });
+        setSales(prevSales => [sale, ...prevSales]); // Optimistic update
         setSku(''); 
-        loadSales(currentDate);
     } catch (error) {
         playErrorSound();
         const message = error instanceof Error ? error.message : 'Terjadi kesalahan saat mencatat penjualan.';
@@ -172,7 +173,7 @@ export default function TiktokSalesPage() {
         setIsSubmitting(false);
         refocusInput();
     }
-  }, [currentDate, recordSale, toast, loadSales, playSuccessSound, playErrorSound, refocusInput]);
+  }, [currentDate, recordSale, toast, playSuccessSound, playErrorSound, refocusInput]);
 
   const handleSkuSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
