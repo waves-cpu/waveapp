@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
@@ -62,7 +61,7 @@ function parseDateFromParams(dateArray: string[] | undefined): Date {
 export default function ShopeeSalesPage() {
   const { language } = useLanguage();
   const t = translations[language];
-  const { fetchSales, recordSale, cancelSale, getProductBySku } = useInventory();
+  const { recordSale, cancelSale, getProductBySku, items, fetchSales: fetchSalesFromHook } = useInventory();
   const { toast } = useToast();
   const { playSuccessSound, playErrorSound } = useScanSounds();
   const router = useRouter();
@@ -94,7 +93,7 @@ export default function ShopeeSalesPage() {
     setLoading(true);
     try {
       // Fetch all sales for the day for client-side searching
-      const { sales: salesData, total } = await fetchSales('shopee', selectedDate, 1, 10000);
+      const { sales: salesData, total } = await fetchSalesFromHook('shopee', selectedDate, 1, 10000);
       setSales(salesData);
       setTotalSales(salesData.length); // Total is now based on fetched data for filtering
     } catch (error) {
@@ -107,7 +106,7 @@ export default function ShopeeSalesPage() {
     } finally {
       setLoading(false);
     }
-  }, [fetchSales, toast]);
+  }, [fetchSalesFromHook, toast]);
   
   // This effect reacts to changes in the URL parameter.
   useEffect(() => {
@@ -153,7 +152,7 @@ export default function ShopeeSalesPage() {
     if (!currentDate) return;
     setIsSubmitting(true);
     try {
-        const { sale } = await recordSale(saleSku, 'shopee', 1, { saleDate: currentDate });
+        const { sale, updatedItem } = await recordSale(saleSku, 'shopee', 1, { saleDate: currentDate });
         playSuccessSound();
         toast({
             title: 'Penjualan Berhasil',
@@ -252,7 +251,8 @@ export default function ShopeeSalesPage() {
             title: 'Penjualan Dibatalkan',
             description: 'Penjualan telah berhasil dibatalkan dan stok dikembalikan.',
         });
-        loadSales(currentDate);
+        // Optimistically remove from local state
+        setSales(prevSales => prevSales.filter(s => s.id !== saleId));
     } catch (error) {
         console.error('Failed to cancel sale:', error);
         toast({
@@ -399,7 +399,6 @@ export default function ShopeeSalesPage() {
                 )}
               </TableBody>
             </Table>
-          </div>
             {totalPages > 1 && (
                 <div className="flex items-center justify-end p-4 border-t">
                     <div className="flex items-center gap-4">
@@ -429,6 +428,7 @@ export default function ShopeeSalesPage() {
                     </div>
                 </div>
             )}
+          </div>
         </div>
       </main>
       {productForVariantSelection && (
