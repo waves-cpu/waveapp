@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
@@ -53,6 +54,7 @@ interface ProfitabilityData {
     totalCogs: number;
     grossProfit: number;
     imageUrl?: string;
+    parentSku?: string;
     variants?: VariantProfitabilityData[];
 }
 
@@ -470,7 +472,7 @@ export default function SalesReportPage() {
                 profitabilityMap.set(parentProductId, {
                     productId: parentProductId,
                     name: sale.productName,
-                    sku: sale.parentSku,
+                    parentSku: sale.parentSku,
                     category: sale.productCategory,
                     unitsSold: 0,
                     totalRevenue: 0,
@@ -587,11 +589,11 @@ export default function SalesReportPage() {
                         </Popover>
                     </div>
                 </div>
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                     <Card>
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                             <CardTitle className="text-sm font-medium">{TFinance.salesReportPage.totalRevenue}</CardTitle>
-                            <DollarSign className="h-4 w-4 text-muted-foreground" />
+                            <Activity className="h-4 w-4 text-muted-foreground" />
                         </CardHeader>
                         <CardContent>
                             <div className="text-2xl font-bold">{formatCurrency(totalRevenue)}</div>
@@ -704,7 +706,7 @@ export default function SalesReportPage() {
                                             <TableRow key={p.productId}>
                                                 <TableCell className="font-medium text-xs py-2">
                                                     <div>{p.name}</div>
-                                                    <div className="text-muted-foreground">SKU: {p.sku || '-'}</div>
+                                                    <div className="text-muted-foreground">SKU: {p.parentSku || '-'}</div>
                                                 </TableCell>
                                                 <TableCell className="text-center text-xs font-bold py-2">{p.unitsSold}</TableCell>
                                                 <TableCell className="text-left text-xs py-2">{formatCurrency(p.totalRevenue)}</TableCell>
