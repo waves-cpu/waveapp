@@ -490,3 +490,5 @@ export default function AssetReportPage() {
         </AppLayout>
     );
 }
+
+    
