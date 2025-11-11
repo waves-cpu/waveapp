@@ -199,8 +199,6 @@ const ReturnProductDialog = ({
                     <DialogHeader>
                         <DialogTitle>Proses Barang Return</DialogTitle>
                         <DialogDescription>
-                            Scan atau cari produk yang dikembalikan untuk membatalkan penjualan dan memasukkan kembali ke stok.
-                            <br />
                             Resi: <span className="font-semibold">{receipt?.awb}</span>
                         </DialogDescription>
                     </DialogHeader>
@@ -681,3 +679,4 @@ export default function ReturnPage() {
         </AppLayout>
     );
 }
+
