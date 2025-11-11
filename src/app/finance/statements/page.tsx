@@ -409,12 +409,12 @@ export default function SalesReportPage() {
     useEffect(() => {
         const fetchShippedCount = async () => {
             if (dateRange?.from) {
-                const count = await getReceiptCountByStatusDb(['Dikirim'], { from: dateRange.from, to: dateRange.to || dateRange.from });
+                const count = await getReceiptCountByStatus(['Dikirim'], { from: dateRange.from, to: dateRange.to || dateRange.from });
                 setShippedCount(count);
             }
         };
         fetchShippedCount();
-    }, [dateRange, getReceiptCountByStatusDb]);
+    }, [dateRange, getReceiptCountByStatus]);
 
 
     const { 
@@ -738,3 +738,5 @@ export default function SalesReportPage() {
         </AppLayout>
     );
 }
+
+    
