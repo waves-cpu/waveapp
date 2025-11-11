@@ -86,7 +86,7 @@ const AllProductsDialog = ({
 
     const sortedProducts = useMemo(() => {
         const sortable = [...products];
-        // For "Non-Moving", sort by stockValue. Otherwise, sort by salesCount.
+        // For "Tidak Laku", sort by stockValue. Otherwise, sort by salesCount.
         const sortBySales = !title.toLowerCase().includes('tidak laku');
         
         sortable.sort((a, b) => {
