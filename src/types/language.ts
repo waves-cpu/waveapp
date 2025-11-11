@@ -706,7 +706,7 @@ export const translations = {
                 totalAssetValue: "Total Nilai Aset",
                 fastLabel: "Cepat Bergerak",
                 slowLabel: "Normal",
-                nonMovingLabel: "Tidak Bergerak",
+                nonMovingLabel: "Tidak Laku",
                 chartTitle: "Grafik Perputaran Aset",
                 chartXAxisLabel: "Klasifikasi Aset",
                 topFastMoving: "20 Produk Terlaris",
