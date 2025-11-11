@@ -82,6 +82,21 @@ const AllProductsDialog = ({
 }) => {
     const { language } = useLanguage();
     const t = translations[language].finance.assetReportPage;
+    const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc');
+
+    const sortedProducts = useMemo(() => {
+        const sortable = [...products];
+        // For "Non-Moving", sort by stockValue. Otherwise, sort by salesCount.
+        const sortBySales = !title.toLowerCase().includes('tidak laku');
+        
+        sortable.sort((a, b) => {
+            const valA = sortBySales ? a.salesCount : a.stockValue;
+            const valB = sortBySales ? b.salesCount : b.stockValue;
+            return sortOrder === 'desc' ? valB - valA : valA - valB;
+        });
+        return sortable;
+    }, [products, sortOrder, title]);
+
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="max-w-xl">
@@ -91,6 +106,17 @@ const AllProductsDialog = ({
                         Daftar lengkap produk untuk kategori ini.
                     </DialogDescription>
                 </DialogHeader>
+                <div className="flex justify-end">
+                    <Select value={sortOrder} onValueChange={(value: 'desc' | 'asc') => setSortOrder(value)}>
+                        <SelectTrigger className="w-[180px]">
+                            <SelectValue placeholder="Urutkan" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="desc">Terbanyak ke Sedikit</SelectItem>
+                            <SelectItem value="asc">Sedikit ke Terbanyak</SelectItem>
+                        </SelectContent>
+                    </Select>
+                </div>
                 <ScrollArea className="max-h-96 border rounded-md">
                     <Table>
                         <TableHeader>
@@ -101,7 +127,7 @@ const AllProductsDialog = ({
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {products.map(product => (
+                            {sortedProducts.map(product => (
                                 <TableRow key={product.id}>
                                     <TableCell className="font-medium">{product.name}</TableCell>
                                     <TableCell className="text-center">{product.salesCount}</TableCell>
@@ -464,4 +490,3 @@ export default function AssetReportPage() {
         </AppLayout>
     );
 }
-
