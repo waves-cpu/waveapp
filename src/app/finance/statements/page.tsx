@@ -590,14 +590,14 @@ export default function SalesReportPage() {
                         </Popover>
                     </div>
                 </div>
-                <div className="grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(250px,1fr))]">
+                <div className="grid gap-4" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))' }}>
                     <Card>
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                             <CardTitle className="text-sm font-medium">{TFinance.salesReportPage.totalRevenue}</CardTitle>
                             <Activity className="h-4 w-4 text-muted-foreground" />
                         </CardHeader>
                         <CardContent>
-                            <div className="text-2xl font-bold">{formatCurrency(totalRevenue)}</div>
+                            <div className="text-2xl font-bold shrink-0">{formatCurrency(totalRevenue)}</div>
                         </CardContent>
                     </Card>
                     <Card>
@@ -606,7 +606,7 @@ export default function SalesReportPage() {
                             <TrendingUp className="h-4 w-4 text-muted-foreground" />
                         </CardHeader>
                         <CardContent>
-                            <div className="text-2xl font-bold">{formatCurrency(grossProfit)}</div>
+                            <div className="text-2xl font-bold shrink-0">{formatCurrency(grossProfit)}</div>
                         </CardContent>
                     </Card>
                      <Card>
@@ -615,7 +615,7 @@ export default function SalesReportPage() {
                             <ShoppingCart className="h-4 w-4 text-muted-foreground" />
                         </CardHeader>
                         <CardContent>
-                            <div className="text-2xl font-bold">{totalUnitsSold.toLocaleString('id-ID')}</div>
+                            <div className="text-2xl font-bold shrink-0">{totalUnitsSold.toLocaleString('id-ID')}</div>
                         </CardContent>
                     </Card>
                     <Card>
@@ -624,7 +624,7 @@ export default function SalesReportPage() {
                             <Truck className="h-4 w-4 text-muted-foreground" />
                         </CardHeader>
                         <CardContent>
-                            <div className="text-2xl font-bold">{shippedCount.toLocaleString('id-ID')}</div>
+                            <div className="text-2xl font-bold shrink-0">{shippedCount.toLocaleString('id-ID')}</div>
                         </CardContent>
                     </Card>
                     <Card>
@@ -633,7 +633,7 @@ export default function SalesReportPage() {
                             <Undo2 className="h-4 w-4 text-muted-foreground" />
                         </CardHeader>
                         <CardContent>
-                            <div className="text-2xl font-bold">{formatCurrency(totalReturnedValue)}</div>
+                            <div className="text-2xl font-bold shrink-0">{formatCurrency(totalReturnedValue)}</div>
                         </CardContent>
                     </Card>
                     <Card>
@@ -642,7 +642,7 @@ export default function SalesReportPage() {
                             <Ban className="h-4 w-4 text-muted-foreground" />
                         </CardHeader>
                         <CardContent>
-                            <div className="text-2xl font-bold">{formatCurrency(totalCancelledValue)}</div>
+                            <div className="text-2xl font-bold shrink-0">{formatCurrency(totalCancelledValue)}</div>
                         </CardContent>
                     </Card>
                 </div>
