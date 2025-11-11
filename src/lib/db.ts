@@ -1,4 +1,5 @@
 
+
 import Database from 'better-sqlite3';
 import path from 'path';
 import fs from 'fs';
@@ -27,6 +28,19 @@ try {
 
 const runMigrations = () => {
   try {
+    // Check if the transactionId column exists in shipping_receipts
+    const shippingReceiptColumns = db.pragma('table_info(shipping_receipts)');
+    if (shippingReceiptColumns && !shippingReceiptColumns.some((col: any) => col.name === 'transactionId')) {
+        db.exec('ALTER TABLE shipping_receipts ADD COLUMN transactionId TEXT');
+    }
+
+    // One-time migration to populate empty transactionId fields from AWB
+    db.exec(`
+        UPDATE shipping_receipts
+        SET transactionId = awb
+        WHERE transactionId IS NULL OR transactionId = '';
+    `);
+
     db.exec("UPDATE products SET sku = SUBSTR(sku, 1, LENGTH(sku) - 2) WHERE sku LIKE '%.0'");
     db.exec("UPDATE variants SET sku = SUBSTR(sku, 1, LENGTH(sku) - 2) WHERE sku LIKE '%.0'");
 
@@ -135,21 +149,6 @@ const runMigrations = () => {
         stmt.run();
     }
     
-    const shippingReceiptColumns = db.pragma('table_info(shipping_receipts)');
-    if (shippingReceiptColumns && !shippingReceiptColumns.some((col: any) => col.name === 'transactionId')) {
-        db.exec('ALTER TABLE shipping_receipts ADD COLUMN transactionId TEXT');
-    }
-    
-    const receiptsToUpdate = db.prepare('SELECT id, awb FROM shipping_receipts WHERE transactionId IS NULL OR transactionId = ""').all();
-    if (receiptsToUpdate.length > 0) {
-        const updateStmt = db.prepare('UPDATE shipping_receipts SET transactionId = ? WHERE id = ?');
-        db.transaction(() => {
-            for (const receipt of receiptsToUpdate as any[]) {
-                updateStmt.run(receipt.awb, receipt.id);
-            }
-        })();
-    }
-
     // Drop manual_journal_entries if it exists
     const journalTable = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='manual_journal_entries'").get();
     if (journalTable) {
