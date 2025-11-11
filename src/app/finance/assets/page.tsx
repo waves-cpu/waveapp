@@ -10,7 +10,7 @@ import { useInventory } from "@/hooks/use-inventory";
 import React, { useMemo, useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { DollarSign, Package, TrendingUp, TrendingDown, Hourglass, BarChart, PieChart, Calendar as CalendarIcon } from "lucide-react";
+import { DollarSign, Package, TrendingUp, TrendingDown, Hourglass, BarChart, PieChart, Calendar as CalendarIcon, Eye } from "lucide-react";
 import { Bar, BarChart as RechartsBarChart, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, Pie, PieChart as RechartsPieChart, Cell, TooltipProps } from "recharts";
 import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { subDays, isAfter, parseISO, isWithinInterval, startOfMonth, endOfMonth, format } from "date-fns";
@@ -23,6 +23,7 @@ import { id as localeId } from 'date-fns/locale';
 import { categories as allCategories } from "@/types";
 import { useAuth } from "@/hooks/use-auth";
 import { useRouter } from "next/navigation";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 const formatCurrency = (amount: number) => `Rp${Math.round(amount).toLocaleString('id-ID')}`;
 
@@ -68,15 +69,68 @@ function AssetReportSkeleton() {
     )
 }
 
-const ProductListTable = ({ products, title, icon: Icon }: { products: RankedAsset[], title: string, icon: React.ElementType }) => {
+const AllProductsDialog = ({
+    open,
+    onOpenChange,
+    title,
+    products,
+}: {
+    open: boolean;
+    onOpenChange: (open: boolean) => void;
+    title: string;
+    products: RankedAsset[];
+}) => {
+    const { language } = useLanguage();
+    const t = translations[language].finance.assetReportPage;
+    return (
+        <Dialog open={open} onOpenChange={onOpenChange}>
+            <DialogContent className="max-w-xl">
+                <DialogHeader>
+                    <DialogTitle>{title}</DialogTitle>
+                    <DialogDescription>
+                        Daftar lengkap produk untuk kategori ini.
+                    </DialogDescription>
+                </DialogHeader>
+                <ScrollArea className="max-h-96 border rounded-md">
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>{t.productColumn}</TableHead>
+                                <TableHead className="text-center">{t.unitsSoldColumn}</TableHead>
+                                <TableHead className="text-right">{t.stockValueColumn}</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {products.map(product => (
+                                <TableRow key={product.id}>
+                                    <TableCell className="font-medium">{product.name}</TableCell>
+                                    <TableCell className="text-center">{product.salesCount}</TableCell>
+                                    <TableCell className="text-right">{formatCurrency(product.stockValue)}</TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                </ScrollArea>
+            </DialogContent>
+        </Dialog>
+    );
+};
+
+
+const ProductListTable = ({ products, title, icon: Icon, onViewAll }: { products: RankedAsset[], title: string, icon: React.ElementType, onViewAll: () => void }) => {
     const { language } = useLanguage();
     const t = translations[language].finance.assetReportPage;
 
     return (
         <Card className="flex flex-col flex-1 min-w-[300px]">
-            <CardHeader className="flex flex-row items-center gap-2 space-y-0 pb-2">
-                <Icon className="h-5 w-5" />
-                <CardTitle className="text-sm font-medium">{title}</CardTitle>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                 <div className="flex items-center gap-2">
+                    <Icon className="h-5 w-5" />
+                    <CardTitle className="text-sm font-medium">{title}</CardTitle>
+                </div>
+                 <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onViewAll}>
+                    <Eye className="h-4 w-4" />
+                </Button>
             </CardHeader>
             <CardContent className="flex-grow p-0">
                 <ScrollArea className="h-72">
@@ -89,7 +143,7 @@ const ProductListTable = ({ products, title, icon: Icon }: { products: RankedAss
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {products.length > 0 ? products.map(product => (
+                            {products.length > 0 ? products.slice(0, 20).map(product => (
                                 <TableRow key={product.id}>
                                     <TableCell className="font-medium text-xs px-4 py-2">
                                         <div>{product.name}</div>
@@ -122,6 +176,10 @@ export default function AssetReportPage() {
     const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
     const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
     const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+
+    const [isAllProductsDialogOpen, setAllProductsDialogOpen] = useState(false);
+    const [dialogContent, setDialogContent] = useState<{title: string, products: RankedAsset[]}>({title: '', products: []});
+
 
     useEffect(() => {
         if (!authLoading && user?.role !== 'admin') {
@@ -229,11 +287,16 @@ export default function AssetReportPage() {
                 totalNonMovingValue,
                 totalAssetValue: totalFastMovingValue + totalSlowMovingValue + totalNonMovingValue,
             },
-            fastMovingProducts: fast.sort((a,b) => b.salesCount - a.salesCount).slice(0, 20),
-            slowMovingProducts: slow.sort((a,b) => b.salesCount - a.salesCount).slice(0, 20),
-            nonMovingProducts: non.sort((a,b) => b.stockValue - a.stockValue).slice(0, 20),
+            fastMovingProducts: fast.sort((a,b) => b.salesCount - a.salesCount),
+            slowMovingProducts: slow.sort((a,b) => b.salesCount - a.salesCount),
+            nonMovingProducts: non.sort((a,b) => b.stockValue - a.stockValue),
         };
     }, [items, allSales, selectedMonth, selectedYear, selectedCategory]);
+    
+    const handleViewAll = (title: string, products: RankedAsset[]) => {
+        setDialogContent({ title, products });
+        setAllProductsDialogOpen(true);
+    };
 
     const chartData = [
         {
@@ -387,11 +450,17 @@ export default function AssetReportPage() {
 
 
                 <div className="flex flex-wrap gap-4">
-                    <ProductListTable products={fastMovingProducts} title={TAsset.topFastMoving} icon={TrendingUp} />
-                    <ProductListTable products={slowMovingProducts} title={TAsset.topSlowMoving} icon={Hourglass} />
-                    <ProductListTable products={nonMovingProducts} title={TAsset.topNonMoving} icon={TrendingDown} />
+                    <ProductListTable products={fastMovingProducts} title={TAsset.topFastMoving} icon={TrendingUp} onViewAll={() => handleViewAll('Semua Produk Terlaris', fastMovingProducts)} />
+                    <ProductListTable products={slowMovingProducts} title={TAsset.topSlowMoving} icon={Hourglass} onViewAll={() => handleViewAll('Semua Produk Normal', slowMovingProducts)} />
+                    <ProductListTable products={nonMovingProducts} title={TAsset.topNonMoving} icon={TrendingDown} onViewAll={() => handleViewAll('Semua Produk Tidak Laku', nonMovingProducts)} />
                 </div>
             </main>
+            <AllProductsDialog 
+                open={isAllProductsDialogOpen}
+                onOpenChange={setAllProductsDialogOpen}
+                title={dialogContent.title}
+                products={dialogContent.products}
+            />
         </AppLayout>
     );
 }
