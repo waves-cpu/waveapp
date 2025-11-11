@@ -590,14 +590,16 @@ export default function SalesReportPage() {
                         </Popover>
                     </div>
                 </div>
-                <div className="grid gap-4 grid-cols-[repeat(auto-fit,minmax(200px,1fr))]">
+                <div className="grid grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-4">
                     <Card>
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                             <CardTitle className="text-sm font-medium">{TFinance.salesReportPage.totalRevenue}</CardTitle>
                             <Activity className="h-4 w-4 text-muted-foreground" />
                         </CardHeader>
                         <CardContent>
-                            <div className="text-2xl font-bold shrink-0">{formatCurrency(totalRevenue)}</div>
+                             <div className="overflow-hidden">
+                                <div className="text-2xl font-bold shrink-0 truncate">{formatCurrency(totalRevenue)}</div>
+                             </div>
                         </CardContent>
                     </Card>
                     <Card>
@@ -606,7 +608,9 @@ export default function SalesReportPage() {
                             <TrendingUp className="h-4 w-4 text-muted-foreground" />
                         </CardHeader>
                         <CardContent>
-                            <div className="text-2xl font-bold shrink-0">{formatCurrency(grossProfit)}</div>
+                            <div className="overflow-hidden">
+                                <div className="text-2xl font-bold shrink-0 truncate">{formatCurrency(grossProfit)}</div>
+                            </div>
                         </CardContent>
                     </Card>
                      <Card>
@@ -615,7 +619,9 @@ export default function SalesReportPage() {
                             <ShoppingCart className="h-4 w-4 text-muted-foreground" />
                         </CardHeader>
                         <CardContent>
-                            <div className="text-2xl font-bold shrink-0">{totalUnitsSold.toLocaleString('id-ID')}</div>
+                            <div className="overflow-hidden">
+                                <div className="text-2xl font-bold shrink-0 truncate">{totalUnitsSold.toLocaleString('id-ID')}</div>
+                            </div>
                         </CardContent>
                     </Card>
                     <Card>
@@ -624,7 +630,9 @@ export default function SalesReportPage() {
                             <Truck className="h-4 w-4 text-muted-foreground" />
                         </CardHeader>
                         <CardContent>
-                            <div className="text-2xl font-bold shrink-0">{shippedCount.toLocaleString('id-ID')}</div>
+                            <div className="overflow-hidden">
+                                <div className="text-2xl font-bold shrink-0 truncate">{shippedCount.toLocaleString('id-ID')}</div>
+                            </div>
                         </CardContent>
                     </Card>
                     <Card>
@@ -633,7 +641,9 @@ export default function SalesReportPage() {
                             <Undo2 className="h-4 w-4 text-muted-foreground" />
                         </CardHeader>
                         <CardContent>
-                            <div className="text-2xl font-bold shrink-0">{formatCurrency(totalReturnedValue)}</div>
+                            <div className="overflow-hidden">
+                                <div className="text-2xl font-bold shrink-0 truncate">{formatCurrency(totalReturnedValue)}</div>
+                            </div>
                         </CardContent>
                     </Card>
                     <Card>
@@ -642,7 +652,9 @@ export default function SalesReportPage() {
                             <Ban className="h-4 w-4 text-muted-foreground" />
                         </CardHeader>
                         <CardContent>
-                            <div className="text-2xl font-bold shrink-0">{formatCurrency(totalCancelledValue)}</div>
+                            <div className="overflow-hidden">
+                                <div className="text-2xl font-bold shrink-0 truncate">{formatCurrency(totalCancelledValue)}</div>
+                            </div>
                         </CardContent>
                     </Card>
                 </div>
