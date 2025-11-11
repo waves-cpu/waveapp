@@ -150,6 +150,7 @@ function AllProductsDialog({
                     totalCogs: 0,
                     grossProfit: 0,
                     variants: [],
+                    parentSku: sale.parentSku
                 });
             }
             
@@ -313,7 +314,7 @@ function AllProductsDialog({
                                                     <Image src={p.imageUrl || 'https://placehold.co/30x30.png'} alt={p.name} width={30} height={30} className="rounded-md" data-ai-hint="product image" />
                                                     <div>
                                                         <div className="font-medium text-sm">{p.name}</div>
-                                                        <div className="text-muted-foreground font-normal text-xs">SKU: {p.sku || '-'}</div>
+                                                        <div className="text-muted-foreground font-normal text-xs">SKU: {p.parentSku || '-'}</div>
                                                     </div>
                                                 </div>
                                             </TableCell>
@@ -589,7 +590,7 @@ export default function SalesReportPage() {
                         </Popover>
                     </div>
                 </div>
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                <div className="grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(250px,1fr))]">
                     <Card>
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                             <CardTitle className="text-sm font-medium">{TFinance.salesReportPage.totalRevenue}</CardTitle>
