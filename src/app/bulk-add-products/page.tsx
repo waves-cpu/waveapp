@@ -99,9 +99,22 @@ export default function BulkAddProductsPage() {
         const workbook = XLSX.read(binaryStr, { type: 'binary' });
         const sheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[sheetName];
-        // Ensure all data is read as raw text to prevent number formatting issues
-        const jsonData = XLSX.utils.sheet_to_json<ProductRow>(worksheet, { raw: false, defval: null });
-        setData(jsonData);
+        
+        const jsonData = XLSX.utils.sheet_to_json<any>(worksheet, { raw: false, defval: null });
+        
+        const cleanedData = jsonData.map(row => ({
+            parent_sku: row.parent_sku ? String(row.parent_sku).trim() : '',
+            product_name: row.product_name ? String(row.product_name).trim() : '',
+            category: row.category ? String(row.category).trim() : '',
+            image_url: row.image_url ? String(row.image_url).trim() : '',
+            variant_sku: row.variant_sku ? String(row.variant_sku).trim() : '',
+            variant_name: row.variant_name ? String(row.variant_name).trim() : '',
+            price: row.price != null ? Number(row.price) : 0,
+            stock: row.stock != null ? Number(row.stock) : 0,
+            cost_price: row.cost_price != null ? Number(row.cost_price) : 0,
+        })).filter(row => row.parent_sku); // Ensure parent_sku is present
+
+        setData(cleanedData as ProductRow[]);
       };
       reader.readAsBinaryString(file);
     }
@@ -164,10 +177,7 @@ export default function BulkAddProductsPage() {
     setIsSubmitting(true);
     let historyId: number | undefined;
 
-    try {
-      const plainData = JSON.parse(JSON.stringify(data));
-      // First, create a "processing" entry and add it to the UI immediately
-      const tempEntry = {
+    const tempEntry = {
         id: Date.now(), // temporary key
         fileName,
         date: new Date().toISOString(),
@@ -175,28 +185,30 @@ export default function BulkAddProductsPage() {
         progress: 0,
         addedCount: 0,
         skippedCount: 0
-      }
-      setImportHistory(prev => [tempEntry, ...prev]);
-      
-      setData([]);
-      setFileName('');
+    }
+    setImportHistory(prev => [tempEntry, ...prev]);
+    setData([]);
+    setFileName('');
 
-      // Now call the server function
+    try {
+      // Create a plain JSON object to avoid any issues with proxies or complex objects
+      const plainData = JSON.parse(JSON.stringify(data));
       const finalResult = await bulkAddProducts(plainData, fileName);
       historyId = finalResult.id;
       
       // Replace the temporary entry with the final result from the database
-      setImportHistory(prev => prev.map(item => item.id === tempEntry.id ? finalResult : item));
+      await loadHistory();
       
-      // Optionally, show a toast for skipped items if any
+      toast({
+        title: TBulk.importSuccess,
+        description: `${finalResult.addedCount} ${TBulk.importSuccessDesc}`,
+      });
       if (finalResult.skippedCount && finalResult.skippedCount > 0) {
           toast({
               title: TBulk.skippedTitle,
               description: TBulk.skippedDesc.replace('{count}', finalResult.skippedCount.toString())
           });
       }
-
-
     } catch (error) {
       console.error(error);
       const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.';
@@ -359,3 +371,5 @@ export default function BulkAddProductsPage() {
     );
 }
 
+
+    
