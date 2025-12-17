@@ -448,14 +448,15 @@ export default function SalesReportPage() {
 
             if (sale.status === 'Return' || sale.status === 'Return Selesai') {
                 returnedValue += saleValue;
-                return;
+                return; // Do not include in revenue or profit calculation
             }
             if (sale.status === 'Cancelled' || sale.status === 'Dibatalkan') {
                 cancelledValue += saleValue;
-                return;
+                return; // Do not include in revenue or profit calculation
             }
+            
+            // Only 'Completed' sales contribute to revenue and profit
             if (sale.status !== 'Completed') return;
-
 
             const saleRevenue = sale.priceAtSale * sale.quantity;
             const saleCogs = (sale.cogsAtSale || 0) * sale.quantity;
