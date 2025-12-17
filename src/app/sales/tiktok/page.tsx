@@ -32,7 +32,7 @@ export default function TiktokProviderPage() {
     return (
         <AppLayout>
             <main className="flex-1 p-4 md:p-10">
-                 <div className="flex items-center gap-4 mb-6">
+                 <div className="flex items-center gap-4 mb-4">
                     <SidebarTrigger className="md:hidden" />
                     <h1 className="text-lg font-bold">{t.sales.tiktok}</h1>
                 </div>
