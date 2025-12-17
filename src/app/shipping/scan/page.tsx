@@ -15,7 +15,6 @@ import { format, parseISO } from 'date-fns';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
-import { QrScanner } from '@yudiel/react-qr-scanner';
 import { AppLayout } from '@/app/components/app-layout';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 
@@ -114,9 +113,9 @@ export default function DesktopScanReceiptPage() {
     }, [isSubmitting, selectedChannel, scanDate, addShippingReceipt, playSuccessSound, playErrorSound, toast, recentlyAdded, refocusInput]);
 
 
-    const handleFormSubmit = (e: React.FormEvent) => {
+    const handleFormSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        handleSubmit(awb);
+        await handleSubmit(awb);
     }
     
     if (!selectedChannel) {
@@ -197,7 +196,7 @@ export default function DesktopScanReceiptPage() {
                 </div>
 
                 <div className="max-w-xl">
-                     <form onSubmit={handleFormSubmit} className="space-y-4">
+                     <form onSubmit={handleFormSubmit}>
                         <div className="relative flex-grow">
                             <ScanLine className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                             <Input
