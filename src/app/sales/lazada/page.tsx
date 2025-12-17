@@ -37,7 +37,7 @@ export default function LazadaProviderPage() {
                     <h1 className="text-lg font-bold">{t.sales.lazada}</h1>
                 </div>
 
-                <div>
+                <div className="max-w-4xl mx-auto">
                      <Card>
                         <CardHeader>
                             <CardTitle>Pilih Jasa Kirim</CardTitle>

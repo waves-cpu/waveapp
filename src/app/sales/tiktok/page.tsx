@@ -37,7 +37,7 @@ export default function TiktokProviderPage() {
                     <h1 className="text-lg font-bold">{t.sales.tiktok}</h1>
                 </div>
 
-                <div>
+                <div className="max-w-4xl mx-auto">
                      <Card>
                         <CardHeader>
                             <CardTitle>Pilih Jasa Kirim</CardTitle>
