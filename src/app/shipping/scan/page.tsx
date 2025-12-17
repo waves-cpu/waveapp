@@ -128,11 +128,11 @@ export default function DesktopScanReceiptPage() {
         return (
             <AppLayout>
                  <main className="flex-1 p-4 md:p-10">
-                    <div className="flex items-center gap-4 mb-6">
-                        <SidebarTrigger className="md:hidden" />
-                        <h1 className="text-lg font-bold">Pilih Jasa Kirim</h1>
-                    </div>
-                    <div className="max-w-2xl mx-auto">
+                    <div className="max-w-4xl mx-auto">
+                         <div className="flex items-center gap-4 mb-6">
+                            <SidebarTrigger className="md:hidden" />
+                            <h1 className="text-lg font-bold">Pilih Jasa Kirim</h1>
+                        </div>
                         <Card>
                              <CardHeader>
                                 <CardTitle className="text-base">Pilih Tanggal Scan</CardTitle>
