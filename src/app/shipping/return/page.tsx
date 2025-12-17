@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
@@ -527,7 +526,7 @@ export default function ReturnPage() {
                                     </Badge>
                                 )}
                             </Button>
-                            {(['Shopee', 'Tiktok', 'Lazada', 'Instant'] as const).map(tab => (
+                            {(['SPX', 'J&T', 'JNE', 'INSTANT', 'CARGO'] as const).map(tab => (
                                 <Button 
                                     key={tab}
                                     variant={activeChannel === tab ? 'secondary' : 'ghost'}
@@ -679,4 +678,3 @@ export default function ReturnPage() {
         </AppLayout>
     );
 }
-
