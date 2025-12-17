@@ -12,12 +12,11 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Calendar as CalendarIcon, ScanLine, Trash2, ShoppingCart, Search, Eye, ArrowLeft } from 'lucide-react';
-import { format, parse, isValid, parseISO } from 'date-fns';
+import { ScanLine, Trash2, ShoppingCart, Search, Eye, ArrowLeft } from 'lucide-react';
+import { format, parseISO } from 'date-fns';
 import { useInventory } from '@/hooks/use-inventory';
 import { useLanguage } from '@/hooks/use-language';
 import { translations } from '@/types/language';
-import { cn } from '@/lib/utils';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import type { Sale, ShippingReceipt } from '@/types';
 import { useToast } from '@/hooks/use-toast';
@@ -30,7 +29,6 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Skeleton } from '@/components/ui/skeleton';
 import { AppLayout } from '@/app/components/app-layout';
@@ -83,7 +81,6 @@ export default function ShopeeChannelPage() {
           page: currentPage, 
           limit: itemsPerPage, 
           channel: shippingChannel, 
-          salesChannel: salesChannel,
           awb: searchTerm,
           dateString: format(new Date(), 'yyyy-MM-dd')
       });
