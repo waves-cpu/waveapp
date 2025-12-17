@@ -201,7 +201,7 @@ export default function DesktopScanReceiptPage() {
                     </h1>
                 </div>
 
-                <div className="max-w-xl">
+                <div className="w-full">
                      <form onSubmit={handleFormSubmit}>
                         <div className="relative flex-grow">
                             <ScanLine className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
