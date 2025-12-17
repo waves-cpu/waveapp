@@ -29,13 +29,13 @@ export default function ShopeeProviderPage() {
 
     const handleProviderSelect = (provider: ShippingProvider) => {
         const today = format(new Date(), 'MM-dd-yyyy');
-        router.push(`/shipping/receipt/${today}?channel=${provider}`);
+        router.push(`/sales/shopee/${today}?channel=${provider}`);
     };
 
     return (
         <AppLayout>
             <main className="flex-1 p-4 md:p-10">
-                <div className="max-w-4xl mx-auto">
+                <div className="w-full">
                      <Card>
                         <CardHeader>
                             <div className="flex items-center gap-4">
