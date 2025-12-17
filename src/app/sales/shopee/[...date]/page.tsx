@@ -18,14 +18,14 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-import { Calendar as CalendarIcon, ScanLine, Trash2, ShoppingCart, Search } from 'lucide-react';
-import { format, parse, isValid } from 'date-fns';
+import { Calendar as CalendarIcon, ScanLine, Trash2, ShoppingCart, Search, Eye } from 'lucide-react';
+import { format, parse, isValid, parseISO } from 'date-fns';
 import { useInventory } from '@/hooks/use-inventory';
 import { useLanguage } from '@/hooks/use-language';
 import { translations } from '@/types/language';
 import { cn } from '@/lib/utils';
 import { SidebarTrigger } from '@/components/ui/sidebar';
-import type { Sale, InventoryItem, InventoryItemVariant } from '@/types';
+import type { Sale, ShippingReceipt } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import {
   AlertDialog,
@@ -36,19 +36,19 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { VariantSelectionDialog } from '@/app/components/variant-selection-dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AppLayout } from '@/app/components/app-layout';
 import { useScanSounds } from '@/hooks/use-scan-sounds';
 import { useParams, useRouter } from 'next/navigation';
 import { Pagination } from '@/components/ui/pagination';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { RecordSaleForReceiptDialog } from '@/app/components/record-sale-for-receipt-dialog';
+import { DailySalesDetailDialog } from '@/app/components/daily-sales-detail-dialog';
+import { Badge } from '@/components/ui/badge';
+
 
 function parseDateFromParams(dateArray: string[] | undefined): Date {
     if (dateArray && dateArray.length > 0) {
-      // Assuming the format is MM-dd-yyyy
       const [month, day, year] = dateArray[0].split('-');
       const parsedDate = parse(`${year}-${month}-${day}`, 'yyyy-MM-dd', new Date());
       if (isValid(parsedDate)) {
@@ -61,84 +61,95 @@ function parseDateFromParams(dateArray: string[] | undefined): Date {
 export default function ShopeeSalesPage() {
   const { language } = useLanguage();
   const t = translations[language];
-  const { recordSale, cancelSale, getProductBySku, items, fetchSales: fetchSalesFromHook } = useInventory();
+  const { addShippingReceipt, deleteShippingReceipt, fetchShippingReceipts, allSales } = useInventory();
   const { toast } = useToast();
   const { playSuccessSound, playErrorSound } = useScanSounds();
   const router = useRouter();
   const params = useParams();
-  
-  const [sales, setSales] = useState<Sale[]>([]);
-  const [totalSales, setTotalSales] = useState(0);
+
+  const [receipts, setReceipts] = useState<ShippingReceipt[]>([]);
+  const [totalReceipts, setTotalReceipts] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [sku, setSku] = useState('');
+  const [awb, setAwb] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const skuInputRef = useRef<HTMLInputElement>(null);
+  const awbInputRef = useRef<HTMLInputElement>(null);
   const [isDatePickerOpen, setDatePickerOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(50);
   const [searchTerm, setSearchTerm] = useState('');
+  
+  const [receiptForSale, setReceiptForSale] = useState<ShippingReceipt | null>(null);
+  const [isSaleDialogOpen, setIsSaleDialogOpen] = useState(false);
 
+  const [detailItems, setDetailItems] = useState<Sale[]>([]);
+  const [isDetailOpen, setIsDetailOpen] = useState(false);
 
-  const [productForVariantSelection, setProductForVariantSelection] = useState<InventoryItem | null>(null);
-  const [isVariantDialogOpen, setIsVariantDialogOpen] = useState(false);
-
-  // The single source of truth for the date is the URL param.
   const currentDate = useMemo(() => parseDateFromParams(Array.isArray(params.date) ? params.date : undefined), [params.date]);
 
   const refocusInput = useCallback(() => {
-    setTimeout(() => skuInputRef.current?.focus(), 0);
+    setTimeout(() => awbInputRef.current?.focus(), 0);
   }, []);
 
-  const loadSales = useCallback(async (selectedDate: Date) => {
+  const loadReceipts = useCallback(async (selectedDate: Date) => {
     setLoading(true);
     try {
-      // Fetch all sales for the day for client-side searching
-      const { sales: salesData, total } = await fetchSalesFromHook('shopee', selectedDate, 1, 10000);
-      setSales(salesData);
-      setTotalSales(salesData.length); // Total is now based on fetched data for filtering
+      const dateString = format(selectedDate, 'yyyy-MM-dd');
+      const { receipts: receiptsData, total } = await fetchShippingReceipts({ 
+          page: currentPage, 
+          limit: itemsPerPage, 
+          channel: 'shopee', 
+          dateString: dateString,
+          awb: searchTerm
+      });
+      setReceipts(receiptsData);
+      setTotalReceipts(total);
     } catch (error) {
-      console.error('Failed to fetch sales:', error);
+      console.error('Failed to fetch receipts:', error);
       toast({
         variant: 'destructive',
-        title: 'Gagal Memuat Penjualan',
-        description: 'Terjadi kesalahan saat mengambil data penjualan.',
+        title: 'Gagal Memuat Resi',
+        description: 'Terjadi kesalahan saat mengambil data resi.',
       });
     } finally {
       setLoading(false);
     }
-  }, [fetchSalesFromHook, toast]);
-  
-  // This effect reacts to changes in the URL parameter.
-  useEffect(() => {
-    loadSales(currentDate);
-  }, [currentDate, loadSales]);
+  }, [fetchShippingReceipts, toast, currentPage, itemsPerPage, searchTerm]);
   
   useEffect(() => {
-    refocusInput();
-  }, [refocusInput]);
+    loadReceipts(currentDate);
+  }, [currentDate, loadReceipts]);
+  
+  useEffect(() => {
+    if(!isSaleDialogOpen) {
+        refocusInput();
+    }
+  }, [isSaleDialogOpen, refocusInput]);
 
-  const filteredSales = useMemo(() => {
+  const filteredReceipts = useMemo(() => {
     if (!searchTerm) {
-      return sales;
+      return receipts;
     }
     const lowercasedFilter = searchTerm.toLowerCase();
-    return sales.filter(sale => 
-      sale.productName.toLowerCase().includes(lowercasedFilter) ||
-      (sale.sku && sale.sku.toLowerCase().includes(lowercasedFilter))
+    return receipts.filter(receipt => 
+      receipt.awb.toLowerCase().includes(lowercasedFilter)
     );
-  }, [sales, searchTerm]);
+  }, [receipts, searchTerm]);
+  
+  const salesByReceipt = useMemo(() => {
+    const map = new Map<string, Sale[]>();
+    allSales.forEach(sale => {
+      const key = sale.transactionId;
+      if (key) {
+        if (!map.has(key)) {
+          map.set(key, []);
+        }
+        map.get(key)!.push(sale);
+      }
+    });
+    return map;
+  }, [allSales]);
 
-  useEffect(() => {
-    setTotalSales(filteredSales.length);
-    setCurrentPage(1);
-  }, [filteredSales]);
 
-  const paginatedSales = useMemo(() => {
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    return filteredSales.slice(startIndex, startIndex + itemsPerPage);
-  }, [filteredSales, currentPage, itemsPerPage]);
-
-  // This function's only job is to change the URL.
   const handleDateChange = (newDate: Date | undefined) => {
     if (newDate) {
         setDatePickerOpen(false);
@@ -148,122 +159,67 @@ export default function ShopeeSalesPage() {
     }
   }
 
-  const handleRecordSale = useCallback(async (saleSku: string) => {
-    if (!currentDate) return;
-    setIsSubmitting(true);
-    try {
-        const { sale } = await recordSale(saleSku, 'shopee', 1, { saleDate: currentDate });
-        playSuccessSound();
-        toast({
-            title: 'Penjualan Berhasil',
-            description: `1 item dengan SKU ${saleSku} berhasil terjual.`,
-        });
-        setSales(prevSales => [sale, ...prevSales]); // Optimistic update
-        setSku(''); 
-    } catch (error) {
-        playErrorSound();
-        const message = error instanceof Error ? error.message : 'Terjadi kesalahan saat mencatat penjualan.';
-        toast({
-            variant: 'destructive',
-            title: 'Penjualan Gagal',
-            description: message,
-        });
-    } finally {
-        setIsSubmitting(false);
-        refocusInput();
-    }
-  }, [currentDate, recordSale, toast, playSuccessSound, playErrorSound, refocusInput]);
-
-  const handleSkuSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleAwbSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!sku || isSubmitting) return;
+    if (!awb || isSubmitting) return;
 
     setIsSubmitting(true);
-    try {
-      const product = await getProductBySku(sku);
+    
+     const newReceipt: Omit<ShippingReceipt, 'id'> = {
+        awb: awb.trim(),
+        channel: 'Shopee',
+        date: format(currentDate, "yyyy-MM-dd'T'HH:mm:ss"),
+        status: 'Perlu Diproses',
+        transactionId: awb.trim()
+    };
 
-      if (!product) {
-        playErrorSound();
-        toast({
-            variant: 'destructive',
-            title: 'SKU Tidak Ditemukan',
-            description: `Produk dengan SKU "${sku}" tidak ditemukan.`,
-        });
-        return;
-      }
-      
-      if (product.variants && product.variants.length > 1) {
-        setProductForVariantSelection(product);
-        setIsVariantDialogOpen(true);
-      } else {
-         const itemToSell = (product.variants && product.variants.length === 1) ? product.variants[0] : product;
-         if (itemToSell.stock !== undefined && itemToSell.stock <= 0) {
-            playErrorSound();
-            toast({
-                variant: 'destructive',
-                title: 'Stok Habis',
-                description: `Stok untuk produk dengan SKU "${itemToSell.sku || sku}" sudah habis.`,
-            });
-            return;
-        }
-        await handleRecordSale(itemToSell.sku || sku);
-      }
+    try {
+        const added = await addShippingReceipt(newReceipt);
+        playSuccessSound();
+        setReceipts(prev => [added, ...prev]);
+        setAwb('');
+        setReceiptForSale(added);
+        setIsSaleDialogOpen(true);
     } catch (error) {
-      playErrorSound();
-      console.error('Failed to process SKU:', error);
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: 'Terjadi kesalahan saat memproses SKU.',
-      });
+        playErrorSound();
+        let title = 'Input Gagal';
+        let errorMessage = 'Gagal menyimpan resi.';
+        if (error instanceof Error && error.message.startsWith('DUPLICATE_AWB_DATE::')) {
+            const dateStr = error.message.split('::')[1];
+            title = 'Resi Duplikat';
+            errorMessage = `Resi ini sudah discan pada ${format(parseISO(dateStr), 'dd MMM yyyy, HH:mm')}`;
+        }
+        toast({ variant: 'destructive', title: title, description: errorMessage });
     } finally {
       setIsSubmitting(false);
-      setSku('');
-      refocusInput();
-    }
-  };
-
-  const handleVariantSelect = (variant: InventoryItemVariant | null) => {
-    setIsVariantDialogOpen(false);
-    setProductForVariantSelection(null);
-    if (variant && variant.sku) {
-        if(variant.stock <= 0) {
-            playErrorSound();
-            toast({
-                variant: 'destructive',
-                title: 'Stok Habis',
-                description: `Stok untuk varian "${variant.name}" sudah habis.`,
-            });
-            refocusInput();
-            return;
-        }
-        handleRecordSale(variant.sku);
-    } else {
-        refocusInput();
     }
   };
   
-  const handleCancelSale = async (saleId: string) => {
-    if (!currentDate) return;
+  const handleDeleteReceipt = async (id: number) => {
     try {
-        await cancelSale(saleId);
+        await deleteShippingReceipt(id);
         toast({
-            title: 'Penjualan Dibatalkan',
-            description: 'Penjualan telah berhasil dibatalkan dan stok dikembalikan.',
+            title: 'Resi Dihapus',
+            description: 'Resi telah berhasil dihapus.',
         });
-        // Optimistically remove from local state
-        setSales(prevSales => prevSales.filter(s => s.id !== saleId));
+        loadReceipts(currentDate);
     } catch (error) {
-        console.error('Failed to cancel sale:', error);
-        toast({
-            variant: 'destructive',
-            title: 'Gagal Membatalkan',
-            description: 'Terjadi kesalahan saat membatalkan penjualan.',
-        });
+        toast({ variant: 'destructive', title: 'Gagal Menghapus', description: 'Terjadi kesalahan.' });
     }
   };
   
-  const totalPages = Math.ceil(totalSales / itemsPerPage);
+  const handleViewDetails = (transactionId?: string) => {
+    if (!transactionId) return;
+    const items = salesByReceipt.get(transactionId) || [];
+    if (items.length > 0) {
+        setDetailItems(items);
+        setIsDetailOpen(true);
+    } else {
+        toast({ title: "Tidak Ada Detail", description: "Tidak ada detail produk untuk resi ini." });
+    }
+  }
+  
+  const totalPages = Math.ceil(totalReceipts / itemsPerPage);
 
   return (
     <AppLayout>
@@ -277,16 +233,16 @@ export default function ShopeeSalesPage() {
 
         <div className="bg-card rounded-lg border shadow-sm flex flex-col flex-1 overflow-hidden">
           <div className="p-4 flex flex-col md:flex-row gap-4 justify-between items-center border-b">
-              <form onSubmit={handleSkuSubmit} className="flex-grow md:max-w-sm">
+              <form onSubmit={handleAwbSubmit} className="flex-grow md:max-w-sm">
                   <div className="relative">
                       <ScanLine className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                       <Input
-                          ref={skuInputRef}
-                          placeholder="Scan atau masukkan SKU, lalu tekan Enter"
-                          value={sku}
-                          onChange={(e) => setSku(e.target.value)}
+                          ref={awbInputRef}
+                          placeholder="Scan atau masukkan No. Resi (AWB), lalu Enter"
+                          value={awb}
+                          onChange={(e) => setAwb(e.target.value)}
                           className="pl-10 w-full"
-                          disabled={isSubmitting || isVariantDialogOpen}
+                          disabled={isSubmitting || isSaleDialogOpen}
                       />
                   </div>
               </form>
@@ -294,7 +250,7 @@ export default function ShopeeSalesPage() {
                 <div className="relative flex-grow">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
-                        placeholder="Cari transaksi..."
+                        placeholder="Cari No. Resi..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                         className="pl-10 w-full"
@@ -329,11 +285,10 @@ export default function ShopeeSalesPage() {
             <Table>
               <TableHeader className="sticky top-0 bg-card">
                 <TableRow>
-                  <TableHead>{t.stockHistory.date}</TableHead>
-                  <TableHead className="w-[40%]">{t.inventoryTable.name}</TableHead>
-                  <TableHead>SKU</TableHead>
-                  <TableHead>{t.inventoryTable.size}</TableHead>
-                  <TableHead>{t.inventoryTable.price}</TableHead>
+                  <TableHead className="w-[200px]">Waktu Scan</TableHead>
+                  <TableHead>No. Resi (AWB)</TableHead>
+                  <TableHead>Produk</TableHead>
+                  <TableHead>Status</TableHead>
                   <TableHead className="text-center">{t.inventoryTable.actions}</TableHead>
                 </TableRow>
               </TableHeader>
@@ -343,55 +298,61 @@ export default function ShopeeSalesPage() {
                       <TableRow key={i}>
                           <TableCell><Skeleton className="h-4 w-[100px]" /></TableCell>
                           <TableCell><Skeleton className="h-4 w-[250px]" /></TableCell>
-                          <TableCell><Skeleton className="h-4 w-[120px]" /></TableCell>
                           <TableCell><Skeleton className="h-4 w-[80px]" /></TableCell>
-                          <TableCell><Skeleton className="h-4 w-[100px]" /></TableCell>
+                          <TableCell><Skeleton className="h-6 w-[100px]" /></TableCell>
                           <TableCell className="text-center">
                               <Skeleton className="h-8 w-8 rounded-md" />
                           </TableCell>
                       </TableRow>
                   ))
-                ) : paginatedSales.length > 0 ? (
-                  paginatedSales.map((sale) => (
-                    <TableRow key={sale.id}>
-                      <TableCell>{format(new Date(sale.saleDate), 'PP')}</TableCell>
-                      <TableCell>{sale.productName}</TableCell>
-                      <TableCell>{sale.sku}</TableCell>
-                      <TableCell>{sale.variantName || '-'}</TableCell>
-                      <TableCell>{`Rp${Math.round(sale.priceAtSale).toLocaleString('id-ID')}`}</TableCell>
-                      <TableCell className="text-center">
-                         <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <Button variant="ghost" size="icon" className="text-destructive">
-                                  <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>Anda yakin?</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  Tindakan ini akan membatalkan penjualan dan mengembalikan stok. Tindakan ini tidak dapat diurungkan.
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>Batal</AlertDialogCancel>
-                                <AlertDialogAction onClick={() => handleCancelSale(sale.id)}>
-                                  Ya, Batalkan Penjualan
-                                </AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
-                      </TableCell>
-                    </TableRow>
-                  ))
+                ) : filteredReceipts.length > 0 ? (
+                  filteredReceipts.map((receipt) => {
+                    const relatedSales = salesByReceipt.get(receipt.transactionId || '') || [];
+                    return (
+                        <TableRow key={receipt.id}>
+                          <TableCell>{format(new Date(receipt.date), 'HH:mm:ss')}</TableCell>
+                          <TableCell className="font-medium">{receipt.awb}</TableCell>
+                          <TableCell>
+                            <Button variant="link" size="sm" className="h-auto p-0 text-xs" onClick={() => handleViewDetails(receipt.transactionId)}>
+                                {relatedSales.length > 0 ? `${relatedSales.reduce((acc, s) => acc + s.quantity, 0)} produk` : 'Lihat Detail'}
+                                <Eye className="ml-2 h-3 w-3" />
+                            </Button>
+                          </TableCell>
+                          <TableCell><Badge variant="secondary">{receipt.status}</Badge></TableCell>
+                          <TableCell className="text-center">
+                             <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button variant="ghost" size="icon" className="text-destructive">
+                                      <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>Anda yakin?</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      Tindakan ini akan menghapus resi dan semua data penjualan terkait. Stok akan dikembalikan. Aksi ini tidak dapat diurungkan.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>Batal</AlertDialogCancel>
+                                    <AlertDialogAction onClick={() => handleDeleteReceipt(receipt.id)}>
+                                      Ya, Hapus Resi
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                          </TableCell>
+                        </TableRow>
+                    )
+                  })
                 ) : (
                   <TableRow>
-                      <TableCell colSpan={6} className="h-48 text-center">
+                      <TableCell colSpan={5} className="h-48 text-center">
                           <div className="flex flex-col items-center justify-center gap-4 text-muted-foreground">
                               <ShoppingCart className="h-16 w-16" />
                               <div className="text-center">
-                                  <p className="font-semibold">Tidak Ada Penjualan</p>
-                                  <p className="text-sm">Tidak ada penjualan yang tercatat pada tanggal yang dipilih.</p>
+                                  <p className="font-semibold">Tidak Ada Resi</p>
+                                  <p className="text-sm">Tidak ada resi yang tercatat pada tanggal yang dipilih.</p>
                               </div>
                           </div>
                       </TableCell>
@@ -407,44 +368,28 @@ export default function ShopeeSalesPage() {
                             currentPage={currentPage}
                             onPageChange={setCurrentPage}
                         />
-                        <Select
-                            value={`${itemsPerPage}`}
-                            onValueChange={(value) => {
-                                setItemsPerPage(Number(value))
-                                setCurrentPage(1)
-                            }}
-                            >
-                            <SelectTrigger className="h-8 w-[200px]">
-                                <SelectValue placeholder={itemsPerPage} />
-                            </SelectTrigger>
-                            <SelectContent side="top">
-                                {[10, 20, 50, 100].map((pageSize) => (
-                                <SelectItem key={pageSize} value={`${pageSize}`}>
-                                    {`${pageSize} / ${t.productSelectionDialog.page}`}
-                                </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
                     </div>
                 </div>
             )}
           </div>
         </div>
       </main>
-      {productForVariantSelection && (
-          <VariantSelectionDialog
-              open={isVariantDialogOpen}
-              onOpenChange={(isOpen) => {
-                  setIsVariantDialogOpen(isOpen);
-                  if (!isOpen) {
-                    refocusInput();
-                  }
-              }}
-              item={productForVariantSelection}
-              onSelect={handleVariantSelect}
-              cart={[]}
-          />
-      )}
+      <RecordSaleForReceiptDialog
+        open={isSaleDialogOpen}
+        onOpenChange={(isOpen) => {
+            setIsSaleDialogOpen(isOpen);
+            if (!isOpen) {
+                // Refresh data when sale dialog is closed
+                loadReceipts(currentDate);
+            }
+        }}
+        receipt={receiptForSale}
+      />
+      <DailySalesDetailDialog
+          open={isDetailOpen}
+          onOpenChange={setIsDetailOpen}
+          sales={detailItems}
+      />
     </AppLayout>
   );
 }
