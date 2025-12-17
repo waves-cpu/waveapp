@@ -42,7 +42,6 @@ import { AppLayout } from '@/app/components/app-layout';
 import { useScanSounds } from '@/hooks/use-scan-sounds';
 import { useParams, useRouter } from 'next/navigation';
 import { Pagination } from '@/components/ui/pagination';
-import { RecordSaleForReceiptDialog } from '@/app/components/record-sale-for-receipt-dialog';
 import { DailySalesDetailDialog } from '@/app/components/daily-sales-detail-dialog';
 import { Badge } from '@/components/ui/badge';
 
@@ -78,9 +77,6 @@ export default function LazadaSalesPage() {
   const [itemsPerPage, setItemsPerPage] = useState(50);
   const [searchTerm, setSearchTerm] = useState('');
   
-  const [receiptForSale, setReceiptForSale] = useState<ShippingReceipt | null>(null);
-  const [isSaleDialogOpen, setIsSaleDialogOpen] = useState(false);
-
   const [detailItems, setDetailItems] = useState<Sale[]>([]);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
 
@@ -120,10 +116,8 @@ export default function LazadaSalesPage() {
   }, [currentDate, loadReceipts]);
   
   useEffect(() => {
-    if(!isSaleDialogOpen) {
-        refocusInput();
-    }
-  }, [isSaleDialogOpen, refocusInput]);
+    refocusInput();
+  }, [refocusInput]);
 
   const filteredReceipts = useMemo(() => {
     if (!searchTerm) {
@@ -178,8 +172,6 @@ export default function LazadaSalesPage() {
         playSuccessSound();
         setReceipts(prev => [added, ...prev]);
         setAwb('');
-        setReceiptForSale(added);
-        setIsSaleDialogOpen(true);
     } catch (error) {
         playErrorSound();
         let title = 'Input Gagal';
@@ -192,6 +184,7 @@ export default function LazadaSalesPage() {
         toast({ variant: 'destructive', title: title, description: errorMessage });
     } finally {
       setIsSubmitting(false);
+      refocusInput();
     }
   };
   
@@ -242,7 +235,7 @@ export default function LazadaSalesPage() {
                           value={awb}
                           onChange={(e) => setAwb(e.target.value)}
                           className="pl-10 w-full"
-                          disabled={isSubmitting || isSaleDialogOpen}
+                          disabled={isSubmitting}
                       />
                   </div>
               </form>
@@ -374,17 +367,6 @@ export default function LazadaSalesPage() {
           </div>
         </div>
       </main>
-      <RecordSaleForReceiptDialog
-        open={isSaleDialogOpen}
-        onOpenChange={(isOpen) => {
-            setIsSaleDialogOpen(isOpen);
-            if (!isOpen) {
-                // Refresh data when sale dialog is closed
-                loadReceipts(currentDate);
-            }
-        }}
-        receipt={receiptForSale}
-      />
       <DailySalesDetailDialog
           open={isDetailOpen}
           onOpenChange={setIsDetailOpen}
