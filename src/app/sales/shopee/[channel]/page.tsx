@@ -49,7 +49,7 @@ export default function ShopeeChannelPage() {
   const { playSuccessSound, playErrorSound } = useScanSounds();
   const router = useRouter();
   const params = useParams();
-  
+
   const salesChannel = "Shopee";
   const shippingChannel = typeof params.channel === 'string' ? params.channel.toUpperCase() : '';
 
