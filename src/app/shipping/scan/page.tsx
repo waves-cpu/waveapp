@@ -45,12 +45,16 @@ export default function DesktopScanReceiptPage() {
     useEffect(() => {
         initializeAudio();
     }, [initializeAudio]);
+
+    const refocusInput = useCallback(() => {
+        setTimeout(() => inputRef.current?.focus(), 0);
+    }, []);
     
     useEffect(() => {
         if(selectedChannel) {
-            inputRef.current?.focus();
+            refocusInput();
         }
-    }, [selectedChannel]);
+    }, [selectedChannel, refocusInput]);
 
     const handleSubmit = useCallback(async (scannedAwb: string) => {
         const trimmedAwb = scannedAwb.trim();
@@ -67,7 +71,7 @@ export default function DesktopScanReceiptPage() {
                 description: `Resi ini sudah discan pada ${format(parseISO(recentDuplicate.date), 'dd MMM yyyy, HH:mm')}`,
             });
             setAwb(''); // Clear input for next scan
-            inputRef.current?.focus();
+            refocusInput();
             return;
         }
 
@@ -105,9 +109,9 @@ export default function DesktopScanReceiptPage() {
             });
         } finally {
             setIsSubmitting(false);
-            inputRef.current?.focus();
+            refocusInput();
         }
-    }, [isSubmitting, selectedChannel, scanDate, addShippingReceipt, playSuccessSound, playErrorSound, toast, recentlyAdded]);
+    }, [isSubmitting, selectedChannel, scanDate, addShippingReceipt, playSuccessSound, playErrorSound, toast, recentlyAdded, refocusInput]);
 
 
     const handleFormSubmit = (e: React.FormEvent) => {
