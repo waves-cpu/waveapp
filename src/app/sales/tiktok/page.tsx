@@ -32,16 +32,14 @@ export default function TiktokProviderPage() {
     return (
         <AppLayout>
             <main className="flex-1 p-4 md:p-10">
-                 <div className="flex items-center gap-4 mb-6">
-                    <SidebarTrigger className="md:hidden" />
-                    <h1 className="text-lg font-bold">{t.sales.tiktok}</h1>
-                </div>
-
                 <div className="max-w-4xl mx-auto">
                      <Card>
                         <CardHeader>
-                            <CardTitle>Pilih Jasa Kirim</CardTitle>
-                            <CardDescription>Pilih jasa kirim yang ingin Anda proses untuk kanal Tiktok.</CardDescription>
+                            <div className="flex items-center gap-4">
+                                <SidebarTrigger className="md:hidden" />
+                                <CardTitle>{t.sales.tiktok}</CardTitle>
+                            </div>
+                            <CardDescription>Pilih jasa kirim yang ingin Anda proses untuk kanal ini.</CardDescription>
                         </CardHeader>
                         <CardContent className="grid grid-cols-2 md:grid-cols-3 gap-4">
                             {shippingProviders.map(provider => (
