@@ -854,7 +854,7 @@ export async function getSalesByDate(channel: string, date: Date, page: number, 
     const countQuery = db.prepare(`
         SELECT COUNT(*) as count 
         FROM sales 
-        WHERE channel = @channel AND date(saleDate) = @dateString
+        WHERE channel = @channel AND date(saleDate) = @dateString AND status != 'Cancelled'
     `);
     const totalResult = countQuery.get({ channel, dateString }) as { count: number };
     const total = totalResult.count;
@@ -871,6 +871,7 @@ export async function getSalesByDate(channel: string, date: Date, page: number, 
         LEFT JOIN variants v ON s.variantId = v.id
         WHERE s.channel = @channel 
         AND date(s.saleDate) = @dateString
+        AND s.status != 'Cancelled'
         ORDER BY s.id DESC
         LIMIT @limit OFFSET @offset
     `);
@@ -1185,6 +1186,7 @@ export async function deleteProductPermanently(itemId: string) {
     
 
     
+
 
 
 
