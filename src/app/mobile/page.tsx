@@ -110,9 +110,7 @@ export default function MobileScanReceiptPage() {
             });
         } finally {
             setIsSubmitting(false);
-            if (isCameraOpen) {
-                 // Do not close camera, allow for next scan
-            } else {
+            if (!isCameraOpen) {
                  inputRef.current?.focus();
             }
         }
@@ -228,6 +226,7 @@ export default function MobileScanReceiptPage() {
                                 value={awb}
                                 onChange={(e) => setAwb(e.target.value)}
                                 disabled={isSubmitting}
+                                autoFocus
                             />
                         </div>
                         <Button type="button" size="icon" className="h-12 w-12 shrink-0" onClick={() => setIsCameraOpen(true)}>
