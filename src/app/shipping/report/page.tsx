@@ -235,7 +235,7 @@ export default function ShippingReportPage() {
                 </div>
                  <div className="flex items-center gap-2 border-b pb-2">
                     <Button variant={activeChannel === null ? 'secondary' : 'ghost'} size="sm" onClick={() => setActiveChannel(null)}>Semua</Button>
-                    {(['Shopee', 'Tiktok', 'Lazada', 'Instant'] as const).map(tab => (
+                    {(['SPX', 'J&T', 'JNE', 'INSTANT', 'CARGO'] as const).map(tab => (
                         <Button 
                             key={tab}
                             variant={activeChannel === tab ? 'secondary' : 'ghost'}

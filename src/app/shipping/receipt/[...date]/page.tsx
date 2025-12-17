@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
@@ -44,7 +43,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 
-type ShippingProvider = 'Shopee' | 'Tiktok' | 'Lazada' | 'Instant';
+type ShippingProvider = 'SPX' | 'J&T' | 'JNE' | 'INSTANT' | 'CARGO';
 
 const getStatusVariant = (status: string) => {
     switch (status.toLowerCase()) {
@@ -73,7 +72,7 @@ export default function ReceiptPage() {
     const [receipts, setReceipts] = useState<ShippingReceipt[]>([]);
     const [totalReceipts, setTotalReceipts] = useState(0);
     const [loading, setLoading] = useState(true);
-    const [activeTab, setActiveTab] = useState<ShippingProvider>('Shopee');
+    const [activeTab, setActiveTab] = useState<ShippingProvider>('SPX');
     const [searchTerm, setSearchTerm] = useState('');
     const [isDatePickerOpen, setDatePickerOpen] = useState(false);
     const [currentPage, setCurrentPage] = useState(1);
@@ -288,7 +287,7 @@ export default function ReceiptPage() {
 
                 <div className="flex flex-col gap-4">
                     <div className="flex items-center gap-2 overflow-x-auto no-scrollbar border-b pb-2">
-                        {(['Shopee', 'Tiktok', 'Lazada', 'Instant'] as ShippingProvider[]).map(tab => (
+                        {(['SPX', 'J&T', 'JNE', 'INSTANT', 'CARGO'] as ShippingProvider[]).map(tab => (
                             <Button 
                                 key={tab}
                                 variant={activeTab === tab ? 'secondary' : 'ghost'}

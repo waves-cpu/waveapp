@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
@@ -19,14 +18,14 @@ import { cn } from '@/lib/utils';
 import { QrScanner } from '@yudiel/react-qr-scanner';
 
 
-type ShippingProvider = 'Shopee' | 'Tiktok' | 'Lazada' | 'Instant' | 'Tokopedia';
+type ShippingProvider = 'SPX' | 'J&T' | 'JNE' | 'INSTANT' | 'CARGO';
 
 const shippingProviders: { name: ShippingProvider, icon: React.ElementType }[] = [
-    { name: 'Shopee', icon: ShoppingBag },
-    { name: 'Tiktok', icon: ShoppingBag },
-    { name: 'Lazada', icon: ShoppingBag },
-    { name: 'Tokopedia', icon: ShoppingBag },
-    { name: 'Instant', icon: Truck },
+    { name: 'SPX', icon: ShoppingBag },
+    { name: 'J&T', icon: ShoppingBag },
+    { name: 'JNE', icon: ShoppingBag },
+    { name: 'INSTANT', icon: Truck },
+    { name: 'CARGO', icon: Truck },
 ];
 
 export default function MobileScanReceiptPage() {
@@ -265,7 +264,3 @@ export default function MobileScanReceiptPage() {
         </div>
     );
 }
-
-
-
-
