@@ -448,46 +448,40 @@ export default function SalesReportPage() {
 
             if (sale.status === 'Return' || sale.status === 'Return Selesai') {
                 returnedValue += saleValue;
-                return; // Do not include in revenue or profit calculation
-            }
-            if (sale.status === 'Cancelled' || sale.status === 'Dibatalkan') {
+            } else if (sale.status === 'Cancelled' || sale.status === 'Dibatalkan') {
                 cancelledValue += saleValue;
-                return; // Do not include in revenue or profit calculation
+            } else if (sale.status === 'Completed') {
+                const saleRevenue = sale.priceAtSale * sale.quantity;
+                const saleCogs = (sale.cogsAtSale || 0) * sale.quantity;
+                
+                revenue += saleRevenue;
+                cogs += saleCogs;
+                units += sale.quantity;
+
+                channelSales[sale.channel] = (channelSales[sale.channel] || 0) + saleRevenue;
+
+                const parentProductId = sale.productId;
+                if (!parentProductId) return;
+
+                if (!profitabilityMap.has(parentProductId)) {
+                    profitabilityMap.set(parentProductId, {
+                        productId: parentProductId,
+                        name: sale.productName,
+                        parentSku: sale.parentSku,
+                        category: sale.productCategory,
+                        unitsSold: 0,
+                        totalRevenue: 0,
+                        totalCogs: 0,
+                        grossProfit: 0,
+                    });
+                }
+
+                const current = profitabilityMap.get(parentProductId)!;
+                current.unitsSold += sale.quantity;
+                current.totalRevenue += saleRevenue;
+                current.totalCogs += saleCogs;
+                current.grossProfit += (saleRevenue - saleCogs);
             }
-            
-            // Only 'Completed' sales contribute to revenue and profit
-            if (sale.status !== 'Completed') return;
-
-            const saleRevenue = sale.priceAtSale * sale.quantity;
-            const saleCogs = (sale.cogsAtSale || 0) * sale.quantity;
-            
-            revenue += saleRevenue;
-            cogs += saleCogs;
-            units += sale.quantity;
-
-            channelSales[sale.channel] = (channelSales[sale.channel] || 0) + saleRevenue;
-
-            const parentProductId = sale.productId;
-             if (!parentProductId) return;
-
-            if (!profitabilityMap.has(parentProductId)) {
-                profitabilityMap.set(parentProductId, {
-                    productId: parentProductId,
-                    name: sale.productName,
-                    parentSku: sale.parentSku,
-                    category: sale.productCategory,
-                    unitsSold: 0,
-                    totalRevenue: 0,
-                    totalCogs: 0,
-                    grossProfit: 0,
-                });
-            }
-
-            const current = profitabilityMap.get(parentProductId)!;
-            current.unitsSold += sale.quantity;
-            current.totalRevenue += saleRevenue;
-            current.totalCogs += saleCogs;
-            current.grossProfit += (saleRevenue - saleCogs);
         });
 
         return {
