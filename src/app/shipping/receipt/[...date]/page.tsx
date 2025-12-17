@@ -350,15 +350,13 @@ export default function ReceiptPage() {
                                             <TableCell>{format(new Date(item.date), 'dd MMM yyyy HH:mm')}</TableCell>
                                             <TableCell>{item.channel}</TableCell>
                                             <TableCell>
+                                                <Badge variant={getStatusVariant(item.status)}>{item.status}</Badge>
+                                            </TableCell>
+                                            <TableCell className="text-center">
                                                 <DropdownMenu>
-                                                    <DropdownMenuTrigger asChild disabled={finalStatuses.includes(item.status)}>
-                                                        <Button variant="ghost" className={cn(
-                                                            "px-2 py-1 h-auto text-xs",
-                                                            getStatusVariant(item.status) === 'default' && "bg-primary text-primary-foreground hover:bg-primary/90",
-                                                            getStatusVariant(item.status) === 'secondary' && "bg-secondary text-secondary-foreground hover:bg-secondary/80",
-                                                            getStatusVariant(item.status) === 'destructive' && "bg-destructive text-destructive-foreground hover:bg-destructive/90",
-                                                        )}>
-                                                            {item.status}
+                                                    <DropdownMenuTrigger asChild>
+                                                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                                                            <MoreVertical className="h-4 w-4" />
                                                         </Button>
                                                     </DropdownMenuTrigger>
                                                     <DropdownMenuContent align="end">
@@ -374,31 +372,29 @@ export default function ReceiptPage() {
                                                                 <DropdownMenuItem onClick={() => handleChangeStatus(item.id, 'Return')} className="text-destructive">{t.actions.markAsReturn}</DropdownMenuItem>
                                                             </>
                                                          )}
+                                                         <AlertDialog>
+                                                            <AlertDialogTrigger asChild>
+                                                                <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-destructive">
+                                                                    Hapus
+                                                                </DropdownMenuItem>
+                                                            </AlertDialogTrigger>
+                                                            <AlertDialogContent>
+                                                                <AlertDialogHeader>
+                                                                    <AlertDialogTitle>{t.deleteConfirmTitle}</AlertDialogTitle>
+                                                                    <AlertDialogDescription>
+                                                                        {t.deleteConfirmDesc.replace('{awb}', item.awb)}
+                                                                    </AlertDialogDescription>
+                                                                </AlertDialogHeader>
+                                                                <AlertDialogFooter>
+                                                                    <AlertDialogCancel onClick={() => setReceiptToDelete(null)}>{tCommon.cancel}</AlertDialogCancel>
+                                                                    <AlertDialogAction onClick={() => { setReceiptToDelete(item); handleDelete();}} className="bg-destructive hover:bg-destructive/90">
+                                                                        {t.deleteConfirmAction}
+                                                                    </AlertDialogAction>
+                                                                </AlertDialogFooter>
+                                                            </AlertDialogContent>
+                                                        </AlertDialog>
                                                     </DropdownMenuContent>
                                                 </DropdownMenu>
-                                            </TableCell>
-                                            <TableCell className="text-center">
-                                                <AlertDialog>
-                                                    <AlertDialogTrigger asChild>
-                                                         <Button variant="ghost" size="icon" className="text-destructive h-8 w-8" onClick={(e) => { e.stopPropagation(); setReceiptToDelete(item); }}>
-                                                            <Trash2 className="h-4 w-4" />
-                                                         </Button>
-                                                    </AlertDialogTrigger>
-                                                    <AlertDialogContent>
-                                                        <AlertDialogHeader>
-                                                            <AlertDialogTitle>{t.deleteConfirmTitle}</AlertDialogTitle>
-                                                            <AlertDialogDescription>
-                                                                {t.deleteConfirmDesc.replace('{awb}', receiptToDelete?.awb || '')}
-                                                            </AlertDialogDescription>
-                                                        </AlertDialogHeader>
-                                                        <AlertDialogFooter>
-                                                            <AlertDialogCancel onClick={() => setReceiptToDelete(null)}>{tCommon.cancel}</AlertDialogCancel>
-                                                            <AlertDialogAction onClick={handleDelete} className="bg-destructive hover:bg-destructive/90">
-                                                                {t.deleteConfirmAction}
-                                                            </AlertDialogAction>
-                                                        </AlertDialogFooter>
-                                                    </AlertDialogContent>
-                                                </AlertDialog>
                                             </TableCell>
                                         </TableRow>
                                     )) : (
