@@ -284,10 +284,12 @@ export default function ReceiptPage() {
                                 Scan Resi
                              </Link>
                          </Button>
-                         <Button size="sm" onClick={handleProcessShipment} disabled={selectedIds.size === 0 || isProcessing}>
-                            <Send className="mr-2 h-4 w-4" />
-                            {isProcessing ? t.processing : `${t.processSelected} (${selectedIds.size})`}
-                         </Button>
+                         {selectedIds.size > 0 && (
+                            <Button size="sm" onClick={handleProcessShipment} disabled={isProcessing}>
+                                <Send className="mr-2 h-4 w-4" />
+                                {isProcessing ? t.processing : `${t.processSelected} (${selectedIds.size})`}
+                            </Button>
+                         )}
                     </div>
                 </div>
 
