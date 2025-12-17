@@ -35,12 +35,12 @@ export default function ShopeeProviderPage() {
     return (
         <AppLayout>
             <main className="flex-1 p-4 md:p-10">
-                 <div className="flex items-center gap-4 mb-4">
+                 <div className="flex items-center gap-4 mb-6">
                     <SidebarTrigger className="md:hidden" />
                     <h1 className="text-lg font-bold">{t.sales.shopee}</h1>
                 </div>
 
-                <div className="max-w-4xl mx-auto">
+                <div>
                      <Card>
                         <CardHeader>
                             <CardTitle>Pilih Jasa Kirim</CardTitle>
