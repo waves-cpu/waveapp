@@ -305,7 +305,6 @@ export default function ReturnPage() {
     const tCommon = translations[language].common;
     
     const [selectedReceipt, setSelectedReceipt] = useState<ShippingReceipt | null>(null);
-    const [receiptToDelete, setReceiptToDelete] = useState<ShippingReceipt | null>(null);
     const [isProductSelectionDialogOpen, setIsProductSelectionDialogOpen] = useState(false);
     const [activeChannel, setActiveChannel] = useState<string | null>(null);
     const [channelCounts, setChannelCounts] = useState<Record<string, number> | null>(null);
@@ -392,12 +391,11 @@ export default function ReturnPage() {
         }
     };
     
-    const handleDelete = async () => {
+    const handleDelete = async (receiptToDelete: ShippingReceipt) => {
         if (!receiptToDelete) return;
         try {
             await deleteShippingReceipt(receiptToDelete.id);
             toast({ title: t.deleteSuccess, description: t.deleteSuccessDesc.replace('{awb}', receiptToDelete.awb) });
-            setReceiptToDelete(null);
             fetchReturns();
             fetchCounts();
         } catch (error) {
@@ -594,7 +592,7 @@ export default function ReturnPage() {
                                                 {item.status === 'Return Selesai' && (
                                                      <AlertDialog>
                                                         <AlertDialogTrigger asChild>
-                                                             <Button variant="ghost" size="icon" className="text-destructive h-8 w-8" onClick={(e) => { e.stopPropagation(); setReceiptToDelete(item); }}>
+                                                             <Button variant="ghost" size="icon" className="text-destructive h-8 w-8">
                                                                 <Trash2 className="h-4 w-4" />
                                                              </Button>
                                                         </AlertDialogTrigger>
@@ -606,8 +604,8 @@ export default function ReturnPage() {
                                                                 </AlertDialogDescription>
                                                             </AlertDialogHeader>
                                                             <AlertDialogFooter>
-                                                                <AlertDialogCancel onClick={() => setReceiptToDelete(null)}>{tCommon.cancel}</AlertDialogCancel>
-                                                                <AlertDialogAction onClick={handleDelete} className="bg-destructive hover:bg-destructive/90">
+                                                                <AlertDialogCancel>{tCommon.cancel}</AlertDialogCancel>
+                                                                <AlertDialogAction onClick={() => handleDelete(item)} className="bg-destructive hover:bg-destructive/90">
                                                                     {t.deleteConfirmAction}
                                                                 </AlertDialogAction>
                                                             </AlertDialogFooter>

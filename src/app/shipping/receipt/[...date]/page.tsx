@@ -81,7 +81,6 @@ export default function ReceiptPage() {
     const { language } = useLanguage();
     const t = translations[language].shipping.receiptPage;
     const tCommon = translations[language].common;
-    const [receiptToDelete, setReceiptToDelete] = useState<ShippingReceipt | null>(null);
     const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
     const [isProcessing, setIsProcessing] = useState(false);
     const [channelCounts, setChannelCounts] = useState<Record<string, number> | null>(null);
@@ -153,12 +152,11 @@ export default function ReceiptPage() {
         setSelectedIds(new Set());
     }, [activeTab, currentDateString, searchTerm, currentPage]);
 
-    const handleDelete = async () => {
+    const handleDelete = async (receiptToDelete: ShippingReceipt) => {
         if (!receiptToDelete) return;
         try {
             await deleteShippingReceipt(receiptToDelete.id);
             toast({ title: t.deleteSuccess, description: t.deleteSuccessDesc.replace('{awb}', receiptToDelete.awb) });
-            setReceiptToDelete(null);
             fetchReceipts(); // Refresh data
             fetchCounts();
         } catch (error) {
@@ -386,8 +384,8 @@ export default function ReceiptPage() {
                                                                     </AlertDialogDescription>
                                                                 </AlertDialogHeader>
                                                                 <AlertDialogFooter>
-                                                                    <AlertDialogCancel onClick={() => setReceiptToDelete(null)}>{tCommon.cancel}</AlertDialogCancel>
-                                                                    <AlertDialogAction onClick={() => { setReceiptToDelete(item); handleDelete();}} className="bg-destructive hover:bg-destructive/90">
+                                                                    <AlertDialogCancel>{tCommon.cancel}</AlertDialogCancel>
+                                                                    <AlertDialogAction onClick={() => handleDelete(item)} className="bg-destructive hover:bg-destructive/90">
                                                                         {t.deleteConfirmAction}
                                                                     </AlertDialogAction>
                                                                 </AlertDialogFooter>
