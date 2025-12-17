@@ -151,6 +151,13 @@ export default function ShippingReportPage() {
                     case 'Return':
                         acc[dateKey].returned++;
                         break;
+                    default:
+                        // This will catch any other statuses like 'Diantar' or 'Tidak Sampai'
+                        // and group them under 'shipped' as they are in-transit.
+                        if (['Diantar', 'Tidak Sampai'].includes(receipt.status)) {
+                            acc[dateKey].shipped++;
+                        }
+                        break;
                 }
 
                 return acc;
