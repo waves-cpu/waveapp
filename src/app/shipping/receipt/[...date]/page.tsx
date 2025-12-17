@@ -39,8 +39,9 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { RecordSaleForReceiptDialog } from '@/app/components/record-sale-for-receipt-dialog';
 
 
 type ShippingProvider = 'SPX' | 'J&T' | 'JNE' | 'INSTANT' | 'CARGO';
@@ -72,40 +73,40 @@ export default function ReceiptPage() {
     const [receipts, setReceipts] = useState<ShippingReceipt[]>([]);
     const [totalReceipts, setTotalReceipts] = useState(0);
     const [loading, setLoading] = useState(true);
+    const { toast } = useToast();
+    const { language } = useLanguage();
+    const t = translations[language].shipping.receiptPage;
+    const tCommon = translations[language].common;
+    const router = useRouter();
+    const params = useParams();
+    const searchParams = useSearchParams();
+
     const [activeTab, setActiveTab] = useState<ShippingProvider>('SPX');
     const [searchTerm, setSearchTerm] = useState('');
     const [isDatePickerOpen, setDatePickerOpen] = useState(false);
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(50);
-    const { toast } = useToast();
-    const { language } = useLanguage();
-    const t = translations[language].shipping.receiptPage;
-    const tCommon = translations[language].common;
     const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
     const [isProcessing, setIsProcessing] = useState(false);
     const [channelCounts, setChannelCounts] = useState<Record<string, number> | null>(null);
-    const router = useRouter();
-    const params = useParams();
 
-    const currentDateString = useMemo(() => {
-        if (Array.isArray(params.date) && params.date.length > 0) {
-            // Validate the date format MM-dd-yyyy
-            const dateParts = params.date[0].split('-');
-            if (dateParts.length === 3) {
-                const [month, day, year] = dateParts;
-                const parsedDate = parse(`${year}-${month}-${day}`, 'yyyy-MM-dd', new Date());
-                if (isValid(parsedDate)) {
-                    return format(parsedDate, 'yyyy-MM-dd');
-                }
-            }
+    const [receiptForSale, setReceiptForSale] = useState<ShippingReceipt | null>(null);
+    const [isSaleDialogOpen, setIsSaleDialogOpen] = useState(false);
+
+
+    const currentDate = useMemo(() => parseDateFromParams(Array.isArray(params.date) ? params.date : undefined), [params.date]);
+    
+    useEffect(() => {
+        const channel = searchParams.get('channel');
+        if (channel && ['SPX', 'J&T', 'JNE', 'INSTANT', 'CARGO'].includes(channel)) {
+            setActiveTab(channel as ShippingProvider);
         }
-        return format(new Date(), 'yyyy-MM-dd');
-    }, [params.date]);
-
+    }, [searchParams]);
 
     const fetchReceipts = useCallback(async () => {
         setLoading(true);
         try {
+            const dateString = format(currentDate, 'yyyy-MM-dd');
             const searchOptions: any = {
                 page: currentPage,
                 limit: itemsPerPage,
@@ -115,7 +116,7 @@ export default function ReceiptPage() {
 
             // Only add dateString if not searching by AWB
             if (!searchTerm) {
-                searchOptions.dateString = currentDateString;
+                searchOptions.dateString = dateString;
             }
 
             const { receipts, total } = await fetchShippingReceipts(searchOptions);
@@ -127,16 +128,17 @@ export default function ReceiptPage() {
         } finally {
             setLoading(false);
         }
-    }, [currentPage, itemsPerPage, activeTab, currentDateString, searchTerm, toast, t.fetchError]);
+    }, [currentPage, itemsPerPage, activeTab, currentDate, searchTerm, toast, t.fetchError]);
     
     const fetchCounts = useCallback(async () => {
         try {
-            const counts = await fetchShippingReceiptCountsByChannel(currentDateString);
+            const dateString = format(currentDate, 'yyyy-MM-dd');
+            const counts = await fetchShippingReceiptCountsByChannel(dateString);
             setChannelCounts(counts);
         } catch (error) {
              console.error("Failed to fetch channel counts:", error);
         }
-    }, [currentDateString]);
+    }, [currentDate]);
 
 
     useEffect(() => {
@@ -145,12 +147,12 @@ export default function ReceiptPage() {
 
     useEffect(() => {
         fetchCounts();
-    }, [currentDateString, fetchReceipts]);
+    }, [currentDate, fetchReceipts]);
     
     // Clear selection when filters change
     useEffect(() => {
         setSelectedIds(new Set());
-    }, [activeTab, currentDateString, searchTerm, currentPage]);
+    }, [activeTab, currentDate, searchTerm, currentPage]);
 
     const handleDelete = async (receiptToDelete: ShippingReceipt) => {
         if (!receiptToDelete) return;
@@ -197,15 +199,20 @@ export default function ReceiptPage() {
     const handleDateSelect = (selectedDate: Date | undefined) => {
         if (selectedDate) {
             const formattedDate = format(selectedDate, 'MM-dd-yyyy');
-            router.push(`/shipping/receipt/${formattedDate}`);
+            const currentChannel = searchParams.get('channel');
+            const newPath = currentChannel ? `/shipping/receipt/${formattedDate}?channel=${currentChannel}` : `/shipping/receipt/${formattedDate}`;
+            router.push(newPath);
             setDatePickerOpen(false);
             setCurrentPage(1); // Reset to first page
         }
     };
+    
 
     const handleTabChange = (tab: ShippingProvider) => {
         setActiveTab(tab);
-        setCurrentPage(1); // Reset to first page
+        const formattedDate = format(currentDate, 'MM-dd-yyyy');
+        router.push(`/shipping/receipt/${formattedDate}?channel=${tab}`);
+        setCurrentPage(1);
     };
 
     const handleSelectAll = (checked: boolean) => {
@@ -227,9 +234,13 @@ export default function ReceiptPage() {
         setSelectedIds(newSelectedIds);
     };
     
+    const handleRecordSale = (receipt: ShippingReceipt) => {
+        setReceiptForSale(receipt);
+        setIsSaleDialogOpen(true);
+    };
+
     const totalPages = Math.ceil(totalReceipts / itemsPerPage);
     const isAllSelected = receipts.length > 0 && receipts.filter(r => r.status === 'Perlu Diproses').every(r => selectedIds.has(r.id));
-    const currentDate = parse(currentDateString, 'yyyy-MM-dd', new Date());
     const finalStatuses = ['Selesai', 'Return', 'Dibatalkan'];
 
     return (
@@ -351,7 +362,7 @@ export default function ReceiptPage() {
                                                 <Badge variant={getStatusVariant(item.status)}>{item.status}</Badge>
                                             </TableCell>
                                             <TableCell className="text-center">
-                                                <DropdownMenu>
+                                                 <DropdownMenu>
                                                     <DropdownMenuTrigger asChild>
                                                         <Button variant="ghost" size="icon" className="h-8 w-8">
                                                             <MoreVertical className="h-4 w-4" />
@@ -360,6 +371,7 @@ export default function ReceiptPage() {
                                                     <DropdownMenuContent align="end">
                                                          {item.status === 'Perlu Diproses' && (
                                                             <>
+                                                                <DropdownMenuItem onClick={() => handleRecordSale(item)}>Catat Penjualan</DropdownMenuItem>
                                                                 <DropdownMenuItem onClick={() => handleChangeStatus(item.id, 'Dikirim')}>{t.actions.processShipment}</DropdownMenuItem>
                                                                 <DropdownMenuItem onClick={() => handleChangeStatus(item.id, 'Dibatalkan')} className="text-destructive">{t.actions.cancel}</DropdownMenuItem>
                                                             </>
@@ -441,6 +453,11 @@ export default function ReceiptPage() {
                     </Card>
                 </div>
             </main>
+            <RecordSaleForReceiptDialog
+                open={isSaleDialogOpen}
+                onOpenChange={setIsSaleDialogOpen}
+                receipt={receiptForSale}
+            />
         </AppLayout>
     );
 }
