@@ -41,10 +41,7 @@ export default function DesktopScanReceiptPage() {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [recentlyAdded, setRecentlyAdded] = useState<ShippingReceipt[]>([]);
     const inputRef = useRef<HTMLInputElement>(null);
-    const [isCameraOpen, setIsCameraOpen] = useState(false);
-    const [isScanningPaused, setIsScanningPaused] = useState(false);
-    const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
-
+    
     useEffect(() => {
         initializeAudio();
     }, [initializeAudio]);
@@ -53,21 +50,7 @@ export default function DesktopScanReceiptPage() {
         if(selectedChannel) {
             inputRef.current?.focus();
         }
-    }, [selectedChannel, isCameraOpen]);
-
-    const checkCameraPermission = useCallback(async () => {
-        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-            setHasCameraPermission(false);
-            return;
-        }
-        try {
-            const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-            stream.getTracks().forEach(track => track.stop()); // Stop using the camera immediately
-            setHasCameraPermission(true);
-        } catch (error) {
-            setHasCameraPermission(false);
-        }
-    }, []);
+    }, [selectedChannel]);
 
     const handleSubmit = useCallback(async (scannedAwb: string) => {
         const trimmedAwb = scannedAwb.trim();
@@ -83,12 +66,8 @@ export default function DesktopScanReceiptPage() {
                 title: 'Resi Duplikat',
                 description: `Resi ini sudah discan pada ${format(parseISO(recentDuplicate.date), 'dd MMM yyyy, HH:mm')}`,
             });
-             if (isCameraOpen) {
-                // Allow for next scan without closing camera
-            } else {
-                setAwb(''); // Clear input for next scan
-                inputRef.current?.focus();
-            }
+            setAwb(''); // Clear input for next scan
+            inputRef.current?.focus();
             return;
         }
 
@@ -126,37 +105,14 @@ export default function DesktopScanReceiptPage() {
             });
         } finally {
             setIsSubmitting(false);
-            if (!isCameraOpen) {
-                 inputRef.current?.focus();
-            }
+            inputRef.current?.focus();
         }
-    }, [isSubmitting, selectedChannel, scanDate, addShippingReceipt, playSuccessSound, playErrorSound, toast, isCameraOpen, recentlyAdded]);
+    }, [isSubmitting, selectedChannel, scanDate, addShippingReceipt, playSuccessSound, playErrorSound, toast, recentlyAdded]);
 
 
     const handleFormSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         handleSubmit(awb);
-    }
-    
-    const handleDecode = (result: string) => {
-        if (isScanningPaused) return;
-
-        setIsScanningPaused(true);
-        handleSubmit(result);
-
-        setTimeout(() => {
-            setIsScanningPaused(false);
-        }, 2000); // 2 second delay
-    };
-
-    const handleCameraToggle = () => {
-        if (isCameraOpen) {
-            setIsCameraOpen(false);
-        } else {
-            checkCameraPermission().then(() => {
-                setIsCameraOpen(true);
-            });
-        }
     }
     
     if (!selectedChannel) {
@@ -236,86 +192,46 @@ export default function DesktopScanReceiptPage() {
                     </h1>
                 </div>
 
-                <div className="grid md:grid-cols-2 gap-8">
-                    <div>
-                         <form onSubmit={handleFormSubmit} className="space-y-4">
-                            <div className="flex items-center gap-2">
-                                <div className="relative flex-grow">
-                                    <ScanLine className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                                    <Input
-                                        ref={inputRef}
-                                        placeholder="Scan atau ketik No. Resi (AWB)"
-                                        className="pl-10 text-base h-12"
-                                        value={awb}
-                                        onChange={(e) => setAwb(e.target.value)}
-                                        disabled={isSubmitting}
-                                        autoFocus
-                                    />
+                <div className="max-w-xl">
+                     <form onSubmit={handleFormSubmit} className="space-y-4">
+                        <div className="relative flex-grow">
+                            <ScanLine className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                            <Input
+                                ref={inputRef}
+                                placeholder="Scan atau ketik No. Resi (AWB), lalu tekan Enter"
+                                className="pl-10 text-base h-12"
+                                value={awb}
+                                onChange={(e) => setAwb(e.target.value)}
+                                disabled={isSubmitting}
+                                autoFocus
+                            />
+                        </div>
+                    </form>
+
+                     <Card className="mt-4">
+                        <CardHeader>
+                            <CardTitle className="text-base">Baru Saja Di-scan ({selectedChannel})</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            {recentlyAdded.filter(r => r.channel === selectedChannel).length === 0 ? (
+                                 <div className="text-center py-10 text-muted-foreground">
+                                    <p>Belum ada resi yang di-scan.</p>
                                 </div>
-                                <Button type="button" size="icon" className="h-12 w-12 shrink-0" onClick={handleCameraToggle}>
-                                    <Camera className="h-6 w-6" />
-                                </Button>
-                            </div>
-                        </form>
-
-                         <Card className="mt-4">
-                            <CardHeader>
-                                <CardTitle className="text-base">Baru Saja Di-scan ({selectedChannel})</CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                                {recentlyAdded.length === 0 ? (
-                                     <div className="text-center py-10 text-muted-foreground">
-                                        <p>Belum ada resi yang di-scan.</p>
-                                    </div>
-                                ) : (
-                                    <ul className="space-y-2">
-                                        {recentlyAdded.filter(r => r.channel === selectedChannel).map(item => (
-                                            <li key={item.id} className="flex justify-between items-center bg-secondary/50 p-2 rounded-md text-sm">
-                                                <div>
-                                                    <p className="font-semibold">{item.awb}</p>
-                                                    <p className="text-xs text-muted-foreground">{item.channel}</p>
-                                                </div>
-                                                <p className="text-xs text-muted-foreground">{format(parseISO(item.date), 'HH:mm:ss')}</p>
-                                            </li>
-                                        ))}
-                                    </ul>
-                                )}
-                            </CardContent>
-                        </Card>
-                    </div>
-
-                    <div>
-                        <Card>
-                            <CardHeader>
-                                <CardTitle className="text-base">Tampilan Kamera</CardTitle>
-                            </CardHeader>
-                             <CardContent>
-                                {isCameraOpen ? (
-                                     hasCameraPermission === false ? (
-                                         <div className="aspect-video bg-black text-white flex flex-col items-center justify-center rounded-md">
-                                             <p>Kamera tidak terdeteksi atau izin ditolak.</p>
-                                             <p className="text-xs text-muted-foreground">Pastikan Anda telah memberikan izin kamera di browser.</p>
-                                         </div>
-                                     ) : (
-                                        <div className="aspect-video bg-black rounded-md overflow-hidden">
-                                            <QrScanner
-                                                onDecode={handleDecode}
-                                                onError={(error) => console.log(error?.message)}
-                                                constraints={{ facingMode: 'environment' }}
-                                                containerStyle={{ width: '100%', height: '100%', paddingTop: '0' }}
-                                                videoStyle={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                                            />
-                                        </div>
-                                     )
-                                ) : (
-                                    <div className="aspect-video bg-muted flex items-center justify-center rounded-md">
-                                        <p className="text-muted-foreground">Kamera tidak aktif</p>
-                                    </div>
-                                )}
-                            </CardContent>
-                        </Card>
-                    </div>
-
+                            ) : (
+                                <ul className="space-y-2">
+                                    {recentlyAdded.filter(r => r.channel === selectedChannel).map(item => (
+                                        <li key={item.id} className="flex justify-between items-center bg-secondary/50 p-2 rounded-md text-sm">
+                                            <div>
+                                                <p className="font-semibold">{item.awb}</p>
+                                                <p className="text-xs text-muted-foreground">{item.channel}</p>
+                                            </div>
+                                            <p className="text-xs text-muted-foreground">{format(parseISO(item.date), 'HH:mm:ss')}</p>
+                                        </li>
+                                    ))}
+                                </ul>
+                            )}
+                        </CardContent>
+                    </Card>
                 </div>
             </main>
         </AppLayout>
