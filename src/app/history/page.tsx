@@ -60,13 +60,7 @@ type AggregatedSalesEntry = {
     productCategories: string[];
 };
 
-type BeginningBalanceEntry = {
-    type: 'balance';
-    date: Date;
-    totalStock: number;
-}
-
-type HistoryEntry = AdjustmentEntry | AggregatedSalesEntry | BeginningBalanceEntry;
+type HistoryEntry = AdjustmentEntry | AggregatedSalesEntry;
 
 export default function HistoryPage() {
   const { items, categories, allSales, loading } = useInventory();
@@ -83,48 +77,19 @@ export default function HistoryPage() {
   const [itemsPerPage, setItemsPerPage] = useState(20);
   const [currentPage, setCurrentPage] = useState(1);
   
-  const beginningBalance = useMemo(() => {
-    const beginningOfMonth = startOfMonth(new Date(selectedYear, selectedMonth));
-    let stock = 0;
-    
-    items.forEach(item => {
-        if (categoryFilter && item.category !== categoryFilter) return;
 
-        const processItem = (subItem: InventoryItem | InventoryItemVariant) => {
-            let lastKnownStock = 0;
-            if (subItem.history && subItem.history.length > 0) {
-                 const historyBeforeMonth = subItem.history
-                    .filter(h => new Date(h.date) < beginningOfMonth)
-                    .sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-                
-                if (historyBeforeMonth.length > 0) {
-                     lastKnownStock = historyBeforeMonth[0].newStockLevel;
-                }
-            }
-           
-            stock += lastKnownStock;
-        };
-
-        if (item.variants && item.variants.length > 0) {
-            item.variants.forEach(variant => processItem(variant));
-        } else if (item.stock !== undefined) {
-            processItem(item);
-        }
-    });
-    return stock;
-
-  }, [items, selectedYear, selectedMonth, categoryFilter]);
-
-
-  const allHistoryForMonth = useMemo((): Exclude<HistoryEntry, BeginningBalanceEntry>[] => {
-    const historyList: Exclude<HistoryEntry, BeginningBalanceEntry>[] = [];
+  const allHistoryForMonth = useMemo((): HistoryEntry[] => {
+    const historyList: HistoryEntry[] = [];
+    const dateFilter = new Date(selectedYear, selectedMonth);
+    const startDate = startOfMonth(dateFilter);
+    const endDate = endOfMonth(dateFilter);
 
     // Process Adjustments for the selected month
     items.forEach(item => {
       const processHistory = (history: AdjustmentHistory[], parentItem: InventoryItem, variant?: InventoryItemVariant) => {
         history.forEach(entry => {
             const entryDate = new Date(entry.date);
-            if (entryDate.getFullYear() !== selectedYear || entryDate.getMonth() !== selectedMonth) {
+            if (!isWithinInterval(entryDate, { start: startDate, end: endDate })) {
                 return;
             }
 
@@ -162,7 +127,7 @@ export default function HistoryPage() {
     
     allSales.forEach(sale => {
         const saleDate = parseISO(sale.saleDate);
-         if (saleDate.getFullYear() !== selectedYear || saleDate.getMonth() !== selectedMonth) {
+         if (!isWithinInterval(saleDate, { start: startDate, end: endDate })) {
             return;
         }
 
@@ -243,13 +208,7 @@ export default function HistoryPage() {
   }, [baseFilteredHistory]);
   
   const filteredHistory = useMemo((): HistoryEntry[] => {
-    const balanceEntry: BeginningBalanceEntry = {
-        type: 'balance',
-        date: startOfMonth(new Date(selectedYear, selectedMonth)),
-        totalStock: beginningBalance,
-    };
-    
-    let filtered: Exclude<HistoryEntry, BeginningBalanceEntry>[] = baseFilteredHistory;
+    let filtered: HistoryEntry[] = baseFilteredHistory;
 
     if (adjustmentTypeFilter !== 'all') {
       filtered = baseFilteredHistory.filter(entry => {
@@ -267,14 +226,9 @@ export default function HistoryPage() {
     }
 
     setCurrentPage(1);
-
-    // Only add balance entry if not filtering by in/out and on first page
-    if (adjustmentTypeFilter === 'all') {
-      return [balanceEntry, ...filtered];
-    }
     return filtered;
 
-  }, [baseFilteredHistory, adjustmentTypeFilter, beginningBalance, selectedYear, selectedMonth]);
+  }, [baseFilteredHistory, adjustmentTypeFilter]);
 
   const totalPages = Math.ceil(filteredHistory.length / itemsPerPage);
   
@@ -286,8 +240,6 @@ export default function HistoryPage() {
   const historyTotals = useMemo(() => {
     let totalIn = 0;
     let totalOut = 0;
-    
-    totalIn += beginningBalance;
 
     baseFilteredHistory.forEach(entry => {
         if (entry.type === 'adjustment') {
@@ -303,7 +255,7 @@ export default function HistoryPage() {
     
     const netChange = totalIn - totalOut;
     return { totalIn, totalOut, netChange };
-  }, [baseFilteredHistory, beginningBalance, categoryFilter]);
+  }, [baseFilteredHistory]);
   
   const uniqueCategoriesWithSales = useMemo(() => {
       return [...categories].sort()
@@ -341,18 +293,6 @@ export default function HistoryPage() {
                 `Total ${entry.totalItems} item terjual`,
                 -entry.totalItems,
                 'N/A'
-            ].join(',');
-        }
-        if(entry.type === 'balance') {
-            return [
-                 format(entry.date, 'yyyy-MM-dd HH:mm:ss'),
-                'Saldo Awal Bulan',
-                '',
-                '',
-                '',
-                'Stok dari bulan sebelumnya',
-                '',
-                entry.totalStock
             ].join(',');
         }
 
@@ -516,7 +456,7 @@ export default function HistoryPage() {
                                 <p className="truncate">{entry.reason}</p>
                             </TableCell>
                             </>
-                        ) : entry.type === 'sales' ? (
+                        ) : (
                             <>
                             <TableCell>
                                 <div className="flex items-center gap-4">
@@ -543,30 +483,13 @@ export default function HistoryPage() {
                                 <p className="truncate">Total {entry.totalItems} item terjual dari channel {entry.channel}.</p>
                             </TableCell>
                             </>
-                        ) : ( // Balance entry
-                             <>
-                            <TableCell>
-                                <div className="flex items-center gap-4 font-semibold">
-                                    <div className="flex h-10 w-10 items-center justify-center rounded-sm bg-blue-100">
-                                        <History className="h-5 w-5 text-blue-700" />
-                                    </div>
-                                    <div>Saldo Awal Bulan</div>
-                                </div>
-                            </TableCell>
-                            <TableCell>{format(new Date(entry.date), 'd MMM yyyy')}</TableCell>
-                            <TableCell className="text-center">-</TableCell>
-                            <TableCell className="text-center font-bold">{entry.totalStock}</TableCell>
-                            <TableCell>
-                                <p className="truncate text-muted-foreground">Total stok dari bulan sebelumnya</p>
-                            </TableCell>
-                            </>
                         )}
                         </TableRow>
                     ))
                     ) : (
                     <TableRow className='h-full'>
                         <TableCell colSpan={5} className="h-full text-center">
-                            <div className="flex flex-col items-center justify-center gap-4 text-muted-foreground h-full">
+                            <div className="flex flex-col items-center justify-center gap-4 text-muted-foreground h-full py-24">
                                 <History className="h-16 w-16" />
                                 <div className="text-center">
                                     <p className="font-semibold">Tidak Ada Riwayat</p>
