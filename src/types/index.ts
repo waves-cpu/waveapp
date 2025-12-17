@@ -122,6 +122,7 @@ export interface ShippingReceipt {
     date: string;
     channel: string;
     status: string;
+    transactionId?: string;
 }
 
 export interface BulkImportHistory {

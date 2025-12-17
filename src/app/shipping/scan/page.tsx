@@ -17,6 +17,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { AppLayout } from '@/app/components/app-layout';
 import { SidebarTrigger } from '@/components/ui/sidebar';
+import { RecordSaleForReceiptDialog } from '@/app/components/record-sale-for-receipt-dialog';
 
 type ShippingProvider = 'SPX' | 'J&T' | 'JNE' | 'INSTANT' | 'CARGO';
 
@@ -41,6 +42,9 @@ export default function DesktopScanReceiptPage() {
     const [recentlyAdded, setRecentlyAdded] = useState<ShippingReceipt[]>([]);
     const inputRef = useRef<HTMLInputElement>(null);
     
+    const [receiptForSale, setReceiptForSale] = useState<ShippingReceipt | null>(null);
+    const [isSaleDialogOpen, setIsSaleDialogOpen] = useState(false);
+
     useEffect(() => {
         initializeAudio();
     }, [initializeAudio]);
@@ -56,19 +60,16 @@ export default function DesktopScanReceiptPage() {
     }, [selectedChannel, refocusInput]);
 
     useEffect(() => {
-        // This effect will run whenever isSubmitting changes.
-        // When it changes from true to false, it means the submission is complete.
-        if (!isSubmitting) {
+        if (!isSubmitting && !isSaleDialogOpen) {
             refocusInput();
         }
-    }, [isSubmitting, refocusInput]);
+    }, [isSubmitting, isSaleDialogOpen, refocusInput]);
 
     const handleSubmit = useCallback(async (scannedAwb: string) => {
         const trimmedAwb = scannedAwb.trim();
         if (!trimmedAwb || !selectedChannel) return;
         if (isSubmitting) return;
 
-        // Client-side duplicate check
         const recentDuplicate = recentlyAdded.find(receipt => receipt.awb === trimmedAwb);
         if (recentDuplicate) {
             playErrorSound();
@@ -77,7 +78,7 @@ export default function DesktopScanReceiptPage() {
                 title: 'Resi Duplikat',
                 description: `Resi ini sudah discan pada ${format(parseISO(recentDuplicate.date), 'dd MMM yyyy, HH:mm')}`,
             });
-            setAwb(''); // Clear input for next scan
+            setAwb(''); 
             return;
         }
 
@@ -87,7 +88,8 @@ export default function DesktopScanReceiptPage() {
             awb: trimmedAwb,
             channel: selectedChannel,
             date: format(scanDate, "yyyy-MM-dd'T'HH:mm:ss"),
-            status: 'Perlu Diproses'
+            status: 'Perlu Diproses',
+            transactionId: trimmedAwb
         };
 
         try {
@@ -95,6 +97,8 @@ export default function DesktopScanReceiptPage() {
             playSuccessSound();
             setRecentlyAdded(prev => [added, ...prev].slice(0, 10));
             setAwb('');
+            setReceiptForSale(added);
+            setIsSaleDialogOpen(true);
         } catch (error) {
             playErrorSound();
             let title = 'Input Gagal';
@@ -211,7 +215,7 @@ export default function DesktopScanReceiptPage() {
                                 className="pl-10 text-base h-12"
                                 value={awb}
                                 onChange={(e) => setAwb(e.target.value)}
-                                disabled={isSubmitting}
+                                disabled={isSubmitting || isSaleDialogOpen}
                                 autoFocus
                             />
                         </div>
@@ -243,6 +247,11 @@ export default function DesktopScanReceiptPage() {
                     </Card>
                 </div>
             </main>
+            <RecordSaleForReceiptDialog
+                open={isSaleDialogOpen}
+                onOpenChange={setIsSaleDialogOpen}
+                receipt={receiptForSale}
+            />
         </AppLayout>
     );
 }
