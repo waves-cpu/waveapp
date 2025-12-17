@@ -80,11 +80,17 @@ const ReturnProductDialog = ({
     onOpenChange,
     onProcessReturn,
     receipt,
+    dialogTitle,
+    dialogDescription,
+    submitText,
 }: {
     open: boolean;
     onOpenChange: (open: boolean) => void;
     onProcessReturn: (transactionId: string, items: ReturnedItem[]) => Promise<void>;
     receipt: ShippingReceipt | null;
+    dialogTitle: string;
+    dialogDescription: string;
+    submitText: string;
 }) => {
     const { getProductBySku } = useInventory();
     const [searchTerm, setSearchTerm] = useState('');
@@ -196,9 +202,9 @@ const ReturnProductDialog = ({
             <Dialog open={open} onOpenChange={onOpenChange}>
                 <DialogContent className="sm:max-w-xl">
                     <DialogHeader>
-                        <DialogTitle>Proses Barang Return</DialogTitle>
+                        <DialogTitle>{dialogTitle}</DialogTitle>
                         <DialogDescription>
-                            Resi: <span className="font-semibold">{receipt?.awb}</span>
+                            {dialogDescription}: <span className="font-semibold">{receipt?.awb}</span>
                         </DialogDescription>
                     </DialogHeader>
                     <div className="space-y-4">
@@ -266,7 +272,7 @@ const ReturnProductDialog = ({
                     <DialogFooter>
                         <Button variant="ghost" onClick={() => onOpenChange(false)}>Batal</Button>
                         <Button onClick={handleFinalizeReturn} disabled={returnedItems.length === 0 || isSubmitting}>
-                            {isSubmitting ? 'Memproses...' : 'Proses Pengembalian'}
+                            {isSubmitting ? 'Memproses...' : submitText}
                         </Button>
                     </DialogFooter>
                 </DialogContent>
@@ -400,12 +406,12 @@ export default function ReturnPage() {
         }
     };
 
-    const handleReturnReceived = (receipt: ShippingReceipt) => {
+    const handleActionClick = (receipt: ShippingReceipt) => {
         if (!receipt.transactionId) {
             toast({
                 variant: 'destructive',
                 title: 'Transaksi Tidak Tertaut',
-                description: 'Resi ini tidak terhubung ke transaksi penjualan. Tidak dapat memproses return otomatis.'
+                description: 'Resi ini tidak terhubung ke transaksi penjualan. Tidak dapat memproses secara otomatis.'
             });
             return;
         }
@@ -422,7 +428,8 @@ export default function ReturnPage() {
             }
             
             if (selectedReceipt) {
-                await handleChangeStatus(selectedReceipt.id, 'Return Selesai');
+                const finalStatus = selectedReceipt.status === 'Dibatalkan' ? 'Selesai' : 'Return Selesai';
+                await handleChangeStatus(selectedReceipt.id, finalStatus);
             }
 
             toast({ title: t.stockReturnedSuccess, description: `${returnedItems.reduce((acc, item) => acc + item.quantity, 0)} item telah dikembalikan ke stok.` });
@@ -572,7 +579,19 @@ export default function ReturnPage() {
                                                 <Badge variant={getStatusVariant(item.status)}>{item.status}</Badge>
                                             </TableCell>
                                             <TableCell className="text-center">
-                                                {item.status === 'Return Selesai' ? (
+                                                {item.status === 'Return' && (
+                                                    <Button variant="outline" size="sm" onClick={() => handleActionClick(item)}>
+                                                        <CheckCircle className="mr-2 h-3 w-3 text-green-500" />
+                                                        {t.actions.itemArrived}
+                                                    </Button>
+                                                )}
+                                                {item.status === 'Dibatalkan' && (
+                                                    <Button variant="outline" size="sm" onClick={() => handleActionClick(item)}>
+                                                        <Undo2 className="mr-2 h-3 w-3" />
+                                                        Proses Pembatalan
+                                                    </Button>
+                                                )}
+                                                {item.status === 'Return Selesai' && (
                                                      <AlertDialog>
                                                         <AlertDialogTrigger asChild>
                                                              <Button variant="ghost" size="icon" className="text-destructive h-8 w-8" onClick={(e) => { e.stopPropagation(); setReceiptToDelete(item); }}>
@@ -594,52 +613,6 @@ export default function ReturnPage() {
                                                             </AlertDialogFooter>
                                                         </AlertDialogContent>
                                                     </AlertDialog>
-                                                ) : (
-                                                    <DropdownMenu>
-                                                        <DropdownMenuTrigger asChild>
-                                                            <Button variant="outline" size="sm">
-                                                                <Undo2 className="mr-2 h-3 w-3" />
-                                                                {t.actions.process}
-                                                            </Button>
-                                                        </DropdownMenuTrigger>
-                                                        <DropdownMenuContent>
-                                                            <DropdownMenuItem onClick={() => handleReturnReceived(item)} disabled={item.status === 'Return Selesai'}>
-                                                                <CheckCircle className="mr-2 h-4 w-4 text-green-500" />
-                                                                <span>{t.actions.itemArrived}</span>
-                                                            </DropdownMenuItem>
-                                                            <DropdownMenuItem onClick={() => handleChangeStatus(item.id, 'Diantar')} disabled={item.status === 'Diantar' || item.status === 'Return Selesai'}>
-                                                                <Truck className="mr-2 h-4 w-4" />
-                                                                <span>{t.actions.itemInTransit}</span>
-                                                            </DropdownMenuItem>
-                                                            <DropdownMenuItem onClick={() => handleChangeStatus(item.id, 'Tidak Sampai')} className="text-destructive" disabled={item.status === 'Return Selesai'}>
-                                                                <XCircle className="mr-2 h-4 w-4" />
-                                                                <span>{t.actions.itemNotArrived}</span>
-                                                            </DropdownMenuItem>
-                                                            <DropdownMenuSeparator />
-                                                            <AlertDialog>
-                                                                <AlertDialogTrigger asChild>
-                                                                    <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-destructive">
-                                                                        <Trash2 className="mr-2 h-4 w-4" />
-                                                                        <span>{t.actions.delete}</span>
-                                                                    </DropdownMenuItem>
-                                                                </AlertDialogTrigger>
-                                                                <AlertDialogContent>
-                                                                    <AlertDialogHeader>
-                                                                        <AlertDialogTitle>{t.deleteConfirmTitle}</AlertDialogTitle>
-                                                                        <AlertDialogDescription>
-                                                                            {t.deleteConfirmDesc.replace('{awb}', item.awb)}
-                                                                        </AlertDialogDescription>
-                                                                    </AlertDialogHeader>
-                                                                    <AlertDialogFooter>
-                                                                        <AlertDialogCancel onClick={() => setReceiptToDelete(null)}>{tCommon.cancel}</AlertDialogCancel>
-                                                                        <AlertDialogAction onClick={() => { setReceiptToDelete(item); handleDelete(); }} className="bg-destructive hover:bg-destructive/90">
-                                                                            {t.deleteConfirmAction}
-                                                                        </AlertDialogAction>
-                                                                    </AlertDialogFooter>
-                                                                </AlertDialogContent>
-                                                            </AlertDialog>
-                                                        </DropdownMenuContent>
-                                                    </DropdownMenu>
                                                 )}
                                             </TableCell>
                                         </TableRow>
@@ -674,6 +647,9 @@ export default function ReturnPage() {
                 onOpenChange={setIsProductSelectionDialogOpen}
                 onProcessReturn={handleProcessReturn}
                 receipt={selectedReceipt}
+                dialogTitle={selectedReceipt?.status === 'Dibatalkan' ? 'Proses Pembatalan' : 'Proses Barang Return'}
+                dialogDescription={selectedReceipt?.status === 'Dibatalkan' ? 'Scan atau pilih produk yang stoknya dikembalikan karena pembatalan' : 'Scan atau pilih produk yang telah kembali ke gudang'}
+                submitText={selectedReceipt?.status === 'Dibatalkan' ? 'Proses Pembatalan' : 'Proses Pengembalian'}
             />
         </AppLayout>
     );
