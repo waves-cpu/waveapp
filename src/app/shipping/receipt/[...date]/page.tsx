@@ -278,6 +278,12 @@ export default function ReceiptPage() {
                             />
                             </PopoverContent>
                         </Popover>
+                         <Button size="sm" asChild>
+                             <Link href="/shipping/scan">
+                                <ScanLine className="mr-2 h-4 w-4" />
+                                Scan Resi
+                             </Link>
+                         </Button>
                          <Button size="sm" onClick={handleProcessShipment} disabled={selectedIds.size === 0 || isProcessing}>
                             <Send className="mr-2 h-4 w-4" />
                             {isProcessing ? t.processing : `${t.processSelected} (${selectedIds.size})`}
