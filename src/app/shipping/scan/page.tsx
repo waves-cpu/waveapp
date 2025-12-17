@@ -55,6 +55,14 @@ export default function DesktopScanReceiptPage() {
         }
     }, [selectedChannel, refocusInput]);
 
+    useEffect(() => {
+        // This effect will run whenever isSubmitting changes.
+        // When it changes from true to false, it means the submission is complete.
+        if (!isSubmitting) {
+            refocusInput();
+        }
+    }, [isSubmitting, refocusInput]);
+
     const handleSubmit = useCallback(async (scannedAwb: string) => {
         const trimmedAwb = scannedAwb.trim();
         if (!trimmedAwb || !selectedChannel) return;
@@ -70,7 +78,6 @@ export default function DesktopScanReceiptPage() {
                 description: `Resi ini sudah discan pada ${format(parseISO(recentDuplicate.date), 'dd MMM yyyy, HH:mm')}`,
             });
             setAwb(''); // Clear input for next scan
-            refocusInput();
             return;
         }
 
@@ -108,9 +115,8 @@ export default function DesktopScanReceiptPage() {
             });
         } finally {
             setIsSubmitting(false);
-            refocusInput();
         }
-    }, [isSubmitting, selectedChannel, scanDate, addShippingReceipt, playSuccessSound, playErrorSound, toast, recentlyAdded, refocusInput]);
+    }, [isSubmitting, selectedChannel, scanDate, addShippingReceipt, playSuccessSound, playErrorSound, toast, recentlyAdded]);
 
 
     const handleFormSubmit = async (e: React.FormEvent) => {
