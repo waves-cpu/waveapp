@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
@@ -36,6 +35,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
+  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Skeleton } from '@/components/ui/skeleton';
 import { AppLayout } from '@/app/components/app-layout';
@@ -379,6 +379,7 @@ export default function LazadaSalesPage() {
         onOpenChange={(isOpen) => {
             setIsSaleDialogOpen(isOpen);
             if (!isOpen) {
+                // Refresh data when sale dialog is closed
                 loadReceipts(currentDate);
             }
         }}
