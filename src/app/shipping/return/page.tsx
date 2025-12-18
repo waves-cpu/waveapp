@@ -44,6 +44,7 @@ import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useScanSounds } from '@/hooks/use-scan-sounds';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { translations } from '@/types/language';
 
 
 const getStatusVariant = (status: string) => {
