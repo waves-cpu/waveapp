@@ -13,16 +13,23 @@ const dbPath = path.join(dbDir, 'waves.db');
 
 let db: Database.Database;
 
-try {
-    db = new Database(dbPath);
-    db.pragma('journal_mode = WAL');
-} catch (error) {
-    console.error('Failed to open database, possibly corrupt. Deleting and recreating.', error);
-    if (fs.existsSync(dbPath)) {
-        fs.unlinkSync(dbPath);
-    }
-    db = new Database(dbPath);
-    db.pragma('journal_mode = WAL');
+function initializeDatabase() {
+  try {
+      db = new Database(dbPath);
+      db.pragma('journal_mode = WAL');
+      runMigrations();
+      seedData();
+  } catch (error) {
+      console.error('Failed to open database, possibly corrupt. Deleting and recreating.', error);
+      if (fs.existsSync(dbPath)) {
+          fs.unlinkSync(dbPath);
+      }
+      db = new Database(dbPath);
+      db.pragma('journal_mode = WAL');
+      createSchema();
+      runMigrations();
+      seedData();
+  }
 }
 
 
@@ -302,9 +309,6 @@ const createSchema = () => {
   `);
 };
 
-createSchema();
-runMigrations();
-
 
 const seedData = () => {
     try {
@@ -338,8 +342,54 @@ const seedData = () => {
     }
 };
 
-seedData();
+// Initialize the database connection when the module is loaded
+initializeDatabase();
+createSchema();
 
-export { db };
+function getDb() {
+  if (!db) {
+    initializeDatabase();
+  }
+  return db;
+}
 
-    
+function executeQuery<T>(query: (db: Database.Database) => T): T {
+  try {
+    return query(getDb());
+  } catch (e: any) {
+    if (e.code === 'SQLITE_CORRUPT' || e.message.includes('malformed')) {
+      console.error('Database corruption detected on query. Re-initializing database.');
+      if (db) {
+        db.close();
+      }
+      if (fs.existsSync(dbPath)) {
+        fs.unlinkSync(dbPath);
+      }
+      initializeDatabase();
+      // Retry the query one more time
+      return query(getDb());
+    } else {
+      throw e;
+    }
+  }
+}
+
+export const dbProxy = {
+  prepare: (sql: string) => {
+    const stmt = executeQuery(db => db.prepare(sql));
+    return {
+      run: (...params: any[]) => executeQuery(() => stmt.run(...params)),
+      get: (...params: any[]) => executeQuery(() => stmt.get(...params)),
+      all: (...params: any[]) => executeQuery(() => stmt.all(...params)),
+    };
+  },
+  exec: (sql: string) => executeQuery(db => db.exec(sql)),
+  transaction: (fn: (...args: any[]) => any) => {
+    const transactionalFn = executeQuery(db => db.transaction(fn));
+    return (...args: any[]) => executeQuery(() => transactionalFn(...args));
+  },
+  pragma: (sql: string) => executeQuery(db => db.pragma(sql)),
+};
+
+// Replace direct 'db' export with the proxy
+export { dbProxy as db };

@@ -2,7 +2,8 @@
 
 'use server';
 
-import { db } from './db';
+import { db as dbProxy } from './db';
+const db = dbProxy;
 import type { InventoryItem, AdjustmentHistory, InventoryItemVariant, Sale, Reseller, ChannelPrice, Accessory, ShippingReceipt, BulkImportHistory, User } from '@/types';
 import { format as formatDate, parseISO, startOfDay, endOfDay } from 'date-fns';
 
@@ -1190,6 +1191,7 @@ export async function deleteProductPermanently(itemId: string) {
     
 
     
+
 
 
 
