@@ -51,7 +51,7 @@ export default function ShopeeChannelPage() {
   const params = useParams();
 
   const salesChannel = "Shopee";
-  const shippingChannel = typeof params.channel === 'string' ? params.channel.toUpperCase() : '';
+  const shippingChannel = typeof params.channel === 'string' ? decodeURIComponent(params.channel).toUpperCase() : '';
 
   const [receipts, setReceipts] = useState<ShippingReceipt[]>([]);
   const [totalReceipts, setTotalReceipts] = useState(0);
