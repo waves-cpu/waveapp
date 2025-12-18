@@ -105,8 +105,8 @@ export async function fetchShippingReceipts(options: {
     const offset = (page - 1) * limit;
 
     let whereClauses: string[] = [];
-    let params: any = {};
-    
+    const params: any = {};
+
     if (awb) {
         whereClauses.push("awb LIKE @awb");
         params.awb = `%${awb}%`;
@@ -127,7 +127,7 @@ export async function fetchShippingReceipts(options: {
         params.salesChannel = salesChannel;
     }
     
-    if (channel && channel !== 'all') {
+    if (channel) {
         whereClauses.push("channel = @channel");
         params.channel = channel;
     }
@@ -152,7 +152,8 @@ export async function fetchShippingReceipts(options: {
         LIMIT @limit OFFSET @offset
     `);
     
-    const receipts = dataQuery.all({ ...params, limit, offset }) as any[];
+    const queryParams = { ...params, limit, offset };
+    const receipts = dataQuery.all(queryParams) as any[];
     
     return { receipts, total };
 }
@@ -1192,6 +1193,7 @@ export async function deleteProductPermanently(itemId: string) {
     
 
     
+
 
 
 

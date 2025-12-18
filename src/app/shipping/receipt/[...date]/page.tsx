@@ -112,10 +112,15 @@ export default function ReceiptPage() {
             const searchOptions: any = {
                 page: currentPage,
                 limit: itemsPerPage,
-                salesChannel: activeSalesChannelTab ?? undefined,
-                channel: activeShippingTab ?? undefined,
                 awb: searchTerm,
             };
+
+            if (activeSalesChannelTab) {
+                searchOptions.salesChannel = activeSalesChannelTab;
+            }
+            if (activeShippingTab) {
+                searchOptions.channel = activeShippingTab;
+            }
 
             // Only add dateString if not searching by AWB
             if (!searchTerm) {
