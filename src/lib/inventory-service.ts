@@ -1,4 +1,5 @@
 
+
 'use server';
 
 import { db } from './db';
@@ -96,7 +97,7 @@ export async function fetchShippingReceipts(options: {
     limit: number;
     salesChannel?: string;
     channel?: string;
-    date_range?: { from: Date, to: Date };
+    date_range?: { from: Date; to: Date };
     status?: string[];
     awb?: string;
 }): Promise<{ receipts: ShippingReceipt[]; total: number }> {
@@ -106,29 +107,30 @@ export async function fetchShippingReceipts(options: {
     let whereClauses: string[] = [];
     const params: any = {};
 
+    // IMPORTANT LOGIC FIX: AWB search should be exclusive of other filters if provided.
+    // If not, apply all other filters.
     if (awb) {
         whereClauses.push("awb LIKE @awb");
         params.awb = `%${awb}%`;
     } else {
-        if (date_range) {
-            whereClauses.push("date >= @from AND date <= @to");
-            params.from = date_range.from.toISOString();
-            params.to = endOfDay(date_range.to).toISOString();
-        }
-
         if (salesChannel) {
             whereClauses.push("salesChannel = @salesChannel");
             params.salesChannel = salesChannel;
         }
-
         if (channel) {
             whereClauses.push("channel = @channel");
             params.channel = channel;
         }
+        if (date_range?.from) {
+            whereClauses.push("date >= @from AND date <= @to");
+            params.from = date_range.from.toISOString();
+            params.to = endOfDay(date_range.to).toISOString();
+        }
     }
-    
+
     if (status && status.length > 0) {
-        whereClauses.push(`status IN (${status.map((_, i) => `@status${i}`).join(',')})`);
+        const statusPlaceholders = status.map((s, i) => `@status${i}`);
+        whereClauses.push(`status IN (${statusPlaceholders.join(',')})`);
         status.forEach((s, i) => {
             params[`status${i}`] = s;
         });
@@ -1188,6 +1190,7 @@ export async function deleteProductPermanently(itemId: string) {
     
 
     
+
 
 
 
