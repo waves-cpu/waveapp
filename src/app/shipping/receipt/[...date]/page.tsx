@@ -35,6 +35,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
+  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -141,8 +142,11 @@ export default function ReceiptPage() {
 
     useEffect(() => {
         fetchReceipts();
+    }, [fetchReceipts]);
+
+    useEffect(() => {
         fetchCounts();
-    }, [fetchReceipts, fetchCounts]);
+    }, [fetchCounts]);
 
     useEffect(() => {
         setCurrentPage(1);
