@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
@@ -19,20 +20,13 @@ import {
 import { Undo2, Truck, CheckCircle, XCircle, Package, Trash2, Search, FileDown } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { useInventory } from '@/hooks/use-inventory';
-import type { ShippingReceipt, InventoryItem, InventoryItemVariant } from '@/types';
+import type { ShippingReceipt, InventoryItem, InventoryItemVariant, Sale } from '@/types';
 import { format, startOfMonth, endOfMonth, parseISO } from 'date-fns';
 import { id as localeId } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
 import { Pagination } from '@/components/ui/pagination';
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-  DropdownMenuSeparator,
-} from "@/components/ui/dropdown-menu";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -44,9 +38,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { VariantSelectionDialog } from '@/app/components/variant-selection-dialog';
 import { useLanguage } from '@/hooks/use-language';
-import { translations } from '@/types/language';
 import { Dialog, DialogHeader, DialogTitle, DialogContent, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -91,83 +83,37 @@ const ReturnProductDialog = ({
     dialogDescription: string;
     submitText: string;
 }) => {
-    const { getProductBySku } = useInventory();
-    const [searchTerm, setSearchTerm] = useState('');
+    const { getProductBySku, allSales } = useInventory();
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [productForVariantSelection, setProductForVariantSelection] = useState<InventoryItem | null>(null);
     const [returnedItems, setReturnedItems] = useState<ReturnedItem[]>([]);
     const { playSuccessSound, playErrorSound } = useScanSounds();
     const { toast } = useToast();
-    const inputRef = React.useRef<HTMLInputElement>(null);
-
+    
     useEffect(() => {
         if (!open) {
-            setSearchTerm('');
             setReturnedItems([]);
             setIsSubmitting(false);
-        } else {
-             setTimeout(() => inputRef.current?.focus(), 100);
+        } else if (receipt?.transactionId) {
+            // Pre-populate items from the original sale
+            const originalSaleItems = allSales.filter(s => s.transactionId === receipt.transactionId);
+            const itemsToReturn: ReturnedItem[] = [];
+            
+            originalSaleItems.forEach(saleItem => {
+                const sku = saleItem.sku;
+                if(sku) {
+                    const name = saleItem.variantName ? `${saleItem.productName} - ${saleItem.variantName}` : saleItem.productName;
+                    const existing = itemsToReturn.find(i => i.sku === sku);
+                    if(existing) {
+                        existing.quantity += saleItem.quantity;
+                    } else {
+                        itemsToReturn.push({ sku, name, quantity: saleItem.quantity });
+                    }
+                }
+            });
+            setReturnedItems(itemsToReturn);
         }
-    }, [open]);
+    }, [open, receipt, allSales]);
 
-    const addOrUpdateReturnedItem = (variant: InventoryItemVariant, parentName?: string) => {
-        if (!variant.sku) {
-            playErrorSound();
-            toast({ variant: "destructive", title: "SKU Tidak Ada", description: "Varian ini tidak memiliki SKU." });
-            return;
-        }
-
-        setReturnedItems(prevItems => {
-            const existingItem = prevItems.find(item => item.sku === variant.sku);
-            if (existingItem) {
-                return prevItems.map(item =>
-                    item.sku === variant.sku ? { ...item, quantity: item.quantity + 1 } : item
-                );
-            }
-            return [...prevItems, { sku: variant.sku!, name: `${parentName} - ${variant.name}`, quantity: 1 }];
-        });
-        playSuccessSound();
-        setSearchTerm('');
-    };
-    
-    const handleSearch = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!searchTerm) return;
-
-        const product = await getProductBySku(searchTerm);
-        if (product) {
-            if (product.variants && product.variants.length > 1) {
-                setProductForVariantSelection(product);
-            } else if (product.variants && product.variants.length === 1) {
-                addOrUpdateReturnedItem(product.variants[0], product.name);
-            } else if (product.sku) { // Simple product
-                setReturnedItems(prev => {
-                     const existing = prev.find(item => item.sku === product.sku);
-                     if (existing) {
-                         return prev.map(item => item.sku === product.sku ? {...item, quantity: item.quantity + 1} : item);
-                     }
-                     return [...prev, { sku: product.sku!, name: product.name, quantity: 1 }];
-                });
-                playSuccessSound();
-                setSearchTerm('');
-            } else {
-                 playErrorSound();
-                 toast({ variant: "destructive", title: "Produk Tidak Valid", description: "Produk ini tidak memiliki SKU." });
-            }
-        } else {
-            playErrorSound();
-            toast({ variant: "destructive", title: "Produk Tidak Ditemukan" });
-        }
-        inputRef.current?.focus();
-    };
-
-    const handleVariantSelectFromDialog = (variant: InventoryItemVariant | null) => {
-        if (variant && productForVariantSelection) {
-            addOrUpdateReturnedItem(variant, productForVariantSelection.name);
-        }
-        setProductForVariantSelection(null);
-        inputRef.current?.focus();
-    }
     
     const updateQuantity = (sku: string, newQuantity: number) => {
         setReturnedItems(prevItems => {
@@ -207,19 +153,9 @@ const ReturnProductDialog = ({
                         </DialogDescription>
                     </DialogHeader>
                     <div className="space-y-4">
-                        <form onSubmit={handleSearch}>
-                             <div className="relative">
-                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                <Input
-                                    ref={inputRef}
-                                    placeholder="Masukkan SKU atau Nama Produk, lalu Enter..."
-                                    value={searchTerm}
-                                    onChange={(e) => setSearchTerm(e.target.value)}
-                                    className="pl-10"
-                                />
-                             </div>
-                        </form>
-                        
+                        <p className="text-sm text-muted-foreground">
+                            Berikut adalah daftar produk dari transaksi asli. Sesuaikan jumlah jika tidak semua barang dikembalikan.
+                        </p>
                          <Card>
                             <CardContent className="p-0">
                                 <ScrollArea className="h-64 border rounded-md">
@@ -257,7 +193,7 @@ const ReturnProductDialog = ({
                                             )) : (
                                                 <TableRow>
                                                     <TableCell colSpan={3} className="h-40 text-center text-muted-foreground">
-                                                        Belum ada produk ditambahkan.
+                                                        Tidak ada produk yang tercatat pada transaksi ini.
                                                     </TableCell>
                                                 </TableRow>
                                             )}
@@ -276,16 +212,6 @@ const ReturnProductDialog = ({
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
-            {productForVariantSelection && (
-                 <VariantSelectionDialog
-                    open={!!productForVariantSelection}
-                    onOpenChange={(isOpen) => !isOpen && setProductForVariantSelection(null)}
-                    item={productForVariantSelection}
-                    onSelect={handleVariantSelectFromDialog}
-                    cart={[]}
-                    ignoreStockCheck={true}
-                />
-            )}
         </>
     );
 };
