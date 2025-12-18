@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
@@ -29,7 +28,6 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Skeleton } from '@/components/ui/skeleton';
 import { AppLayout } from '@/app/components/app-layout';
@@ -44,7 +42,7 @@ import { RecordSaleForReceiptDialog } from '@/app/components/record-sale-for-rec
 export default function TiktokChannelPage() {
   const { language } = useLanguage();
   const t = translations[language];
-  const { addShippingReceipt, deleteShippingReceipt, fetchShippingReceipts, allSales } = useInventory();
+  const { addShippingReceipt, deleteShippingReceipt, fetchShippingReceipts, allSales, fetchItems } = useInventory();
   const { toast } = useToast();
   const { playSuccessSound, playErrorSound } = useScanSounds();
   const router = useRouter();
@@ -71,7 +69,7 @@ export default function TiktokChannelPage() {
 
   const refocusInput = useCallback(() => {
     if (!isSaleDialogOpen) {
-      setTimeout(() => awbInputRef.current?.focus(), 0);
+      setTimeout(() => awbInputRef.current?.focus(), 100);
     }
   }, [isSaleDialogOpen]);
 
@@ -81,7 +79,7 @@ export default function TiktokChannelPage() {
       const { receipts: receiptsData, total } = await fetchShippingReceipts({ 
           page: currentPage, 
           limit: itemsPerPage, 
-          channel: shippingChannel,
+          channel: shippingChannel, 
           awb: searchTerm,
           dateString: format(new Date(), 'yyyy-MM-dd')
       });
@@ -102,10 +100,14 @@ export default function TiktokChannelPage() {
   useEffect(() => {
     loadReceipts();
   }, [loadReceipts]);
+
+  useEffect(() => {
+    fetchItems(); // Ensure items are fresh for the sale dialog
+  }, [fetchItems]);
   
   useEffect(() => {
     refocusInput();
-  }, [refocusInput, receipts]);
+  }, [refocusInput, receipts, isSaleDialogOpen]);
 
 
   const salesByReceipt = useMemo(() => {
@@ -139,11 +141,10 @@ export default function TiktokChannelPage() {
     try {
         const added = await addShippingReceipt(newReceipt);
         playSuccessSound();
-        setReceipts(prev => [added, ...prev]);
-        setTotalReceipts(prev => prev + 1);
         setAwb('');
         setReceiptForSale(added);
         setIsSaleDialogOpen(true);
+        // We will reload receipts when the dialog closes to reflect new state
     } catch (error) {
         playErrorSound();
         let title = 'Input Gagal';
@@ -172,14 +173,16 @@ export default function TiktokChannelPage() {
     }
   };
   
-  const handleViewDetails = (transactionId?: string) => {
-    if (!transactionId) return;
-    const items = salesByReceipt.get(transactionId) || [];
+  const handleViewDetails = (receipt: ShippingReceipt) => {
+    if (!receipt.transactionId) return;
+    const items = salesByReceipt.get(receipt.transactionId) || [];
     if (items.length > 0) {
         setDetailItems(items);
         setIsDetailOpen(true);
     } else {
-        toast({ title: "Tidak Ada Detail", description: "Belum ada produk yang tercatat untuk resi ini." });
+        // If no sales recorded, open the sale recording dialog
+        setReceiptForSale(receipt);
+        setIsSaleDialogOpen(true);
     }
   }
   
@@ -255,9 +258,9 @@ export default function TiktokChannelPage() {
                         <TableRow key={receipt.id}>
                           <TableCell>{format(new Date(receipt.date), 'HH:mm:ss')}</TableCell>
                           <TableCell className="font-medium">{receipt.awb}</TableCell>
-                          <TableCell>
-                            <Button variant="link" size="sm" className="h-auto p-0 text-xs" onClick={() => handleViewDetails(receipt.transactionId)}>
-                                {relatedSales.length > 0 ? `${relatedSales.reduce((acc, s) => acc + s.quantity, 0)} produk` : 'Lihat Detail'}
+                           <TableCell>
+                            <Button variant="link" size="sm" className="h-auto p-0 text-xs" onClick={() => handleViewDetails(receipt)}>
+                                {relatedSales.length > 0 ? `${relatedSales.reduce((acc, s) => acc + s.quantity, 0)} produk` : 'Catat Produk'}
                                 <Eye className="ml-2 h-3 w-3" />
                             </Button>
                           </TableCell>
@@ -322,9 +325,15 @@ export default function TiktokChannelPage() {
           onOpenChange={setIsDetailOpen}
           sales={detailItems}
       />
-      <RecordSaleForReceiptDialog
+       <RecordSaleForReceiptDialog
         open={isSaleDialogOpen}
-        onOpenChange={setIsSaleDialogOpen}
+        onOpenChange={(isOpen) => {
+          setIsSaleDialogOpen(isOpen);
+          if (!isOpen) {
+            setReceiptForSale(null);
+            loadReceipts(); // Refresh the list after closing
+          }
+        }}
         receipt={receiptForSale}
       />
     </AppLayout>
