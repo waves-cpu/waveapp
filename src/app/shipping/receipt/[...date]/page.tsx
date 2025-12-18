@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
@@ -82,7 +83,7 @@ export default function ReceiptPage() {
     const params = useParams();
     const searchParams = useSearchParams();
 
-    const [activeShippingTab, setActiveShippingTab] = useState<ShippingProvider | null>(null);
+    const [activeShippingTab, setActiveShippingTab] = useState<string | null>(null);
     const [activeSalesChannelTab, setActiveSalesChannelTab] = useState<string | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [isDatePickerOpen, setDatePickerOpen] = useState(false);
@@ -100,9 +101,7 @@ export default function ReceiptPage() {
     
     useEffect(() => {
         const shippingChannel = searchParams.get('channel');
-        if (shippingChannel && ['SPX', 'J&T', 'JNE', 'INSTANT', 'CARGO'].includes(shippingChannel)) {
-            setActiveShippingTab(shippingChannel as ShippingProvider);
-        }
+        setActiveShippingTab(shippingChannel);
     }, [searchParams]);
 
     const fetchReceipts = useCallback(async () => {
@@ -112,20 +111,11 @@ export default function ReceiptPage() {
             const searchOptions: any = {
                 page: currentPage,
                 limit: itemsPerPage,
-                awb: searchTerm,
+                awb: searchTerm || undefined,
+                dateString: searchTerm ? undefined : dateString,
+                salesChannel: activeSalesChannelTab || undefined,
+                channel: activeShippingTab || undefined,
             };
-
-            if (activeSalesChannelTab) {
-                searchOptions.salesChannel = activeSalesChannelTab;
-            }
-            if (activeShippingTab) {
-                searchOptions.channel = activeShippingTab;
-            }
-
-            // Only add dateString if not searching by AWB
-            if (!searchTerm) {
-                searchOptions.dateString = dateString;
-            }
 
             const { receipts, total } = await fetchShippingReceipts(searchOptions);
             setReceipts(receipts);
@@ -155,7 +145,7 @@ export default function ReceiptPage() {
 
     useEffect(() => {
         fetchCounts();
-    }, [currentDate, fetchReceipts]);
+    }, [currentDate, fetchReceipts, fetchCounts]);
     
     // Clear selection when filters change
     useEffect(() => {
@@ -215,7 +205,7 @@ export default function ReceiptPage() {
         }
     };
     
-    const handleShippingTabChange = (tab: ShippingProvider | null) => {
+    const handleShippingTabChange = (tab: string | null) => {
         setActiveShippingTab(tab);
         setCurrentPage(1);
     };
@@ -511,3 +501,4 @@ export default function ReceiptPage() {
         </AppLayout>
     );
 }
+
