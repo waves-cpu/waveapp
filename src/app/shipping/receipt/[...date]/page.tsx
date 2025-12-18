@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
@@ -10,9 +11,9 @@ import { Calendar as CalendarIcon, FileDown, Trash2, Truck, ScanLine, Search, Se
 import { Badge } from '@/components/ui/badge';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-import { format, parse, isValid } from 'date-fns';
+import { format, parse, isValid, endOfDay } from 'date-fns';
 import { cn } from '@/lib/utils';
-import { fetchShippingReceipts, deleteShippingReceipt, updateShippingReceiptsStatus, updateShippingReceiptStatus, fetchShippingReceiptCountsByChannel } from '@/lib/inventory-service';
+import { useInventory } from '@/hooks/use-inventory';
 import type { ShippingReceipt } from '@/types';
 import { Pagination } from '@/components/ui/pagination';
 import { useToast } from '@/hooks/use-toast';
@@ -34,7 +35,6 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -79,7 +79,8 @@ export default function ReceiptPage() {
     const tCommon = translations[language].common;
     const router = useRouter();
     const params = useParams();
-    const searchParams = useSearchParams();
+    
+    const { fetchShippingReceipts, deleteShippingReceipt, updateShippingReceiptsStatus, updateShippingReceiptStatus, fetchShippingReceiptCountsByChannel } = useInventory();
 
     const [activeShippingTab, setActiveShippingTab] = useState<string | null>(null);
     const [activeSalesChannelTab, setActiveSalesChannelTab] = useState<string | null>(null);
@@ -97,23 +98,24 @@ export default function ReceiptPage() {
 
     const currentDate = useMemo(() => parseDateFromParams(Array.isArray(params.date) ? params.date : undefined), [params.date]);
     
-    useEffect(() => {
-        const shippingChannel = searchParams.get('channel');
-        setActiveShippingTab(shippingChannel);
-    }, [searchParams]);
-
     const fetchReceipts = useCallback(async () => {
         setLoading(true);
         try {
-            const dateString = format(currentDate, 'yyyy-MM-dd');
             const searchOptions: any = {
                 page: currentPage,
                 limit: itemsPerPage,
                 awb: searchTerm || undefined,
-                dateString: searchTerm ? undefined : dateString,
                 salesChannel: activeSalesChannelTab || undefined,
                 channel: activeShippingTab || undefined,
             };
+
+            // Only add date if there is no AWB search term
+            if (!searchTerm) {
+                searchOptions.date_range = {
+                    from: currentDate,
+                    to: endOfDay(currentDate),
+                };
+            }
 
             const { receipts, total } = await fetchShippingReceipts(searchOptions);
             setReceipts(receipts);
@@ -124,7 +126,7 @@ export default function ReceiptPage() {
         } finally {
             setLoading(false);
         }
-    }, [currentPage, itemsPerPage, activeShippingTab, activeSalesChannelTab, currentDate, searchTerm, toast, t.fetchError]);
+    }, [currentPage, itemsPerPage, activeShippingTab, activeSalesChannelTab, currentDate, searchTerm, fetchShippingReceipts, toast, t.fetchError]);
     
     const fetchCounts = useCallback(async () => {
         try {
@@ -134,16 +136,17 @@ export default function ReceiptPage() {
         } catch (error) {
              console.error("Failed to fetch channel counts:", error);
         }
-    }, [currentDate]);
+    }, [currentDate, fetchShippingReceiptCountsByChannel]);
 
 
     useEffect(() => {
         fetchReceipts();
-    }, [fetchReceipts]);
+        fetchCounts();
+    }, [fetchReceipts, fetchCounts]);
 
     useEffect(() => {
-        fetchCounts();
-    }, [currentDate, fetchReceipts, fetchCounts]);
+        setCurrentPage(1);
+    }, [activeShippingTab, activeSalesChannelTab, searchTerm]);
     
     // Clear selection when filters change
     useEffect(() => {
@@ -195,24 +198,11 @@ export default function ReceiptPage() {
     const handleDateSelect = (selectedDate: Date | undefined) => {
         if (selectedDate) {
             const formattedDate = format(selectedDate, 'MM-dd-yyyy');
-            const currentChannel = searchParams.get('channel');
-            const newPath = currentChannel ? `/shipping/receipt/${formattedDate}?channel=${currentChannel}` : `/shipping/receipt/${formattedDate}`;
-            router.push(newPath);
+            router.push(`/shipping/receipt/${formattedDate}`);
             setDatePickerOpen(false);
-            setCurrentPage(1); // Reset to first page
         }
     };
     
-    const handleShippingTabChange = (tab: string | null) => {
-        setActiveShippingTab(tab);
-        setCurrentPage(1);
-    };
-
-    const handleSalesChannelTabChange = (tab: string | null) => {
-        setActiveSalesChannelTab(tab);
-        setCurrentPage(1);
-    }
-
     const handleSelectAll = (checked: boolean) => {
         if (checked) {
             const processableIds = receipts.filter(r => r.status === 'Perlu Diproses').map(r => r.id);
@@ -238,7 +228,7 @@ export default function ReceiptPage() {
     };
 
     const totalPages = Math.ceil(totalReceipts / itemsPerPage);
-    const isAllSelected = receipts.length > 0 && receipts.filter(r => r.status === 'Perlu Diproses').every(r => selectedIds.has(r.id));
+    const isAllSelected = receipts.length > 0 && receipts.filter(r => r.status === 'Perlu Diproses').length > 0 && receipts.filter(r => r.status === 'Perlu Diproses').every(r => selectedIds.has(r.id));
     const finalStatuses = ['Selesai', 'Return', 'Dibatalkan'];
 
     return (
@@ -307,7 +297,7 @@ export default function ReceiptPage() {
                                 key="all-sales"
                                 variant={activeSalesChannelTab === null ? 'secondary' : 'ghost'}
                                 size="sm"
-                                onClick={() => handleSalesChannelTabChange(null)}
+                                onClick={() => setActiveSalesChannelTab(null)}
                                 className="shrink-0"
                             >
                                 Semua Kanal
@@ -317,7 +307,7 @@ export default function ReceiptPage() {
                                     key={tab}
                                     variant={activeSalesChannelTab === tab ? 'secondary' : 'ghost'}
                                     size="sm"
-                                    onClick={() => handleSalesChannelTabChange(tab)}
+                                    onClick={() => setActiveSalesChannelTab(tab)}
                                     className="shrink-0"
                                 >
                                     {tab}
@@ -330,7 +320,7 @@ export default function ReceiptPage() {
                             key="all-shipping"
                             variant={activeShippingTab === null ? 'secondary' : 'ghost'}
                             size="sm"
-                            onClick={() => handleShippingTabChange(null)}
+                            onClick={() => setActiveShippingTab(null)}
                             className="shrink-0"
                         >
                             Semua Jasa Kirim
@@ -340,7 +330,7 @@ export default function ReceiptPage() {
                                 key={tab}
                                 variant={activeShippingTab === tab ? 'secondary' : 'ghost'}
                                 size="sm"
-                                onClick={() => handleShippingTabChange(tab)}
+                                onClick={() => setActiveShippingTab(tab)}
                                 className="shrink-0"
                             >
                                 {tab}
