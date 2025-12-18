@@ -293,7 +293,7 @@ export default function ReceiptPage() {
                             </PopoverContent>
                         </Popover>
                          <Button size="sm" asChild>
-                             <Link href="/shipping/scan">
+                             <Link href="/mobile">
                                 <ScanLine className="mr-2 h-4 w-4" />
                                 Scan Resi
                              </Link>
@@ -497,7 +497,8 @@ export default function ReceiptPage() {
                     setIsSaleDialogOpen(isOpen);
                     if (!isOpen) {
                         setReceiptForSale(null);
-                        // No need to fetchReceipts here, it will be done on status change
+                        fetchReceipts();
+                        fetchCounts();
                     }
                 }}
                 receipt={receiptForSale}
