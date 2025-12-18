@@ -49,6 +49,7 @@ type ShippingProvider = 'SPX' | 'J&T' | 'JNE' | 'INSTANT' | 'CARGO';
 const getStatusVariant = (status: string) => {
     switch (status.toLowerCase()) {
         case 'selesai': return 'default';
+        case 'return selesai': return 'default';
         case 'dikirim': return 'secondary';
         case 'return':
         case 'dibatalkan': return 'destructive';
@@ -81,7 +82,8 @@ export default function ReceiptPage() {
     const params = useParams();
     const searchParams = useSearchParams();
 
-    const [activeTab, setActiveTab] = useState<ShippingProvider>('SPX');
+    const [activeShippingTab, setActiveShippingTab] = useState<ShippingProvider | null>(null);
+    const [activeSalesChannelTab, setActiveSalesChannelTab] = useState<string | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [isDatePickerOpen, setDatePickerOpen] = useState(false);
     const [currentPage, setCurrentPage] = useState(1);
@@ -97,9 +99,9 @@ export default function ReceiptPage() {
     const currentDate = useMemo(() => parseDateFromParams(Array.isArray(params.date) ? params.date : undefined), [params.date]);
     
     useEffect(() => {
-        const channel = searchParams.get('channel');
-        if (channel && ['SPX', 'J&T', 'JNE', 'INSTANT', 'CARGO'].includes(channel)) {
-            setActiveTab(channel as ShippingProvider);
+        const shippingChannel = searchParams.get('channel');
+        if (shippingChannel && ['SPX', 'J&T', 'JNE', 'INSTANT', 'CARGO'].includes(shippingChannel)) {
+            setActiveShippingTab(shippingChannel as ShippingProvider);
         }
     }, [searchParams]);
 
@@ -110,7 +112,8 @@ export default function ReceiptPage() {
             const searchOptions: any = {
                 page: currentPage,
                 limit: itemsPerPage,
-                channel: activeTab,
+                salesChannel: activeSalesChannelTab ?? undefined,
+                channel: activeShippingTab ?? undefined,
                 awb: searchTerm,
             };
 
@@ -128,7 +131,7 @@ export default function ReceiptPage() {
         } finally {
             setLoading(false);
         }
-    }, [currentPage, itemsPerPage, activeTab, currentDate, searchTerm, toast, t.fetchError]);
+    }, [currentPage, itemsPerPage, activeShippingTab, activeSalesChannelTab, currentDate, searchTerm, toast, t.fetchError]);
     
     const fetchCounts = useCallback(async () => {
         try {
@@ -152,7 +155,7 @@ export default function ReceiptPage() {
     // Clear selection when filters change
     useEffect(() => {
         setSelectedIds(new Set());
-    }, [activeTab, currentDate, searchTerm, currentPage]);
+    }, [activeShippingTab, activeSalesChannelTab, currentDate, searchTerm, currentPage]);
 
     const handleDelete = async (receiptToDelete: ShippingReceipt) => {
         if (!receiptToDelete) return;
@@ -207,13 +210,15 @@ export default function ReceiptPage() {
         }
     };
     
-
-    const handleTabChange = (tab: ShippingProvider) => {
-        setActiveTab(tab);
-        const formattedDate = format(currentDate, 'MM-dd-yyyy');
-        router.push(`/shipping/receipt/${formattedDate}?channel=${tab}`);
+    const handleShippingTabChange = (tab: ShippingProvider | null) => {
+        setActiveShippingTab(tab);
         setCurrentPage(1);
     };
+
+    const handleSalesChannelTabChange = (tab: string | null) => {
+        setActiveSalesChannelTab(tab);
+        setCurrentPage(1);
+    }
 
     const handleSelectAll = (checked: boolean) => {
         if (checked) {
@@ -303,18 +308,51 @@ export default function ReceiptPage() {
                 </div>
 
                 <div className="flex flex-col gap-4">
+                     <div className="border-b">
+                         <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-2">
+                             <Button 
+                                key="all-sales"
+                                variant={activeSalesChannelTab === null ? 'secondary' : 'ghost'}
+                                size="sm"
+                                onClick={() => handleSalesChannelTabChange(null)}
+                                className="shrink-0"
+                            >
+                                Semua Kanal
+                            </Button>
+                            {(['Shopee', 'Tiktok', 'Lazada'] as const).map(tab => (
+                                <Button 
+                                    key={tab}
+                                    variant={activeSalesChannelTab === tab ? 'secondary' : 'ghost'}
+                                    size="sm"
+                                    onClick={() => handleSalesChannelTabChange(tab)}
+                                    className="shrink-0"
+                                >
+                                    {tab}
+                                </Button>
+                            ))}
+                        </div>
+                    </div>
                     <div className="flex items-center gap-2 overflow-x-auto no-scrollbar border-b pb-2">
+                         <Button 
+                            key="all-shipping"
+                            variant={activeShippingTab === null ? 'secondary' : 'ghost'}
+                            size="sm"
+                            onClick={() => handleShippingTabChange(null)}
+                            className="shrink-0"
+                        >
+                            Semua Jasa Kirim
+                        </Button>
                         {(['SPX', 'J&T', 'JNE', 'INSTANT', 'CARGO'] as ShippingProvider[]).map(tab => (
                             <Button 
                                 key={tab}
-                                variant={activeTab === tab ? 'secondary' : 'ghost'}
+                                variant={activeShippingTab === tab ? 'secondary' : 'ghost'}
                                 size="sm"
-                                onClick={() => handleTabChange(tab)}
+                                onClick={() => handleShippingTabChange(tab)}
                                 className="shrink-0"
                             >
                                 {tab}
                                 {channelCounts && (
-                                    <Badge variant={activeTab === tab ? 'default' : 'secondary'} className="ml-2">
+                                    <Badge variant={activeShippingTab === tab ? 'default' : 'secondary'} className="ml-2">
                                         {channelCounts[tab] || 0}
                                     </Badge>
                                 )}
@@ -336,9 +374,9 @@ export default function ReceiptPage() {
                                             />
                                         </TableHead>
                                         <TableHead>{t.table.awb}</TableHead>
-                                        <TableHead>{t.table.date}</TableHead>
-                                        <TableHead>{t.table.channel}</TableHead>
-                                        <TableHead>{t.table.status}</TableHead>
+                                        <TableHead>Kanal Penjualan</TableHead>
+                                        <TableHead>Jasa Kirim</TableHead>
+                                        <TableHead>Status</TableHead>
                                         <TableHead className="text-center">{t.table.actions}</TableHead>
                                     </TableRow>
                                 </TableHeader>
@@ -356,7 +394,7 @@ export default function ReceiptPage() {
                                                 />
                                             </TableCell>
                                             <TableCell className="font-medium">{item.awb}</TableCell>
-                                            <TableCell>{format(new Date(item.date), 'dd MMM yyyy HH:mm')}</TableCell>
+                                            <TableCell>{item.salesChannel}</TableCell>
                                             <TableCell>{item.channel}</TableCell>
                                             <TableCell>
                                                 <Badge variant={getStatusVariant(item.status)}>{item.status}</Badge>
@@ -455,7 +493,13 @@ export default function ReceiptPage() {
             </main>
             <RecordSaleForReceiptDialog
                 open={isSaleDialogOpen}
-                onOpenChange={setIsSaleDialogOpen}
+                onOpenChange={(isOpen) => {
+                    setIsSaleDialogOpen(isOpen);
+                    if (!isOpen) {
+                        setReceiptForSale(null);
+                        // No need to fetchReceipts here, it will be done on status change
+                    }
+                }}
                 receipt={receiptForSale}
             />
         </AppLayout>
