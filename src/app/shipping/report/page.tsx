@@ -1,379 +1,270 @@
+
 'use client';
 
-import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { AppLayout } from '@/app/components/app-layout';
+import { SidebarTrigger } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
-import { Calendar } from '@/components/ui/calendar';
-import { Calendar as CalendarIcon, ScanLine, Trash2, ShoppingCart, Search, Eye } from 'lucide-react';
-import { format, parse, isValid, parseISO } from 'date-fns';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { FileDown, Truck, PackageCheck, Undo2, Ban, History } from 'lucide-react';
 import { useInventory } from '@/hooks/use-inventory';
+import type { ShippingReceipt } from '@/types';
+import { format, parseISO, startOfMonth, endOfMonth, eachDayOfInterval } from 'date-fns';
+import { id as localeId } from 'date-fns/locale';
+import * as XLSX from 'xlsx';
+import { saveAs } from 'file-saver';
 import { useLanguage } from '@/hooks/use-language';
 import { translations } from '@/types/language';
-import { cn } from '@/lib/utils';
-import { SidebarTrigger } from '@/components/ui/sidebar';
-import type { Sale, ShippingReceipt } from '@/types';
-import { useToast } from '@/hooks/use-toast';
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
-import { Skeleton } from '@/components/ui/skeleton';
-import { AppLayout } from '@/app/components/app-layout';
-import { useScanSounds } from '@/hooks/use-scan-sounds';
-import { useParams, useRouter } from 'next/navigation';
-import { Pagination } from '@/components/ui/pagination';
-import { DailySalesDetailDialog } from '@/app/components/daily-sales-detail-dialog';
-import { Badge } from '@/components/ui/badge';
-import { RecordSaleForReceiptDialog } from '@/app/components/record-sale-for-receipt-dialog';
+  ChartConfig,
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+  ChartLegend,
+  ChartLegendContent,
+} from "@/components/ui/chart"
+import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts"
 
 
-export default function TiktokSalesPage() {
-  const { language } = useLanguage();
-  const t = translations[language];
-  const { addShippingReceipt, deleteShippingReceipt, fetchShippingReceipts, allSales, fetchItems } = useInventory();
-  const { toast } = useToast();
-  const { playSuccessSound, playErrorSound } = useScanSounds();
-  const router = useRouter();
+type DailyCount = {
+  date: string;
+  'Perlu Diproses': number;
+  Dikirim: number;
+  Selesai: number;
+  'Return Selesai': number;
+  Dibatalkan: number;
+  Return: number;
+  Total: number;
+};
 
-  const [receipts, setReceipts] = useState<ShippingReceipt[]>([]);
-  const [totalReceipts, setTotalReceipts] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const [awb, setAwb] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const awbInputRef = useRef<HTMLInputElement>(null);
-  const [isDatePickerOpen, setDatePickerOpen] = useState(false);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(50);
-  const [searchTerm, setSearchTerm] = useState('');
-  
-  const [detailItems, setDetailItems] = useState<Sale[]>([]);
-  const [isDetailOpen, setIsDetailOpen] = useState(false);
-  
-  const [receiptForSale, setReceiptForSale] = useState<ShippingReceipt | null>(null);
-  const [isSaleDialogOpen, setIsSaleDialogOpen] = useState(false);
+const STATUS_KEYS = ['Perlu Diproses', 'Dikirim', 'Selesai', 'Return Selesai', 'Dibatalkan', 'Return'];
 
-  const [currentDate, setCurrentDate] = useState(new Date());
-
-  const refocusInput = useCallback(() => {
-    if (!isSaleDialogOpen) {
-      setTimeout(() => awbInputRef.current?.focus(), 100);
-    }
-  }, [isSaleDialogOpen]);
-
-  const loadReceipts = useCallback(async () => {
-    setLoading(true);
-    try {
-      const dateString = format(currentDate, 'yyyy-MM-dd');
-      const { receipts: receiptsData, total } = await fetchShippingReceipts({ 
-          page: currentPage, 
-          limit: itemsPerPage, 
-          salesChannel: 'Tiktok', 
-          dateString: dateString,
-          awb: searchTerm
-      });
-      setReceipts(receiptsData);
-      setTotalReceipts(total);
-    } catch (error) {
-      console.error('Failed to fetch receipts:', error);
-      toast({
-        variant: 'destructive',
-        title: 'Gagal Memuat Resi',
-        description: 'Terjadi kesalahan saat mengambil data resi.',
-      });
-    } finally {
-      setLoading(false);
-    }
-  }, [fetchShippingReceipts, toast, currentPage, itemsPerPage, searchTerm, currentDate]);
-  
-  useEffect(() => {
-    loadReceipts();
-  }, [loadReceipts]);
-  
-  useEffect(() => {
-    refocusInput();
-  }, [refocusInput, receipts, isSaleDialogOpen]);
-  
-  useEffect(() => {
-    fetchItems(); // Ensure items are fresh for the sale dialog
-  }, [fetchItems]);
+const chartConfig = {
+  PerluDiproses: { label: "Perlu Diproses", color: "hsl(var(--chart-1))" },
+  Dikirim: { label: "Dikirim", color: "hsl(var(--chart-2))" },
+  Selesai: { label: "Selesai", color: "hsl(var(--chart-3))" },
+  ReturnSelesai: { label: "Return Selesai", color: "hsl(var(--chart-4))" },
+  Dibatalkan: { label: "Dibatalkan", color: "hsl(var(--chart-5))" },
+  Return: { label: "Return", color: "hsl(var(--destructive))" },
+} satisfies ChartConfig
 
 
-  const salesByReceipt = useMemo(() => {
-    const map = new Map<string, Sale[]>();
-    allSales.forEach(sale => {
-      const key = sale.transactionId;
-      if (key) {
-        if (!map.has(key)) {
-          map.set(key, []);
-        }
-        map.get(key)!.push(sale);
-      }
-    });
-    return map;
-  }, [allSales]);
-
-
-  const handleDateChange = (newDate: Date | undefined) => {
-    if (newDate) {
-        setDatePickerOpen(false);
-        setCurrentDate(newDate);
-        setCurrentPage(1);
-    }
-  }
-
-  const handleAwbSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (!awb || isSubmitting) return;
-
-    setIsSubmitting(true);
+export default function ReceiptReportPage() {
+    const [reportData, setReportData] = useState<DailyCount[]>([]);
+    const [totalCounts, setTotalCounts] = useState<Record<string, number>>({});
+    const [loading, setLoading] = useState(true);
+    const { fetchShippingReceipts } = useInventory();
+    const { language } = useLanguage();
+    const t = translations[language].shipping.reportPage;
     
-     const newReceipt: Omit<ShippingReceipt, 'id'> = {
-        awb: awb.trim(),
-        salesChannel: 'Tiktok',
-        channel: 'J&T', // Default to J&T for Tiktok
-        date: format(currentDate, "yyyy-MM-dd'T'HH:mm:ss"),
-        status: 'Perlu Diproses',
-        transactionId: awb.trim()
-    };
+    const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
+    const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
 
-    try {
-        const added = await addShippingReceipt(newReceipt);
-        playSuccessSound();
-        setAwb('');
-        setReceiptForSale(added);
-        setIsSaleDialogOpen(true);
-    } catch (error) {
-        playErrorSound();
-        let title = 'Input Gagal';
-        let errorMessage = 'Gagal menyimpan resi.';
-        if (error instanceof Error && error.message.startsWith('DUPLICATE_AWB_DATE::')) {
-            const dateStr = error.message.split('::')[1];
-            title = 'Resi Duplikat';
-            errorMessage = `Resi ini sudah discan pada ${format(parseISO(dateStr), 'dd MMM yyyy, HH:mm')}`;
+    const years = useMemo(() => {
+        const currentYear = new Date().getFullYear();
+        // Show current year and last 5 years
+        return Array.from({ length: 6 }, (_, i) => currentYear - i);
+    }, []);
+
+    const fetchReportData = useCallback(async () => {
+        setLoading(true);
+        try {
+            const date = new Date(selectedYear, selectedMonth);
+            const firstDay = startOfMonth(date);
+            const lastDay = endOfMonth(date);
+
+            const { receipts } = await fetchShippingReceipts({
+                page: 1,
+                limit: 10000, // Fetch all for the month
+                date_range: { from: firstDay, to: lastDay }
+            });
+
+            const dailyData: { [key: string]: Omit<DailyCount, 'date'> } = {};
+
+            const daysInMonth = eachDayOfInterval({ start: firstDay, end: lastDay });
+            daysInMonth.forEach(day => {
+                const dateKey = format(day, 'yyyy-MM-dd');
+                dailyData[dateKey] = {
+                    'Perlu Diproses': 0, 'Dikirim': 0, 'Selesai': 0, 'Return Selesai': 0,
+                    'Dibatalkan': 0, 'Return': 0, 'Total': 0
+                };
+            });
+            
+            const totals: Record<string, number> = {};
+            STATUS_KEYS.forEach(key => totals[key] = 0);
+            totals.Total = 0;
+
+            receipts.forEach(receipt => {
+                const dateKey = format(parseISO(receipt.date), 'yyyy-MM-dd');
+                if (dailyData[dateKey]) {
+                    dailyData[dateKey][receipt.status as keyof typeof dailyData[string]]++;
+                    dailyData[dateKey].Total++;
+                    
+                    totals[receipt.status]++;
+                    totals.Total++;
+                }
+            });
+
+            const formattedData = Object.entries(dailyData).map(([date, counts]) => ({
+                date: format(parseISO(date), 'd MMM'),
+                ...counts
+            }));
+
+            setReportData(formattedData);
+            setTotalCounts(totals);
+
+        } catch (error) {
+            console.error("Failed to fetch report data:", error);
+        } finally {
+            setLoading(false);
         }
-        toast({ variant: 'destructive', title: title, description: errorMessage });
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-  
-  const handleDeleteReceipt = async (id: number) => {
-    try {
-        await deleteShippingReceipt(id);
-        toast({
-            title: 'Resi Dihapus',
-            description: 'Resi telah berhasil dihapus.',
-        });
-        loadReceipts();
-    } catch (error) {
-        toast({ variant: 'destructive', title: 'Gagal Menghapus', description: 'Terjadi kesalahan.' });
-    }
-  };
-  
-  const handleViewDetails = (receipt: ShippingReceipt) => {
-    if (!receipt.transactionId) return;
-    const items = salesByReceipt.get(receipt.transactionId) || [];
-    if (items.length > 0) {
-        setDetailItems(items);
-        setIsDetailOpen(true);
-    } else {
-        setReceiptForSale(receipt);
-        setIsSaleDialogOpen(true);
-    }
-  }
-  
-  const totalPages = Math.ceil(totalReceipts / itemsPerPage);
+    }, [fetchShippingReceipts, selectedMonth, selectedYear]);
 
-  return (
-    <AppLayout>
-      <main className="flex min-h-svh flex-1 flex-col gap-4 bg-muted/40 p-4">
-        <div className="flex items-center gap-4">
-          <SidebarTrigger className="md:hidden" />
-          <h1 className="text-lg md:text-xl font-bold font-headline text-foreground">
-            {t.sales.tiktok}
-          </h1>
-        </div>
+    useEffect(() => {
+        fetchReportData();
+    }, [fetchReportData]);
 
-        <div className="bg-card rounded-lg border shadow-sm flex flex-col flex-1 overflow-hidden">
-          <div className="p-4 flex flex-col md:flex-row gap-4 justify-between items-center border-b">
-              <form onSubmit={handleAwbSubmit} className="flex-grow md:max-w-sm">
-                  <div className="relative">
-                      <ScanLine className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input
-                          ref={awbInputRef}
-                          placeholder="Scan atau masukkan No. Resi (AWB), lalu Enter"
-                          value={awb}
-                          onChange={(e) => setAwb(e.target.value)}
-                          className="pl-10 w-full"
-                          disabled={isSubmitting || isSaleDialogOpen}
-                          autoFocus
-                      />
-                  </div>
-              </form>
-              <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-                <div className="relative flex-grow">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                        placeholder="Cari No. Resi..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="pl-10 w-full"
-                    />
-                </div>
-                <Popover open={isDatePickerOpen} onOpenChange={setDatePickerOpen}>
-                  <PopoverTrigger asChild>
-                    <Button
-                      id="date"
-                      variant={'outline'}
-                      className={cn(
-                        'w-full sm:w-[240px] justify-start text-left font-normal',
-                        !currentDate && 'text-muted-foreground'
-                      )}
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {currentDate ? format(currentDate, 'PP') : <span>{t.stockHistory.dateRange}</span>}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="end">
-                    <Calendar
-                      mode="single"
-                      selected={currentDate}
-                      onSelect={handleDateChange}
-                      initialFocus
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
-          </div>
-          <div className="flex-grow overflow-auto">
-            <Table>
-              <TableHeader className="sticky top-0 bg-card">
-                <TableRow>
-                  <TableHead className="w-[200px]">Waktu Scan</TableHead>
-                  <TableHead>No. Resi (AWB)</TableHead>
-                  <TableHead>Produk</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-center">{t.inventoryTable.actions}</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {loading ? (
-                  Array.from({ length: 5 }).map((_, i) => (
-                      <TableRow key={i}>
-                          <TableCell><Skeleton className="h-4 w-[100px]" /></TableCell>
-                          <TableCell><Skeleton className="h-4 w-[250px]" /></TableCell>
-                          <TableCell><Skeleton className="h-4 w-[80px]" /></TableCell>
-                          <TableCell><Skeleton className="h-6 w-[100px]" /></TableCell>
-                          <TableCell className="text-center">
-                              <Skeleton className="h-8 w-8 rounded-md" />
-                          </TableCell>
-                      </TableRow>
-                  ))
-                ) : receipts.length > 0 ? (
-                  receipts.map((receipt) => {
-                    const relatedSales = salesByReceipt.get(receipt.transactionId || '') || [];
-                    return (
-                        <TableRow key={receipt.id}>
-                          <TableCell>{format(new Date(receipt.date), 'HH:mm:ss')}</TableCell>
-                          <TableCell className="font-medium">{receipt.awb}</TableCell>
-                          <TableCell>
-                            <Button variant="link" size="sm" className="h-auto p-0 text-xs" onClick={() => handleViewDetails(receipt)}>
-                                {relatedSales.length > 0 ? `${relatedSales.reduce((acc, s) => acc + s.quantity, 0)} produk` : 'Catat Produk'}
-                                <Eye className="ml-2 h-3 w-3" />
-                            </Button>
-                          </TableCell>
-                          <TableCell><Badge variant="secondary">{receipt.status}</Badge></TableCell>
-                          <TableCell className="text-center">
-                             <AlertDialog>
-                                <AlertDialogTrigger asChild>
-                                  <Button variant="ghost" size="icon" className="text-destructive">
-                                      <Trash2 className="h-4 w-4" />
-                                  </Button>
-                                </AlertDialogTrigger>
-                                <AlertDialogContent>
-                                  <AlertDialogHeader>
-                                    <AlertDialogTitle>Anda yakin?</AlertDialogTitle>
-                                    <AlertDialogDescription>
-                                      Tindakan ini akan menghapus resi dan semua data penjualan terkait. Stok akan dikembalikan. Aksi ini tidak dapat diurungkan.
-                                    </AlertDialogDescription>
-                                  </AlertDialogHeader>
-                                  <AlertDialogFooter>
-                                    <AlertDialogCancel>Batal</AlertDialogCancel>
-                                    <AlertDialogAction onClick={() => handleDeleteReceipt(receipt.id)}>
-                                      Ya, Hapus Resi
-                                    </AlertDialogAction>
-                                  </AlertDialogFooter>
-                                </AlertDialogContent>
-                              </AlertDialog>
-                          </TableCell>
-                        </TableRow>
-                    )
-                  })
-                ) : (
-                  <TableRow>
-                      <TableCell colSpan={5} className="h-48 text-center">
-                          <div className="flex flex-col items-center justify-center gap-4 text-muted-foreground">
-                              <ShoppingCart className="h-16 w-16" />
-                              <div className="text-center">
-                                  <p className="font-semibold">Tidak Ada Resi</p>
-                                  <p className="text-sm">Tidak ada resi yang tercatat pada tanggal yang dipilih.</p>
-                              </div>
-                          </div>
-                      </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-            {totalPages > 1 && (
-                <div className="flex items-center justify-end p-4 border-t">
+    const downloadExcel = useCallback(() => {
+        const dataToExport = reportData.map(item => ({
+            'Tanggal': item.date,
+            'Perlu Diproses': item['Perlu Diproses'],
+            'Dikirim': item.Dikirim,
+            'Selesai': item.Selesai,
+            'Return Selesai': item['Return Selesai'],
+            'Dibatalkan': item.Dibatalkan,
+            'Return': item.Return,
+            'Total': item.Total
+        }));
+
+        const totalsRow = {
+            'Tanggal': 'TOTAL',
+            'Perlu Diproses': totalCounts['Perlu Diproses'] || 0,
+            'Dikirim': totalCounts.Dikirim || 0,
+            'Selesai': totalCounts.Selesai || 0,
+            'Return Selesai': totalCounts['Return Selesai'] || 0,
+            'Dibatalkan': totalCounts.Dibatalkan || 0,
+            'Return': totalCounts.Return || 0,
+            'Total': totalCounts.Total || 0,
+        };
+        
+        dataToExport.push(totalsRow);
+
+        const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, 'Laporan Resi');
+        
+        const monthName = format(new Date(selectedYear, selectedMonth), 'MMMM-yyyy', { locale: localeId });
+        XLSX.writeFile(workbook, `Laporan_Resi_${monthName}.xlsx`);
+    }, [reportData, totalCounts, selectedMonth, selectedYear]);
+
+    return (
+        <AppLayout>
+            <main className="flex min-h-[calc(100vh_-_theme(spacing.16))] flex-1 flex-col gap-4 bg-muted/40 p-4 md:gap-8 md:p-10">
+                 <div className="flex items-center justify-between gap-4">
                     <div className="flex items-center gap-4">
-                        <Pagination
-                            totalPages={totalPages}
-                            currentPage={currentPage}
-                            onPageChange={setCurrentPage}
-                        />
+                        <SidebarTrigger className="md:hidden" />
+                        <h1 className="text-lg md:text-xl font-bold font-headline text-foreground">
+                           {t.title}
+                        </h1>
+                    </div>
+                     <div className="flex items-center gap-2">
+                        <Select value={selectedMonth.toString()} onValueChange={(value) => setSelectedMonth(parseInt(value))}>
+                            <SelectTrigger className="w-[150px]">
+                                <SelectValue placeholder={t.selectMonth} />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {Array.from({ length: 12 }).map((_, i) => (
+                                    <SelectItem key={i} value={i.toString()}>
+                                        {format(new Date(0, i), 'MMMM', { locale: localeId })}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                        <Select value={selectedYear.toString()} onValueChange={(value) => setSelectedYear(parseInt(value))}>
+                            <SelectTrigger className="w-[100px]">
+                                <SelectValue placeholder={t.selectYear} />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {years.map(year => (
+                                    <SelectItem key={year} value={year.toString()}>
+                                        {year}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                        <Button onClick={downloadExcel} variant="outline" size="sm">
+                            <FileDown className="mr-2 h-4 w-4" />
+                            Download Laporan
+                        </Button>
                     </div>
                 </div>
-            )}
-          </div>
-        </div>
-      </main>
-      <DailySalesDetailDialog
-          open={isDetailOpen}
-          onOpenChange={setIsDetailOpen}
-          sales={detailItems}
-      />
-      <RecordSaleForReceiptDialog
-        open={isSaleDialogOpen}
-        onOpenChange={(isOpen) => {
-          setIsSaleDialogOpen(isOpen);
-          if (!isOpen) {
-            setReceiptForSale(null);
-            loadReceipts(); 
-          }
-        }}
-        receipt={receiptForSale}
-      />
-    </AppLayout>
-  );
+                 <div className="grid gap-6">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Laporan Resi Bulanan</CardTitle>
+                             <CardDescription>
+                                Jumlah resi harian berdasarkan status untuk bulan {format(new Date(selectedYear, selectedMonth), 'MMMM yyyy', { locale: localeId })}.
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent className="pt-6">
+                           <Table>
+                               <TableHeader>
+                                   <TableRow>
+                                       <TableHead className="w-[100px]">{t.table.date}</TableHead>
+                                       <TableHead className="text-center">{t.table.pending}</TableHead>
+                                       <TableHead className="text-center">{t.table.shipped}</TableHead>
+                                       <TableHead className="text-center">{t.table.completed}</TableHead>
+                                       <TableHead className="text-center">{t.table.returnCompleted}</TableHead>
+                                       <TableHead className="text-center">{t.table.cancelled}</TableHead>
+                                       <TableHead className="text-center">{t.table.returned}</TableHead>
+                                       <TableHead className="text-center font-bold">{t.table.total}</TableHead>
+                                   </TableRow>
+                               </TableHeader>
+                                <TableBody>
+                                    {loading ? (
+                                        <TableRow><TableCell colSpan={8} className="h-48 text-center">Memuat data...</TableCell></TableRow>
+                                    ) : reportData.length > 0 ? reportData.map(item => (
+                                        <TableRow key={item.date}>
+                                            <TableCell className="font-medium">{item.date}</TableCell>
+                                            <TableCell className="text-center">{item['Perlu Diproses']}</TableCell>
+                                            <TableCell className="text-center">{item.Dikirim}</TableCell>
+                                            <TableCell className="text-center">{item.Selesai}</TableCell>
+                                            <TableCell className="text-center">{item['Return Selesai']}</TableCell>
+                                            <TableCell className="text-center">{item.Dibatalkan}</TableCell>
+                                            <TableCell className="text-center">{item.Return}</TableCell>
+                                            <TableCell className="text-center font-bold">{item.Total}</TableCell>
+                                        </TableRow>
+                                    )) : (
+                                        <TableRow>
+                                            <TableCell colSpan={8} className="h-48 text-center">
+                                                <div className="flex flex-col items-center justify-center gap-4 text-muted-foreground">
+                                                    <History className="h-16 w-16" />
+                                                    <p className="font-semibold">{t.noDataTitle}</p>
+                                                    <p className="text-sm">{t.noDataDesc}</p>
+                                                </div>
+                                            </TableCell>
+                                        </TableRow>
+                                    )}
+                                </TableBody>
+                                 <CardFooter>
+                                    <TableRow>
+                                        <TableHead className="font-bold">TOTAL</TableHead>
+                                        <TableHead className="text-center font-bold">{totalCounts['Perlu Diproses'] || 0}</TableHead>
+                                        <TableHead className="text-center font-bold">{totalCounts.Dikirim || 0}</TableHead>
+                                        <TableHead className="text-center font-bold">{totalCounts.Selesai || 0}</TableHead>
+                                        <TableHead className="text-center font-bold">{totalCounts['Return Selesai'] || 0}</TableHead>
+                                        <TableHead className="text-center font-bold">{totalCounts.Dibatalkan || 0}</TableHead>
+                                        <TableHead className="text-center font-bold">{totalCounts.Return || 0}</TableHead>
+                                        <TableHead className="text-center font-extrabold text-lg">{totalCounts.Total || 0}</TableHead>
+                                    </TableRow>
+                                </CardFooter>
+                           </Table>
+                        </CardContent>
+                    </Card>
+                 </div>
+            </main>
+        </AppLayout>
+    )
 }
