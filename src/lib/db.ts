@@ -33,6 +33,9 @@ const runMigrations = () => {
     if (shippingReceiptColumns && !shippingReceiptColumns.some((col: any) => col.name === 'transactionId')) {
         db.exec('ALTER TABLE shipping_receipts ADD COLUMN transactionId TEXT');
     }
+    if (shippingReceiptColumns && !shippingReceiptColumns.some((col: any) => col.name === 'salesChannel')) {
+        db.exec('ALTER TABLE shipping_receipts ADD COLUMN salesChannel TEXT');
+    }
 
     // One-time migration to populate empty transactionId fields from AWB
     db.exec(`
@@ -280,6 +283,7 @@ const createSchema = () => {
         awb TEXT NOT NULL UNIQUE,
         date TEXT NOT NULL,
         channel TEXT NOT NULL,
+        salesChannel TEXT,
         status TEXT NOT NULL,
         transactionId TEXT
     );

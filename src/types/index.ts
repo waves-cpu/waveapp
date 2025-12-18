@@ -120,7 +120,8 @@ export interface ShippingReceipt {
     id: number;
     awb: string;
     date: string;
-    channel: string;
+    channel: string; // Shipping provider (e.g., J&T, SPX)
+    salesChannel?: string; // Sales channel (e.g., Shopee, Tiktok)
     status: string;
     transactionId?: string;
 }

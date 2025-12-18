@@ -95,17 +95,23 @@ export async function deleteBulkImportHistory(id: number) {
 export async function fetchShippingReceipts(options: {
     page: number;
     limit: number;
+    salesChannel?: string;
     channel?: string;
     dateString?: string;
     date_range?: { from: Date, to: Date };
     status?: string[];
     awb?: string;
 }): Promise<{ receipts: ShippingReceipt[]; total: number }> {
-    const { page, limit, channel, dateString, date_range, status, awb } = options;
+    const { page, limit, salesChannel, channel, dateString, date_range, status, awb } = options;
     const offset = (page - 1) * limit;
 
     let whereClauses: string[] = [];
     let params: any = {};
+    
+    if (salesChannel) {
+        whereClauses.push("salesChannel = @salesChannel");
+        params.salesChannel = salesChannel;
+    }
 
     if (awb) {
         whereClauses.push("awb LIKE @awb");
@@ -202,7 +208,7 @@ export async function getReceiptCountByStatus(status: string[], dateRange: { fro
 
 export async function addShippingReceipt(receipt: Omit<ShippingReceipt, 'id'>): Promise<ShippingReceipt> {
     try {
-        const result = db.prepare('INSERT INTO shipping_receipts (awb, date, channel, status, transactionId) VALUES (@awb, @date, @channel, @status, @transactionId)').run({
+        const result = db.prepare('INSERT INTO shipping_receipts (awb, date, channel, salesChannel, status, transactionId) VALUES (@awb, @date, @channel, @salesChannel, @status, @transactionId)').run({
             ...receipt,
             transactionId: receipt.awb, // Use AWB as transactionId
         });
@@ -1186,6 +1192,7 @@ export async function deleteProductPermanently(itemId: string) {
     
 
     
+
 
 
 

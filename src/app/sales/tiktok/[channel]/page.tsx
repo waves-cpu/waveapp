@@ -80,6 +80,7 @@ export default function TiktokChannelPage() {
       const { receipts: receiptsData, total } = await fetchShippingReceipts({ 
           page: currentPage, 
           limit: itemsPerPage, 
+          salesChannel: salesChannel,
           channel: shippingChannel, 
           awb: searchTerm,
           dateString: format(new Date(), 'yyyy-MM-dd')
@@ -96,7 +97,7 @@ export default function TiktokChannelPage() {
     } finally {
       setLoading(false);
     }
-  }, [fetchShippingReceipts, toast, currentPage, itemsPerPage, searchTerm, shippingChannel]);
+  }, [fetchShippingReceipts, toast, currentPage, itemsPerPage, searchTerm, salesChannel, shippingChannel]);
   
   useEffect(() => {
     loadReceipts();
@@ -133,6 +134,7 @@ export default function TiktokChannelPage() {
     
      const newReceipt: Omit<ShippingReceipt, 'id'> = {
         awb: awb.trim(),
+        salesChannel: salesChannel,
         channel: shippingChannel,
         date: format(new Date(), "yyyy-MM-dd'T'HH:mm:ss"),
         status: 'Perlu Diproses',
@@ -326,7 +328,7 @@ export default function TiktokChannelPage() {
           onOpenChange={setIsDetailOpen}
           sales={detailItems}
       />
-       <RecordSaleForReceiptDialog
+      <RecordSaleForReceiptDialog
         open={isSaleDialogOpen}
         onOpenChange={(isOpen) => {
           setIsSaleDialogOpen(isOpen);

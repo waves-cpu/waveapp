@@ -80,6 +80,7 @@ export default function LazadaChannelPage() {
       const { receipts: receiptsData, total } = await fetchShippingReceipts({ 
           page: currentPage, 
           limit: itemsPerPage, 
+          salesChannel: salesChannel,
           channel: shippingChannel, 
           awb: searchTerm,
           dateString: format(new Date(), 'yyyy-MM-dd')
@@ -96,16 +97,16 @@ export default function LazadaChannelPage() {
     } finally {
       setLoading(false);
     }
-  }, [fetchShippingReceipts, toast, currentPage, itemsPerPage, searchTerm, shippingChannel]);
+  }, [fetchShippingReceipts, toast, currentPage, itemsPerPage, searchTerm, salesChannel, shippingChannel]);
   
   useEffect(() => {
     loadReceipts();
   }, [loadReceipts]);
-  
+
   useEffect(() => {
     fetchItems(); // Ensure items are fresh for the sale dialog
   }, [fetchItems]);
-
+  
   useEffect(() => {
     refocusInput();
   }, [refocusInput, receipts, isSaleDialogOpen]);
@@ -133,6 +134,7 @@ export default function LazadaChannelPage() {
     
      const newReceipt: Omit<ShippingReceipt, 'id'> = {
         awb: awb.trim(),
+        salesChannel: salesChannel,
         channel: shippingChannel,
         date: format(new Date(), "yyyy-MM-dd'T'HH:mm:ss"),
         status: 'Perlu Diproses',
