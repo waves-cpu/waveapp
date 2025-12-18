@@ -77,7 +77,6 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     const { items } = useInventory();
     const { user, logout } = useAuth();
     const [isSalesOpen, setSalesOpen] = useState(true);
-    const [isShippingOpen, setShippingOpen] = useState(true);
     const [isInventoryOpen, setInventoryOpen] = useState(true);
     const [isFinanceOpen, setFinanceOpen] = useState(true);
     
@@ -151,44 +150,6 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                       </CollapsibleContent>
                   </Collapsible>
                   
-                  <Collapsible open={isShippingOpen} onOpenChange={setShippingOpen}>
-                      <CollapsibleTrigger asChild>
-                          <SidebarMenuButton>
-                              <Truck />
-                              <span>{t.shipping.title}</span>
-                              <ChevronDown className={cn("ml-auto transition-transform", isShippingOpen && "rotate-180")} />
-                          </SidebarMenuButton>
-                      </CollapsibleTrigger>
-                      <CollapsibleContent>
-                          <SidebarMenu className="ml-4 mt-2 border-l border-muted-foreground/20 pl-4">
-                               <SidebarMenuItem>
-                                  <Link href="/shipping/receipt">
-                                      <SidebarMenuButton variant="ghost" size="sm" isActive={pathname.startsWith('/shipping/receipt')}>
-                                          <Receipt />
-                                          {t.shipping.receipt}
-                                      </SidebarMenuButton>
-                                  </Link>
-                              </SidebarMenuItem>
-                              <SidebarMenuItem>
-                                  <Link href="/shipping/return">
-                                      <SidebarMenuButton variant="ghost" size="sm" isActive={pathname.startsWith('/shipping/return')}>
-                                          <Undo2 />
-                                          {t.shipping.return}
-                                      </SidebarMenuButton>
-                                  </Link>
-                              </SidebarMenuItem>
-                              <SidebarMenuItem>
-                                  <Link href="/shipping/report">
-                                      <SidebarMenuButton variant="ghost" size="sm" isActive={pathname.startsWith('/shipping/report')}>
-                                          <FileText />
-                                          {t.shipping.report}
-                                      </SidebarMenuButton>
-                                  </Link>
-                              </SidebarMenuItem>
-                          </SidebarMenu>
-                      </CollapsibleContent>
-                  </Collapsible>
-
                   <Collapsible open={isInventoryOpen} onOpenChange={setInventoryOpen}>
                       <CollapsibleTrigger asChild>
                           <SidebarMenuButton>

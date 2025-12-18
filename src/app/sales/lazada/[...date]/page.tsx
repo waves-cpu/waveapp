@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
@@ -45,27 +44,16 @@ import { useParams, useRouter } from 'next/navigation';
 import { Pagination } from '@/components/ui/pagination';
 import { DailySalesDetailDialog } from '@/app/components/daily-sales-detail-dialog';
 import { Badge } from '@/components/ui/badge';
+import { RecordSaleForReceiptDialog } from '@/app/components/record-sale-for-receipt-dialog';
 
 
-function parseDateFromParams(dateArray: string[] | undefined): Date {
-    if (dateArray && dateArray.length > 0) {
-      const [month, day, year] = dateArray[0].split('-');
-      const parsedDate = parse(`${year}-${month}-${day}`, 'yyyy-MM-dd', new Date());
-      if (isValid(parsedDate)) {
-        return parsedDate;
-      }
-    }
-    return new Date();
-}
-
-export default function LazadaSalesPage() {
+export default function TiktokSalesPage() {
   const { language } = useLanguage();
   const t = translations[language];
-  const { addShippingReceipt, deleteShippingReceipt, fetchShippingReceipts, allSales } = useInventory();
+  const { addShippingReceipt, deleteShippingReceipt, fetchShippingReceipts, allSales, fetchItems } = useInventory();
   const { toast } = useToast();
   const { playSuccessSound, playErrorSound } = useScanSounds();
   const router = useRouter();
-  const params = useParams();
 
   const [receipts, setReceipts] = useState<ShippingReceipt[]>([]);
   const [totalReceipts, setTotalReceipts] = useState(0);
@@ -80,21 +68,26 @@ export default function LazadaSalesPage() {
   
   const [detailItems, setDetailItems] = useState<Sale[]>([]);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
+  
+  const [receiptForSale, setReceiptForSale] = useState<ShippingReceipt | null>(null);
+  const [isSaleDialogOpen, setIsSaleDialogOpen] = useState(false);
 
-  const currentDate = useMemo(() => parseDateFromParams(Array.isArray(params.date) ? params.date : undefined), [params.date]);
+  const [currentDate, setCurrentDate] = useState(new Date());
 
   const refocusInput = useCallback(() => {
-    setTimeout(() => awbInputRef.current?.focus(), 0);
-  }, []);
+    if (!isSaleDialogOpen) {
+      setTimeout(() => awbInputRef.current?.focus(), 100);
+    }
+  }, [isSaleDialogOpen]);
 
-  const loadReceipts = useCallback(async (selectedDate: Date) => {
+  const loadReceipts = useCallback(async () => {
     setLoading(true);
     try {
-      const dateString = format(selectedDate, 'yyyy-MM-dd');
+      const dateString = format(currentDate, 'yyyy-MM-dd');
       const { receipts: receiptsData, total } = await fetchShippingReceipts({ 
           page: currentPage, 
           limit: itemsPerPage, 
-          channel: 'lazada', 
+          salesChannel: 'Tiktok', 
           dateString: dateString,
           awb: searchTerm
       });
@@ -110,26 +103,21 @@ export default function LazadaSalesPage() {
     } finally {
       setLoading(false);
     }
-  }, [fetchShippingReceipts, toast, currentPage, itemsPerPage, searchTerm]);
+  }, [fetchShippingReceipts, toast, currentPage, itemsPerPage, searchTerm, currentDate]);
   
   useEffect(() => {
-    loadReceipts(currentDate);
-  }, [currentDate, loadReceipts]);
+    loadReceipts();
+  }, [loadReceipts]);
   
   useEffect(() => {
     refocusInput();
-  }, [refocusInput]);
-
-  const filteredReceipts = useMemo(() => {
-    if (!searchTerm) {
-      return receipts;
-    }
-    const lowercasedFilter = searchTerm.toLowerCase();
-    return receipts.filter(receipt => 
-      receipt.awb.toLowerCase().includes(lowercasedFilter)
-    );
-  }, [receipts, searchTerm]);
+  }, [refocusInput, receipts, isSaleDialogOpen]);
   
+  useEffect(() => {
+    fetchItems(); // Ensure items are fresh for the sale dialog
+  }, [fetchItems]);
+
+
   const salesByReceipt = useMemo(() => {
     const map = new Map<string, Sale[]>();
     allSales.forEach(sale => {
@@ -148,8 +136,7 @@ export default function LazadaSalesPage() {
   const handleDateChange = (newDate: Date | undefined) => {
     if (newDate) {
         setDatePickerOpen(false);
-        const formattedDate = format(newDate, 'MM-dd-yyyy');
-        router.push(`/sales/lazada/${formattedDate}`);
+        setCurrentDate(newDate);
         setCurrentPage(1);
     }
   }
@@ -162,7 +149,8 @@ export default function LazadaSalesPage() {
     
      const newReceipt: Omit<ShippingReceipt, 'id'> = {
         awb: awb.trim(),
-        channel: 'Lazada',
+        salesChannel: 'Tiktok',
+        channel: 'J&T', // Default to J&T for Tiktok
         date: format(currentDate, "yyyy-MM-dd'T'HH:mm:ss"),
         status: 'Perlu Diproses',
         transactionId: awb.trim()
@@ -171,8 +159,9 @@ export default function LazadaSalesPage() {
     try {
         const added = await addShippingReceipt(newReceipt);
         playSuccessSound();
-        setReceipts(prev => [added, ...prev]);
         setAwb('');
+        setReceiptForSale(added);
+        setIsSaleDialogOpen(true);
     } catch (error) {
         playErrorSound();
         let title = 'Input Gagal';
@@ -185,7 +174,6 @@ export default function LazadaSalesPage() {
         toast({ variant: 'destructive', title: title, description: errorMessage });
     } finally {
       setIsSubmitting(false);
-      refocusInput();
     }
   };
   
@@ -196,20 +184,21 @@ export default function LazadaSalesPage() {
             title: 'Resi Dihapus',
             description: 'Resi telah berhasil dihapus.',
         });
-        loadReceipts(currentDate);
+        loadReceipts();
     } catch (error) {
         toast({ variant: 'destructive', title: 'Gagal Menghapus', description: 'Terjadi kesalahan.' });
     }
   };
   
-  const handleViewDetails = (transactionId?: string) => {
-    if (!transactionId) return;
-    const items = salesByReceipt.get(transactionId) || [];
+  const handleViewDetails = (receipt: ShippingReceipt) => {
+    if (!receipt.transactionId) return;
+    const items = salesByReceipt.get(receipt.transactionId) || [];
     if (items.length > 0) {
         setDetailItems(items);
         setIsDetailOpen(true);
     } else {
-        toast({ title: "Tidak Ada Detail", description: "Tidak ada detail produk untuk resi ini." });
+        setReceiptForSale(receipt);
+        setIsSaleDialogOpen(true);
     }
   }
   
@@ -221,7 +210,7 @@ export default function LazadaSalesPage() {
         <div className="flex items-center gap-4">
           <SidebarTrigger className="md:hidden" />
           <h1 className="text-lg md:text-xl font-bold font-headline text-foreground">
-            {t.sales.lazada}
+            {t.sales.tiktok}
           </h1>
         </div>
 
@@ -236,7 +225,8 @@ export default function LazadaSalesPage() {
                           value={awb}
                           onChange={(e) => setAwb(e.target.value)}
                           className="pl-10 w-full"
-                          disabled={isSubmitting}
+                          disabled={isSubmitting || isSaleDialogOpen}
+                          autoFocus
                       />
                   </div>
               </form>
@@ -299,16 +289,16 @@ export default function LazadaSalesPage() {
                           </TableCell>
                       </TableRow>
                   ))
-                ) : filteredReceipts.length > 0 ? (
-                  filteredReceipts.map((receipt) => {
+                ) : receipts.length > 0 ? (
+                  receipts.map((receipt) => {
                     const relatedSales = salesByReceipt.get(receipt.transactionId || '') || [];
                     return (
                         <TableRow key={receipt.id}>
                           <TableCell>{format(new Date(receipt.date), 'HH:mm:ss')}</TableCell>
                           <TableCell className="font-medium">{receipt.awb}</TableCell>
                           <TableCell>
-                            <Button variant="link" size="sm" className="h-auto p-0 text-xs" onClick={() => handleViewDetails(receipt.transactionId)}>
-                                {relatedSales.length > 0 ? `${relatedSales.reduce((acc, s) => acc + s.quantity, 0)} produk` : 'Lihat Detail'}
+                            <Button variant="link" size="sm" className="h-auto p-0 text-xs" onClick={() => handleViewDetails(receipt)}>
+                                {relatedSales.length > 0 ? `${relatedSales.reduce((acc, s) => acc + s.quantity, 0)} produk` : 'Catat Produk'}
                                 <Eye className="ml-2 h-3 w-3" />
                             </Button>
                           </TableCell>
@@ -372,6 +362,17 @@ export default function LazadaSalesPage() {
           open={isDetailOpen}
           onOpenChange={setIsDetailOpen}
           sales={detailItems}
+      />
+      <RecordSaleForReceiptDialog
+        open={isSaleDialogOpen}
+        onOpenChange={(isOpen) => {
+          setIsSaleDialogOpen(isOpen);
+          if (!isOpen) {
+            setReceiptForSale(null);
+            loadReceipts(); 
+          }
+        }}
+        receipt={receiptForSale}
       />
     </AppLayout>
   );

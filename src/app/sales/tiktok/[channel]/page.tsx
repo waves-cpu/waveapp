@@ -11,11 +11,18 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { ScanLine, Trash2, ShoppingCart, Search, Eye, ArrowLeft } from 'lucide-react';
-import { format, parseISO } from 'date-fns';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { Calendar as CalendarIcon, ScanLine, Trash2, ShoppingCart, Search, Eye } from 'lucide-react';
+import { format, parse, isValid, parseISO } from 'date-fns';
 import { useInventory } from '@/hooks/use-inventory';
 import { useLanguage } from '@/hooks/use-language';
 import { translations } from '@/types/language';
+import { cn } from '@/lib/utils';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import type { Sale, ShippingReceipt } from '@/types';
 import { useToast } from '@/hooks/use-toast';
@@ -40,17 +47,13 @@ import { Badge } from '@/components/ui/badge';
 import { RecordSaleForReceiptDialog } from '@/app/components/record-sale-for-receipt-dialog';
 
 
-export default function TiktokChannelPage() {
+export default function TiktokSalesPage() {
   const { language } = useLanguage();
   const t = translations[language];
   const { addShippingReceipt, deleteShippingReceipt, fetchShippingReceipts, allSales, fetchItems } = useInventory();
   const { toast } = useToast();
   const { playSuccessSound, playErrorSound } = useScanSounds();
   const router = useRouter();
-  const params = useParams();
-
-  const salesChannel = "Tiktok";
-  const shippingChannel = typeof params.channel === 'string' ? params.channel.toUpperCase() : '';
 
   const [receipts, setReceipts] = useState<ShippingReceipt[]>([]);
   const [totalReceipts, setTotalReceipts] = useState(0);
@@ -58,6 +61,7 @@ export default function TiktokChannelPage() {
   const [awb, setAwb] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const awbInputRef = useRef<HTMLInputElement>(null);
+  const [isDatePickerOpen, setDatePickerOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(50);
   const [searchTerm, setSearchTerm] = useState('');
@@ -68,6 +72,8 @@ export default function TiktokChannelPage() {
   const [receiptForSale, setReceiptForSale] = useState<ShippingReceipt | null>(null);
   const [isSaleDialogOpen, setIsSaleDialogOpen] = useState(false);
 
+  const [currentDate, setCurrentDate] = useState(new Date());
+
   const refocusInput = useCallback(() => {
     if (!isSaleDialogOpen) {
       setTimeout(() => awbInputRef.current?.focus(), 100);
@@ -77,13 +83,13 @@ export default function TiktokChannelPage() {
   const loadReceipts = useCallback(async () => {
     setLoading(true);
     try {
+      const dateString = format(currentDate, 'yyyy-MM-dd');
       const { receipts: receiptsData, total } = await fetchShippingReceipts({ 
           page: currentPage, 
           limit: itemsPerPage, 
-          salesChannel: salesChannel,
-          channel: shippingChannel, 
-          awb: searchTerm,
-          dateString: format(new Date(), 'yyyy-MM-dd')
+          salesChannel: 'Tiktok', 
+          dateString: dateString,
+          awb: searchTerm
       });
       setReceipts(receiptsData);
       setTotalReceipts(total);
@@ -97,19 +103,19 @@ export default function TiktokChannelPage() {
     } finally {
       setLoading(false);
     }
-  }, [fetchShippingReceipts, toast, currentPage, itemsPerPage, searchTerm, salesChannel, shippingChannel]);
+  }, [fetchShippingReceipts, toast, currentPage, itemsPerPage, searchTerm, currentDate]);
   
   useEffect(() => {
     loadReceipts();
   }, [loadReceipts]);
-
-  useEffect(() => {
-    fetchItems(); // Ensure items are fresh for the sale dialog
-  }, [fetchItems]);
   
   useEffect(() => {
     refocusInput();
   }, [refocusInput, receipts, isSaleDialogOpen]);
+  
+  useEffect(() => {
+    fetchItems(); // Ensure items are fresh for the sale dialog
+  }, [fetchItems]);
 
 
   const salesByReceipt = useMemo(() => {
@@ -126,6 +132,15 @@ export default function TiktokChannelPage() {
     return map;
   }, [allSales]);
 
+
+  const handleDateChange = (newDate: Date | undefined) => {
+    if (newDate) {
+        setDatePickerOpen(false);
+        setCurrentDate(newDate);
+        setCurrentPage(1);
+    }
+  }
+
   const handleAwbSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!awb || isSubmitting) return;
@@ -134,9 +149,9 @@ export default function TiktokChannelPage() {
     
      const newReceipt: Omit<ShippingReceipt, 'id'> = {
         awb: awb.trim(),
-        salesChannel: salesChannel,
-        channel: shippingChannel,
-        date: format(new Date(), "yyyy-MM-dd'T'HH:mm:ss"),
+        salesChannel: 'Tiktok',
+        channel: 'J&T', // Default to J&T for Tiktok
+        date: format(currentDate, "yyyy-MM-dd'T'HH:mm:ss"),
         status: 'Perlu Diproses',
         transactionId: awb.trim()
     };
@@ -147,7 +162,6 @@ export default function TiktokChannelPage() {
         setAwb('');
         setReceiptForSale(added);
         setIsSaleDialogOpen(true);
-        // We will reload receipts when the dialog closes to reflect new state
     } catch (error) {
         playErrorSound();
         let title = 'Input Gagal';
@@ -183,7 +197,6 @@ export default function TiktokChannelPage() {
         setDetailItems(items);
         setIsDetailOpen(true);
     } else {
-        // If no sales recorded, open the sale recording dialog
         setReceiptForSale(receipt);
         setIsSaleDialogOpen(true);
     }
@@ -194,14 +207,11 @@ export default function TiktokChannelPage() {
   return (
     <AppLayout>
       <main className="flex min-h-svh flex-1 flex-col gap-4 bg-muted/40 p-4">
-        <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon" className="md:hidden" onClick={() => router.back()}>
-                <ArrowLeft />
-            </Button>
-            <SidebarTrigger className="hidden md:flex" />
-            <h1 className="text-lg md:text-xl font-bold font-headline text-foreground">
-                {salesChannel} - {shippingChannel}
-            </h1>
+        <div className="flex items-center gap-4">
+          <SidebarTrigger className="md:hidden" />
+          <h1 className="text-lg md:text-xl font-bold font-headline text-foreground">
+            {t.sales.tiktok}
+          </h1>
         </div>
 
         <div className="bg-card rounded-lg border shadow-sm flex flex-col flex-1 overflow-hidden">
@@ -220,14 +230,39 @@ export default function TiktokChannelPage() {
                       />
                   </div>
               </form>
-              <div className="relative flex-grow sm:flex-grow-0">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                      placeholder="Cari No. Resi..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="pl-10 w-full sm:w-64"
-                  />
+              <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                <div className="relative flex-grow">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                        placeholder="Cari No. Resi..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="pl-10 w-full"
+                    />
+                </div>
+                <Popover open={isDatePickerOpen} onOpenChange={setDatePickerOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      id="date"
+                      variant={'outline'}
+                      className={cn(
+                        'w-full sm:w-[240px] justify-start text-left font-normal',
+                        !currentDate && 'text-muted-foreground'
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {currentDate ? format(currentDate, 'PP') : <span>{t.stockHistory.dateRange}</span>}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="end">
+                    <Calendar
+                      mode="single"
+                      selected={currentDate}
+                      onSelect={handleDateChange}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
               </div>
           </div>
           <div className="flex-grow overflow-auto">
@@ -301,7 +336,7 @@ export default function TiktokChannelPage() {
                               <ShoppingCart className="h-16 w-16" />
                               <div className="text-center">
                                   <p className="font-semibold">Tidak Ada Resi</p>
-                                  <p className="text-sm">Belum ada resi yang tercatat untuk hari ini.</p>
+                                  <p className="text-sm">Tidak ada resi yang tercatat pada tanggal yang dipilih.</p>
                               </div>
                           </div>
                       </TableCell>
@@ -309,7 +344,6 @@ export default function TiktokChannelPage() {
                 )}
               </TableBody>
             </Table>
-          </div>
             {totalPages > 1 && (
                 <div className="flex items-center justify-end p-4 border-t">
                     <div className="flex items-center gap-4">
@@ -321,6 +355,7 @@ export default function TiktokChannelPage() {
                     </div>
                 </div>
             )}
+          </div>
         </div>
       </main>
       <DailySalesDetailDialog
@@ -334,7 +369,7 @@ export default function TiktokChannelPage() {
           setIsSaleDialogOpen(isOpen);
           if (!isOpen) {
             setReceiptForSale(null);
-            loadReceipts(); // Refresh the list after closing
+            loadReceipts(); 
           }
         }}
         receipt={receiptForSale}
