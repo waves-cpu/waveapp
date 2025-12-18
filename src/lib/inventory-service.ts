@@ -1,5 +1,4 @@
 
-
 'use server';
 
 import { db } from './db';
@@ -108,30 +107,31 @@ export async function fetchShippingReceipts(options: {
     let whereClauses: string[] = [];
     let params: any = {};
     
-    if (salesChannel) {
-        whereClauses.push("salesChannel = @salesChannel");
-        params.salesChannel = salesChannel;
-    }
-
     if (awb) {
         whereClauses.push("awb LIKE @awb");
         params.awb = `%${awb}%`;
     } else {
-        if (channel && channel !== 'all') {
-            whereClauses.push("channel = @channel");
-            params.channel = channel;
-        }
         if (dateString) {
             whereClauses.push("date(date) = @dateString");
             params.dateString = dateString;
         }
+        if (date_range) {
+            whereClauses.push("date >= @from AND date <= @to");
+            params.from = date_range.from.toISOString();
+            params.to = endOfDay(date_range.to).toISOString();
+        }
     }
     
-    if (date_range) {
-        whereClauses.push("date >= @from AND date <= @to");
-        params.from = date_range.from.toISOString();
-        params.to = endOfDay(date_range.to).toISOString();
+    if (salesChannel) {
+        whereClauses.push("salesChannel = @salesChannel");
+        params.salesChannel = salesChannel;
     }
+    
+    if (channel && channel !== 'all') {
+        whereClauses.push("channel = @channel");
+        params.channel = channel;
+    }
+
     if (status && status.length > 0) {
         whereClauses.push(`status IN (${status.map((_, i) => `@status${i}`).join(',')})`);
         status.forEach((s, i) => {
@@ -1192,6 +1192,8 @@ export async function deleteProductPermanently(itemId: string) {
     
 
     
+
+
 
 
 
