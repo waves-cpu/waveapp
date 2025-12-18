@@ -1,4 +1,5 @@
 
+
 'use server';
 
 import { db } from './db';
@@ -110,16 +111,17 @@ export async function fetchShippingReceipts(options: {
     if (awb) {
         whereClauses.push("awb LIKE @awb");
         params.awb = `%${awb}%`;
-    } else {
-        if (dateString) {
-            whereClauses.push("date(date) = @dateString");
-            params.dateString = dateString;
-        }
-        if (date_range) {
-            whereClauses.push("date >= @from AND date <= @to");
-            params.from = date_range.from.toISOString();
-            params.to = endOfDay(date_range.to).toISOString();
-        }
+    }
+    
+    if (dateString && !awb) {
+        whereClauses.push("date(date) = @dateString");
+        params.dateString = dateString;
+    }
+    
+    if (date_range && !awb) {
+        whereClauses.push("date >= @from AND date <= @to");
+        params.from = date_range.from.toISOString();
+        params.to = endOfDay(date_range.to).toISOString();
     }
     
     if (salesChannel) {
@@ -1193,6 +1195,7 @@ export async function deleteProductPermanently(itemId: string) {
     
 
     
+
 
 
 
