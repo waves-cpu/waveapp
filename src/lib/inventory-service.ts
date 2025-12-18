@@ -1,3 +1,4 @@
+
 'use server';
 
 import { db } from './db';
@@ -95,12 +96,11 @@ export async function fetchShippingReceipts(options: {
     limit: number;
     salesChannel?: string;
     channel?: string;
-    dateString?: string;
     date_range?: { from: Date, to: Date };
     status?: string[];
     awb?: string;
 }): Promise<{ receipts: ShippingReceipt[]; total: number }> {
-    const { page, limit, salesChannel, channel, dateString, date_range, status, awb } = options;
+    const { page, limit, salesChannel, channel, date_range, status, awb } = options;
     const offset = (page - 1) * limit;
 
     let whereClauses: string[] = [];
@@ -110,10 +110,7 @@ export async function fetchShippingReceipts(options: {
         whereClauses.push("awb LIKE @awb");
         params.awb = `%${awb}%`;
     } else {
-        if (dateString) {
-            whereClauses.push("date(date) = @dateString");
-            params.dateString = dateString;
-        } else if (date_range) {
+        if (date_range) {
             whereClauses.push("date >= @from AND date <= @to");
             params.from = date_range.from.toISOString();
             params.to = endOfDay(date_range.to).toISOString();
@@ -142,7 +139,7 @@ export async function fetchShippingReceipts(options: {
     const countQuery = db.prepare(`SELECT COUNT(*) as count FROM shipping_receipts ${whereString}`);
     const totalResult = countQuery.get(params) as { count: number };
     const total = totalResult.count;
-
+    
     const dataQuery = db.prepare(`
         SELECT * FROM shipping_receipts
         ${whereString}
@@ -1191,6 +1188,7 @@ export async function deleteProductPermanently(itemId: string) {
     
 
     
+
 
 
 
