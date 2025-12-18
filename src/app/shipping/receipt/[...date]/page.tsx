@@ -83,8 +83,8 @@ export default function ReceiptPage() {
     
     const { fetchShippingReceipts, deleteShippingReceipt, updateShippingReceiptsStatus, updateShippingReceiptStatus, fetchShippingReceiptCountsByChannel } = useInventory();
 
-    const [activeShippingTab, setActiveShippingTab] = useState<string | null>(null);
-    const [activeSalesChannelTab, setActiveSalesChannelTab] = useState<string | null>(null);
+    const [activeShippingTab, setActiveShippingTab] = useState<string | null>('SPX');
+    const [activeSalesChannelTab, setActiveSalesChannelTab] = useState<string | null>('Shopee');
     const [searchTerm, setSearchTerm] = useState('');
     const [isDatePickerOpen, setDatePickerOpen] = useState(false);
     const [currentPage, setCurrentPage] = useState(1);
@@ -297,15 +297,6 @@ export default function ReceiptPage() {
                 <div className="flex flex-col gap-4">
                      <div className="border-b">
                          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-2">
-                             <Button 
-                                key="all-sales"
-                                variant={activeSalesChannelTab === null ? 'secondary' : 'ghost'}
-                                size="sm"
-                                onClick={() => setActiveSalesChannelTab(null)}
-                                className="shrink-0"
-                            >
-                                Semua Kanal
-                            </Button>
                             {(['Shopee', 'Tiktok', 'Lazada'] as const).map(tab => (
                                 <Button 
                                     key={tab}
@@ -320,15 +311,6 @@ export default function ReceiptPage() {
                         </div>
                     </div>
                     <div className="flex items-center gap-2 overflow-x-auto no-scrollbar border-b pb-2">
-                         <Button 
-                            key="all-shipping"
-                            variant={activeShippingTab === null ? 'secondary' : 'ghost'}
-                            size="sm"
-                            onClick={() => setActiveShippingTab(null)}
-                            className="shrink-0"
-                        >
-                            Semua Jasa Kirim
-                        </Button>
                         {(['SPX', 'J&T', 'JNE', 'INSTANT', 'CARGO'] as ShippingProvider[]).map(tab => (
                             <Button 
                                 key={tab}
@@ -493,4 +475,3 @@ export default function ReceiptPage() {
         </AppLayout>
     );
 }
-
