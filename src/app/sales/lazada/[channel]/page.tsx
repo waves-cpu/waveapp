@@ -28,6 +28,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
+  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Skeleton } from '@/components/ui/skeleton';
 import { AppLayout } from '@/app/components/app-layout';
@@ -258,7 +259,7 @@ export default function LazadaChannelPage() {
                         <TableRow key={receipt.id}>
                           <TableCell>{format(new Date(receipt.date), 'HH:mm:ss')}</TableCell>
                           <TableCell className="font-medium">{receipt.awb}</TableCell>
-                           <TableCell>
+                          <TableCell>
                             <Button variant="link" size="sm" className="h-auto p-0 text-xs" onClick={() => handleViewDetails(receipt)}>
                                 {relatedSales.length > 0 ? `${relatedSales.reduce((acc, s) => acc + s.quantity, 0)} produk` : 'Catat Produk'}
                                 <Eye className="ml-2 h-3 w-3" />
