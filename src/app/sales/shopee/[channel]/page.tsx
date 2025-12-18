@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
@@ -328,7 +329,7 @@ export default function ShopeeChannelPage() {
           onOpenChange={setIsDetailOpen}
           sales={detailItems}
       />
-      <RecordSaleForReceiptDialog
+       <RecordSaleForReceiptDialog
         open={isSaleDialogOpen}
         onOpenChange={(isOpen) => {
           setIsSaleDialogOpen(isOpen);
