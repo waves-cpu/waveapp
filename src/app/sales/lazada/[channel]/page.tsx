@@ -44,7 +44,7 @@ import { RecordSaleForReceiptDialog } from '@/app/components/record-sale-for-rec
 export default function LazadaChannelPage() {
   const { language } = useLanguage();
   const t = translations[language];
-  const { addShippingReceipt, deleteShippingReceipt, fetchShippingReceipts, allSales, fetchItems } = useInventory();
+  const { addShippingReceipt, deleteShippingReceipt, fetchShippingReceipts, allSales } = useInventory();
   const { toast } = useToast();
   const { playSuccessSound, playErrorSound } = useScanSounds();
   const router = useRouter();
@@ -104,10 +104,6 @@ export default function LazadaChannelPage() {
     loadReceipts();
   }, [loadReceipts]);
 
-  useEffect(() => {
-    fetchItems(); // Ensure items are fresh for the sale dialog
-  }, [fetchItems]);
-  
   useEffect(() => {
     refocusInput();
   }, [refocusInput, receipts, isSaleDialogOpen]);
