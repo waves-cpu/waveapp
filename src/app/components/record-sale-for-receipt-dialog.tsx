@@ -57,7 +57,7 @@ export function RecordSaleForReceiptDialog({
   onSaleComplete,
   receipt,
 }: RecordSaleForReceiptDialogProps) {
-  const { items: inventoryItems, recordSale } = useInventory();
+  const { items: inventoryItems, recordSale, updateShippingReceiptStatus } = useInventory();
   const [cart, setCart] = useState<CartItem[]>([]);
   const { toast } = useToast();
   const { playSuccessSound, playErrorSound } = useScanSounds();
@@ -86,7 +86,9 @@ export function RecordSaleForReceiptDialog({
   }, [open]);
 
   const addToCart = useCallback((item: InventoryItem, variant?: InventoryItemVariant) => {
-    const onlinePrice = item.channelPrices?.find(p => ['shopee', 'tiktok', 'lazada'].includes(p.channel))?.price;
+    const itemToAddRaw = variant || item;
+    const onlinePriceResult = itemToAddRaw.channelPrices?.find(p => ['shopee', 'tiktok', 'lazada'].includes(p.channel));
+    const price = onlinePriceResult?.price ?? itemToAddRaw.price!;
 
     const itemToAdd = {
         productId: item.id,
@@ -95,7 +97,7 @@ export function RecordSaleForReceiptDialog({
         variantName: variant?.name,
         sku: variant?.sku || item.sku || '',
         quantity: 1,
-        price: onlinePrice ?? variant?.price ?? item.price ?? 0,
+        price: price,
         imageUrl: item.imageUrl
     };
 
@@ -161,6 +163,10 @@ export function RecordSaleForReceiptDialog({
         })
       );
       await Promise.all(salePromises);
+
+      // After successfully recording sales, update receipt status
+      await updateShippingReceiptStatus(receipt.id, 'Dikirim');
+      
       toast({
         title: 'Penjualan Dicatat',
         description: `Stok untuk ${cart.length} produk telah berhasil dikurangi.`,

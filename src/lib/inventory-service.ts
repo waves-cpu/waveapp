@@ -758,7 +758,7 @@ export async function performSale(
     
     const { newSaleId } = db.transaction(() => {
         const saleDate = options?.saleDate || new Date();
-        const saleDateString = formatDate(saleDate, 'yyyy-MM-dd HH:mm:ss');
+        const saleDateString = saleDate.toISOString();
         const saleReason = `Sale (${channel})` + (options?.resellerName ? ` - ${options.resellerName}` : '');
 
         let finalPriceAtSale;
@@ -781,17 +781,19 @@ export async function performSale(
             if (options?.priceAtSale !== undefined) {
                 finalPriceAtSale = options.priceAtSale;
             } else {
-                const specificChannelPriceResult = getChannelPriceStmt.get({ productId: null, variantId: variant.id, channel: channel }) as { price: number } | undefined;
-                const isOnlineChannel = ONLINE_MARKETPLACES.includes(channel.toLowerCase());
-                const onlinePriceResult = getChannelPriceStmt.get({ productId: null, variantId: variant.id, channel: 'online' }) as { price: number } | undefined;
-                
-                if (specificChannelPriceResult) {
-                    finalPriceAtSale = specificChannelPriceResult.price;
-                } else if (isOnlineChannel && onlinePriceResult) {
-                    finalPriceAtSale = onlinePriceResult.price;
-                } else {
-                    finalPriceAtSale = variant.price;
-                }
+                 const isOnlineChannel = ONLINE_MARKETPLACES.includes(channel.toLowerCase());
+                 let priceResult;
+                 
+                 // 1. Try specific channel (e.g., 'shopee')
+                 priceResult = getChannelPriceStmt.get({ productId: null, variantId: variant.id, channel: channel.toLowerCase() }) as { price: number } | undefined;
+                 
+                 // 2. If online and no specific price, try 'online'
+                 if (!priceResult && isOnlineChannel) {
+                     priceResult = getChannelPriceStmt.get({ productId: null, variantId: variant.id, channel: 'online' }) as { price: number } | undefined;
+                 }
+                 
+                 // 3. Fallback to general variant price
+                 finalPriceAtSale = priceResult ? priceResult.price : variant.price;
             }
 
             cogsAtSale = variant.costPrice || 0;
@@ -809,17 +811,16 @@ export async function performSale(
                 if (options?.priceAtSale !== undefined) {
                     finalPriceAtSale = options.priceAtSale;
                 } else {
-                    const specificChannelPriceResult = getChannelPriceStmt.get({ productId: product.id, variantId: null, channel: channel }) as { price: number } | undefined;
                     const isOnlineChannel = ONLINE_MARKETPLACES.includes(channel.toLowerCase());
-                    const onlinePriceResult = getChannelPriceStmt.get({ productId: product.id, variantId: null, channel: 'online' }) as { price: number } | undefined;
+                    let priceResult;
                     
-                    if (specificChannelPriceResult) {
-                        finalPriceAtSale = specificChannelPriceResult.price;
-                    } else if (isOnlineChannel && onlinePriceResult) {
-                        finalPriceAtSale = onlinePriceResult.price;
-                    } else {
-                        finalPriceAtSale = product.price!;
+                    priceResult = getChannelPriceStmt.get({ productId: product.id, variantId: null, channel: channel.toLowerCase() }) as { price: number } | undefined;
+
+                    if (!priceResult && isOnlineChannel) {
+                        priceResult = getChannelPriceStmt.get({ productId: product.id, variantId: null, channel: 'online' }) as { price: number } | undefined;
                     }
+
+                    finalPriceAtSale = priceResult ? priceResult.price : product.price!;
                 }
 
                 cogsAtSale = product.costPrice || 0;
@@ -864,7 +865,7 @@ export async function performSale(
             COALESCE(v.sku, p.sku) as sku,
             s.status
         FROM sales s
-        LEFT JOIN products p ON s.productId = p.id
+        JOIN products p ON s.productId = p.id
         LEFT JOIN variants v ON s.variantId = v.id
         WHERE s.id = ?
     `).get(newSaleId) as Sale;
