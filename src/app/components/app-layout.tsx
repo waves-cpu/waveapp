@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useMemo } from 'react';
@@ -78,7 +79,6 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     const [isSalesOpen, setSalesOpen] = useState(true);
     const [isInventoryOpen, setInventoryOpen] = useState(true);
     const [isShippingOpen, setShippingOpen] = useState(true);
-    const [isFinanceOpen, setFinanceOpen] = useState(true);
     
     const hasArchivedItems = useMemo(() => items.some(item => item.isArchived), [items]);
 
@@ -266,38 +266,6 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                       </CollapsibleContent>
                   </Collapsible>
 
-                  {user?.role === 'admin' && (
-                    <Collapsible open={isFinanceOpen} onOpenChange={setFinanceOpen}>
-                        <CollapsibleTrigger asChild>
-                            <SidebarMenuButton>
-                                <BookCopy />
-                                <span>{t.finance.title}</span>
-                                <ChevronDown className={cn("ml-auto transition-transform", isFinanceOpen && "rotate-180")} />
-                            </SidebarMenuButton>
-                        </CollapsibleTrigger>
-                        <CollapsibleContent>
-                            <SidebarMenu className="ml-4 mt-2 border-l border-muted-foreground/20 pl-4">
-                                <SidebarMenuItem>
-                                    <Link href="/finance/assets">
-                                        <SidebarMenuButton variant="ghost" size="sm" isActive={pathname === '/finance/assets'}>
-                                            <ArchiveIcon />
-                                            {t.finance.assetReport}
-                                        </SidebarMenuButton>
-                                    </Link>
-                                </SidebarMenuItem>
-                                <SidebarMenuItem>
-                                    <Link href="/finance/settings">
-                                        <SidebarMenuButton variant="ghost" size="sm" isActive={pathname === '/finance/settings'}>
-                                            <DollarSign />
-                                            {t.finance.priceSettings}
-                                        </SidebarMenuButton>
-                                    </Link>
-                                </SidebarMenuItem>
-                            </SidebarMenu>
-                        </CollapsibleContent>
-                    </Collapsible>
-                  )}
-                  
               </SidebarMenu>
           </SidebarContent>
           <SidebarFooter>
