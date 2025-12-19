@@ -1119,15 +1119,31 @@ export async function updatePrices(updates: { id: string, type: 'product' | 'var
                 deleteChannelPricesByVariant.run(id);
             }
             
+            const onlinePrice = update.channelPrices?.find(p => p.channel === 'online')?.price;
+
             update.channelPrices?.forEach(channelPrice => {
                 const priceIsValid = channelPrice.price !== undefined && channelPrice.price !== null && channelPrice.price >= 0;
-                if (priceIsValid) {
-                    insertChannelPriceStmt.run({
-                        productId: type === 'product' ? id : null,
-                        variantId: type === 'variant' ? id : null,
-                        channel: channelPrice.channel,
-                        price: channelPrice.price
-                    });
+                
+                if (channelPrice.channel === 'online') {
+                    if (priceIsValid) {
+                        ['shopee', 'tiktok', 'lazada'].forEach(onlineChannel => {
+                            insertChannelPriceStmt.run({
+                                productId: type === 'product' ? id : null,
+                                variantId: type === 'variant' ? id : null,
+                                channel: onlineChannel,
+                                price: channelPrice.price
+                            });
+                        });
+                    }
+                } else {
+                     if (priceIsValid) {
+                        insertChannelPriceStmt.run({
+                            productId: type === 'product' ? id : null,
+                            variantId: type === 'variant' ? id : null,
+                            channel: channelPrice.channel,
+                            price: channelPrice.price
+                        });
+                    }
                 }
             });
         });
@@ -1297,6 +1313,7 @@ async function updateShippingReceiptStatusByAwb(awb: string, status: string) {
 
 
     
+
 
 
 
