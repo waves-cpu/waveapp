@@ -20,6 +20,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { Card, CardContent } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Trash2, ShoppingBag, Search } from 'lucide-react';
 import { useInventory } from '@/hooks/use-inventory';
