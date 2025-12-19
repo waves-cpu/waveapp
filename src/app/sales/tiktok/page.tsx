@@ -12,6 +12,7 @@ import { Truck } from 'lucide-react';
 
 const shippingProviders = [
     { name: 'J&T', icon: Truck },
+    { name: 'JNE', icon: Truck },
 ];
 
 export default function TiktokHubPage() {
