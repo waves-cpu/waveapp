@@ -782,19 +782,17 @@ export async function performSale(
                 finalPriceAtSale = options.priceAtSale;
             } else {
                 const isOnlineChannel = ONLINE_MARKETPLACES.includes(channel.toLowerCase());
-                const resellerPriceResult = getChannelPriceStmt.get({ productId: null, variantId: variant.id, channel: 'reseller' }) as { price: number } | undefined;
+                
+                const specificChannelPriceResult = getChannelPriceStmt.get({ productId: null, variantId: variant.id, channel: channel }) as { price: number } | undefined;
                 const onlinePriceResult = getChannelPriceStmt.get({ productId: null, variantId: variant.id, channel: 'shopee' }) as { price: number } | undefined;
                 
-                let specificChannelPriceResult;
-                if (channel === 'reseller') {
-                    specificChannelPriceResult = resellerPriceResult;
-                } else if (isOnlineChannel) {
-                    specificChannelPriceResult = onlinePriceResult;
+                if (specificChannelPriceResult) {
+                    finalPriceAtSale = specificChannelPriceResult.price;
+                } else if (isOnlineChannel && onlinePriceResult) {
+                    finalPriceAtSale = onlinePriceResult.price;
                 } else {
-                    specificChannelPriceResult = getChannelPriceStmt.get({ productId: null, variantId: variant.id, channel: channel }) as { price: number } | undefined;
+                    finalPriceAtSale = variant.price;
                 }
-                
-                finalPriceAtSale = specificChannelPriceResult?.price ?? variant.price;
             }
 
             cogsAtSale = variant.costPrice || 0;
@@ -813,19 +811,17 @@ export async function performSale(
                     finalPriceAtSale = options.priceAtSale;
                 } else {
                     const isOnlineChannel = ONLINE_MARKETPLACES.includes(channel.toLowerCase());
-                    const resellerPriceResult = getChannelPriceStmt.get({ productId: product.id, variantId: null, channel: 'reseller' }) as { price: number } | undefined;
+
+                    const specificChannelPriceResult = getChannelPriceStmt.get({ productId: product.id, variantId: null, channel: channel }) as { price: number } | undefined;
                     const onlinePriceResult = getChannelPriceStmt.get({ productId: product.id, variantId: null, channel: 'shopee' }) as { price: number } | undefined;
-
-                    let specificChannelPriceResult;
-                    if (channel === 'reseller') {
-                        specificChannelPriceResult = resellerPriceResult;
-                    } else if (isOnlineChannel) {
-                        specificChannelPriceResult = onlinePriceResult;
+                    
+                    if (specificChannelPriceResult) {
+                        finalPriceAtSale = specificChannelPriceResult.price;
+                    } else if (isOnlineChannel && onlinePriceResult) {
+                        finalPriceAtSale = onlinePriceResult.price;
                     } else {
-                        specificChannelPriceResult = getChannelPriceStmt.get({ productId: product.id, variantId: null, channel: channel }) as { price: number } | undefined;
+                        finalPriceAtSale = product.price!;
                     }
-
-                    finalPriceAtSale = specificChannelPriceResult?.price ?? product.price!;
                 }
 
                 cogsAtSale = product.costPrice || 0;
@@ -1313,6 +1309,7 @@ async function updateShippingReceiptStatusByAwb(awb: string, status: string) {
 
 
     
+
 
 
 
