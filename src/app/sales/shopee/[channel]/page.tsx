@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
@@ -288,11 +289,6 @@ export default function ShopeeChannelPage() {
                                   </Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end">
-                                  {receipt.status === 'Perlu Diproses' && (
-                                    <DropdownMenuItem onClick={() => updateShippingReceiptStatus(receipt.id, 'Dikirim')}>
-                                        Kirim
-                                    </DropdownMenuItem>
-                                  )}
                                   <AlertDialog>
                                     <AlertDialogTrigger asChild>
                                        <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-destructive">
