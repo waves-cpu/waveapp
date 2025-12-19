@@ -5,8 +5,8 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { AppLayout } from '@/app/components/app-layout';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { FileDown, Truck, PackageCheck, Undo2, Ban, History } from 'lucide-react';
 import { useInventory } from '@/hooks/use-inventory';
@@ -248,7 +248,7 @@ export default function ReceiptReportPage() {
                                         </TableRow>
                                     )}
                                 </TableBody>
-                                 <CardFooter>
+                                 <TableFooter>
                                     <TableRow>
                                         <TableHead className="font-bold">TOTAL</TableHead>
                                         <TableHead className="text-center font-bold">{totalCounts['Perlu Diproses'] || 0}</TableHead>
@@ -259,7 +259,7 @@ export default function ReceiptReportPage() {
                                         <TableHead className="text-center font-bold">{totalCounts.Return || 0}</TableHead>
                                         <TableHead className="text-center font-extrabold text-lg">{totalCounts.Total || 0}</TableHead>
                                     </TableRow>
-                                </CardFooter>
+                                </TableFooter>
                            </Table>
                         </CardContent>
                     </Card>
