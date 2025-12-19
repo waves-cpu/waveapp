@@ -28,8 +28,11 @@ import { useDebounce } from '@/hooks/use-debounce';
 
 type SaleItem = {
     sku: string;
-    name: string;
+    productName: string;
+    variantName: string;
+    size: string;
     quantity: number;
+    price: number;
 };
 
 interface RecordSaleForReceiptDialogProps {
@@ -37,6 +40,16 @@ interface RecordSaleForReceiptDialogProps {
     onOpenChange: (open: boolean) => void;
     receipt: ShippingReceipt | null;
 }
+
+const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('id-ID', {
+        style: 'currency',
+        currency: 'IDR',
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0,
+    }).format(amount);
+};
+
 
 export function RecordSaleForReceiptDialog({
     open,
@@ -84,7 +97,7 @@ export function RecordSaleForReceiptDialog({
         }
     }, [open]);
 
-    const addOrUpdateSaleItem = useCallback((variant: InventoryItemVariant, parentName?: string) => {
+    const addOrUpdateSaleItem = useCallback((variant: InventoryItemVariant, parentProduct: InventoryItem) => {
         if (!variant.sku) {
             playErrorSound();
             toast({ variant: "destructive", title: "SKU Tidak Ada", description: "Varian ini tidak memiliki SKU." });
@@ -98,7 +111,14 @@ export function RecordSaleForReceiptDialog({
                     item.sku === variant.sku ? { ...item, quantity: item.quantity + 1 } : item
                 );
             }
-            return [...prevItems, { sku: variant.sku!, name: `${parentName} - ${variant.name}`, quantity: 1 }];
+            return [...prevItems, { 
+                sku: variant.sku!, 
+                productName: parentProduct.name,
+                variantName: variant.name,
+                size: variant.name, // Assuming variant name is the size
+                quantity: 1,
+                price: variant.price
+            }];
         });
         playSuccessSound();
         setSearchTerm('');
@@ -118,7 +138,7 @@ export function RecordSaleForReceiptDialog({
                 if (stock !== undefined && stock <= 0) {
                      throw new Error(`Stok untuk produk "${itemToAdd.name}" sudah habis.`);
                 }
-                addOrUpdateSaleItem(itemToAdd as InventoryItemVariant, product.name);
+                addOrUpdateSaleItem(itemToAdd as InventoryItemVariant, product);
             }
         } catch (error: any) {
             playErrorSound();
@@ -130,13 +150,11 @@ export function RecordSaleForReceiptDialog({
         e.preventDefault();
         if (!searchTerm) return;
         
-        // If there's a single exact match suggestion, select it.
         if (searchSuggestions.length === 1 && (searchSuggestions[0].sku?.toLowerCase() === searchTerm.toLowerCase() || searchSuggestions[0].variants?.some(v => v.sku?.toLowerCase() === searchTerm.toLowerCase()))) {
             handleProductSelect(searchSuggestions[0]);
             return;
         }
 
-        // Fallback to original SKU search logic for scanner input
         try {
             const product = await getProductBySku(searchTerm);
             if (product) {
@@ -156,7 +174,7 @@ export function RecordSaleForReceiptDialog({
 
     const handleVariantSelectFromDialog = (variant: InventoryItemVariant | null) => {
         if (variant && productForVariantSelection) {
-            addOrUpdateSaleItem(variant, productForVariantSelection.name);
+            addOrUpdateSaleItem(variant, productForVariantSelection);
         }
         setProductForVariantSelection(null);
         inputRef.current?.focus();
@@ -193,10 +211,12 @@ export function RecordSaleForReceiptDialog({
         }
     };
 
+    const totalAmount = useMemo(() => saleItems.reduce((acc, item) => acc + item.price * item.quantity, 0), [saleItems]);
+
     return (
         <>
             <Dialog open={open} onOpenChange={onOpenChange}>
-                <DialogContent className="sm:max-w-xl">
+                <DialogContent className="max-w-2xl">
                     <DialogHeader>
                         <DialogTitle>Catat Penjualan untuk Resi</DialogTitle>
                         <DialogDescription>
@@ -262,12 +282,14 @@ export function RecordSaleForReceiptDialog({
                         </form>
                         <Card>
                             <CardContent className="p-0">
-                                <ScrollArea className="h-64 border rounded-md">
+                                <ScrollArea className="h-72 border rounded-md">
                                     <Table>
                                         <TableHeader>
                                             <TableRow>
                                                 <TableHead>Produk</TableHead>
+                                                <TableHead className="w-[100px] text-center">Ukuran</TableHead>
                                                 <TableHead className="w-[120px] text-center">Jumlah</TableHead>
+                                                <TableHead className="w-[150px] text-right">Harga Jual</TableHead>
                                                 <TableHead className="w-[50px]"></TableHead>
                                             </TableRow>
                                         </TableHeader>
@@ -275,9 +297,10 @@ export function RecordSaleForReceiptDialog({
                                             {saleItems.length > 0 ? saleItems.map(item => (
                                                 <TableRow key={item.sku}>
                                                     <TableCell>
-                                                        <p className="font-medium text-sm">{item.name}</p>
+                                                        <p className="font-medium text-sm">{item.productName}</p>
                                                         <p className="text-xs text-muted-foreground">SKU: {item.sku}</p>
                                                     </TableCell>
+                                                    <TableCell className="text-center text-sm">{item.size}</TableCell>
                                                     <TableCell>
                                                         <div className="flex items-center justify-center gap-1">
                                                             <Input
@@ -288,6 +311,7 @@ export function RecordSaleForReceiptDialog({
                                                             />
                                                         </div>
                                                     </TableCell>
+                                                     <TableCell className="text-right font-medium text-sm">{formatCurrency(item.price)}</TableCell>
                                                     <TableCell>
                                                         <Button variant="ghost" size="icon" className="text-destructive h-8 w-8" onClick={() => removeItem(item.sku)}>
                                                             <Trash2 className="h-4 w-4" />
@@ -296,7 +320,7 @@ export function RecordSaleForReceiptDialog({
                                                 </TableRow>
                                             )) : (
                                                 <TableRow>
-                                                    <TableCell colSpan={3} className="h-40 text-center text-muted-foreground">
+                                                    <TableCell colSpan={5} className="h-40 text-center text-muted-foreground">
                                                         Belum ada produk ditambahkan.
                                                     </TableCell>
                                                 </TableRow>
@@ -307,11 +331,16 @@ export function RecordSaleForReceiptDialog({
                             </CardContent>
                         </Card>
                     </div>
-                    <DialogFooter>
-                        <Button variant="outline" onClick={() => onOpenChange(false)}>Batal</Button>
-                        <Button onClick={handleFinalizeSale} disabled={saleItems.length === 0 || isSubmitting}>
-                            {isSubmitting ? 'Menyimpan...' : 'Selesaikan Penjualan'}
-                        </Button>
+                     <DialogFooter className="sm:justify-between items-center pt-4">
+                        <div className="text-lg font-bold">
+                            Total: {formatCurrency(totalAmount)}
+                        </div>
+                        <div className="flex gap-2">
+                           <Button variant="outline" onClick={() => onOpenChange(false)}>Batal</Button>
+                            <Button onClick={handleFinalizeSale} disabled={saleItems.length === 0 || isSubmitting}>
+                                {isSubmitting ? 'Menyimpan...' : 'Selesaikan Penjualan'}
+                            </Button>
+                        </div>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
