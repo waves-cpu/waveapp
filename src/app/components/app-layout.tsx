@@ -79,6 +79,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     const [isSalesOpen, setSalesOpen] = useState(true);
     const [isInventoryOpen, setInventoryOpen] = useState(true);
     const [isShippingOpen, setShippingOpen] = useState(true);
+    const [isFinanceOpen, setFinanceOpen] = useState(true);
     
     const hasArchivedItems = useMemo(() => items.some(item => item.isArchived), [items]);
 
@@ -224,6 +225,28 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                                         </SidebarMenuButton>
                                     </Link>
                                 </SidebarMenuItem>
+                          </SidebarMenu>
+                      </CollapsibleContent>
+                  </Collapsible>
+
+                   <Collapsible open={isFinanceOpen} onOpenChange={setFinanceOpen}>
+                      <CollapsibleTrigger asChild>
+                          <SidebarMenuButton>
+                              <DollarSign />
+                              <span>{t.finance.title}</span>
+                              <ChevronDown className={cn("ml-auto transition-transform", isFinanceOpen && "rotate-180")} />
+                          </SidebarMenuButton>
+                      </CollapsibleTrigger>
+                      <CollapsibleContent>
+                          <SidebarMenu className="ml-4 mt-2 border-l border-muted-foreground/20 pl-4">
+                               <SidebarMenuItem>
+                                  <Link href="/finance/settings">
+                                      <SidebarMenuButton variant="ghost" size="sm" isActive={pathname.startsWith('/finance/settings')}>
+                                          <Settings2 />
+                                          {t.finance.priceSettings}
+                                      </SidebarMenuButton>
+                                  </Link>
+                              </SidebarMenuItem>
                           </SidebarMenu>
                       </CollapsibleContent>
                   </Collapsible>

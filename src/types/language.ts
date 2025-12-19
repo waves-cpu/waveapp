@@ -1,5 +1,4 @@
 
-
 export const translations = {
     en: {
         sidebar: {
@@ -23,6 +22,27 @@ export const translations = {
             lazada: "Lazada",
             pos: "POS",
             reseller: "Reseller",
+        },
+        finance: {
+            title: "Finance",
+            priceSettings: "Price Settings",
+            priceSettingsPage: {
+                title: "Price Settings",
+                description: "Set cost prices, selling prices, and channel-specific prices for all your products.",
+                costPrice: "Cost Price (HPP)",
+                sellingPrice: "General Price",
+                posPrice: "POS Price",
+                resellerPrice: "Reseller Price",
+                onlinePrice: "Online Price",
+                saveButton: "Save All Changes",
+                noChanges: "No changes to save.",
+                successTitle: "Prices Updated",
+                successDesc: "All price changes have been successfully saved.",
+                errorTitle: "Update Failed",
+                errorDesc: "An error occurred while saving prices.",
+                channelPriceDetails: "Channel Price Details",
+                sellingPrices: "selling prices",
+            }
         },
         shipping: {
             title: "Shipping",
@@ -284,7 +304,7 @@ export const translations = {
             searchPlaceholder: "Scan SKU or search product name...",
             noResults: "No products found.",
             noStock: "Out of stock",
-            orderSummary: "Order Summary",
+            orderSummary: "Ringkasan Pesanan",
             item: "Item",
             qty: "Qty",
             price: "Price",
@@ -506,6 +526,27 @@ export const translations = {
             lazada: "Lazada",
             pos: "POS",
             reseller: "Reseller",
+        },
+        finance: {
+            title: "Keuangan",
+            priceSettings: "Pengaturan Harga",
+            priceSettingsPage: {
+                title: "Pengaturan Harga",
+                description: "Atur harga pokok, harga jual, dan harga spesifik kanal untuk semua produk Anda.",
+                costPrice: "Harga Pokok (HPP)",
+                sellingPrice: "Harga Jual Umum",
+                posPrice: "Harga POS",
+                resellerPrice: "Harga Reseller",
+                onlinePrice: "Harga Online",
+                saveButton: "Simpan Semua Perubahan",
+                noChanges: "Tidak ada perubahan untuk disimpan.",
+                successTitle: "Harga Diperbarui",
+                successDesc: "Semua perubahan harga telah berhasil disimpan.",
+                errorTitle: "Gagal Memperbarui",
+                errorDesc: "Terjadi kesalahan saat menyimpan harga.",
+                channelPriceDetails: "Detail Harga Kanal",
+                sellingPrices: "harga jual",
+            }
         },
         shipping: {
             title: "Pengiriman",

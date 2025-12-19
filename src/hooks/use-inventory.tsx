@@ -230,9 +230,8 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
   }, [items]);
 
   const recordSale = async (sku: string, channel: string, quantity: number, options?: { saleDate?: Date, transactionId?: string, paymentMethod?: string, resellerName?: string, priceAtSale?: number, status?: string }): Promise<void> => {
-    const newSale = await performSale(sku, channel, quantity, options);
-    setAllSales(prevSales => [newSale, ...prevSales].sort((a, b) => new Date(b.saleDate).getTime() - new Date(a.saleDate).getTime()));
-    await fetchAllData(); // Still refetch to update inventory items correctly
+    await performSale(sku, channel, quantity, options);
+    await fetchAllData();
   };
 
   const fetchSales = async (channel: string, date: Date, page: number, limit: number): Promise<{ sales: Sale[], total: number }> => {
@@ -372,4 +371,3 @@ export const useInventory = () => {
   }
   return context;
 };
-

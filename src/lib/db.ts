@@ -13,10 +13,10 @@ const dbPath = path.join(dbDir, 'waves.db');
 let db: Database.Database;
 
 function initializeDatabase() {
-  // Force delete the database file on every initialization
-  if (fs.existsSync(dbPath)) {
-      fs.unlinkSync(dbPath);
-  }
+  // Do not delete the database file on every initialization
+  // if (fs.existsSync(dbPath)) {
+  //     fs.unlinkSync(dbPath);
+  // }
 
   try {
       db = new Database(dbPath);
@@ -386,7 +386,7 @@ function executeQuery<T>(query: (db: Database.Database) => T): T {
   }
 }
 
-export const dbProxy = {
+const dbProxy = {
   prepare: (sql: string) => {
     const stmt = executeQuery(db => db.prepare(sql));
     return {
@@ -408,4 +408,3 @@ export { dbProxy as db };
 
 // Initialize the database connection when the module is loaded
 initializeDatabase();
-
