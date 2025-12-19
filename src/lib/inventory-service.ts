@@ -1028,7 +1028,6 @@ function adjustStockByReason(identifier: string, reason: string) {
     // This is a placeholder for a more complex logic that might be needed.
     // For now, we assume we cannot know which item to adjust stock for.
     // In a real scenario, you might log this for manual review.
-    console.warn(`Could not automatically adjust stock for identifier: ${identifier}. Reason: ${reason}. Manual adjustment may be required.`);
 }
 
 export async function updatePrices(updates: { id: string, type: 'product' | 'variant', costPrice?: number, price?: number, channelPrices?: { channel: string, price?: number }[] }[]) {
@@ -1265,6 +1264,7 @@ async function updateShippingReceiptStatusByAwb(awb: string, status: string) {
 
 
     
+
 
 
 

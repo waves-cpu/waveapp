@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
@@ -264,7 +265,6 @@ export default function ReturnPage() {
             setReturns(receipts);
             setTotalReturns(total);
         } catch (error) {
-            console.error("Failed to fetch return receipts:", error);
             toast({ variant: 'destructive', title: t.fetchError });
         } finally {
             setLoading(false);
@@ -291,7 +291,6 @@ export default function ReturnPage() {
 
             setChannelCounts(countsByChannel);
         } catch (error) {
-             console.error("Failed to fetch channel counts:", error);
         }
     }, [fetchShippingReceipts, selectedMonth, selectedYear]);
 
@@ -313,7 +312,6 @@ export default function ReturnPage() {
             fetchReturns();
             fetchCounts();
         } catch (error) {
-            console.error(`Failed to change status to ${newStatus}:`, error);
             toast({ variant: 'destructive', title: t.statusUpdateError });
         }
     };
@@ -326,7 +324,6 @@ export default function ReturnPage() {
             fetchReturns();
             fetchCounts();
         } catch (error) {
-            console.error("Failed to delete receipt:", error);
             toast({ variant: 'destructive', title: t.deleteError });
         }
     };

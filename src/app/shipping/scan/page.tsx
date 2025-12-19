@@ -94,7 +94,6 @@ export default function TiktokSalesPage() {
       setReceipts(receiptsData);
       setTotalReceipts(total);
     } catch (error) {
-      console.error('Failed to fetch receipts:', error);
       toast({
         variant: 'destructive',
         title: 'Gagal Memuat Resi',

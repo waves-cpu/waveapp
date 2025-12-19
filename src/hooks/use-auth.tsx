@@ -27,7 +27,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             const allUsers = await fetchAllUsers();
             setUsers(allUsers);
         } catch (error) {
-            console.error("Failed to fetch users", error);
         }
     }, []);
 
@@ -39,7 +38,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                     setUser(JSON.parse(storedUser));
                 }
             } catch (error) {
-                console.error("Failed to parse user from sessionStorage", error);
                 sessionStorage.removeItem('user');
             } finally {
                 setLoading(false);
@@ -61,7 +59,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             }
             return false;
         } catch(error) {
-            console.error("Login error:", error);
             return false;
         }
     };

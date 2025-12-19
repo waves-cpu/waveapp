@@ -46,7 +46,6 @@ export const InvoiceSettingsProvider = ({ children }: { children: ReactNode }) =
                 setSettingsState(savedSettings);
             }
         } catch (error) {
-            console.error("Failed to load invoice settings from database", error);
         } finally {
             setIsLoaded(true);
         }
@@ -65,7 +64,6 @@ export const InvoiceSettingsProvider = ({ children }: { children: ReactNode }) =
                 description: "Pengaturan faktur Anda telah berhasil diperbarui.",
             });
         } catch (error) {
-             console.error("Failed to save invoice settings to database", error);
              toast({
                 variant: 'destructive',
                 title: "Gagal Menyimpan",

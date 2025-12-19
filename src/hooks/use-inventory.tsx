@@ -121,7 +121,6 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
       setShippingReceipts(shippingData.receipts);
 
     } catch (error) {
-      console.error("Failed to fetch data:", error);
     } finally {
       setLoading(false);
     }
@@ -137,7 +136,6 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
       const resellerData = await getResellers();
       setResellers(resellerData);
     } catch(error) {
-      console.error("Failed to fetch resellers:", error);
     }
   }, []);
 
@@ -377,3 +375,4 @@ export const useInventory = () => {
 };
 
     
+

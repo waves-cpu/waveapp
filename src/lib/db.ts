@@ -21,7 +21,6 @@ function initializeDatabase() {
       runMigrations();
       seedData();
   } catch (error) {
-      console.error('Failed to open database, possibly corrupt. Recreating database.', error);
       if (db && db.open) {
         db.close();
       }
@@ -64,7 +63,6 @@ const runMigrations = () => {
         const hasVariantId = channelPricesColumns.some((col: any) => col.name === 'variant_id');
         
         if (!hasProductId || !hasVariantId) {
-            console.log('Incorrect schema detected for channel_prices. Recreating table...');
             db.exec('DROP TABLE IF EXISTS channel_prices');
             db.exec(`
                  CREATE TABLE channel_prices (
@@ -78,7 +76,6 @@ const runMigrations = () => {
                     UNIQUE (product_id, variant_id, channel)
                 );
             `);
-             console.log('Table channel_prices recreated successfully.');
         }
     }
 
@@ -172,7 +169,6 @@ const runMigrations = () => {
   } catch (error) {
     if (error instanceof Error && error.message.includes('no such table:')) {
     } else {
-        console.error('Migration failed:', error);
     }
   }
 };
@@ -341,7 +337,6 @@ const seedData = () => {
         }
 
     } catch (e) {
-        // console.error("Seeding failed", e);
     }
 };
 
@@ -358,7 +353,6 @@ function executeQuery<T>(query: (db: Database.Database) => T): T {
     return query(getDb());
   } catch (e: any) {
     if (e.code === 'SQLITE_CORRUPT' || e.message.includes('malformed') || e.message.includes('disk I/O error') || e.message.includes('not open')) {
-      console.error('Database error detected. Re-initializing database.', e);
       if (db && db.open) {
         db.close();
       }
@@ -366,14 +360,10 @@ function executeQuery<T>(query: (db: Database.Database) => T): T {
         try {
             fs.unlinkSync(dbPath);
         } catch (unlinkError) {
-            console.error('Failed to delete corrupt database file:', unlinkError);
             throw new Error('Database is locked or inaccessible. Could not recover.');
         }
       }
-      // Re-establish the 'db' variable with a new connection and schema
-      db = new Database(dbPath);
-      db.pragma('journal_mode = WAL');
-      createSchema(); // CRITICAL: Re-create the schema on the new database.
+      initializeDatabase();
       
       // Retry the query one more time
       return query(getDb());
@@ -405,4 +395,3 @@ export { dbProxy as db };
 
 // Initialize the database connection when the module is loaded
 initializeDatabase();
-

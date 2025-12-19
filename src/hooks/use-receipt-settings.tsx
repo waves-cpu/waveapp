@@ -42,7 +42,6 @@ export const ReceiptSettingsProvider = ({ children }: { children: ReactNode }) =
                 setSettingsState(savedSettings);
             }
         } catch (error) {
-            console.error("Failed to load receipt settings from database", error);
         } finally {
             setIsLoaded(true);
         }
@@ -61,7 +60,6 @@ export const ReceiptSettingsProvider = ({ children }: { children: ReactNode }) =
                 description: "Pengaturan struk Anda telah berhasil diperbarui ke database.",
             });
         } catch (error) {
-             console.error("Failed to save receipt settings to database", error);
              toast({
                 variant: 'destructive',
                 title: "Gagal Menyimpan",
