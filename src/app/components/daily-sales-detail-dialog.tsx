@@ -41,7 +41,7 @@ interface AggregatedSale {
     channel: string;
     quantity: number;
     priceAtSale: number;
-    size?: string; // This can be the variant name or a size property
+    size?: string;
 }
 
 const formatCurrency = (amount: number) => {
@@ -153,7 +153,6 @@ export function DailySalesDetailDialog({ open, onOpenChange, sales, title, descr
                               <TableRow key={`${sale.sku}-${index}` || `${sale.productName}-${index}`}>
                                   <TableCell>
                                       <div className="font-medium">{sale.productName}</div>
-                                      {sale.variantName && <div className="text-xs text-muted-foreground">{sale.variantName}</div>}
                                       {sale.sku && <div className="text-xs text-muted-foreground">SKU: {sale.sku}</div>}
                                   </TableCell>
                                   <TableCell>
