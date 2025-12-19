@@ -12,7 +12,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { ScanLine, Trash2, ShoppingCart, Search, Eye, ArrowLeft } from 'lucide-react';
+import { ScanLine, Trash2, ShoppingCart, Search, Eye, ArrowLeft, MoreVertical } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { useInventory } from '@/hooks/use-inventory';
 import { useLanguage } from '@/hooks/use-language';
@@ -31,6 +31,12 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Skeleton } from '@/components/ui/skeleton';
 import { AppLayout } from '@/app/components/app-layout';
 import { useScanSounds } from '@/hooks/use-scan-sounds';
@@ -38,6 +44,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { Pagination } from '@/components/ui/pagination';
 import { DailySalesDetailDialog } from '@/app/components/daily-sales-detail-dialog';
 import { Badge } from '@/components/ui/badge';
+import { RecordSaleForReceiptDialog } from '@/app/components/record-sale-for-receipt-dialog';
 
 
 export default function ShopeeChannelPage() {
@@ -64,10 +71,15 @@ export default function ShopeeChannelPage() {
   
   const [detailItems, setDetailItems] = useState<Sale[]>([]);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
+  
+  const [receiptForSale, setReceiptForSale] = useState<ShippingReceipt | null>(null);
+  const [isSaleDialogOpen, setIsSaleDialogOpen] = useState(false);
 
   const refocusInput = useCallback(() => {
-    setTimeout(() => awbInputRef.current?.focus(), 100);
-  }, []);
+    if (!isSaleDialogOpen) {
+        setTimeout(() => awbInputRef.current?.focus(), 100);
+    }
+  }, [isSaleDialogOpen]);
 
   const loadReceipts = useCallback(async () => {
     setLoading(true);
@@ -100,7 +112,7 @@ export default function ShopeeChannelPage() {
 
   useEffect(() => {
     refocusInput();
-  }, [refocusInput, receipts]);
+  }, [refocusInput, receipts, isSaleDialogOpen]);
 
 
   const salesByReceipt = useMemo(() => {
@@ -133,10 +145,11 @@ export default function ShopeeChannelPage() {
     };
 
     try {
-        await addShippingReceipt(newReceipt);
+        const added = await addShippingReceipt(newReceipt);
         playSuccessSound();
         setAwb('');
-        loadReceipts();
+        setReceiptForSale(added);
+        setIsSaleDialogOpen(true);
     } catch (error) {
         playErrorSound();
         let title = 'Input Gagal';
@@ -168,8 +181,13 @@ export default function ShopeeChannelPage() {
   const handleViewDetails = (receipt: ShippingReceipt) => {
     if (!receipt.transactionId) return;
     const items = salesByReceipt.get(receipt.transactionId) || [];
-    setDetailItems(items);
-    setIsDetailOpen(true);
+    if (items.length > 0) {
+        setDetailItems(items);
+        setIsDetailOpen(true);
+    } else {
+        setReceiptForSale(receipt);
+        setIsSaleDialogOpen(true);
+    }
   }
   
   const totalPages = Math.ceil(totalReceipts / itemsPerPage);
@@ -198,7 +216,7 @@ export default function ShopeeChannelPage() {
                           value={awb}
                           onChange={(e) => setAwb(e.target.value)}
                           className="pl-10 w-full"
-                          disabled={isSubmitting}
+                          disabled={isSubmitting || isSaleDialogOpen}
                           autoFocus
                       />
                   </div>
@@ -233,7 +251,7 @@ export default function ShopeeChannelPage() {
                           <TableCell><Skeleton className="h-4 w-[80px]" /></TableCell>
                           <TableCell><Skeleton className="h-6 w-[100px]" /></TableCell>
                           <TableCell className="text-center">
-                              <Skeleton className="h-8 w-8 rounded-md" />
+                            <Skeleton className="h-8 w-8 rounded-full" />
                           </TableCell>
                       </TableRow>
                   ))
@@ -241,39 +259,58 @@ export default function ShopeeChannelPage() {
                   receipts.map((receipt) => {
                     const relatedSales = salesByReceipt.get(receipt.transactionId || '') || [];
                     const isProcessed = relatedSales.length > 0;
+                    
                     return (
                         <TableRow key={receipt.id}>
                           <TableCell>{format(new Date(receipt.date), 'HH:mm:ss')}</TableCell>
                           <TableCell className="font-medium">{receipt.awb}</TableCell>
                           <TableCell>
-                            <Button variant="link" size="sm" className="h-auto p-0 text-xs" onClick={() => handleViewDetails(receipt)} disabled={!isProcessed}>
-                                {isProcessed ? `${relatedSales.reduce((acc, s) => acc + s.quantity, 0)} produk` : '-'}
-                                {isProcessed && <Eye className="ml-2 h-3 w-3" />}
+                            <Button variant="link" size="sm" className="h-auto p-0 text-xs" onClick={() => handleViewDetails(receipt)}>
+                                {isProcessed ? `${relatedSales.reduce((acc, s) => acc + s.quantity, 0)} produk` : 'Catat Produk'}
+                                <Eye className="ml-2 h-3 w-3" />
                             </Button>
                           </TableCell>
-                          <TableCell><Badge variant={isProcessed ? "secondary" : "outline"}>{receipt.status}</Badge></TableCell>
-                          <TableCell className="text-center">
-                             <AlertDialog>
-                                <AlertDialogTrigger asChild>
-                                  <Button variant="ghost" size="icon" className="text-destructive">
-                                      <Trash2 className="h-4 w-4" />
+                           <TableCell>
+                                <Badge variant={receipt.status === 'Dikirim' ? "default" : isProcessed ? "secondary" : "outline"}>
+                                    {receipt.status}
+                                </Badge>
+                           </TableCell>
+                           <TableCell className="text-center">
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" size="icon" className="h-8 w-8">
+                                    <MoreVertical className="h-4 w-4" />
                                   </Button>
-                                </AlertDialogTrigger>
-                                <AlertDialogContent>
-                                  <AlertDialogHeader>
-                                    <AlertDialogTitle>Anda yakin?</AlertDialogTitle>
-                                    <AlertDialogDescription>
-                                      Tindakan ini akan menghapus resi dan semua data penjualan terkait. Stok akan dikembalikan. Aksi ini tidak dapat diurungkan.
-                                    </AlertDialogDescription>
-                                  </AlertDialogHeader>
-                                  <AlertDialogFooter>
-                                    <AlertDialogCancel>Batal</AlertDialogCancel>
-                                    <AlertDialogAction onClick={() => handleDeleteReceipt(receipt.id)}>
-                                      Ya, Hapus Resi
-                                    </AlertDialogAction>
-                                  </AlertDialogFooter>
-                                </AlertDialogContent>
-                              </AlertDialog>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  {receipt.status === 'Perlu Diproses' && (
+                                    <DropdownMenuItem onClick={() => updateShippingReceiptStatus(receipt.id, 'Dikirim')}>
+                                        Kirim
+                                    </DropdownMenuItem>
+                                  )}
+                                  <AlertDialog>
+                                    <AlertDialogTrigger asChild>
+                                       <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-destructive">
+                                          Hapus
+                                      </DropdownMenuItem>
+                                    </AlertDialogTrigger>
+                                    <AlertDialogContent>
+                                      <AlertDialogHeader>
+                                        <AlertDialogTitle>Anda yakin?</AlertDialogTitle>
+                                        <AlertDialogDescription>
+                                          Tindakan ini akan menghapus resi dan semua data penjualan terkait. Stok akan dikembalikan. Aksi ini tidak dapat diurungkan.
+                                        </AlertDialogDescription>
+                                      </AlertDialogHeader>
+                                      <AlertDialogFooter>
+                                        <AlertDialogCancel>Batal</AlertDialogCancel>
+                                        <AlertDialogAction onClick={() => handleDeleteReceipt(receipt.id)}>
+                                          Ya, Hapus Resi
+                                        </AlertDialogAction>
+                                      </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                  </AlertDialog>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
                           </TableCell>
                         </TableRow>
                     )
@@ -311,6 +348,17 @@ export default function ShopeeChannelPage() {
           open={isDetailOpen}
           onOpenChange={setIsDetailOpen}
           sales={detailItems}
+      />
+      <RecordSaleForReceiptDialog
+        open={isSaleDialogOpen}
+        onOpenChange={(isOpen) => {
+          setIsSaleDialogOpen(isOpen);
+          if (!isOpen) {
+            setReceiptForSale(null);
+            loadReceipts(); 
+          }
+        }}
+        receipt={receiptForSale}
       />
     </AppLayout>
   );
