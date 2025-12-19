@@ -13,7 +13,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { ScanLine, Trash2, ShoppingCart, Search, Eye, ArrowLeft, MoreVertical } from 'lucide-react';
-import { format, parseISO } from 'date-fns';
+import { format, parseISO, startOfDay, endOfDay } from 'date-fns';
 import { useInventory } from '@/hooks/use-inventory';
 import { useLanguage } from '@/hooks/use-language';
 import { translations } from '@/types/language';
@@ -84,13 +84,14 @@ export default function ShopeeChannelPage() {
   const loadReceipts = useCallback(async () => {
     setLoading(true);
     try {
+      const today = new Date();
       const { receipts: receiptsData, total } = await fetchShippingReceipts({ 
           page: currentPage, 
           limit: itemsPerPage, 
           salesChannel: salesChannel,
           channel: shippingChannel, 
           awb: searchTerm,
-          date_range: { from: new Date(), to: new Date() }
+          date_range: { from: startOfDay(today), to: endOfDay(today) }
       });
       setReceipts(receiptsData);
       setTotalReceipts(total);
@@ -366,5 +367,3 @@ export default function ShopeeChannelPage() {
     </AppLayout>
   );
 }
-
-    
