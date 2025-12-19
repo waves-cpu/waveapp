@@ -60,8 +60,14 @@ export default function ReceiptReportPage() {
     const { language } = useLanguage();
     const t = translations[language].shipping.reportPage;
     
-    const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
-    const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+    const [selectedMonth, setSelectedMonth] = useState<number | undefined>(undefined);
+    const [selectedYear, setSelectedYear] = useState<number | undefined>(undefined);
+
+    useEffect(() => {
+        const currentDate = new Date();
+        setSelectedMonth(currentDate.getMonth());
+        setSelectedYear(currentDate.getFullYear());
+    }, []);
 
     const years = useMemo(() => {
         const currentYear = new Date().getFullYear();
@@ -70,6 +76,7 @@ export default function ReceiptReportPage() {
     }, []);
 
     const fetchReportData = useCallback(async () => {
+        if (selectedMonth === undefined || selectedYear === undefined) return;
         setLoading(true);
         try {
             const date = new Date(selectedYear, selectedMonth);
@@ -127,6 +134,7 @@ export default function ReceiptReportPage() {
     }, [fetchReportData]);
 
     const downloadExcel = useCallback(() => {
+        if (selectedMonth === undefined || selectedYear === undefined) return;
         const dataToExport = reportData.map(item => ({
             'Tanggal': item.date,
             'Perlu Diproses': item['Perlu Diproses'],
@@ -170,6 +178,7 @@ export default function ReceiptReportPage() {
                         </h1>
                     </div>
                      <div className="flex items-center gap-2">
+                        {selectedMonth !== undefined && (
                         <Select value={selectedMonth.toString()} onValueChange={(value) => setSelectedMonth(parseInt(value))}>
                             <SelectTrigger className="w-[150px]">
                                 <SelectValue placeholder={t.selectMonth} />
@@ -182,6 +191,8 @@ export default function ReceiptReportPage() {
                                 ))}
                             </SelectContent>
                         </Select>
+                        )}
+                        {selectedYear !== undefined && (
                         <Select value={selectedYear.toString()} onValueChange={(value) => setSelectedYear(parseInt(value))}>
                             <SelectTrigger className="w-[100px]">
                                 <SelectValue placeholder={t.selectYear} />
@@ -194,6 +205,7 @@ export default function ReceiptReportPage() {
                                 ))}
                             </SelectContent>
                         </Select>
+                        )}
                         <Button onClick={downloadExcel} variant="outline" size="sm">
                             <FileDown className="mr-2 h-4 w-4" />
                             Download Laporan

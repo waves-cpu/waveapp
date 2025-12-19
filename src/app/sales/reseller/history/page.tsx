@@ -55,10 +55,14 @@ export default function ResellerHistoryPage() {
     const TReseller = t.reseller;
     const { generatePDF } = useInvoicePDF();
 
-    const [date, setDate] = useState<Date | undefined>(new Date());
+    const [date, setDate] = useState<Date | undefined>(undefined);
     const [selectedSaleItems, setSelectedSaleItems] = useState<Sale[]>([]);
     const [isDetailOpen, setIsDetailOpen] = useState(false);
     const [invoiceForPreview, setInvoiceForPreview] = useState<InvoiceData | null>(null);
+
+    useEffect(() => {
+        setDate(new Date());
+    }, []);
 
     useEffect(() => {
         fetchItems();

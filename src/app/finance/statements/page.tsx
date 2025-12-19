@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { AppLayout } from '@/app/components/app-layout';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { useInventory } from '@/hooks/use-inventory';
@@ -94,10 +94,14 @@ export default function StatementsPage() {
     const t = translations[language].finance.statementsPage;
     const { allSales, categories, loading } = useInventory();
 
-    const [date, setDate] = useState<DateRange | undefined>({ from: startOfMonth(new Date()), to: endOfMonth(new Date()) });
+    const [date, setDate] = useState<DateRange | undefined>(undefined);
     const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
     const [channelFilter, setChannelFilter] = useState<string | null>(null);
     const [isBestsellerDialogOpen, setBestsellerDialogOpen] = useState(false);
+
+    useEffect(() => {
+        setDate({ from: startOfMonth(new Date()), to: endOfMonth(new Date()) });
+    }, []);
 
     const {
         grossRevenue,

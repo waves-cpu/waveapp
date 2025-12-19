@@ -36,7 +36,7 @@ export default function MobileScanReceiptPage() {
 
     const [selectedChannel, setSelectedChannel] = useState<ShippingProvider | null>(null);
     const [awb, setAwb] = useState('');
-    const [scanDate, setScanDate] = useState<Date>(new Date());
+    const [scanDate, setScanDate] = useState<Date | undefined>(undefined);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [recentlyAdded, setRecentlyAdded] = useState<ShippingReceipt[]>([]);
     const inputRef = useRef<HTMLInputElement>(null);
@@ -45,6 +45,7 @@ export default function MobileScanReceiptPage() {
 
     useEffect(() => {
         initializeAudio();
+        setScanDate(new Date());
     }, [initializeAudio]);
     
     useEffect(() => {
@@ -55,7 +56,7 @@ export default function MobileScanReceiptPage() {
 
     const handleSubmit = useCallback(async (scannedAwb: string) => {
         const trimmedAwb = scannedAwb.trim();
-        if (!trimmedAwb || !selectedChannel) return;
+        if (!trimmedAwb || !selectedChannel || !scanDate) return;
         if (isSubmitting) return;
 
         // Client-side duplicate check

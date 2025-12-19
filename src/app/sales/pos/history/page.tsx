@@ -50,11 +50,15 @@ export default function PosHistoryPage() {
     const { toast } = useToast();
     const t = translations[language];
 
-    const [date, setDate] = useState<Date | undefined>(new Date());
+    const [date, setDate] = useState<Date | undefined>(undefined);
     const [selectedSaleItems, setSelectedSaleItems] = useState<Sale[]>([]);
     const [isDetailOpen, setIsDetailOpen] = useState(false);
     
     const [receiptToPrint, setReceiptToPrint] = useState<ReceiptData | null>(null);
+
+    useEffect(() => {
+        setDate(new Date());
+    }, []);
 
     useEffect(() => {
         fetchItems();
