@@ -41,6 +41,7 @@ interface AggregatedSale {
     channel: string;
     quantity: number;
     priceAtSale: number;
+    size?: string; // This can be the variant name or a size property
 }
 
 const formatCurrency = (amount: number) => {
@@ -79,6 +80,7 @@ export function DailySalesDetailDialog({ open, onOpenChange, sales, title, descr
                     channel: sale.channel,
                     quantity: sale.quantity,
                     priceAtSale: sale.priceAtSale,
+                    size: sale.variantName, // Use variantName as size
                 });
             }
         });
@@ -137,8 +139,9 @@ export function DailySalesDetailDialog({ open, onOpenChange, sales, title, descr
               <Table>
                   <TableHeader className="sticky top-0 bg-card">
                       <TableRow>
-                          <TableHead className="w-[45%]">Produk</TableHead>
-                          <TableHead className="w-[15%]">Saluran</TableHead>
+                          <TableHead className="w-[40%]">Produk</TableHead>
+                          <TableHead className="w-[15%]">Jasa Kirim</TableHead>
+                          <TableHead className="w-[10%]">Ukuran</TableHead>
                           <TableHead className="text-center w-[10%]">Jumlah</TableHead>
                           <TableHead className="text-right w-[15%]">Harga Satuan</TableHead>
                           <TableHead className="text-right w-[15%]">Total</TableHead>
@@ -156,6 +159,9 @@ export function DailySalesDetailDialog({ open, onOpenChange, sales, title, descr
                                   <TableCell>
                                       <Badge variant="secondary" className="capitalize">{sale.channel}</Badge>
                                   </TableCell>
+                                  <TableCell>
+                                      {sale.size || '-'}
+                                  </TableCell>
                                   <TableCell className="text-center">{sale.quantity}</TableCell>
                                   <TableCell className="text-right">{formatCurrency(sale.priceAtSale)}</TableCell>
                                   <TableCell className="text-right font-medium">{formatCurrency(sale.quantity * sale.priceAtSale)}</TableCell>
@@ -163,7 +169,7 @@ export function DailySalesDetailDialog({ open, onOpenChange, sales, title, descr
                           ))
                       ) : (
                            <TableRow>
-                              <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
+                              <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
                                   Tidak ada produk yang cocok dengan pencarian Anda.
                               </TableCell>
                           </TableRow>
@@ -171,7 +177,7 @@ export function DailySalesDetailDialog({ open, onOpenChange, sales, title, descr
                   </TableBody>
                    <TableFooter>
                       <TableRow>
-                          <TableCell colSpan={2} className="text-right font-bold">Total</TableCell>
+                          <TableCell colSpan={3} className="text-right font-bold">Total</TableCell>
                           <TableCell className="text-center font-bold">{totalQuantity}</TableCell>
                           <TableCell colSpan={2} className="text-right font-bold">{formatCurrency(totalRevenue)}</TableCell>
                       </TableRow>
