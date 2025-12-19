@@ -78,7 +78,11 @@ export default function LazadaChannelPage() {
   const [receiptForSale, setReceiptForSale] = useState<ShippingReceipt | null>(null);
   const [isSaleDialogOpen, setIsSaleDialogOpen] = useState(false);
 
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
+
+  useEffect(() => {
+    setSelectedDate(new Date());
+  }, []);
 
   const refocusInput = useCallback(() => {
     if (!isSaleDialogOpen) {
@@ -87,6 +91,7 @@ export default function LazadaChannelPage() {
   }, [isSaleDialogOpen]);
 
   const loadReceipts = useCallback(async () => {
+    if (!selectedDate) return;
     setLoading(true);
     try {
       const { receipts: receiptsData, total } = await fetchShippingReceipts({ 
@@ -136,7 +141,7 @@ export default function LazadaChannelPage() {
 
   const handleAwbSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!awb || isSubmitting) return;
+    if (!awb || isSubmitting || !selectedDate) return;
 
     setIsSubmitting(true);
     

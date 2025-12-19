@@ -74,11 +74,15 @@ export default function TiktokChannelPage() {
   
   const [detailItems, setDetailItems] = useState<Sale[]>([]);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
-  
+
   const [receiptForSale, setReceiptForSale] = useState<ShippingReceipt | null>(null);
   const [isSaleDialogOpen, setIsSaleDialogOpen] = useState(false);
 
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
+
+  useEffect(() => {
+    setSelectedDate(new Date());
+  }, []);
 
   const refocusInput = useCallback(() => {
     if (!isSaleDialogOpen) {
@@ -87,6 +91,7 @@ export default function TiktokChannelPage() {
   }, [isSaleDialogOpen]);
 
   const loadReceipts = useCallback(async () => {
+    if (!selectedDate) return;
     setLoading(true);
     try {
       const { receipts: receiptsData, total } = await fetchShippingReceipts({ 
@@ -136,7 +141,7 @@ export default function TiktokChannelPage() {
 
   const handleAwbSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!awb || isSubmitting) return;
+    if (!awb || isSubmitting || !selectedDate) return;
 
     setIsSubmitting(true);
     
@@ -307,11 +312,11 @@ export default function TiktokChannelPage() {
                           <TableCell>
                             <Button variant="link" size="sm" className="h-auto p-0 text-xs" onClick={() => handleViewDetails(receipt)}>
                                 {isProcessed ? `${relatedSales.reduce((acc, s) => acc + s.quantity, 0)} produk` : 'Catat Produk'}
-                                <Eye className="ml-2 h-3 w-3" />
+                                {isProcessed && <Eye className="ml-2 h-3 w-3" />}
                             </Button>
                           </TableCell>
                            <TableCell>
-                                <Badge variant={receipt.status === 'Dikirim' ? "default" : isProcessed ? "secondary" : "outline"}>
+                                <Badge variant={receipt.status === 'Dikirim' ? "default" : "outline"}>
                                     {receipt.status}
                                 </Badge>
                            </TableCell>

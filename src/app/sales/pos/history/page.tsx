@@ -3,7 +3,7 @@
 
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { useInventory } from '@/hooks/use-inventory';
-import type { Sale } from '@/types';
+import type { Sale, Reseller } from '@/types';
 import { AppLayout } from '@/app/components/app-layout';
 import { useLanguage } from '@/hooks/use-language';
 import { translations } from '@/types/language';
