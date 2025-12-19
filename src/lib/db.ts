@@ -17,20 +17,21 @@ function initializeDatabase() {
   try {
       db = new Database(dbPath);
       db.pragma('journal_mode = WAL');
+      createSchema(); // Ensure schema exists on initial load
       runMigrations();
       seedData();
   } catch (error) {
       console.error('Failed to open database, possibly corrupt. Recreating database.', error);
-      if (db) {
+      if (db && db.open) {
         db.close();
       }
       if (fs.existsSync(dbPath)) {
           fs.unlinkSync(dbPath);
       }
+      // Recreate and re-initialize
       db = new Database(dbPath);
       db.pragma('journal_mode = WAL');
-      createSchema();
-      // We don't run migrations or seed data on recreation to start fresh.
+      createSchema(); // This is critical for recovery
   }
 }
 
@@ -356,9 +357,9 @@ function executeQuery<T>(query: (db: Database.Database) => T): T {
   try {
     return query(getDb());
   } catch (e: any) {
-    if (e.code === 'SQLITE_CORRUPT' || e.message.includes('malformed') || e.message.includes('disk I/O error')) {
-      console.error('Database corruption or I/O error detected. Re-initializing database.', e);
-      if (db) {
+    if (e.code === 'SQLITE_CORRUPT' || e.message.includes('malformed') || e.message.includes('disk I/O error') || e.message.includes('not open')) {
+      console.error('Database error detected. Re-initializing database.', e);
+      if (db && db.open) {
         db.close();
       }
       if (fs.existsSync(dbPath)) {
@@ -369,7 +370,11 @@ function executeQuery<T>(query: (db: Database.Database) => T): T {
             throw new Error('Database is locked or inaccessible. Could not recover.');
         }
       }
-      initializeDatabase();
+      // Re-establish the 'db' variable with a new connection and schema
+      db = new Database(dbPath);
+      db.pragma('journal_mode = WAL');
+      createSchema(); // CRITICAL: Re-create the schema on the new database.
+      
       // Retry the query one more time
       return query(getDb());
     } else {
@@ -400,3 +405,4 @@ export { dbProxy as db };
 
 // Initialize the database connection when the module is loaded
 initializeDatabase();
+
