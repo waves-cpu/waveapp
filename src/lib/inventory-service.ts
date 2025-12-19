@@ -98,7 +98,7 @@ export async function fetchShippingReceipts(options: {
     limit: number;
     salesChannel?: string;
     channel?: string;
-    date_range?: { from: Date | null; to: Date };
+    date_range?: { from: Date | null; to: Date }; // Allow null for "semua"
     status?: string[];
     awb?: string;
 }): Promise<{ receipts: ShippingReceipt[]; total: number }> {
@@ -109,7 +109,7 @@ export async function fetchShippingReceipts(options: {
     const params: any = {};
 
     if (awb) {
-        whereClauses.push("awb LIKE @awb");
+        whereClauses.push("LOWER(REPLACE(awb, ' ', '')) LIKE LOWER(REPLACE(@awb, ' ', ''))");
         params.awb = `%${awb}%`;
     } else {
         if (salesChannel) {
@@ -123,9 +123,10 @@ export async function fetchShippingReceipts(options: {
         if (date_range?.from) {
             whereClauses.push("date >= @from AND date <= @to");
             params.from = date_range.from.toISOString();
-            params.to = endOfDay(date_range.to).toISOString();
+            params.to = endOfDay(date_range.to!).toISOString();
         }
     }
+    
 
     if (status && status.length > 0) {
         const statusPlaceholders = status.map((s, i) => `@status${i}`);
@@ -1264,6 +1265,7 @@ async function updateShippingReceiptStatusByAwb(awb: string, status: string) {
 
 
     
+
 
 
 
