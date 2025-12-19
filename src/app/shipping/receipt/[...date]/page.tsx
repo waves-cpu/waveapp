@@ -84,7 +84,7 @@ export default function ReceiptPage() {
     const router = useRouter();
     const params = useParams();
     
-    const { fetchShippingReceipts, deleteShippingReceipt, updateShippingReceiptsStatus, updateShippingReceiptStatus, fetchShippingReceiptCountsByChannel, getPendingReceiptsBeforeDate } = useInventory();
+    const { fetchShippingReceipts, deleteShippingReceipt, updateShippingReceiptsStatus, updateShippingReceiptStatus, fetchShippingReceiptCountsByChannel, fetchShippingReceiptCountsByStatus, getPendingReceiptsBeforeDate } = useInventory();
 
     const [activeShippingTab, setActiveShippingTab] = useState<string | null>(null);
     const [activeSalesChannelTab, setActiveSalesChannelTab] = useState<string | null>(null);
@@ -95,6 +95,7 @@ export default function ReceiptPage() {
     const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
     const [isProcessing, setIsProcessing] = useState(false);
     const [channelCounts, setChannelCounts] = useState<Record<string, number> | null>(null);
+    const [statusCounts, setStatusCounts] = useState<Record<string, number> | null>(null);
     const [activeStatusFilter, setActiveStatusFilter] = useState<string>('Semua Status');
 
     const [pendingOldReceiptsCount, setPendingOldReceiptsCount] = useState(0);
@@ -137,15 +138,25 @@ export default function ReceiptPage() {
     
     const fetchCounts = useCallback(async () => {
         setChannelCounts(null);
+        setStatusCounts(null);
         try {
             const dateString = currentDate ? format(currentDate, 'yyyy-MM-dd') : undefined;
-            const statusFilter = activeStatusFilter !== 'Semua Status' ? [activeStatusFilter] : undefined;
-            const counts = await fetchShippingReceiptCountsByChannel(dateString, statusFilter);
-            setChannelCounts(counts);
+            
+            // Fetch channel counts
+            const channelStatusFilter = activeStatusFilter !== 'Semua Status' ? [activeStatusFilter] : undefined;
+            const channelCountsData = await fetchShippingReceiptCountsByChannel(dateString, channelStatusFilter);
+            setChannelCounts(channelCountsData);
+            
+            // Fetch status counts
+            const statusChannelFilter = activeShippingTab ?? undefined;
+            const statusSalesChannelFilter = activeSalesChannelTab ?? undefined;
+            const statusCountsData = await fetchShippingReceiptCountsByStatus(dateString, statusChannelFilter, statusSalesChannelFilter);
+            setStatusCounts(statusCountsData);
+
         } catch (error) {
-             console.error("Failed to fetch channel counts:", error);
+             console.error("Failed to fetch counts:", error);
         }
-    }, [currentDate, fetchShippingReceiptCountsByChannel, activeStatusFilter]);
+    }, [currentDate, fetchShippingReceiptCountsByChannel, fetchShippingReceiptCountsByStatus, activeStatusFilter, activeShippingTab, activeSalesChannelTab]);
 
     const checkOldPendingReceipts = useCallback(async () => {
         if (!currentDate) return;
@@ -378,15 +389,25 @@ export default function ReceiptPage() {
                             </Button>
                         ))}
                     </div>
-                     <div className="flex items-center gap-2">
+                     <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
                         {STATUS_OPTIONS.map(status => (
                             <Button
                                 key={status}
                                 variant={activeStatusFilter === status ? 'secondary' : 'ghost'}
                                 size="sm"
                                 onClick={() => setActiveStatusFilter(status)}
+                                className="shrink-0"
                             >
                                 {status}
+                                {!statusCounts ? (
+                                    <Loader2 className="ml-2 h-4 w-4 animate-spin" />
+                                ) : (
+                                    <Badge variant={activeStatusFilter === status ? 'default' : 'secondary'} className="ml-2">
+                                        {status === 'Semua Status'
+                                            ? Object.values(statusCounts).reduce((a, b) => a + b, 0)
+                                            : statusCounts[status] || 0}
+                                    </Badge>
+                                )}
                             </Button>
                         ))}
                     </div>
@@ -493,31 +514,11 @@ export default function ReceiptPage() {
                         </CardContent>
                          {totalPages > 1 && (
                             <div className="flex items-center justify-end p-4 border-t">
-                                 <div className="flex items-center gap-4">
-                                    <Pagination
-                                        totalPages={totalPages}
-                                        currentPage={currentPage}
-                                        onPageChange={setCurrentPage}
-                                    />
-                                    <Select
-                                        value={`${itemsPerPage}`}
-                                        onValueChange={(value) => {
-                                            setItemsPerPage(Number(value))
-                                            setCurrentPage(1)
-                                        }}
-                                        >
-                                        <SelectTrigger className="h-8 w-[200px]">
-                                            <SelectValue placeholder={itemsPerPage} />
-                                        </SelectTrigger>
-                                        <SelectContent side="top">
-                                            {[25, 50, 100].map((pageSize) => (
-                                            <SelectItem key={pageSize} value={`${pageSize}`}>
-                                                {`${pageSize} / halaman`}
-                                            </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                </div>
+                                <Pagination
+                                    totalPages={totalPages}
+                                    currentPage={currentPage}
+                                    onPageChange={setCurrentPage}
+                                />
                             </div>
                         )}
                     </Card>
@@ -525,6 +526,4 @@ export default function ReceiptPage() {
             </main>
         </AppLayout>
     );
-
-    
 }

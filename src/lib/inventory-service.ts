@@ -191,6 +191,41 @@ export async function fetchShippingReceiptCountsByChannel(dateString?: string, s
     return counts;
 }
 
+export async function fetchShippingReceiptCountsByStatus(dateString?: string, channel?: string, salesChannel?: string): Promise<Record<string, number>> {
+    let whereClauses: string[] = [];
+    const params: any[] = [];
+    
+    if (dateString) {
+        whereClauses.push("strftime('%Y-%m-%d', date) = ?");
+        params.push(dateString);
+    }
+    if (channel) {
+        whereClauses.push("channel = ?");
+        params.push(channel);
+    }
+    if (salesChannel) {
+        whereClauses.push("salesChannel = ?");
+        params.push(salesChannel);
+    }
+
+    const whereString = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
+
+    const query = db.prepare(`
+        SELECT status, COUNT(*) as count
+        FROM shipping_receipts
+        ${whereString}
+        GROUP BY status
+    `);
+    
+    const results = query.all(...params) as { status: string, count: number }[];
+    const counts: Record<string, number> = {};
+    results.forEach(row => {
+        counts[row.status] = row.count;
+    });
+    return counts;
+}
+
+
 export async function getReceiptCountByStatus(status: string[], dateRange: { from: Date, to: Date }): Promise<number> {
     const { from, to } = dateRange;
     const whereClauses: string[] = ["date BETWEEN @from AND @to"];
@@ -1230,5 +1265,6 @@ async function updateShippingReceiptStatusByAwb(awb: string, status: string) {
 
 
     
+
 
 

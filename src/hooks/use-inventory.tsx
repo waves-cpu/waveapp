@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
@@ -34,6 +35,7 @@ import {
   updateShippingReceiptsStatus,
   updateShippingReceiptStatus,
   fetchShippingReceiptCountsByChannel,
+  fetchShippingReceiptCountsByStatus,
   getReceiptCountByStatus as getReceiptCountByStatusDb,
   addBulkImportHistory,
   updateBulkImportHistory,
@@ -83,6 +85,7 @@ interface InventoryContextType {
   updateShippingReceiptsStatus: (ids: number[], status: string) => Promise<void>;
   updateShippingReceiptStatus: (id: number, status: string) => Promise<void>;
   fetchShippingReceiptCountsByChannel: (dateString?: string, status?: string[]) => Promise<Record<string, number>>;
+  fetchShippingReceiptCountsByStatus: (dateString?: string, channel?: string, salesChannel?: string) => Promise<Record<string, number>>;
   getReceiptCountByStatus: (status: string[], dateRange: { from: Date, to: Date }) => Promise<number>;
   getPendingReceiptsBeforeDate: (date: Date) => Promise<number>;
   // Bulk Import History
@@ -354,6 +357,7 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
         updateShippingReceiptsStatus,
         updateShippingReceiptStatus,
         fetchShippingReceiptCountsByChannel,
+        fetchShippingReceiptCountsByStatus,
         getReceiptCountByStatus,
         getPendingReceiptsBeforeDate,
         fetchImportHistory: fetchBulkImportHistory,
