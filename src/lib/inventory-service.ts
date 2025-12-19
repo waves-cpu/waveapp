@@ -1,4 +1,5 @@
 
+
 'use server';
 
 import { db as dbProxy } from './db';
@@ -761,6 +762,11 @@ export async function performSale(
             const saleResult = db.prepare('INSERT INTO sales (transactionId, paymentMethod, resellerName, productId, variantId, channel, quantity, priceAtSale, cogsAtSale, saleDate, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
               .run(options?.transactionId || `online-${Date.now()}`, options?.paymentMethod, options?.resellerName, variant.productId, variant.id, channel, quantity, finalPriceAtSale, cogsAtSale, saleDateString, saleStatus);
               
+            // After recording the sale, update the shipping receipt status
+            if (options?.transactionId) {
+                updateShippingReceiptStatusByAwb(options.transactionId, 'Dikirim');
+            }
+
             const newSale = db.prepare('SELECT s.*, p.name as productName, v.name as variantName, COALESCE(v.sku, p.sku) as sku, p.category as productCategory FROM sales s JOIN products p ON s.productId = p.id LEFT JOIN variants v ON s.variantId = v.id WHERE s.id = ?').get(saleResult.lastInsertRowid) as Sale;
             return { sale: newSale, updatedItem: fetchSingleItem(affectedItemId) };
 
@@ -796,6 +802,11 @@ export async function performSale(
                 adjustStock(product.id.toString(), -quantity, saleReason);
                 const saleResult = db.prepare('INSERT INTO sales (transactionId, paymentMethod, resellerName, productId, variantId, channel, quantity, priceAtSale, cogsAtSale, saleDate, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
                   .run(options?.transactionId || `online-${Date.now()}`, options?.paymentMethod, options?.resellerName, product.id, null, channel, quantity, finalPriceAtSale, cogsAtSale, saleDateString, saleStatus);
+                
+                // After recording the sale, update the shipping receipt status
+                if (options?.transactionId) {
+                    updateShippingReceiptStatusByAwb(options.transactionId, 'Dikirim');
+                }
 
                 const newSale = db.prepare('SELECT s.*, p.name as productName, p.sku FROM sales s JOIN products p ON s.productId = p.id WHERE s.id = ?').get(saleResult.lastInsertRowid) as Sale;
                 return { sale: newSale, updatedItem: fetchSingleItem(affectedItemId) };
@@ -1190,12 +1201,10 @@ export async function deleteProductPermanently(itemId: string) {
     db.prepare('DELETE FROM products WHERE id = ?').run(itemId);
 }
 
-
-
-
-
-
-
+async function updateShippingReceiptStatusByAwb(awb: string, status: string) {
+    const stmt = db.prepare(`UPDATE shipping_receipts SET status = ? WHERE awb = ?`);
+    stmt.run(status, awb);
+}
     
 
     
@@ -1230,3 +1239,4 @@ export async function deleteProductPermanently(itemId: string) {
 
 
     
+
