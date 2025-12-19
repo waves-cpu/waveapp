@@ -202,8 +202,6 @@ export default function ReceiptReportPage() {
                 </div>
                  <div className="grid gap-6">
                     <Card>
-                        <CardHeader>
-                        </CardHeader>
                         <CardContent className="pt-6">
                            <Table>
                                <TableHeader>
