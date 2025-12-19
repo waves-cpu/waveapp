@@ -286,7 +286,7 @@ export function RecordSaleForReceiptDialog({
                                     <Table>
                                         <TableHeader>
                                             <TableRow>
-                                                <TableHead>Produk</TableHead>
+                                                <TableHead className="whitespace-nowrap">Produk</TableHead>
                                                 <TableHead className="w-[100px] text-center">Ukuran</TableHead>
                                                 <TableHead className="w-[120px] text-center">Jumlah</TableHead>
                                                 <TableHead className="w-[150px] text-right">Harga Jual</TableHead>
@@ -296,7 +296,7 @@ export function RecordSaleForReceiptDialog({
                                         <TableBody>
                                             {saleItems.length > 0 ? saleItems.map(item => (
                                                 <TableRow key={item.sku}>
-                                                    <TableCell>
+                                                    <TableCell className="whitespace-nowrap">
                                                         <p className="font-medium text-sm">{item.productName}</p>
                                                         <p className="text-xs text-muted-foreground">SKU: {item.sku}</p>
                                                     </TableCell>
