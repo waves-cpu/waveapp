@@ -79,7 +79,7 @@ interface InventoryContextType {
   adjustAccessoryStock: (accessoryId: string, change: number, reason: string) => Promise<void>;
   // Shipping
   shippingReceipts: ShippingReceipt[];
-  fetchShippingReceipts: (options: { page: number; limit: number; salesChannel?: string; channel?: string; date?: Date; date_range?: { from: Date; to: Date }; status?: string[]; awb?: string; }) => Promise<{ receipts: ShippingReceipt[]; total: number; }>;
+  fetchShippingReceipts: (options: { page: number; limit: number; salesChannel?: string; channel?: string; date_range?: { from: Date | null; to: Date }; status?: string[]; awb?: string; }) => Promise<{ receipts: ShippingReceipt[]; total: number; }>;
   addShippingReceipt: (receipt: Omit<ShippingReceipt, 'id'>) => Promise<ShippingReceipt>;
   deleteShippingReceipt: (id: number) => Promise<void>;
   updateShippingReceiptsStatus: (ids: number[], status: string) => Promise<void>;
@@ -232,11 +232,10 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
   }, [items]);
 
   const recordSale = async (sku: string, channel: string, quantity: number, options?: { saleDate?: Date, transactionId?: string, paymentMethod?: string, resellerName?: string, priceAtSale?: number, status?: string }): Promise<{ sale: Sale; updatedItem: InventoryItem }> => {
-    const { sale, updatedItem } = await performSale(sku, channel, quantity, options);
-    // Optimistic update
-    setAllSales(prevSales => [sale, ...prevSales]);
-    setItems(prevItems => prevItems.map(item => item.id === updatedItem.id ? updatedItem : item));
-    return { sale, updatedItem };
+    const result = await performSale(sku, channel, quantity, options);
+    // After DB operation, refetch all data to ensure UI consistency everywhere.
+    await fetchAllData(); 
+    return result;
   };
 
   const fetchSales = async (channel: string, date: Date, page: number, limit: number): Promise<{ sales: Sale[], total: number }> => {
@@ -290,7 +289,7 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
     await fetchAllData();
   };
 
-  const _fetchShippingReceipts = async (options: { page: number; limit: number; channel?: string; salesChannel?: string; date?: Date; date_range?: {from: Date, to: Date}; status?: string[]; awb?: string; }) => {
+  const _fetchShippingReceipts = async (options: { page: number; limit: number; channel?: string; salesChannel?: string; date_range?: {from: Date | null, to: Date}; status?: string[]; awb?: string; }) => {
     return await fetchShippingReceiptsDb({ ...options });
   };
   
