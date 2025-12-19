@@ -17,7 +17,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Undo2, Truck, CheckCircle, XCircle, Package, Trash2, Search, FileDown } from 'lucide-react';
+import { Undo2, Truck, CheckCircle, XCircle, Package, Trash2, Search, FileDown, MoreVertical, Loader2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { useInventory } from '@/hooks/use-inventory';
 import type { ShippingReceipt, InventoryItem, InventoryItemVariant, Sale } from '@/types';
@@ -272,6 +272,7 @@ export default function ReturnPage() {
     }, [currentPage, itemsPerPage, activeChannel, searchTerm, toast, t.fetchError, fetchShippingReceipts, selectedMonth, selectedYear]);
     
     const fetchCounts = useCallback(async () => {
+        setChannelCounts(null); // Reset counts to show loading state
         try {
             const date = new Date(selectedYear, selectedMonth);
             const firstDay = startOfMonth(date);
@@ -451,7 +452,9 @@ export default function ReturnPage() {
                                 className="shrink-0"
                             >
                                 Semua
-                                {channelCounts && (
+                                {!channelCounts ? (
+                                    <Loader2 className="ml-2 h-4 w-4 animate-spin" />
+                                ) : (
                                      <Badge variant={activeChannel === null ? 'default' : 'secondary'} className="ml-2">
                                         {Object.values(channelCounts).reduce((a,b) => a+b, 0)}
                                     </Badge>
@@ -466,7 +469,9 @@ export default function ReturnPage() {
                                     className="shrink-0"
                                 >
                                     {tab}
-                                    {channelCounts && (
+                                    {!channelCounts ? (
+                                        <Loader2 className="ml-2 h-4 w-4 animate-spin" />
+                                    ) : (
                                          <Badge variant={activeChannel === tab ? 'default' : 'secondary'} className="ml-2">
                                             {channelCounts[tab] || 0}
                                         </Badge>
@@ -572,7 +577,7 @@ export default function ReturnPage() {
                 onProcessReturn={handleProcessReturn}
                 receipt={selectedReceipt}
                 dialogTitle={selectedReceipt?.status === 'Dibatalkan' ? 'Proses Pembatalan' : 'Proses Barang Return'}
-                dialogDescription={selectedReceipt?.status === 'Dibatalkan' ? 'Scan atau pilih produk yang stoknya dikembalikan karena pembatalan' : 'Scan atau pilih produk yang telah kembali ke gudang'}
+                dialogDescription={selectedReceipt?.status === 'Dibatalkan' ? 'Pastikan produk dan jumlah yang dikembalikan ke stok sudah benar' : 'Pastikan produk dan jumlah yang telah kembali ke gudang sudah benar'}
                 submitText={selectedReceipt?.status === 'Dibatalkan' ? 'Proses Pembatalan' : 'Proses Pengembalian'}
             />
         </AppLayout>
