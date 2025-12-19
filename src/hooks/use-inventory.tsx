@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
@@ -38,6 +39,7 @@ import {
   updateBulkImportHistory,
   fetchBulkImportHistory,
   deleteBulkImportHistory as deleteBulkImportHistoryDb,
+  getPendingReceiptsBeforeDate as getPendingReceiptsBeforeDateDb,
 } from '@/lib/inventory-service';
 
 
@@ -75,13 +77,14 @@ interface InventoryContextType {
   adjustAccessoryStock: (accessoryId: string, change: number, reason: string) => Promise<void>;
   // Shipping
   shippingReceipts: ShippingReceipt[];
-  fetchShippingReceipts: (options: { page: number; limit: number; channel?: string; date?: Date; dateString?: string; status?: string[]; awb?: string; }) => Promise<{ receipts: ShippingReceipt[]; total: number; }>;
+  fetchShippingReceipts: (options: { page: number; limit: number; channel?: string; date?: Date; date_range?: { from: Date; to: Date }; status?: string[]; awb?: string; }) => Promise<{ receipts: ShippingReceipt[]; total: number; }>;
   addShippingReceipt: (receipt: Omit<ShippingReceipt, 'id'>) => Promise<ShippingReceipt>;
   deleteShippingReceipt: (id: number) => Promise<void>;
   updateShippingReceiptsStatus: (ids: number[], status: string) => Promise<void>;
   updateShippingReceiptStatus: (id: number, status: string) => Promise<void>;
   fetchShippingReceiptCountsByChannel: (dateString?: string, status?: string[]) => Promise<Record<string, number>>;
   getReceiptCountByStatus: (status: string[], dateRange: { from: Date, to: Date }) => Promise<number>;
+  getPendingReceiptsBeforeDate: (date: Date) => Promise<number>;
   // Bulk Import History
   fetchImportHistory: () => Promise<BulkImportHistory[]>;
   deleteImportHistory: (id: number) => Promise<void>;
@@ -286,7 +289,7 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
     await fetchAllData();
   };
 
-  const _fetchShippingReceipts = async (options: { page: number; limit: number; channel?: string; date?: Date; dateString?: string, status?: string[]; awb?: string; }) => {
+  const _fetchShippingReceipts = async (options: { page: number; limit: number; channel?: string; date?: Date; date_range?: {from: Date, to: Date}; status?: string[]; awb?: string; }) => {
     return await fetchShippingReceiptsDb({ ...options });
   };
   
@@ -306,6 +309,10 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
 
   const getReceiptCountByStatus = async (status: string[], dateRange: { from: Date, to: Date }) => {
     return await getReceiptCountByStatusDb(status, dateRange);
+  }
+  
+  const getPendingReceiptsBeforeDate = async (date: Date) => {
+      return await getPendingReceiptsBeforeDateDb(date);
   }
 
   return (
@@ -348,6 +355,7 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
         updateShippingReceiptStatus,
         fetchShippingReceiptCountsByChannel,
         getReceiptCountByStatus,
+        getPendingReceiptsBeforeDate,
         fetchImportHistory: fetchBulkImportHistory,
         deleteImportHistory,
       }}>
@@ -363,3 +371,5 @@ export const useInventory = () => {
   }
   return context;
 };
+
+    

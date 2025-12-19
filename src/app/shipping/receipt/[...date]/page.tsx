@@ -7,7 +7,7 @@ import { SidebarTrigger } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Calendar as CalendarIcon, FileDown, Trash2, Truck, ScanLine, Search, Send, Ban, MoreVertical, Loader2 } from 'lucide-react';
+import { Calendar as CalendarIcon, FileDown, Trash2, Truck, ScanLine, Search, Send, Ban, MoreVertical, Loader2, AlertCircle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
@@ -37,6 +37,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useParams, useRouter } from 'next/navigation';
@@ -81,10 +82,10 @@ export default function ReceiptPage() {
     const router = useRouter();
     const params = useParams();
     
-    const { fetchShippingReceipts, deleteShippingReceipt, updateShippingReceiptsStatus, updateShippingReceiptStatus, fetchShippingReceiptCountsByChannel } = useInventory();
+    const { fetchShippingReceipts, deleteShippingReceipt, updateShippingReceiptsStatus, updateShippingReceiptStatus, fetchShippingReceiptCountsByChannel, getPendingReceiptsBeforeDate } = useInventory();
 
-    const [activeShippingTab, setActiveShippingTab] = useState<string | null>('SPX');
-    const [activeSalesChannelTab, setActiveSalesChannelTab] = useState<string | null>('Shopee');
+    const [activeShippingTab, setActiveShippingTab] = useState<string | null>(null);
+    const [activeSalesChannelTab, setActiveSalesChannelTab] = useState<string | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [isDatePickerOpen, setDatePickerOpen] = useState(false);
     const [currentPage, setCurrentPage] = useState(1);
@@ -95,6 +96,8 @@ export default function ReceiptPage() {
 
     const [receiptForSale, setReceiptForSale] = useState<ShippingReceipt | null>(null);
     const [isSaleDialogOpen, setIsSaleDialogOpen] = useState(false);
+
+    const [pendingOldReceiptsCount, setPendingOldReceiptsCount] = useState(0);
 
 
     const currentDate = useMemo(() => parseDateFromParams(Array.isArray(params.date) ? params.date : undefined), [params.date]);
@@ -130,6 +133,7 @@ export default function ReceiptPage() {
     }, [currentPage, itemsPerPage, activeShippingTab, activeSalesChannelTab, currentDate, searchTerm, fetchShippingReceipts, toast, t.fetchError]);
     
     const fetchCounts = useCallback(async () => {
+        setChannelCounts(null);
         try {
             const dateString = format(currentDate, 'yyyy-MM-dd');
             const counts = await fetchShippingReceiptCountsByChannel(dateString);
@@ -139,10 +143,19 @@ export default function ReceiptPage() {
         }
     }, [currentDate, fetchShippingReceiptCountsByChannel]);
 
+    const checkOldPendingReceipts = useCallback(async () => {
+        try {
+            const count = await getPendingReceiptsBeforeDate(currentDate);
+            setPendingOldReceiptsCount(count);
+        } catch (error) {
+            console.error("Failed to fetch pending old receipts:", error);
+        }
+    }, [currentDate, getPendingReceiptsBeforeDate]);
 
     useEffect(() => {
         fetchReceipts();
-    }, [fetchReceipts]);
+        checkOldPendingReceipts();
+    }, [fetchReceipts, checkOldPendingReceipts]);
 
     useEffect(() => {
         fetchCounts();
@@ -287,10 +300,31 @@ export default function ReceiptPage() {
                          )}
                     </div>
                 </div>
+                 {pendingOldReceiptsCount > 0 && (
+                    <Alert variant="destructive">
+                        <AlertCircle className="h-4 w-4" />
+                        <AlertTitle>Pekerjaan Tertunda</AlertTitle>
+                        <AlertDescription className="flex justify-between items-center">
+                            Anda memiliki {pendingOldReceiptsCount} resi dari hari sebelumnya yang belum diproses.
+                            <Link href="/shipping/return">
+                                <Button variant="secondary" size="sm">Lihat & Proses Sekarang</Button>
+                            </Link>
+                        </AlertDescription>
+                    </Alert>
+                )}
+
 
                 <div className="flex flex-col gap-4">
                      <div className="border-b">
                          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-2">
+                            <Button 
+                                variant={activeSalesChannelTab === null ? 'secondary' : 'ghost'}
+                                size="sm"
+                                onClick={() => setActiveSalesChannelTab(null)}
+                                className="shrink-0"
+                            >
+                                Semua Kanal
+                            </Button>
                             {(['Shopee', 'Tiktok', 'Lazada'] as const).map(tab => (
                                 <Button 
                                     key={tab}
@@ -305,6 +339,21 @@ export default function ReceiptPage() {
                         </div>
                     </div>
                     <div className="flex items-center gap-2 overflow-x-auto no-scrollbar border-b pb-2">
+                         <Button 
+                            variant={activeShippingTab === null ? 'secondary' : 'ghost'}
+                            size="sm"
+                            onClick={() => setActiveShippingTab(null)}
+                            className="shrink-0"
+                        >
+                            Semua Jasa Kirim
+                             {!channelCounts ? (
+                                <Loader2 className="ml-2 h-4 w-4 animate-spin" />
+                            ) : (
+                                <Badge variant={activeShippingTab === null ? 'default' : 'secondary'} className="ml-2">
+                                    {Object.values(channelCounts).reduce((a, b) => a + b, 0)}
+                                </Badge>
+                            )}
+                        </Button>
                         {(['SPX', 'J&T', 'JNE', 'INSTANT', 'CARGO'] as ShippingProvider[]).map(tab => (
                             <Button 
                                 key={tab}

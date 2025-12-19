@@ -1,5 +1,4 @@
 
-
 'use server';
 
 import { db as dbProxy } from './db';
@@ -154,6 +153,17 @@ export async function fetchShippingReceipts(options: {
     const receipts = dataQuery.all(queryParams) as any[];
     
     return { receipts, total };
+}
+
+export async function getPendingReceiptsBeforeDate(date: Date): Promise<number> {
+    const dateString = date.toISOString().split('T')[0];
+    const query = db.prepare(`
+        SELECT COUNT(*) as count
+        FROM shipping_receipts
+        WHERE status = 'Perlu Diproses' AND date(date) < date(?)
+    `);
+    const result = query.get(dateString) as { count: number };
+    return result.count;
 }
 
 export async function fetchShippingReceiptCountsByChannel(dateString?: string, status?: string[]): Promise<Record<string, number>> {
@@ -1219,3 +1229,6 @@ export async function deleteProductPermanently(itemId: string) {
 
 
 
+
+
+    
