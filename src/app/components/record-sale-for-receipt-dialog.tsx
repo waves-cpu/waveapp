@@ -57,7 +57,7 @@ export function RecordSaleForReceiptDialog({
   onSaleComplete,
   receipt,
 }: RecordSaleForReceiptDialogProps) {
-  const { items: inventoryItems, recordSale, updateShippingReceiptStatus } = useInventory();
+  const { items: inventoryItems, recordSale } = useInventory();
   const [cart, setCart] = useState<CartItem[]>([]);
   const { toast } = useToast();
   const { playSuccessSound, playErrorSound } = useScanSounds();
@@ -159,13 +159,10 @@ export function RecordSaleForReceiptDialog({
         recordSale(item.sku, receipt.salesChannel || 'Unknown', item.quantity, {
             transactionId: receipt.transactionId || receipt.awb,
             priceAtSale: item.price,
-            status: 'Dikirim'
+            status: 'Dikirim' // Set status to "Dikirim" on sale record
         })
       );
       await Promise.all(salePromises);
-
-      // After successfully recording sales, update receipt status
-      await updateShippingReceiptStatus(receipt.id, 'Dikirim');
       
       toast({
         title: 'Penjualan Dicatat',
