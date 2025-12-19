@@ -745,3 +745,4 @@ export default function SalesReportPage() {
         </AppLayout>
     );
 }
+
