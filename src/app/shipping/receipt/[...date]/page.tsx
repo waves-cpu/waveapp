@@ -84,7 +84,7 @@ export default function ReceiptPage() {
     const router = useRouter();
     const params = useParams();
     
-    const { fetchShippingReceipts, deleteShippingReceipt, updateShippingReceiptsStatus, updateShippingReceiptStatus, fetchShippingReceiptCountsByChannel, fetchShippingReceiptCountsByStatus, getPendingReceiptsBeforeDate } = useInventory();
+    const { fetchShippingReceipts, deleteShippingReceipt, updateShippingReceiptsStatus, updateShippingReceiptStatus, fetchShippingReceiptCountsByChannel, fetchShippingReceiptCountsByStatus, getPendingReceiptsBeforeDate, cancelSaleTransaction } = useInventory();
 
     const [activeShippingTab, setActiveShippingTab] = useState<string | null>(null);
     const [activeSalesChannelTab, setActiveSalesChannelTab] = useState<string | null>(null);
@@ -182,12 +182,15 @@ export default function ReceiptPage() {
     const handleDelete = async (receiptToDelete: ShippingReceipt) => {
         if (!receiptToDelete) return;
         try {
+            if (receiptToDelete.transactionId) {
+                await cancelSaleTransaction(receiptToDelete.transactionId);
+            }
             await deleteShippingReceipt(receiptToDelete.id);
-            toast({ title: t.deleteSuccess, description: t.deleteSuccessDesc.replace('{awb}', receiptToDelete.awb) });
-            fetchReceipts(); // Refresh data
+            toast({ title: t.deleteSuccess, description: 'Resi dihapus dan stok telah dikembalikan.' });
+            fetchReceipts();
             fetchCounts();
         } catch (error) {
-            toast({ variant: 'destructive', title: t.deleteError });
+            toast({ variant: 'destructive', title: t.deleteError, description: 'Gagal menghapus resi dan mengembalikan stok.' });
         }
     };
     
