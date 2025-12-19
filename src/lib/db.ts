@@ -20,15 +20,17 @@ function initializeDatabase() {
       runMigrations();
       seedData();
   } catch (error) {
-      console.error('Failed to open database, possibly corrupt. Deleting and recreating.', error);
+      console.error('Failed to open database, possibly corrupt. Recreating database.', error);
+      if (db) {
+        db.close();
+      }
       if (fs.existsSync(dbPath)) {
           fs.unlinkSync(dbPath);
       }
       db = new Database(dbPath);
       db.pragma('journal_mode = WAL');
       createSchema();
-      runMigrations();
-      seedData();
+      // We don't run migrations or seed data on recreation to start fresh.
   }
 }
 
@@ -357,13 +359,18 @@ function executeQuery<T>(query: (db: Database.Database) => T): T {
   try {
     return query(getDb());
   } catch (e: any) {
-    if (e.code === 'SQLITE_CORRUPT' || e.message.includes('malformed')) {
-      console.error('Database corruption detected on query. Re-initializing database.');
+    if (e.code === 'SQLITE_CORRUPT' || e.message.includes('malformed') || e.message.includes('disk I/O error')) {
+      console.error('Database corruption or I/O error detected. Re-initializing database.', e);
       if (db) {
         db.close();
       }
       if (fs.existsSync(dbPath)) {
-        fs.unlinkSync(dbPath);
+        try {
+            fs.unlinkSync(dbPath);
+        } catch (unlinkError) {
+            console.error('Failed to delete corrupt database file:', unlinkError);
+            throw new Error('Database is locked or inaccessible. Could not recover.');
+        }
       }
       initializeDatabase();
       // Retry the query one more time
