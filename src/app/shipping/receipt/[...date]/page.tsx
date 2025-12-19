@@ -94,8 +94,8 @@ export default function ReceiptPage() {
     const [itemsPerPage, setItemsPerPage] = useState(50);
     const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
     const [isProcessing, setIsProcessing] = useState(false);
-    const [channelCounts, setChannelCounts] = useState<Record<string, number> | null>(null);
-    const [statusCounts, setStatusCounts] = useState<Record<string, number> | null>(null);
+    const [channelCounts, setChannelCounts] = useState<Record<string, number>>({});
+    const [statusCounts, setStatusCounts] = useState<Record<string, number>>({});
     const [activeStatusFilter, setActiveStatusFilter] = useState<string>('Semua Status');
 
     const [pendingOldReceiptsCount, setPendingOldReceiptsCount] = useState(0);
@@ -129,7 +129,6 @@ export default function ReceiptPage() {
             setReceipts(receipts);
             setTotalReceipts(total);
         } catch (error) {
-            console.error("Failed to fetch receipts:", error);
             toast({ variant: 'destructive', title: t.fetchError });
         } finally {
             setLoading(false);
@@ -137,24 +136,19 @@ export default function ReceiptPage() {
     }, [currentPage, itemsPerPage, activeShippingTab, activeSalesChannelTab, currentDate, searchTerm, fetchShippingReceipts, toast, t.fetchError, activeStatusFilter]);
     
     const fetchCounts = useCallback(async () => {
-        setChannelCounts(null);
-        setStatusCounts(null);
         try {
             const dateString = currentDate ? format(currentDate, 'yyyy-MM-dd') : undefined;
             
-            // Fetch channel counts
             const channelStatusFilter = activeStatusFilter !== 'Semua Status' ? [activeStatusFilter] : undefined;
             const channelCountsData = await fetchShippingReceiptCountsByChannel(dateString, channelStatusFilter);
             setChannelCounts(channelCountsData);
             
-            // Fetch status counts
             const statusChannelFilter = activeShippingTab ?? undefined;
             const statusSalesChannelFilter = activeSalesChannelTab ?? undefined;
             const statusCountsData = await fetchShippingReceiptCountsByStatus(dateString, statusChannelFilter, statusSalesChannelFilter);
             setStatusCounts(statusCountsData);
 
         } catch (error) {
-             console.error("Failed to fetch counts:", error);
         }
     }, [currentDate, fetchShippingReceiptCountsByChannel, fetchShippingReceiptCountsByStatus, activeStatusFilter, activeShippingTab, activeSalesChannelTab]);
 
@@ -164,7 +158,6 @@ export default function ReceiptPage() {
             const count = await getPendingReceiptsBeforeDate(currentDate);
             setPendingOldReceiptsCount(count);
         } catch (error) {
-            console.error("Failed to fetch pending old receipts:", error);
         }
     }, [currentDate, getPendingReceiptsBeforeDate]);
 
@@ -194,7 +187,6 @@ export default function ReceiptPage() {
             fetchReceipts(); // Refresh data
             fetchCounts();
         } catch (error) {
-            console.error("Failed to delete receipt:", error);
             toast({ variant: 'destructive', title: t.deleteError });
         }
     };
@@ -206,7 +198,6 @@ export default function ReceiptPage() {
             fetchReceipts();
             fetchCounts();
         } catch (error) {
-            console.error(`Failed to change status to ${newStatus}:`, error);
             toast({ variant: 'destructive', title: t.statusUpdateError, description: t.statusUpdateErrorDesc });
         }
     };
@@ -221,7 +212,6 @@ export default function ReceiptPage() {
             fetchReceipts();
             fetchCounts();
         } catch (error) {
-            console.error("Failed to process shipments:", error);
             toast({ variant: 'destructive', title: t.bulkProcessError, description: t.bulkProcessErrorDesc });
         } finally {
             setIsProcessing(false);
@@ -362,13 +352,9 @@ export default function ReceiptPage() {
                             className="shrink-0"
                         >
                             Semua Jasa Kirim
-                             {!channelCounts ? (
-                                <Loader2 className="ml-2 h-4 w-4 animate-spin" />
-                            ) : (
-                                <Badge variant={activeShippingTab === null ? 'default' : 'secondary'} className="ml-2">
-                                    {Object.values(channelCounts).reduce((a, b) => a + b, 0)}
-                                </Badge>
-                            )}
+                            <Badge variant={activeShippingTab === null ? 'default' : 'secondary'} className="ml-2">
+                                {Object.values(channelCounts).reduce((a, b) => a + b, 0)}
+                            </Badge>
                         </Button>
                         {(['SPX', 'J&T', 'JNE', 'INSTANT', 'CARGO'] as ShippingProvider[]).map(tab => (
                             <Button 
@@ -379,13 +365,9 @@ export default function ReceiptPage() {
                                 className="shrink-0"
                             >
                                 {tab}
-                                {!channelCounts ? (
-                                    <Loader2 className="ml-2 h-4 w-4 animate-spin" />
-                                ) : (
-                                     <Badge variant={activeShippingTab === tab ? 'default' : 'secondary'} className="ml-2">
-                                        {channelCounts[tab] || 0}
-                                    </Badge>
-                                )}
+                                <Badge variant={activeShippingTab === tab ? 'default' : 'secondary'} className="ml-2">
+                                    {channelCounts[tab] || 0}
+                                </Badge>
                             </Button>
                         ))}
                     </div>
@@ -399,15 +381,11 @@ export default function ReceiptPage() {
                                 className="shrink-0"
                             >
                                 {status}
-                                {!statusCounts ? (
-                                    <Loader2 className="ml-2 h-4 w-4 animate-spin" />
-                                ) : (
-                                    <Badge variant={activeStatusFilter === status ? 'default' : 'secondary'} className="ml-2">
-                                        {status === 'Semua Status'
-                                            ? Object.values(statusCounts).reduce((a, b) => a + b, 0)
-                                            : statusCounts[status] || 0}
-                                    </Badge>
-                                )}
+                                <Badge variant={activeStatusFilter === status ? 'default' : 'secondary'} className="ml-2">
+                                    {status === 'Semua Status'
+                                        ? Object.values(statusCounts).reduce((a, b) => a + b, 0)
+                                        : statusCounts[status] || 0}
+                                </Badge>
                             </Button>
                         ))}
                     </div>
