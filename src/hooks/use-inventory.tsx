@@ -231,7 +231,7 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
 
   const recordSale = async (sku: string, channel: string, quantity: number, options?: { saleDate?: Date, transactionId?: string, paymentMethod?: string, resellerName?: string, priceAtSale?: number, status?: string }): Promise<{ sale: Sale; updatedItem: InventoryItem }> => {
     const result = await performSale(sku, channel, quantity, options);
-    await fetchAllData(); 
+    await fetchAllData();
     return result;
   };
 
@@ -371,3 +371,4 @@ export const useInventory = () => {
   }
   return context;
 };
+

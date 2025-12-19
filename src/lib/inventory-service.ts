@@ -1012,7 +1012,6 @@ export async function revertSaleByTransaction(transactionId: string) {
         const receipt = getReceiptStmt.get(transactionId) as ShippingReceipt;
         if (receipt) {
             updateShippingReceiptStatus(receipt.id, 'Return Selesai');
-            adjustStockByReason(receipt.awb, 'Return (transaksi tidak ditemukan)');
         }
         // This throw will be caught by the calling function to provide a user-friendly toast
         throw new Error('TRANSACTION_NOT_FOUND');
@@ -1265,6 +1264,7 @@ async function updateShippingReceiptStatusByAwb(awb: string, status: string) {
 
 
     
+
 
 
 
