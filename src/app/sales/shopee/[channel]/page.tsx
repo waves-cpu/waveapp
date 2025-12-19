@@ -12,7 +12,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { ScanLine, Trash2, ShoppingCart, Search, Eye, ArrowLeft, MoreVertical } from 'lucide-react';
+import { ScanLine, Trash2, ShoppingCart, Search, Eye, ArrowLeft, MoreVertical, Calendar as CalendarIcon } from 'lucide-react';
 import { format, parseISO, startOfDay, endOfDay } from 'date-fns';
 import { useInventory } from '@/hooks/use-inventory';
 import { useLanguage } from '@/hooks/use-language';
@@ -37,6 +37,9 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AppLayout } from '@/app/components/app-layout';
 import { useScanSounds } from '@/hooks/use-scan-sounds';
@@ -75,6 +78,8 @@ export default function ShopeeChannelPage() {
   const [receiptForSale, setReceiptForSale] = useState<ShippingReceipt | null>(null);
   const [isSaleDialogOpen, setIsSaleDialogOpen] = useState(false);
 
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+
   const refocusInput = useCallback(() => {
     if (!isSaleDialogOpen) {
         setTimeout(() => awbInputRef.current?.focus(), 100);
@@ -84,14 +89,13 @@ export default function ShopeeChannelPage() {
   const loadReceipts = useCallback(async () => {
     setLoading(true);
     try {
-      const today = new Date();
       const { receipts: receiptsData, total } = await fetchShippingReceipts({ 
           page: currentPage, 
           limit: itemsPerPage, 
           salesChannel: salesChannel,
           channel: shippingChannel, 
           awb: searchTerm,
-          date_range: { from: startOfDay(today), to: endOfDay(today) }
+          date_range: { from: startOfDay(selectedDate), to: endOfDay(selectedDate) }
       });
       setReceipts(receiptsData);
       setTotalReceipts(total);
@@ -105,7 +109,7 @@ export default function ShopeeChannelPage() {
     } finally {
       setLoading(false);
     }
-  }, [fetchShippingReceipts, toast, currentPage, itemsPerPage, searchTerm, salesChannel, shippingChannel]);
+  }, [fetchShippingReceipts, toast, currentPage, itemsPerPage, searchTerm, salesChannel, shippingChannel, selectedDate]);
   
   useEffect(() => {
     loadReceipts();
@@ -140,7 +144,7 @@ export default function ShopeeChannelPage() {
         awb: awb.trim(),
         salesChannel: salesChannel,
         channel: shippingChannel,
-        date: format(new Date(), "yyyy-MM-dd'T'HH:mm:ss"),
+        date: format(selectedDate, "yyyy-MM-dd'T'HH:mm:ss"),
         status: 'Perlu Diproses',
         transactionId: awb.trim()
     };
@@ -235,14 +239,36 @@ export default function ShopeeChannelPage() {
                       />
                   </div>
               </form>
-              <div className="relative flex-grow sm:flex-grow-0">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                      placeholder="Cari No. Resi..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="pl-10 w-full sm:w-64"
-                  />
+              <div className="flex items-center gap-2">
+                <div className="relative flex-grow sm:flex-grow-0">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                        placeholder="Cari No. Resi..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="pl-10 w-full sm:w-64"
+                    />
+                </div>
+                <Popover>
+                    <PopoverTrigger asChild>
+                        <Button
+                            id="date"
+                            variant={'outline'}
+                            className={cn('w-full sm:w-[240px] justify-start text-left font-normal', !selectedDate && 'text-muted-foreground')}
+                        >
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {selectedDate ? format(selectedDate, 'PPP') : <span>Pilih tanggal</span>}
+                        </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="end">
+                        <Calendar
+                            mode="single"
+                            selected={selectedDate}
+                            onSelect={(date) => setSelectedDate(date || new Date())}
+                            initialFocus
+                        />
+                    </PopoverContent>
+                </Popover>
               </div>
           </div>
           <div className="flex-grow overflow-auto">
