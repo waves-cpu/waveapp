@@ -230,7 +230,9 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
   }, [items]);
 
   const recordSale = async (sku: string, channel: string, quantity: number, options?: { saleDate?: Date, transactionId?: string, paymentMethod?: string, resellerName?: string, priceAtSale?: number, status?: string }): Promise<void> => {
-    await performSale(sku, channel, quantity, options);
+    const newSale = await performSale(sku, channel, quantity, options);
+    // Directly update the sales state instead of re-fetching everything
+    setAllSales(prevSales => [newSale, ...prevSales].sort((a, b) => new Date(b.saleDate).getTime() - new Date(a.saleDate).getTime()));
     await fetchAllData();
   };
 
@@ -299,7 +301,7 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
 
   const deleteShippingReceipt = async (id: number) => {
     await deleteShippingReceiptDb(id);
-    await fetchAllData();
+    // Don't refetch all, let the component manage its own list
   };
 
   const deleteImportHistory = async (id: number) => {
@@ -371,3 +373,5 @@ export const useInventory = () => {
   }
   return context;
 };
+
+    

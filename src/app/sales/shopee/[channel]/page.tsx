@@ -50,7 +50,7 @@ import { RecordSaleForReceiptDialog } from '@/app/components/record-sale-for-rec
 export default function ShopeeChannelPage() {
   const { language } = useLanguage();
   const t = translations[language];
-  const { addShippingReceipt, deleteShippingReceipt, fetchShippingReceipts, allSales, updateShippingReceiptStatus, fetchShippingReceiptCountsByStatus, fetchShippingReceiptCountsByChannel } = useInventory();
+  const { addShippingReceipt, deleteShippingReceipt, fetchShippingReceipts, allSales, updateShippingReceiptStatus, fetchShippingReceiptCountsByStatus, fetchShippingReceiptCountsByChannel, cancelSaleTransaction } = useInventory();
   const { toast } = useToast();
   const { playSuccessSound, playErrorSound } = useScanSounds();
   const router = useRouter();
@@ -165,16 +165,23 @@ export default function ShopeeChannelPage() {
     }
   };
   
-  const handleDeleteReceipt = async (id: number) => {
+  const handleDeleteReceipt = async (receipt: ShippingReceipt) => {
     try {
-        await deleteShippingReceipt(id);
+        // First, cancel the associated sales transaction to return stock
+        if (receipt.transactionId) {
+            await cancelSaleTransaction(receipt.transactionId);
+        }
+        // Then, delete the receipt itself
+        await deleteShippingReceipt(receipt.id);
+        
         toast({
-            title: 'Resi Dihapus',
-            description: 'Resi telah berhasil dihapus.',
+            title: 'Resi Dihapus & Stok Dikembalikan',
+            description: `Resi ${receipt.awb} telah dihapus dan stok telah dikembalikan.`,
         });
-        loadReceipts();
+        loadReceipts(); // Refresh the list
     } catch (error) {
-        toast({ variant: 'destructive', title: 'Gagal Menghapus', description: 'Terjadi kesalahan.' });
+        console.error("Error during receipt deletion:", error);
+        toast({ variant: 'destructive', title: 'Gagal Menghapus', description: 'Terjadi kesalahan saat menghapus resi dan mengembalikan stok.' });
     }
   };
   
@@ -304,7 +311,7 @@ export default function ShopeeChannelPage() {
                                       </AlertDialogHeader>
                                       <AlertDialogFooter>
                                         <AlertDialogCancel>Batal</AlertDialogCancel>
-                                        <AlertDialogAction onClick={() => handleDeleteReceipt(receipt.id)}>
+                                        <AlertDialogAction onClick={() => handleDeleteReceipt(receipt)}>
                                           Ya, Hapus Resi
                                         </AlertDialogAction>
                                       </AlertDialogFooter>
@@ -359,3 +366,5 @@ export default function ShopeeChannelPage() {
     </AppLayout>
   );
 }
+
+    

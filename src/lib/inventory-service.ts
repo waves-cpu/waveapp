@@ -781,10 +781,9 @@ export async function performSale(
             if (options?.priceAtSale !== undefined) {
                 finalPriceAtSale = options.priceAtSale;
             } else {
-                const isOnlineChannel = ONLINE_MARKETPLACES.includes(channel.toLowerCase());
-                
                 const specificChannelPriceResult = getChannelPriceStmt.get({ productId: null, variantId: variant.id, channel: channel }) as { price: number } | undefined;
-                const onlinePriceResult = getChannelPriceStmt.get({ productId: null, variantId: variant.id, channel: 'shopee' }) as { price: number } | undefined;
+                const isOnlineChannel = ONLINE_MARKETPLACES.includes(channel.toLowerCase());
+                const onlinePriceResult = getChannelPriceStmt.get({ productId: null, variantId: variant.id, channel: 'online' }) as { price: number } | undefined;
                 
                 if (specificChannelPriceResult) {
                     finalPriceAtSale = specificChannelPriceResult.price;
@@ -810,10 +809,9 @@ export async function performSale(
                 if (options?.priceAtSale !== undefined) {
                     finalPriceAtSale = options.priceAtSale;
                 } else {
-                    const isOnlineChannel = ONLINE_MARKETPLACES.includes(channel.toLowerCase());
-
                     const specificChannelPriceResult = getChannelPriceStmt.get({ productId: product.id, variantId: null, channel: channel }) as { price: number } | undefined;
-                    const onlinePriceResult = getChannelPriceStmt.get({ productId: product.id, variantId: null, channel: 'shopee' }) as { price: number } | undefined;
+                    const isOnlineChannel = ONLINE_MARKETPLACES.includes(channel.toLowerCase());
+                    const onlinePriceResult = getChannelPriceStmt.get({ productId: product.id, variantId: null, channel: 'online' }) as { price: number } | undefined;
                     
                     if (specificChannelPriceResult) {
                         finalPriceAtSale = specificChannelPriceResult.price;
@@ -1033,14 +1031,17 @@ export async function revertSaleItem(transactionId: string, sku: string) {
 
 
 export async function revertSaleByTransaction(transactionId: string) {
-    const getSalesStmt = db.prepare("SELECT * FROM sales WHERE transactionId = ? AND status = 'Completed'");
+    const getSalesStmt = db.prepare("SELECT * FROM sales WHERE transactionId = ? AND status != 'Cancelled'");
     const sales = getSalesStmt.all(transactionId) as Sale[];
 
     if (!sales || sales.length === 0) {
         const getReceiptStmt = db.prepare('SELECT * FROM shipping_receipts WHERE awb = ?');
         const receipt = getReceiptStmt.get(transactionId) as ShippingReceipt;
         if (receipt) {
-            updateShippingReceiptStatus(receipt.id, 'Return Selesai');
+            // If we found a receipt but no sales, it means the sale was likely never recorded.
+            // We can just mark the receipt as "Cancelled" or another appropriate status.
+            updateShippingReceiptStatus(receipt.id, 'Dibatalkan');
+            return;
         }
         // This throw will be caught by the calling function to provide a user-friendly toast
         throw new Error('TRANSACTION_NOT_FOUND');
@@ -1321,3 +1322,6 @@ async function updateShippingReceiptStatusByAwb(awb: string, status: string) {
 
 
 
+
+
+    
