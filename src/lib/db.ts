@@ -1,5 +1,4 @@
 
-
 import Database from 'better-sqlite3';
 import path from 'path';
 import fs from 'fs';
@@ -14,6 +13,11 @@ const dbPath = path.join(dbDir, 'waves.db');
 let db: Database.Database;
 
 function initializeDatabase() {
+  // Force delete the database file on every initialization
+  if (fs.existsSync(dbPath)) {
+      fs.unlinkSync(dbPath);
+  }
+
   try {
       db = new Database(dbPath);
       db.pragma('journal_mode = WAL');
@@ -404,3 +408,4 @@ export { dbProxy as db };
 
 // Initialize the database connection when the module is loaded
 initializeDatabase();
+
