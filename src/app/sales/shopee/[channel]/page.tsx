@@ -38,13 +38,12 @@ import { useParams, useRouter } from 'next/navigation';
 import { Pagination } from '@/components/ui/pagination';
 import { DailySalesDetailDialog } from '@/app/components/daily-sales-detail-dialog';
 import { Badge } from '@/components/ui/badge';
-import { RecordSaleForReceiptDialog } from '@/app/components/record-sale-for-receipt-dialog';
 
 
 export default function ShopeeChannelPage() {
   const { language } = useLanguage();
   const t = translations[language];
-  const { addShippingReceipt, deleteShippingReceipt, fetchShippingReceipts, allSales } = useInventory();
+  const { addShippingReceipt, deleteShippingReceipt, fetchShippingReceipts, allSales, updateShippingReceiptStatus } = useInventory();
   const { toast } = useToast();
   const { playSuccessSound, playErrorSound } = useScanSounds();
   const router = useRouter();
@@ -65,15 +64,10 @@ export default function ShopeeChannelPage() {
   
   const [detailItems, setDetailItems] = useState<Sale[]>([]);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
-  
-  const [receiptForSale, setReceiptForSale] = useState<ShippingReceipt | null>(null);
-  const [isSaleDialogOpen, setIsSaleDialogOpen] = useState(false);
 
   const refocusInput = useCallback(() => {
-    if (!isSaleDialogOpen) {
-      setTimeout(() => awbInputRef.current?.focus(), 100);
-    }
-  }, [isSaleDialogOpen]);
+    setTimeout(() => awbInputRef.current?.focus(), 100);
+  }, []);
 
   const loadReceipts = useCallback(async () => {
     setLoading(true);
@@ -84,7 +78,7 @@ export default function ShopeeChannelPage() {
           salesChannel: salesChannel,
           channel: shippingChannel, 
           awb: searchTerm,
-          dateString: format(new Date(), 'yyyy-MM-dd')
+          date_range: { from: new Date(), to: new Date() }
       });
       setReceipts(receiptsData);
       setTotalReceipts(total);
@@ -106,7 +100,7 @@ export default function ShopeeChannelPage() {
 
   useEffect(() => {
     refocusInput();
-  }, [refocusInput, receipts, isSaleDialogOpen]);
+  }, [refocusInput, receipts]);
 
 
   const salesByReceipt = useMemo(() => {
@@ -139,12 +133,10 @@ export default function ShopeeChannelPage() {
     };
 
     try {
-        const added = await addShippingReceipt(newReceipt);
+        await addShippingReceipt(newReceipt);
         playSuccessSound();
         setAwb('');
-        setReceiptForSale(added);
-        setIsSaleDialogOpen(true);
-        // We will reload receipts when the dialog closes to reflect new state
+        loadReceipts();
     } catch (error) {
         playErrorSound();
         let title = 'Input Gagal';
@@ -176,14 +168,8 @@ export default function ShopeeChannelPage() {
   const handleViewDetails = (receipt: ShippingReceipt) => {
     if (!receipt.transactionId) return;
     const items = salesByReceipt.get(receipt.transactionId) || [];
-    if (items.length > 0) {
-        setDetailItems(items);
-        setIsDetailOpen(true);
-    } else {
-        // If no sales recorded, open the sale recording dialog
-        setReceiptForSale(receipt);
-        setIsSaleDialogOpen(true);
-    }
+    setDetailItems(items);
+    setIsDetailOpen(true);
   }
   
   const totalPages = Math.ceil(totalReceipts / itemsPerPage);
@@ -212,7 +198,7 @@ export default function ShopeeChannelPage() {
                           value={awb}
                           onChange={(e) => setAwb(e.target.value)}
                           className="pl-10 w-full"
-                          disabled={isSubmitting || isSaleDialogOpen}
+                          disabled={isSubmitting}
                           autoFocus
                       />
                   </div>
@@ -260,9 +246,9 @@ export default function ShopeeChannelPage() {
                           <TableCell>{format(new Date(receipt.date), 'HH:mm:ss')}</TableCell>
                           <TableCell className="font-medium">{receipt.awb}</TableCell>
                           <TableCell>
-                            <Button variant="link" size="sm" className="h-auto p-0 text-xs" onClick={() => handleViewDetails(receipt)}>
-                                {isProcessed ? `${relatedSales.reduce((acc, s) => acc + s.quantity, 0)} produk` : 'Catat Produk'}
-                                <Eye className="ml-2 h-3 w-3" />
+                            <Button variant="link" size="sm" className="h-auto p-0 text-xs" onClick={() => handleViewDetails(receipt)} disabled={!isProcessed}>
+                                {isProcessed ? `${relatedSales.reduce((acc, s) => acc + s.quantity, 0)} produk` : '-'}
+                                {isProcessed && <Eye className="ml-2 h-3 w-3" />}
                             </Button>
                           </TableCell>
                           <TableCell><Badge variant={isProcessed ? "secondary" : "outline"}>{receipt.status}</Badge></TableCell>
@@ -325,17 +311,6 @@ export default function ShopeeChannelPage() {
           open={isDetailOpen}
           onOpenChange={setIsDetailOpen}
           sales={detailItems}
-      />
-       <RecordSaleForReceiptDialog
-        open={isSaleDialogOpen}
-        onOpenChange={(isOpen) => {
-          setIsSaleDialogOpen(isOpen);
-          if (!isOpen) {
-            setReceiptForSale(null);
-            loadReceipts(); // Refresh the list after closing
-          }
-        }}
-        receipt={receiptForSale}
       />
     </AppLayout>
   );

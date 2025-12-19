@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
@@ -41,7 +42,6 @@ import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useParams, useRouter } from 'next/navigation';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { RecordSaleForReceiptDialog } from '@/app/components/record-sale-for-receipt-dialog';
 
 
 type ShippingProvider = 'SPX' | 'J&T' | 'JNE' | 'INSTANT' | 'CARGO';
@@ -96,9 +96,6 @@ export default function ReceiptPage() {
     const [isProcessing, setIsProcessing] = useState(false);
     const [channelCounts, setChannelCounts] = useState<Record<string, number> | null>(null);
     const [activeStatusFilter, setActiveStatusFilter] = useState<string>('Semua Status');
-
-    const [receiptForSale, setReceiptForSale] = useState<ShippingReceipt | null>(null);
-    const [isSaleDialogOpen, setIsSaleDialogOpen] = useState(false);
 
     const [pendingOldReceiptsCount, setPendingOldReceiptsCount] = useState(0);
 
@@ -249,11 +246,6 @@ export default function ReceiptPage() {
         setSelectedIds(newSelectedIds);
     };
     
-    const handleRecordSale = (receipt: ShippingReceipt) => {
-        setReceiptForSale(receipt);
-        setIsSaleDialogOpen(true);
-    };
-    
     const handleShowAllPending = () => {
         router.push('/shipping/receipt/semua');
         setActiveStatusFilter('Perlu Diproses');
@@ -379,7 +371,7 @@ export default function ReceiptPage() {
                                 {!channelCounts ? (
                                     <Loader2 className="ml-2 h-4 w-4 animate-spin" />
                                 ) : (
-                                    <Badge variant={activeShippingTab === tab ? 'default' : 'secondary'} className="ml-2">
+                                     <Badge variant={activeShippingTab === tab ? 'default' : 'secondary'} className="ml-2">
                                         {channelCounts[tab] || 0}
                                     </Badge>
                                 )}
@@ -450,7 +442,6 @@ export default function ReceiptPage() {
                                                     <DropdownMenuContent align="end">
                                                          {item.status === 'Perlu Diproses' && (
                                                             <>
-                                                                <DropdownMenuItem onClick={() => handleRecordSale(item)}>Catat Penjualan</DropdownMenuItem>
                                                                 <DropdownMenuItem onClick={() => handleChangeStatus(item.id, 'Dikirim')}>{t.actions.processShipment}</DropdownMenuItem>
                                                                 <DropdownMenuItem onClick={() => handleChangeStatus(item.id, 'Dibatalkan')} className="text-destructive">{t.actions.cancel}</DropdownMenuItem>
                                                             </>
@@ -532,18 +523,6 @@ export default function ReceiptPage() {
                     </Card>
                 </div>
             </main>
-            <RecordSaleForReceiptDialog
-                open={isSaleDialogOpen}
-                onOpenChange={(isOpen) => {
-                    setIsSaleDialogOpen(isOpen);
-                    if (!isOpen) {
-                        setReceiptForSale(null);
-                        fetchReceipts();
-                        fetchCounts();
-                    }
-                }}
-                receipt={receiptForSale}
-            />
         </AppLayout>
     );
 
