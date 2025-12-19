@@ -344,16 +344,13 @@ const seedData = () => {
     }
 };
 
-// Initialize the database connection when the module is loaded
-initializeDatabase();
-createSchema();
-
 function getDb() {
-  if (!db) {
+  if (!db || !db.open) {
     initializeDatabase();
   }
   return db;
 }
+
 
 function executeQuery<T>(query: (db: Database.Database) => T): T {
   try {
@@ -400,3 +397,6 @@ export const dbProxy = {
 
 // Replace direct 'db' export with the proxy
 export { dbProxy as db };
+
+// Initialize the database connection when the module is loaded
+initializeDatabase();
