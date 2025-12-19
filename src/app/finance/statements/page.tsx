@@ -1,14 +1,13 @@
 
-
 'use client';
 
-import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { AppLayout } from "@/app/components/app-layout";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { useLanguage } from "@/hooks/use-language";
 import { translations } from "@/types/language";
 import { useInventory } from "@/hooks/use-inventory";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DollarSign, Package, TrendingUp, ShoppingCart, Activity, Eye, Search, Store, ChevronDown, Truck, Undo2, Ban } from "lucide-react";
 import { Pie, PieChart as RechartsPieChart, Cell, Tooltip, ResponsiveContainer, Legend } from "recharts";
@@ -16,7 +15,7 @@ import { ChartConfig, ChartContainer, ChartTooltipContent } from "@/components/u
 import { subDays, isWithinInterval, startOfDay, endOfDay, format, parseISO } from "date-fns";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import type { InventoryItem, InventoryItemVariant, Sale } from '@/types';
+import type { InventoryItem, Sale } from '@/types';
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
@@ -43,6 +42,7 @@ const CHANNEL_COLORS: { [key: string]: string } = {
   default: "hsl(var(--muted-foreground))",
 };
 
+const SALES_CHANNELS = ['Shopee', 'Tiktok', 'Lazada', 'POS', 'Reseller'];
 
 interface ProfitabilityData {
     productId: string;
@@ -97,18 +97,22 @@ function AllProductsDialog({
     allSales,
     categories,
     initialDateRange,
-    initialAllProducts
+    initialCategoryFilter,
+    initialChannelFilter,
 } : {
     open: boolean;
     onOpenChange: (open: boolean) => void;
     allSales: Sale[];
     categories: string[];
     initialDateRange: DateRange | undefined;
-    initialAllProducts: InventoryItem[];
+    initialCategoryFilter: string | null;
+    initialChannelFilter: string | null;
 }) {
     const { language } = useLanguage();
     const t = translations[language];
-    const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
+    
+    const [categoryFilter, setCategoryFilter] = useState<string | null>(initialCategoryFilter);
+    const [channelFilter, setChannelFilter] = useState<string | null>(initialChannelFilter);
     const [searchTerm, setSearchTerm] = useState('');
     const [dateRange, setDateRange] = useState<DateRange | undefined>(initialDateRange);
     const [currentPage, setCurrentPage] = useState(1);
@@ -118,14 +122,19 @@ function AllProductsDialog({
         if (open) {
             setCurrentPage(1);
             setSearchTerm('');
-            setCategoryFilter(null);
+            setCategoryFilter(initialCategoryFilter);
+            setChannelFilter(initialChannelFilter);
             setDateRange(initialDateRange);
         }
-    }, [open, initialDateRange]);
+    }, [open, initialDateRange, initialCategoryFilter, initialChannelFilter]);
 
     const productProfitability = useMemo(() => {
         const salesInDateRange = allSales.filter(sale => {
             if (sale.status !== 'Completed') return false;
+
+            if (channelFilter && sale.channel.toLowerCase() !== channelFilter.toLowerCase()) return false;
+            if (categoryFilter && sale.productCategory !== categoryFilter) return false;
+
             if (!dateRange || !dateRange.from) return true;
             const saleDate = parseISO(sale.saleDate);
             const toDate = dateRange.to || dateRange.from;
@@ -194,28 +203,28 @@ function AllProductsDialog({
         });
 
         return Array.from(profitabilityMap.values()).sort((a,b) => b.unitsSold - a.unitsSold);
-    }, [allSales, dateRange]);
+    }, [allSales, dateRange, categoryFilter, channelFilter]);
 
 
     const filteredData = useMemo(() => {
-        const filtered = productProfitability
-            .filter(p => !categoryFilter || p.category === categoryFilter)
+        if (!searchTerm) return productProfitability;
+        
+        const lowerSearch = searchTerm.toLowerCase();
+        return productProfitability
             .filter(p => {
-                if (!searchTerm) return true;
-                const lowerSearch = searchTerm.toLowerCase();
                 const productMatch = p.name.toLowerCase().includes(lowerSearch) || (p.sku && p.sku.toLowerCase().includes(lowerSearch));
                 if (productMatch) return true;
                 if (p.variants) {
                     return p.variants.some(v => v.name.toLowerCase().includes(lowerSearch) || (v.sku && v.sku.toLowerCase().includes(lowerSearch)));
                 }
                 return false;
-            })
-            .sort((a,b) => b.unitsSold - a.unitsSold);
-
+            });
+    }, [productProfitability, searchTerm]);
+    
+    useEffect(() => {
         setCurrentPage(1);
-        return filtered;
+    }, [filteredData]);
 
-    }, [productProfitability, categoryFilter, searchTerm]);
 
     const totalPages = Math.ceil(filteredData.length / itemsPerPage);
 
@@ -241,7 +250,16 @@ function AllProductsDialog({
                             className="pl-10"
                         />
                     </div>
-                    <Select onValueChange={(value) => setCategoryFilter(value === 'all' ? null : value)} defaultValue="all">
+                     <Select onValueChange={(value) => setChannelFilter(value === 'all' ? null : value)} value={channelFilter || 'all'}>
+                        <SelectTrigger className="w-full sm:w-[180px]">
+                            <SelectValue placeholder="Filter Kanal" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">Semua Kanal</SelectItem>
+                            {SALES_CHANNELS.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
+                    <Select onValueChange={(value) => setCategoryFilter(value === 'all' ? null : value)} value={categoryFilter || 'all'}>
                         <SelectTrigger className="w-full sm:w-[180px]">
                             <SelectValue placeholder="Filter Kategori" />
                         </SelectTrigger>
@@ -388,7 +406,7 @@ export default function SalesReportPage() {
     const { language } = useLanguage();
     const t = translations[language];
     const TFinance = t.finance;
-    const { items, allSales, loading: inventoryLoading, categories, getReceiptCountByStatus } = useInventory();
+    const { allSales, loading: inventoryLoading, categories, getReceiptCountByStatus } = useInventory();
     const { user, loading: authLoading } = useAuth();
     const router = useRouter();
 
@@ -397,6 +415,7 @@ export default function SalesReportPage() {
       to: new Date(),
     });
     const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
+    const [channelFilter, setChannelFilter] = useState<string | null>(null);
     const [isTopProductsDialogOpen, setIsTopProductsDialogOpen] = useState(false);
     const [shippedCount, setShippedCount] = useState(0);
 
@@ -406,16 +425,19 @@ export default function SalesReportPage() {
         }
     }, [authLoading, user, router]);
 
-    useEffect(() => {
-        const fetchShippedCount = async () => {
-            if (dateRange?.from) {
-                const count = await getReceiptCountByStatus(['Dikirim'], { from: dateRange.from, to: dateRange.to || dateRange.from });
-                setShippedCount(count);
-            }
-        };
-        fetchShippedCount();
+    const fetchCounts = useCallback(async () => {
+        if (dateRange?.from) {
+            const count = await getReceiptCountByStatus(['Dikirim'], { from: dateRange.from, to: dateRange.to || dateRange.from });
+            setShippedCount(count);
+        } else {
+            const count = await getReceiptCountByStatus(['Dikirim'], { from: new Date(0), to: new Date() });
+            setShippedCount(count);
+        }
     }, [dateRange, getReceiptCountByStatus]);
-
+    
+    useEffect(() => {
+        fetchCounts();
+    }, [fetchCounts]);
 
     const { 
         totalRevenue,
@@ -428,7 +450,10 @@ export default function SalesReportPage() {
         totalCancelledValue,
     } = useMemo(() => {
         const salesInDateRange = allSales.filter(sale => {
+            // Apply top-level filters
+            if (channelFilter && sale.channel.toLowerCase() !== channelFilter.toLowerCase()) return false;
             if (categoryFilter && sale.productCategory !== categoryFilter) return false;
+            
             if (!dateRange || !dateRange.from) return true;
             const saleDate = parseISO(sale.saleDate);
             const toDate = dateRange.to || dateRange.from;
@@ -468,6 +493,7 @@ export default function SalesReportPage() {
                         productId: parentProductId,
                         name: sale.productName,
                         parentSku: sale.parentSku,
+                        imageUrl: sale.parentImageUrl,
                         category: sale.productCategory,
                         unitsSold: 0,
                         totalRevenue: 0,
@@ -499,7 +525,7 @@ export default function SalesReportPage() {
             totalCancelledValue: cancelledValue,
         };
 
-    }, [allSales, dateRange, categoryFilter]);
+    }, [allSales, dateRange, categoryFilter, channelFilter]);
 
 
     const pieChartConfig = useMemo(() => {
@@ -537,6 +563,19 @@ export default function SalesReportPage() {
                         <h1 className="text-lg font-bold">{TFinance.salesReport}</h1>
                     </div>
                     <div className='flex items-center gap-2'>
+                         <Select onValueChange={(value) => setChannelFilter(value === 'all' ? null : value)} defaultValue="all">
+                            <SelectTrigger className="w-full md:w-[150px]">
+                            <SelectValue placeholder="Filter Kanal" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">Semua Kanal</SelectItem>
+                                {SALES_CHANNELS.map((channel) => (
+                                    <SelectItem key={channel} value={channel}>
+                                    {channel}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
                         <Select onValueChange={(value) => setCategoryFilter(value === 'all' ? null : value)} defaultValue="all">
                             <SelectTrigger className="w-full md:w-[180px]">
                             <SelectValue placeholder={t.inventoryTable.selectCategoryPlaceholder} />
@@ -703,7 +742,7 @@ export default function SalesReportPage() {
                                 <Table>
                                     <TableHeader className="sticky top-0 bg-card">
                                         <TableRow>
-                                            <TableHead className="text-xs">{t.inventoryTable.name}</TableHead>
+                                            <TableHead className="text-xs">Produk</TableHead>
                                             <TableHead className="text-center text-xs">{TFinance.salesReportPage.unitsSold}</TableHead>
                                             <TableHead className="text-left text-xs">{TFinance.salesReportPage.totalRevenue}</TableHead>
                                             <TableHead className="text-left text-xs">{TFinance.salesReportPage.grossProfit}</TableHead>
@@ -713,8 +752,13 @@ export default function SalesReportPage() {
                                         {productProfitability.slice(0, 10).length > 0 ? productProfitability.slice(0, 10).map(p => (
                                             <TableRow key={p.productId}>
                                                 <TableCell className="font-medium text-xs py-2">
-                                                    <div>{p.name}</div>
-                                                    <div className="text-muted-foreground">SKU: {p.parentSku || '-'}</div>
+                                                    <div className="flex items-center gap-3">
+                                                        <Image src={p.imageUrl || 'https://placehold.co/30x30.png'} alt={p.name} width={30} height={30} className="rounded-md" data-ai-hint="product image" />
+                                                        <div>
+                                                            <div>{p.name}</div>
+                                                            <div className="text-muted-foreground font-normal">SKU: {p.parentSku || '-'}</div>
+                                                        </div>
+                                                    </div>
                                                 </TableCell>
                                                 <TableCell className="text-center text-xs font-bold py-2">{p.unitsSold}</TableCell>
                                                 <TableCell className="text-left text-xs py-2">{formatCurrency(p.totalRevenue)}</TableCell>
@@ -740,9 +784,9 @@ export default function SalesReportPage() {
                 allSales={allSales}
                 categories={categories}
                 initialDateRange={dateRange}
-                initialAllProducts={items}
+                initialCategoryFilter={categoryFilter}
+                initialChannelFilter={channelFilter}
             />
         </AppLayout>
     );
 }
-

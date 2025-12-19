@@ -107,18 +107,16 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
   const fetchAllData = useCallback(async () => {
     setLoading(true);
     try {
-      const [inventoryData, salesData, resellerData, shippingData] = await Promise.all([
+      const [inventoryData, salesData, resellerData] = await Promise.all([
         fetchInventoryData(),
         fetchAllSales(),
         getResellers(),
-        fetchShippingReceiptsDb({ page: 1, limit: 1000 }), // Fetch initial receipts
       ]);
       
       setItems(inventoryData.items);
       setAccessories(inventoryData.accessories);
       setAllSales(salesData);
       setResellers(resellerData);
-      setShippingReceipts(shippingData.receipts);
 
     } catch (error) {
     } finally {
@@ -233,7 +231,6 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
 
   const recordSale = async (sku: string, channel: string, quantity: number, options?: { saleDate?: Date, transactionId?: string, paymentMethod?: string, resellerName?: string, priceAtSale?: number, status?: string }): Promise<{ sale: Sale; updatedItem: InventoryItem }> => {
     const result = await performSale(sku, channel, quantity, options);
-    // After DB operation, refetch all data to ensure UI consistency everywhere.
     await fetchAllData(); 
     return result;
   };
@@ -280,7 +277,7 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
     await addAccessoryDb(accessory);
     await fetchAllData();
   };
-  const updateAccessory = async (accessoryId: string, accessoryData: Omit<Accessory, 'id' | 'history'>) => {
+  const updateAccessory = async (accessoryId: string, accessoryData: Omit<Accessory, 'id'| 'history'>) => {
     await updateAccessoryDb(accessoryId, accessoryData);
     await fetchAllData();
   };
@@ -295,12 +292,14 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
   
 
   const addShippingReceipt = async (receipt: Omit<ShippingReceipt, 'id'>) => {
-    return await addShippingReceiptDb(receipt);
+    const newReceipt = await addShippingReceiptDb(receipt);
+    await fetchAllData();
+    return newReceipt;
   };
 
   const deleteShippingReceipt = async (id: number) => {
     await deleteShippingReceiptDb(id);
-    // Refetching is handled by the page component.
+    await fetchAllData();
   };
 
   const deleteImportHistory = async (id: number) => {
@@ -372,5 +371,3 @@ export const useInventory = () => {
   }
   return context;
 };
-
-    
