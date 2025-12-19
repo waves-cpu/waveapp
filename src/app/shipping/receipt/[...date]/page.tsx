@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
@@ -194,9 +195,12 @@ export default function ReceiptPage() {
         }
     };
     
-    const handleChangeStatus = async (id: number, newStatus: string) => {
+    const handleChangeStatus = async (receipt: ShippingReceipt, newStatus: string) => {
         try {
-            await updateShippingReceiptStatus(id, newStatus);
+            if (newStatus === 'Dibatalkan' && receipt.transactionId) {
+                await cancelSaleTransaction(receipt.transactionId);
+            }
+            await updateShippingReceiptStatus(receipt.id, newStatus);
             toast({ title: t.statusUpdateSuccess, description: t.statusUpdateSuccessDesc.replace('{status}', newStatus) });
             fetchReceipts();
             fetchCounts();
@@ -444,14 +448,14 @@ export default function ReceiptPage() {
                                                     <DropdownMenuContent align="end">
                                                          {item.status === 'Perlu Diproses' && (
                                                             <>
-                                                                <DropdownMenuItem onClick={() => handleChangeStatus(item.id, 'Dikirim')}>{t.actions.processShipment}</DropdownMenuItem>
-                                                                <DropdownMenuItem onClick={() => handleChangeStatus(item.id, 'Dibatalkan')} className="text-destructive">{t.actions.cancel}</DropdownMenuItem>
+                                                                <DropdownMenuItem onClick={() => handleChangeStatus(item, 'Dikirim')}>{t.actions.processShipment}</DropdownMenuItem>
+                                                                <DropdownMenuItem onClick={() => handleChangeStatus(item, 'Dibatalkan')} className="text-destructive">{t.actions.cancel}</DropdownMenuItem>
                                                             </>
                                                          )}
                                                          {item.status === 'Dikirim' && (
                                                             <>
-                                                                <DropdownMenuItem onClick={() => handleChangeStatus(item.id, 'Selesai')}>{t.actions.markAsDone}</DropdownMenuItem>
-                                                                <DropdownMenuItem onClick={() => handleChangeStatus(item.id, 'Return')} className="text-destructive">{t.actions.markAsReturn}</DropdownMenuItem>
+                                                                <DropdownMenuItem onClick={() => handleChangeStatus(item, 'Selesai')}>{t.actions.markAsDone}</DropdownMenuItem>
+                                                                <DropdownMenuItem onClick={() => handleChangeStatus(item, 'Return')} className="text-destructive">{t.actions.markAsReturn}</DropdownMenuItem>
                                                             </>
                                                          )}
                                                          <AlertDialog>
@@ -508,3 +512,4 @@ export default function ReceiptPage() {
         </AppLayout>
     );
 }
+
