@@ -97,7 +97,7 @@ export async function fetchShippingReceipts(options: {
     limit: number;
     salesChannel?: string;
     channel?: string;
-    date_range?: { from: Date; to: Date };
+    date_range?: { from: Date | null; to: Date };
     status?: string[];
     awb?: string;
 }): Promise<{ receipts: ShippingReceipt[]; total: number }> {
@@ -107,8 +107,6 @@ export async function fetchShippingReceipts(options: {
     let whereClauses: string[] = [];
     const params: any = {};
 
-    // IMPORTANT LOGIC FIX: AWB search should be exclusive of other filters if provided.
-    // If not, apply all other filters.
     if (awb) {
         whereClauses.push("awb LIKE @awb");
         params.awb = `%${awb}%`;
@@ -167,7 +165,7 @@ export async function getPendingReceiptsBeforeDate(date: Date): Promise<number> 
 }
 
 export async function fetchShippingReceiptCountsByChannel(dateString?: string, status?: string[]): Promise<Record<string, number>> {
-    const statusToQuery = status || ['Perlu Diproses'];
+    const statusToQuery = status || ['Perlu Diproses', 'Dikirim', 'Selesai', 'Return', 'Return Selesai', 'Dibatalkan'];
 
     let whereClause = `status IN (${statusToQuery.map(() => '?').join(',')})`;
     const params: any[] = [...statusToQuery];

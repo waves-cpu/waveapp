@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
@@ -58,8 +57,11 @@ const getStatusVariant = (status: string) => {
     }
 };
 
-function parseDateFromParams(dateArray: string[] | undefined): Date {
+const STATUS_OPTIONS = ['Semua Status', 'Perlu Diproses', 'Dikirim', 'Selesai', 'Return', 'Return Selesai', 'Dibatalkan'];
+
+function parseDateFromParams(dateArray: string[] | undefined): Date | null {
     if (dateArray && dateArray.length > 0) {
+      if (dateArray[0] === 'semua') return null;
       // Assuming the format is MM-dd-yyyy
       const [month, day, year] = dateArray[0].split('-');
       const parsedDate = parse(`${year}-${month}-${day}`, 'yyyy-MM-dd', new Date());
@@ -93,12 +95,12 @@ export default function ReceiptPage() {
     const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
     const [isProcessing, setIsProcessing] = useState(false);
     const [channelCounts, setChannelCounts] = useState<Record<string, number> | null>(null);
+    const [activeStatusFilter, setActiveStatusFilter] = useState<string>('Semua Status');
 
     const [receiptForSale, setReceiptForSale] = useState<ShippingReceipt | null>(null);
     const [isSaleDialogOpen, setIsSaleDialogOpen] = useState(false);
 
     const [pendingOldReceiptsCount, setPendingOldReceiptsCount] = useState(0);
-
 
     const currentDate = useMemo(() => parseDateFromParams(Array.isArray(params.date) ? params.date : undefined), [params.date]);
     
@@ -113,13 +115,17 @@ export default function ReceiptPage() {
                 channel: activeShippingTab || undefined,
             };
 
-            // Only add date if there is no AWB search term
-            if (!searchTerm) {
+            if (currentDate && !searchTerm) {
                 searchOptions.date_range = {
                     from: currentDate,
                     to: endOfDay(currentDate),
                 };
             }
+            
+            if (activeStatusFilter !== 'Semua Status') {
+                searchOptions.status = [activeStatusFilter];
+            }
+
 
             const { receipts, total } = await fetchShippingReceipts(searchOptions);
             setReceipts(receipts);
@@ -130,20 +136,22 @@ export default function ReceiptPage() {
         } finally {
             setLoading(false);
         }
-    }, [currentPage, itemsPerPage, activeShippingTab, activeSalesChannelTab, currentDate, searchTerm, fetchShippingReceipts, toast, t.fetchError]);
+    }, [currentPage, itemsPerPage, activeShippingTab, activeSalesChannelTab, currentDate, searchTerm, fetchShippingReceipts, toast, t.fetchError, activeStatusFilter]);
     
     const fetchCounts = useCallback(async () => {
         setChannelCounts(null);
         try {
-            const dateString = format(currentDate, 'yyyy-MM-dd');
-            const counts = await fetchShippingReceiptCountsByChannel(dateString);
+            const dateString = currentDate ? format(currentDate, 'yyyy-MM-dd') : undefined;
+            const statusFilter = activeStatusFilter !== 'Semua Status' ? [activeStatusFilter] : undefined;
+            const counts = await fetchShippingReceiptCountsByChannel(dateString, statusFilter);
             setChannelCounts(counts);
         } catch (error) {
              console.error("Failed to fetch channel counts:", error);
         }
-    }, [currentDate, fetchShippingReceiptCountsByChannel]);
+    }, [currentDate, fetchShippingReceiptCountsByChannel, activeStatusFilter]);
 
     const checkOldPendingReceipts = useCallback(async () => {
+        if (!currentDate) return;
         try {
             const count = await getPendingReceiptsBeforeDate(currentDate);
             setPendingOldReceiptsCount(count);
@@ -154,8 +162,8 @@ export default function ReceiptPage() {
 
     useEffect(() => {
         fetchReceipts();
-        checkOldPendingReceipts();
-    }, [fetchReceipts, checkOldPendingReceipts]);
+        if(currentDate) checkOldPendingReceipts();
+    }, [fetchReceipts, checkOldPendingReceipts, currentDate]);
 
     useEffect(() => {
         fetchCounts();
@@ -163,12 +171,12 @@ export default function ReceiptPage() {
 
     useEffect(() => {
         setCurrentPage(1);
-    }, [activeShippingTab, activeSalesChannelTab, searchTerm]);
+    }, [activeShippingTab, activeSalesChannelTab, searchTerm, activeStatusFilter]);
     
     // Clear selection when filters change
     useEffect(() => {
         setSelectedIds(new Set());
-    }, [activeShippingTab, activeSalesChannelTab, currentDate, searchTerm, currentPage]);
+    }, [activeShippingTab, activeSalesChannelTab, currentDate, searchTerm, currentPage, activeStatusFilter]);
 
     const handleDelete = async (receiptToDelete: ShippingReceipt) => {
         if (!receiptToDelete) return;
@@ -217,6 +225,8 @@ export default function ReceiptPage() {
             const formattedDate = format(selectedDate, 'MM-dd-yyyy');
             router.push(`/shipping/receipt/${formattedDate}`);
             setDatePickerOpen(false);
+        } else {
+            router.push('/shipping/receipt/semua');
         }
     };
     
@@ -242,6 +252,11 @@ export default function ReceiptPage() {
     const handleRecordSale = (receipt: ShippingReceipt) => {
         setReceiptForSale(receipt);
         setIsSaleDialogOpen(true);
+    };
+    
+    const handleShowAllPending = () => {
+        router.push('/shipping/receipt/semua');
+        setActiveStatusFilter('Perlu Diproses');
     };
 
     const totalPages = Math.ceil(totalReceipts / itemsPerPage);
@@ -306,9 +321,7 @@ export default function ReceiptPage() {
                         <AlertTitle>Pekerjaan Tertunda</AlertTitle>
                         <AlertDescription className="flex justify-between items-center">
                             Anda memiliki {pendingOldReceiptsCount} resi dari hari sebelumnya yang belum diproses.
-                            <Link href="/shipping/return">
-                                <Button variant="secondary" size="sm">Lihat & Proses Sekarang</Button>
-                            </Link>
+                             <Button variant="secondary" size="sm" onClick={handleShowAllPending}>Lihat & Proses Sekarang</Button>
                         </AlertDescription>
                     </Alert>
                 )}
@@ -373,6 +386,18 @@ export default function ReceiptPage() {
                             </Button>
                         ))}
                     </div>
+                     <div className="flex items-center gap-2">
+                        {STATUS_OPTIONS.map(status => (
+                            <Button
+                                key={status}
+                                variant={activeStatusFilter === status ? 'secondary' : 'ghost'}
+                                size="sm"
+                                onClick={() => setActiveStatusFilter(status)}
+                            >
+                                {status}
+                            </Button>
+                        ))}
+                    </div>
 
                     <Card>
                         <CardContent className="pt-6">
@@ -388,6 +413,7 @@ export default function ReceiptPage() {
                                             />
                                         </TableHead>
                                         <TableHead>{t.table.awb}</TableHead>
+                                        <TableHead>Tanggal</TableHead>
                                         <TableHead>Kanal Penjualan</TableHead>
                                         <TableHead>Jasa Kirim</TableHead>
                                         <TableHead>Status</TableHead>
@@ -396,7 +422,7 @@ export default function ReceiptPage() {
                                 </TableHeader>
                                 <TableBody>
                                     {loading ? (
-                                        <TableRow><TableCell colSpan={6} className="h-48 text-center">{t.loading}</TableCell></TableRow>
+                                        <TableRow><TableCell colSpan={7} className="h-48 text-center">{t.loading}</TableCell></TableRow>
                                     ) : receipts.length > 0 ? receipts.map(item => (
                                         <TableRow key={item.id} data-state={selectedIds.has(item.id) && 'selected'}>
                                             <TableCell>
@@ -408,6 +434,7 @@ export default function ReceiptPage() {
                                                 />
                                             </TableCell>
                                             <TableCell className="font-medium">{item.awb}</TableCell>
+                                            <TableCell>{format(new Date(item.date), 'dd MMM yyyy')}</TableCell>
                                             <TableCell>{item.salesChannel}</TableCell>
                                             <TableCell>{item.channel}</TableCell>
                                             <TableCell>
@@ -461,7 +488,7 @@ export default function ReceiptPage() {
                                         </TableRow>
                                     )) : (
                                         <TableRow>
-                                            <TableCell colSpan={6} className="h-48 text-center">
+                                            <TableCell colSpan={7} className="h-48 text-center">
                                                 <div className="flex flex-col items-center justify-center gap-4 text-muted-foreground">
                                                     <Truck className="h-16 w-16" />
                                                     <p className="font-semibold">{t.noReceiptsTitle}</p>
@@ -522,5 +549,3 @@ export default function ReceiptPage() {
 
     
 }
-
-    
