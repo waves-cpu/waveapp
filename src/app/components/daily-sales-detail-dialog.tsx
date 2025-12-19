@@ -42,6 +42,7 @@ interface AggregatedSale {
     quantity: number;
     priceAtSale: number;
     size?: string;
+    totalRevenue: number;
 }
 
 const formatCurrency = (amount: number) => {
@@ -67,11 +68,15 @@ export function DailySalesDetailDialog({ open, onOpenChange, sales, title, descr
         const aggregationMap = new Map<string, AggregatedSale>();
 
         sales.forEach(sale => {
-            const key = `${sale.productId}-${sale.variantId || 'none'}-${sale.priceAtSale}`;
+            // Aggregate by SKU, saleDate, and channel to group items sold in the same context
+            const saleDate = format(parseISO(sale.saleDate), 'yyyy-MM-dd');
+            const key = `${sale.sku}-${saleDate}-${sale.channel}`;
+
             const existingEntry = aggregationMap.get(key);
 
             if (existingEntry) {
                 existingEntry.quantity += sale.quantity;
+                existingEntry.totalRevenue += sale.quantity * sale.priceAtSale;
             } else {
                 aggregationMap.set(key, {
                     productName: sale.productName,
@@ -81,6 +86,7 @@ export function DailySalesDetailDialog({ open, onOpenChange, sales, title, descr
                     quantity: sale.quantity,
                     priceAtSale: sale.priceAtSale,
                     size: sale.variantName, // Use variantName as size
+                    totalRevenue: sale.quantity * sale.priceAtSale,
                 });
             }
         });
@@ -99,7 +105,7 @@ export function DailySalesDetailDialog({ open, onOpenChange, sales, title, descr
             : allAggregatedSales;
 
         const totalQuantity = filteredSales.reduce((sum, sale) => sum + sale.quantity, 0);
-        const totalRevenue = filteredSales.reduce((sum, sale) => sum + sale.quantity * sale.priceAtSale, 0);
+        const totalRevenue = filteredSales.reduce((sum, sale) => sum + sale.totalRevenue, 0);
 
         return { aggregatedSales: filteredSales, totalQuantity, totalRevenue };
     }, [sales, searchTerm]);
@@ -116,7 +122,7 @@ export function DailySalesDetailDialog({ open, onOpenChange, sales, title, descr
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl">
+      <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle>{title || defaultTitle}</DialogTitle>
           <DialogDescription>
@@ -139,12 +145,11 @@ export function DailySalesDetailDialog({ open, onOpenChange, sales, title, descr
               <Table>
                   <TableHeader className="sticky top-0 bg-card">
                       <TableRow>
-                          <TableHead className="w-[40%]">Produk</TableHead>
-                          <TableHead className="w-[15%]">Jasa Kirim</TableHead>
-                          <TableHead className="w-[10%]">Ukuran</TableHead>
+                          <TableHead className="w-[50%]">Produk</TableHead>
+                          <TableHead className="w-[15%]">Ukuran</TableHead>
                           <TableHead className="text-center w-[10%]">Jumlah</TableHead>
-                          <TableHead className="text-right w-[15%]">Harga Satuan</TableHead>
-                          <TableHead className="text-right w-[15%]">Total</TableHead>
+                          <TableHead className="text-right w-[20%]">Harga Satuan</TableHead>
+                          <TableHead className="text-right w-[20%]">Total</TableHead>
                       </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -156,19 +161,16 @@ export function DailySalesDetailDialog({ open, onOpenChange, sales, title, descr
                                       {sale.sku && <div className="text-xs text-muted-foreground">SKU: {sale.sku}</div>}
                                   </TableCell>
                                   <TableCell>
-                                      <Badge variant="secondary" className="capitalize">{sale.channel}</Badge>
-                                  </TableCell>
-                                  <TableCell>
                                       {sale.size || '-'}
                                   </TableCell>
                                   <TableCell className="text-center">{sale.quantity}</TableCell>
                                   <TableCell className="text-right">{formatCurrency(sale.priceAtSale)}</TableCell>
-                                  <TableCell className="text-right font-medium">{formatCurrency(sale.quantity * sale.priceAtSale)}</TableCell>
+                                  <TableCell className="text-right font-medium">{formatCurrency(sale.totalRevenue)}</TableCell>
                               </TableRow>
                           ))
                       ) : (
                            <TableRow>
-                              <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
+                              <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
                                   Tidak ada produk yang cocok dengan pencarian Anda.
                               </TableCell>
                           </TableRow>
@@ -176,7 +178,7 @@ export function DailySalesDetailDialog({ open, onOpenChange, sales, title, descr
                   </TableBody>
                    <TableFooter>
                       <TableRow>
-                          <TableCell colSpan={3} className="text-right font-bold">Total</TableCell>
+                          <TableCell colSpan={2} className="text-right font-bold">Total</TableCell>
                           <TableCell className="text-center font-bold">{totalQuantity}</TableCell>
                           <TableCell colSpan={2} className="text-right font-bold">{formatCurrency(totalRevenue)}</TableCell>
                       </TableRow>
