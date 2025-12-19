@@ -21,10 +21,10 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import type { Sale } from '@/types';
 import { useMemo, useState, useEffect } from 'react';
 import { Badge } from '@/components/ui/badge';
-import { format } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import { Input } from '@/components/ui/input';
 import { Search } from 'lucide-react';
-
+import { id as localeId } from 'date-fns/locale';
 
 interface DailySalesDetailDialogProps {
   open: boolean;
@@ -40,7 +40,17 @@ interface AggregatedSale {
     sku?: string;
     channel: string;
     quantity: number;
+    priceAtSale: number;
 }
+
+const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('id-ID', {
+        style: 'currency',
+        currency: 'IDR',
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0,
+    }).format(amount);
+};
 
 export function DailySalesDetailDialog({ open, onOpenChange, sales, title, description }: DailySalesDetailDialogProps) {
     const [searchTerm, setSearchTerm] = useState('');
@@ -51,13 +61,12 @@ export function DailySalesDetailDialog({ open, onOpenChange, sales, title, descr
         }
     }, [open]);
     
-    const { aggregatedSales, totalQuantity } = useMemo(() => {
-        if (!sales) return { aggregatedSales: [], totalQuantity: 0 };
+    const { aggregatedSales, totalQuantity, totalRevenue } = useMemo(() => {
+        if (!sales) return { aggregatedSales: [], totalQuantity: 0, totalRevenue: 0 };
         const aggregationMap = new Map<string, AggregatedSale>();
 
         sales.forEach(sale => {
-            // Use a composite key to correctly aggregate items that might share an SKU but are different products/variants
-            const key = `${sale.productId}-${sale.variantId || 'none'}`;
+            const key = `${sale.productId}-${sale.variantId || 'none'}-${sale.priceAtSale}`;
             const existingEntry = aggregationMap.get(key);
 
             if (existingEntry) {
@@ -69,6 +78,7 @@ export function DailySalesDetailDialog({ open, onOpenChange, sales, title, descr
                     sku: sale.sku,
                     channel: sale.channel,
                     quantity: sale.quantity,
+                    priceAtSale: sale.priceAtSale,
                 });
             }
         });
@@ -87,13 +97,14 @@ export function DailySalesDetailDialog({ open, onOpenChange, sales, title, descr
             : allAggregatedSales;
 
         const totalQuantity = filteredSales.reduce((sum, sale) => sum + sale.quantity, 0);
+        const totalRevenue = filteredSales.reduce((sum, sale) => sum + sale.quantity * sale.priceAtSale, 0);
 
-        return { aggregatedSales: filteredSales, totalQuantity };
+        return { aggregatedSales: filteredSales, totalQuantity, totalRevenue };
     }, [sales, searchTerm]);
 
     const salesDate = useMemo(() => {
         if (sales && sales.length > 0) {
-            return format(new Date(sales[0].saleDate), 'PP');
+            return format(parseISO(sales[0].saleDate), 'PPP', { locale: localeId });
         }
         return '';
     }, [sales]);
@@ -121,47 +132,53 @@ export function DailySalesDetailDialog({ open, onOpenChange, sales, title, descr
             />
         </div>
 
-        <ScrollArea className="max-h-96 border rounded-md">
-            <Table>
-                <TableHeader>
-                    <TableRow>
-                        <TableHead className="w-[50%]">Produk</TableHead>
-                        <TableHead className="text-center">Jumlah</TableHead>
-                        <TableHead>Saluran</TableHead>
-                    </TableRow>
-                </TableHeader>
-                <TableBody>
-                    {aggregatedSales.length > 0 ? (
-                        aggregatedSales.map((sale, index) => (
-                            <TableRow key={`${sale.sku}-${index}` || `${sale.productName}-${index}`}>
-                                <TableCell>
-                                    <div className="font-medium">{sale.productName}</div>
-                                    {sale.variantName && <div className="text-xs text-muted-foreground">{sale.variantName}</div>}
-                                    {sale.sku && <div className="text-xs text-muted-foreground">SKU: {sale.sku}</div>}
-                                </TableCell>
-                                <TableCell className="text-center">{sale.quantity}</TableCell>
-                                <TableCell>
-                                    <Badge variant="secondary" className="capitalize">{sale.channel}</Badge>
-                                </TableCell>
-                            </TableRow>
-                        ))
-                    ) : (
-                         <TableRow>
-                            <TableCell colSpan={3} className="h-24 text-center text-muted-foreground">
-                                Tidak ada produk yang cocok dengan pencarian Anda.
-                            </TableCell>
-                        </TableRow>
-                    )}
-                </TableBody>
-                 <TableFooter>
-                    <TableRow>
-                        <TableCell className="text-right font-bold">Total Terjual</TableCell>
-                        <TableCell className="text-center font-bold">{totalQuantity}</TableCell>
-                        <TableCell></TableCell>
-                    </TableRow>
-                </TableFooter>
-            </Table>
-        </ScrollArea>
+        <div className="border rounded-md">
+          <ScrollArea className="h-96">
+              <Table>
+                  <TableHeader className="sticky top-0 bg-card">
+                      <TableRow>
+                          <TableHead className="w-[45%]">Produk</TableHead>
+                          <TableHead className="w-[15%]">Saluran</TableHead>
+                          <TableHead className="text-center w-[10%]">Jumlah</TableHead>
+                          <TableHead className="text-right w-[15%]">Harga Satuan</TableHead>
+                          <TableHead className="text-right w-[15%]">Total</TableHead>
+                      </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                      {aggregatedSales.length > 0 ? (
+                          aggregatedSales.map((sale, index) => (
+                              <TableRow key={`${sale.sku}-${index}` || `${sale.productName}-${index}`}>
+                                  <TableCell>
+                                      <div className="font-medium">{sale.productName}</div>
+                                      {sale.variantName && <div className="text-xs text-muted-foreground">{sale.variantName}</div>}
+                                      {sale.sku && <div className="text-xs text-muted-foreground">SKU: {sale.sku}</div>}
+                                  </TableCell>
+                                  <TableCell>
+                                      <Badge variant="secondary" className="capitalize">{sale.channel}</Badge>
+                                  </TableCell>
+                                  <TableCell className="text-center">{sale.quantity}</TableCell>
+                                  <TableCell className="text-right">{formatCurrency(sale.priceAtSale)}</TableCell>
+                                  <TableCell className="text-right font-medium">{formatCurrency(sale.quantity * sale.priceAtSale)}</TableCell>
+                              </TableRow>
+                          ))
+                      ) : (
+                           <TableRow>
+                              <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
+                                  Tidak ada produk yang cocok dengan pencarian Anda.
+                              </TableCell>
+                          </TableRow>
+                      )}
+                  </TableBody>
+                   <TableFooter>
+                      <TableRow>
+                          <TableCell colSpan={2} className="text-right font-bold">Total</TableCell>
+                          <TableCell className="text-center font-bold">{totalQuantity}</TableCell>
+                          <TableCell colSpan={2} className="text-right font-bold">{formatCurrency(totalRevenue)}</TableCell>
+                      </TableRow>
+                  </TableFooter>
+              </Table>
+          </ScrollArea>
+        </div>
       </DialogContent>
     </Dialog>
   );
