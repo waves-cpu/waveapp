@@ -79,7 +79,7 @@ interface InventoryContextType {
   adjustAccessoryStock: (accessoryId: string, change: number, reason: string) => Promise<void>;
   // Shipping
   shippingReceipts: ShippingReceipt[];
-  fetchShippingReceipts: (options: { page: number; limit: number; channel?: string; date?: Date; date_range?: { from: Date; to: Date }; status?: string[]; awb?: string; }) => Promise<{ receipts: ShippingReceipt[]; total: number; }>;
+  fetchShippingReceipts: (options: { page: number; limit: number; salesChannel?: string; channel?: string; date?: Date; date_range?: { from: Date; to: Date }; status?: string[]; awb?: string; }) => Promise<{ receipts: ShippingReceipt[]; total: number; }>;
   addShippingReceipt: (receipt: Omit<ShippingReceipt, 'id'>) => Promise<ShippingReceipt>;
   deleteShippingReceipt: (id: number) => Promise<void>;
   updateShippingReceiptsStatus: (ids: number[], status: string) => Promise<void>;
@@ -290,7 +290,7 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
     await fetchAllData();
   };
 
-  const _fetchShippingReceipts = async (options: { page: number; limit: number; channel?: string; date?: Date; date_range?: {from: Date, to: Date}; status?: string[]; awb?: string; }) => {
+  const _fetchShippingReceipts = async (options: { page: number; limit: number; channel?: string; salesChannel?: string; date?: Date; date_range?: {from: Date, to: Date}; status?: string[]; awb?: string; }) => {
     return await fetchShippingReceiptsDb({ ...options });
   };
   
@@ -375,4 +375,3 @@ export const useInventory = () => {
 };
 
     
-

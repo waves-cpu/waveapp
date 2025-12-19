@@ -880,7 +880,7 @@ export async function fetchAllSales(): Promise<Sale[]> {
             p.name as productName,
             p.category as productCategory,
             p.imageUrl as parentImageUrl,
-            s.parentSku,
+            p.sku as parentSku,
             v.name as variantName,
             COALESCE(v.sku, p.sku) as sku,
             s.status
@@ -1265,6 +1265,7 @@ async function updateShippingReceiptStatusByAwb(awb: string, status: string) {
 
 
     
+
 
 
 
