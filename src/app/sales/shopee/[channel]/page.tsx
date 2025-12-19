@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
@@ -50,7 +49,7 @@ import { RecordSaleForReceiptDialog } from '@/app/components/record-sale-for-rec
 export default function ShopeeChannelPage() {
   const { language } = useLanguage();
   const t = translations[language];
-  const { addShippingReceipt, deleteShippingReceipt, fetchShippingReceipts, allSales, updateShippingReceiptStatus } = useInventory();
+  const { addShippingReceipt, deleteShippingReceipt, fetchShippingReceipts, allSales, updateShippingReceiptStatus, fetchShippingReceiptCountsByStatus, fetchShippingReceiptCountsByChannel } = useInventory();
   const { toast } = useToast();
   const { playSuccessSound, playErrorSound } = useScanSounds();
   const router = useRouter();
@@ -191,6 +190,12 @@ export default function ShopeeChannelPage() {
   }
   
   const totalPages = Math.ceil(totalReceipts / itemsPerPage);
+
+  const handleSaleComplete = () => {
+      setIsSaleDialogOpen(false);
+      setReceiptForSale(null);
+      loadReceipts();
+  };
 
   return (
     <AppLayout>
@@ -351,13 +356,8 @@ export default function ShopeeChannelPage() {
       />
       <RecordSaleForReceiptDialog
         open={isSaleDialogOpen}
-        onOpenChange={(isOpen) => {
-          setIsSaleDialogOpen(isOpen);
-          if (!isOpen) {
-            setReceiptForSale(null);
-            loadReceipts(); 
-          }
-        }}
+        onOpenChange={setIsSaleDialogOpen}
+        onSaleComplete={handleSaleComplete}
         receipt={receiptForSale}
       />
     </AppLayout>

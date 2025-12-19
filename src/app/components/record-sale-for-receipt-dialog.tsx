@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
@@ -48,12 +47,14 @@ interface CartItem {
 interface RecordSaleForReceiptDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onSaleComplete: () => void;
   receipt: ShippingReceipt | null;
 }
 
 export function RecordSaleForReceiptDialog({
   open,
   onOpenChange,
+  onSaleComplete,
   receipt,
 }: RecordSaleForReceiptDialogProps) {
   const { items: inventoryItems, recordSale } = useInventory();
@@ -164,7 +165,7 @@ export function RecordSaleForReceiptDialog({
         title: 'Penjualan Dicatat',
         description: `Stok untuk ${cart.length} produk telah berhasil dikurangi.`,
       });
-      onOpenChange(false);
+      onSaleComplete();
     } catch (error) {
       console.error('Failed to record sale:', error);
       toast({

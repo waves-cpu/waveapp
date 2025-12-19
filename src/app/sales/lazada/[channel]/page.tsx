@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
@@ -192,6 +191,12 @@ export default function LazadaChannelPage() {
   
   const totalPages = Math.ceil(totalReceipts / itemsPerPage);
 
+  const handleSaleComplete = () => {
+      setIsSaleDialogOpen(false);
+      setReceiptForSale(null);
+      loadReceipts();
+  };
+
   return (
     <AppLayout>
       <main className="flex min-h-svh flex-1 flex-col gap-4 bg-muted/40 p-4">
@@ -350,13 +355,8 @@ export default function LazadaChannelPage() {
       />
       <RecordSaleForReceiptDialog
         open={isSaleDialogOpen}
-        onOpenChange={(isOpen) => {
-          setIsSaleDialogOpen(isOpen);
-          if (!isOpen) {
-            setReceiptForSale(null);
-            loadReceipts(); 
-          }
-        }}
+        onOpenChange={setIsSaleDialogOpen}
+        onSaleComplete={handleSaleComplete}
         receipt={receiptForSale}
       />
     </AppLayout>
