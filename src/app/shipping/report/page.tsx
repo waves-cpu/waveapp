@@ -203,9 +203,6 @@ export default function ReceiptReportPage() {
                  <div className="grid gap-6">
                     <Card>
                         <CardHeader>
-                             <CardDescription>
-                                Jumlah resi harian berdasarkan status untuk bulan {format(new Date(selectedYear, selectedMonth), 'MMMM yyyy', { locale: localeId })}.
-                            </CardDescription>
                         </CardHeader>
                         <CardContent className="pt-6">
                            <Table>
