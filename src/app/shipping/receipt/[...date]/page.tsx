@@ -7,7 +7,7 @@ import { SidebarTrigger } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Calendar as CalendarIcon, FileDown, Trash2, Truck, ScanLine, Search, Send, Ban, MoreVertical } from 'lucide-react';
+import { Calendar as CalendarIcon, FileDown, Trash2, Truck, ScanLine, Search, Send, Ban, MoreVertical, Loader2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
@@ -314,7 +314,9 @@ export default function ReceiptPage() {
                                 className="shrink-0"
                             >
                                 {tab}
-                                {channelCounts && (
+                                {!channelCounts ? (
+                                    <Loader2 className="ml-2 h-4 w-4 animate-spin" />
+                                ) : (
                                     <Badge variant={activeShippingTab === tab ? 'default' : 'secondary'} className="ml-2">
                                         {channelCounts[tab] || 0}
                                     </Badge>
@@ -468,5 +470,8 @@ export default function ReceiptPage() {
             />
         </AppLayout>
     );
+
+    
+}
 
     
