@@ -752,6 +752,7 @@ export async function performSale(
     const getProductStmt = db.prepare('SELECT * FROM products WHERE sku = ? AND hasVariants = 0');
     const getVariantStmt = db.prepare('SELECT * FROM variants WHERE sku = ?');
     const getChannelPriceStmt = db.prepare('SELECT price FROM channel_prices WHERE (product_id = @productId OR variant_id = @variantId) AND channel = @channel');
+    const getParentProductStmt = db.prepare('SELECT * FROM products WHERE id = ?');
     
     const ONLINE_MARKETPLACES = ['shopee', 'tiktok', 'lazada'];
     
@@ -763,6 +764,7 @@ export async function performSale(
         let finalPriceAtSale;
         let cogsAtSale;
         let saleStatus = options?.status || 'Completed';
+        let parentProduct: any;
 
         const variant = getVariantStmt.get(sku) as (InventoryItemVariant & { id: number, productId: number, costPrice?: number }) | undefined;
         let affectedItemId: string | undefined;
@@ -772,6 +774,7 @@ export async function performSale(
                 throw new Error('Insufficient stock for variant.');
             }
             affectedItemId = variant.productId.toString();
+            parentProduct = getParentProductStmt.get(variant.productId);
 
             if (options?.priceAtSale !== undefined) {
                 finalPriceAtSale = options.priceAtSale;
@@ -795,8 +798,8 @@ export async function performSale(
             cogsAtSale = variant.costPrice || 0;
             adjustStock(variant.id.toString(), -quantity, saleReason);
 
-            const saleResult = db.prepare('INSERT INTO sales (transactionId, paymentMethod, resellerName, productId, variantId, channel, quantity, priceAtSale, cogsAtSale, saleDate, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
-              .run(options?.transactionId || `online-${Date.now()}`, options?.paymentMethod, options?.resellerName, variant.productId, variant.id, channel, quantity, finalPriceAtSale, cogsAtSale, saleDateString, saleStatus);
+            const saleResult = db.prepare('INSERT INTO sales (transactionId, paymentMethod, resellerName, productId, variantId, channel, quantity, priceAtSale, cogsAtSale, saleDate, status, parentSku) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
+              .run(options?.transactionId || `online-${Date.now()}`, options?.paymentMethod, options?.resellerName, variant.productId, variant.id, channel, quantity, finalPriceAtSale, cogsAtSale, saleDateString, saleStatus, parentProduct?.sku);
 
             const newSale = db.prepare('SELECT s.*, p.name as productName, v.name as variantName, COALESCE(v.sku, p.sku) as sku, p.category as productCategory FROM sales s JOIN products p ON s.productId = p.id LEFT JOIN variants v ON s.variantId = v.id WHERE s.id = ?').get(saleResult.lastInsertRowid) as Sale;
             return { sale: newSale, updatedItem: fetchSingleItem(affectedItemId) };
@@ -805,6 +808,7 @@ export async function performSale(
             const product = getProductStmt.get(sku) as (InventoryItem & { id: number, costPrice?: number, sku: string }) | undefined;
             if (product) {
                 affectedItemId = product.id.toString();
+                parentProduct = product;
                  if (product.stock! < quantity) {
                     throw new Error('Insufficient stock for product.');
                 }
@@ -831,8 +835,8 @@ export async function performSale(
                 cogsAtSale = product.costPrice || 0;
                 
                 adjustStock(product.id.toString(), -quantity, saleReason);
-                const saleResult = db.prepare('INSERT INTO sales (transactionId, paymentMethod, resellerName, productId, variantId, channel, quantity, priceAtSale, cogsAtSale, saleDate, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
-                  .run(options?.transactionId || `online-${Date.now()}`, options?.paymentMethod, options?.resellerName, product.id, null, channel, quantity, finalPriceAtSale, cogsAtSale, saleDateString, saleStatus);
+                const saleResult = db.prepare('INSERT INTO sales (transactionId, paymentMethod, resellerName, productId, variantId, channel, quantity, priceAtSale, cogsAtSale, saleDate, status, parentSku) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
+                  .run(options?.transactionId || `online-${Date.now()}`, options?.paymentMethod, options?.resellerName, product.id, null, channel, quantity, finalPriceAtSale, cogsAtSale, saleDateString, saleStatus, parentProduct?.sku);
                 
 
                 const newSale = db.prepare('SELECT s.*, p.name as productName, p.sku FROM sales s JOIN products p ON s.productId = p.id WHERE s.id = ?').get(saleResult.lastInsertRowid) as Sale;
@@ -1264,6 +1268,7 @@ async function updateShippingReceiptStatusByAwb(awb: string, status: string) {
 
 
     
+
 
 
 

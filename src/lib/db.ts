@@ -87,6 +87,8 @@ const runMigrations = () => {
     const hasCogs = salesColumns.some((col: any) => col.name === 'cogsAtSale');
     const hasParentSku = salesColumns.some((col: any) => col.name === 'parentSku');
     const hasStatus = salesColumns.some((col: any) => col.name === 'status');
+    const hasProductCategory = salesColumns.some((col: any) => col.name === 'productCategory');
+    const hasParentImageUrl = salesColumns.some((col: any) => col.name === 'parentImageUrl');
 
 
     if (!hasTransactionId) {
@@ -111,6 +113,14 @@ const runMigrations = () => {
     
     if (!hasStatus) {
         db.exec("ALTER TABLE sales ADD COLUMN status TEXT DEFAULT 'Completed'");
+    }
+
+    if (!hasProductCategory) {
+        db.exec("ALTER TABLE sales ADD COLUMN productCategory TEXT");
+    }
+
+    if (!hasParentImageUrl) {
+        db.exec("ALTER TABLE sales ADD COLUMN parentImageUrl TEXT");
     }
 
     const resellerColumns = db.pragma('table_info(resellers)');
@@ -167,9 +177,6 @@ const runMigrations = () => {
 
 
   } catch (error) {
-    if (error instanceof Error && error.message.includes('no such table:')) {
-    } else {
-    }
   }
 };
 
@@ -261,6 +268,8 @@ const createSchema = () => {
         variantId INTEGER,
         accessoryId INTEGER,
         parentSku TEXT,
+        parentImageUrl TEXT,
+        productCategory TEXT,
         channel TEXT NOT NULL,
         quantity INTEGER NOT NULL,
         priceAtSale REAL NOT NULL,

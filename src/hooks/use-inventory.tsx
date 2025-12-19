@@ -231,7 +231,8 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
 
   const recordSale = async (sku: string, channel: string, quantity: number, options?: { saleDate?: Date, transactionId?: string, paymentMethod?: string, resellerName?: string, priceAtSale?: number, status?: string }): Promise<{ sale: Sale; updatedItem: InventoryItem }> => {
     const result = await performSale(sku, channel, quantity, options);
-    await fetchAllData();
+    // After a sale is performed, refetch all data to ensure UI consistency
+    await fetchAllData(); 
     return result;
   };
 
@@ -293,7 +294,8 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
 
   const addShippingReceipt = async (receipt: Omit<ShippingReceipt, 'id'>) => {
     const newReceipt = await addShippingReceiptDb(receipt);
-    await fetchAllData();
+    // Don't refetch all data here, it's too slow.
+    // The calling component will handle UI updates.
     return newReceipt;
   };
 
@@ -371,4 +373,3 @@ export const useInventory = () => {
   }
   return context;
 };
-
