@@ -254,7 +254,7 @@ export default function LazadaChannelPage() {
                 ) : receipts.length > 0 ? (
                   receipts.map((receipt) => {
                     const relatedSales = salesByReceipt.get(receipt.transactionId || '') || [];
-                    const isProcessed = receipt.status !== 'Perlu Diproses';
+                    const isProcessed = relatedSales.length > 0;
                     return (
                         <TableRow key={receipt.id}>
                           <TableCell>{format(new Date(receipt.date), 'HH:mm:ss')}</TableCell>
