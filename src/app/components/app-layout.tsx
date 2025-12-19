@@ -278,14 +278,6 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                         <CollapsibleContent>
                             <SidebarMenu className="ml-4 mt-2 border-l border-muted-foreground/20 pl-4">
                                 <SidebarMenuItem>
-                                    <Link href="/finance/statements">
-                                        <SidebarMenuButton variant="ghost" size="sm" isActive={pathname === '/finance/statements'}>
-                                            <BarChart />
-                                            {t.finance.salesReport}
-                                        </SidebarMenuButton>
-                                    </Link>
-                                </SidebarMenuItem>
-                                <SidebarMenuItem>
                                     <Link href="/finance/assets">
                                         <SidebarMenuButton variant="ghost" size="sm" isActive={pathname === '/finance/assets'}>
                                             <ArchiveIcon />
