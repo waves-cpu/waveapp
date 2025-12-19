@@ -748,7 +748,7 @@ export async function performSale(
         priceAtSale?: number,
         status?: string
     }
-): Promise<{ sale: Sale; updatedItem: InventoryItem }> {
+): Promise<Sale> {
     const getProductStmt = db.prepare('SELECT * FROM products WHERE sku = ? AND hasVariants = 0');
     const getVariantStmt = db.prepare('SELECT * FROM variants WHERE sku = ?');
     const getChannelPriceStmt = db.prepare('SELECT price FROM channel_prices WHERE (product_id = @productId OR variant_id = @variantId) AND channel = @channel');
@@ -756,7 +756,7 @@ export async function performSale(
     
     const ONLINE_MARKETPLACES = ['shopee', 'tiktok', 'lazada'];
     
-    const { sale, updatedItem } = db.transaction(() => {
+    const { newSaleId } = db.transaction(() => {
         const saleDate = options?.saleDate || new Date();
         const saleDateString = formatDate(saleDate, 'yyyy-MM-dd HH:mm:ss');
         const saleReason = `Sale (${channel})` + (options?.resellerName ? ` - ${options.resellerName}` : '');
@@ -765,16 +765,18 @@ export async function performSale(
         let cogsAtSale;
         let saleStatus = options?.status || 'Completed';
         let parentProduct: any;
+        let productId: number | string;
+        let variantId: number | string | null = null;
 
         const variant = getVariantStmt.get(sku) as (InventoryItemVariant & { id: number, productId: number, costPrice?: number }) | undefined;
-        let affectedItemId: string | undefined;
         
         if (variant) {
             if (variant.stock < quantity) {
                 throw new Error('Insufficient stock for variant.');
             }
-            affectedItemId = variant.productId.toString();
             parentProduct = getParentProductStmt.get(variant.productId);
+            productId = parentProduct.id;
+            variantId = variant.id;
 
             if (options?.priceAtSale !== undefined) {
                 finalPriceAtSale = options.priceAtSale;
@@ -798,17 +800,11 @@ export async function performSale(
             cogsAtSale = variant.costPrice || 0;
             adjustStock(variant.id.toString(), -quantity, saleReason);
 
-            const saleResult = db.prepare('INSERT INTO sales (transactionId, paymentMethod, resellerName, productId, variantId, channel, quantity, priceAtSale, cogsAtSale, saleDate, status, parentSku) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
-              .run(options?.transactionId || `online-${Date.now()}`, options?.paymentMethod, options?.resellerName, variant.productId, variant.id, channel, quantity, finalPriceAtSale, cogsAtSale, saleDateString, saleStatus, parentProduct?.sku);
-
-            const newSale = db.prepare('SELECT s.*, p.name as productName, v.name as variantName, COALESCE(v.sku, p.sku) as sku, p.category as productCategory FROM sales s JOIN products p ON s.productId = p.id LEFT JOIN variants v ON s.variantId = v.id WHERE s.id = ?').get(saleResult.lastInsertRowid) as Sale;
-            return { sale: newSale, updatedItem: fetchSingleItem(affectedItemId) };
-
         } else {
             const product = getProductStmt.get(sku) as (InventoryItem & { id: number, costPrice?: number, sku: string }) | undefined;
             if (product) {
-                affectedItemId = product.id.toString();
                 parentProduct = product;
+                productId = product.id;
                  if (product.stock! < quantity) {
                     throw new Error('Insufficient stock for product.');
                 }
@@ -835,20 +831,53 @@ export async function performSale(
                 cogsAtSale = product.costPrice || 0;
                 
                 adjustStock(product.id.toString(), -quantity, saleReason);
-                const saleResult = db.prepare('INSERT INTO sales (transactionId, paymentMethod, resellerName, productId, variantId, channel, quantity, priceAtSale, cogsAtSale, saleDate, status, parentSku) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
-                  .run(options?.transactionId || `online-${Date.now()}`, options?.paymentMethod, options?.resellerName, product.id, null, channel, quantity, finalPriceAtSale, cogsAtSale, saleDateString, saleStatus, parentProduct?.sku);
-                
-
-                const newSale = db.prepare('SELECT s.*, p.name as productName, p.sku FROM sales s JOIN products p ON s.productId = p.id WHERE s.id = ?').get(saleResult.lastInsertRowid) as Sale;
-                return { sale: newSale, updatedItem: fetchSingleItem(affectedItemId) };
-
             } else {
                 throw new Error('Product or variant with specified SKU not found or has variants.');
             }
         }
+        
+        const saleResult = db.prepare(`
+            INSERT INTO sales (transactionId, paymentMethod, resellerName, productId, variantId, channel, quantity, priceAtSale, cogsAtSale, saleDate, status, parentSku, productCategory, parentImageUrl)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `).run(
+            options?.transactionId || `online-${Date.now()}`, 
+            options?.paymentMethod, 
+            options?.resellerName, 
+            productId, 
+            variantId, 
+            channel, 
+            quantity, 
+            finalPriceAtSale, 
+            cogsAtSale, 
+            saleDateString, 
+            saleStatus,
+            parentProduct?.sku,
+            parentProduct?.category,
+            parentProduct?.imageUrl
+        );
+        return { newSaleId: saleResult.lastInsertRowid };
+
     })();
-    return { sale, updatedItem };
+
+    const newSale = db.prepare(`
+        SELECT 
+            s.id, s.transactionId, s.paymentMethod, s.resellerName, s.productId, s.variantId, s.channel, s.quantity, s.priceAtSale, s.cogsAtSale, s.saleDate,
+            p.name as productName,
+            p.category as productCategory,
+            p.imageUrl as parentImageUrl,
+            p.sku as parentSku,
+            v.name as variantName,
+            COALESCE(v.sku, p.sku) as sku,
+            s.status
+        FROM sales s
+        LEFT JOIN products p ON s.productId = p.id
+        LEFT JOIN variants v ON s.variantId = v.id
+        WHERE s.id = ?
+    `).get(newSaleId) as Sale;
+    
+    return newSale;
 }
+
 
 export async function fetchSingleItem(itemId: string): Promise<InventoryItem> {
     const product = db.prepare("SELECT * FROM products WHERE id = ?").get(itemId) as any;
@@ -1268,6 +1297,7 @@ async function updateShippingReceiptStatusByAwb(awb: string, status: string) {
 
 
     
+
 
 
 
