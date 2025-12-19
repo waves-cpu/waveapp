@@ -239,6 +239,14 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                       </CollapsibleTrigger>
                       <CollapsibleContent>
                           <SidebarMenu className="ml-4 mt-2 border-l border-muted-foreground/20 pl-4">
+                                <SidebarMenuItem>
+                                  <Link href="/finance/statements">
+                                      <SidebarMenuButton variant="ghost" size="sm" isActive={pathname.startsWith('/finance/statements')}>
+                                          <FileBarChart />
+                                          {t.finance.statements}
+                                      </SidebarMenuButton>
+                                  </Link>
+                                </SidebarMenuItem>
                                <SidebarMenuItem>
                                   <Link href="/finance/settings">
                                       <SidebarMenuButton variant="ghost" size="sm" isActive={pathname.startsWith('/finance/settings')}>
@@ -246,7 +254,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                                           {t.finance.priceSettings}
                                       </SidebarMenuButton>
                                   </Link>
-                              </SidebarMenuItem>
+                                </SidebarMenuItem>
                           </SidebarMenu>
                       </CollapsibleContent>
                   </Collapsible>
