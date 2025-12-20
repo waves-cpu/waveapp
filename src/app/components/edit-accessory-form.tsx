@@ -70,8 +70,8 @@ export function EditAccessoryForm({ existingItem }: EditAccessoryFormProps) {
         sku: existingItem.sku || '',
         unit: existingItem.unit || 'Pcs',
         quantityPerUnit: existingItem.quantityPerUnit ?? undefined,
-        price: existingItem.price ?? '',
-        stock: existingItem.stock ?? '',
+        price: existingItem.price ?? undefined,
+        stock: existingItem.stock ?? undefined,
     };
   }, [existingItem]);
 
@@ -90,7 +90,11 @@ export function EditAccessoryForm({ existingItem }: EditAccessoryFormProps) {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsSubmitting(true);
     try {
-        await updateAccessory(values.id, values);
+        const submissionData = {
+            ...values,
+            quantityPerUnit: (values.unit === 'Box' || values.unit === 'Pack') ? values.quantityPerUnit : undefined,
+        };
+        await updateAccessory(values.id, submissionData);
         toast({
         title: "Aksesoris Diperbarui",
         description: `${values.name} telah berhasil diperbarui.`,
