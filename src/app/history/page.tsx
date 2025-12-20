@@ -36,6 +36,8 @@ import { AppLayout } from '../components/app-layout';
 import { Pagination } from '@/components/ui/pagination';
 import Link from 'next/link';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import * as XLSX from 'xlsx';
+import { saveAs } from 'file-saver';
 
 type AdjustmentEntry = {
     type: 'adjustment';
@@ -280,9 +282,9 @@ export default function HistoryPage() {
       return '#';
   }
 
-  const downloadCSV = () => {
+  const downloadExcel = () => {
     const headers = ['Tanggal', 'Nama Produk', 'Varian', 'SKU', 'Kategori', 'Alasan', 'Perubahan', 'Stok Akhir'];
-    const rows = filteredHistory.map(entry => {
+    const data = filteredHistory.map(entry => {
         if(entry.type === 'sales') {
             return [
                 format(entry.date, 'yyyy-MM-dd HH:mm:ss'),
@@ -293,32 +295,28 @@ export default function HistoryPage() {
                 `Total ${entry.totalItems} item terjual`,
                 -entry.totalItems,
                 'N/A'
-            ].join(',');
+            ];
         }
 
-        const rowData = [
+        return [
             format(entry.date, 'yyyy-MM-dd HH:mm:ss'),
             entry.itemName || '',
             entry.variantName || '',
             entry.variantSku || '',
             entry.itemCategory || '',
-            `"${entry.reason.replace(/"/g, '""')}"`, // Escape double quotes
+            entry.reason,
             entry.change,
             entry.newStockLevel ?? 'N/A'
         ];
-        return rowData.join(',');
     });
 
-    const csvString = [headers.join(','), ...rows].join('\n');
-    const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', 'riwayat_stok.csv');
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    const worksheet = XLSX.utils.aoa_to_sheet([headers, ...data]);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Riwayat Stok');
+
+    const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+    const blob = new Blob([excelBuffer], { type: 'application/octet-stream' });
+    saveAs(blob, 'riwayat_stok.xlsx');
   };
 
   return (
@@ -380,9 +378,9 @@ export default function HistoryPage() {
                                 ))}
                             </SelectContent>
                         </Select>
-                        <Button onClick={downloadCSV} variant="outline" size="sm">
+                        <Button onClick={downloadExcel} variant="outline" size="sm">
                             <FileDown className="mr-2 h-4 w-4" />
-                            {t.inventoryTable.exportCsv.replace('Excel', 'CSV')}
+                            {t.inventoryTable.exportCsv}
                         </Button>
                     </div>
                 </div>
