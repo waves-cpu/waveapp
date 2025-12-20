@@ -5,6 +5,8 @@ import React, { useState } from 'react';
 import {
   PlusCircle,
   FileUp,
+  ChevronDown,
+  FilePenLine,
 } from 'lucide-react';
 import { InventoryTable } from './inventory-table';
 import { UpdateStockDialog } from './update-stock-dialog';
@@ -14,6 +16,12 @@ import { translations } from '@/types/language';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import Link from 'next/link';
 import { BulkAddSheet } from './bulk-add-sheet';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 function DashboardContent() {
   const { language } = useLanguage();
@@ -39,10 +47,27 @@ function DashboardContent() {
                 </h1>
             </div>
             <div className="flex items-center gap-2">
-                <Button variant="outline" size="sm" onClick={() => setBulkAddOpen(true)}>
-                    <FileUp className="mr-2 h-4 w-4" />
-                    {t.dashboard.bulk}
-                </Button>
+                 <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <Button variant="outline" size="sm">
+                            Aksi Massal
+                            <ChevronDown className="ml-2 h-4 w-4" />
+                        </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => setBulkAddOpen(true)}>
+                             <FileUp className="mr-2 h-4 w-4" />
+                             Impor Produk
+                        </DropdownMenuItem>
+                        <DropdownMenuItem asChild>
+                            <Link href="/finance/settings">
+                                <FilePenLine className="mr-2 h-4 w-4" />
+                                Edit Harga Massal
+                            </Link>
+                        </DropdownMenuItem>
+                    </DropdownMenuContent>
+                </DropdownMenu>
+
                 <Button asChild size="sm">
                     <Link href="/add-product">
                         <PlusCircle className="mr-2 h-4 w-4" />
