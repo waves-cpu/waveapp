@@ -283,14 +283,25 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
   
   const cancelSaleTransaction = async (transactionId: string) => {
     const affectedSales = await revertSaleByTransaction(transactionId, 'Cancelled');
-    const affectedItemIds = new Set(affectedSales.map(s => s.productId));
-    setAllSales(prev => prev.filter(s => s.transactionId !== transactionId));
-    affectedItemIds.forEach(async (id) => {
-        if(id) {
-          const updatedItem = await fetchSingleItem(id.toString());
-          setItems(prev => prev.map(item => item.id === id ? updatedItem : item));
-        }
+    const affectedItemIds = new Set<string>();
+    const affectedAccessoryIds = new Set<string>();
+
+    affectedSales.forEach(sale => {
+      if (sale.productId) affectedItemIds.add(sale.productId.toString());
+      if (sale.accessoryId) affectedAccessoryIds.add(sale.accessoryId.toString());
     });
+
+    setAllSales(prev => prev.filter(s => s.transactionId !== transactionId));
+    
+    for (const id of affectedItemIds) {
+        const updatedItem = await fetchSingleItem(id);
+        setItems(prev => prev.map(item => item.id === id ? updatedItem : item));
+    }
+
+    for (const id of affectedAccessoryIds) {
+        const updatedAccessory = await fetchSingleAccessory(id);
+        setAccessories(prev => prev.map(acc => acc.id === id ? updatedAccessory : acc));
+    }
   }
   
   const returnSaleTransaction = async (transactionId: string) => {

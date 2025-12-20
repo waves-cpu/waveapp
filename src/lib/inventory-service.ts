@@ -988,14 +988,19 @@ export async function revertSale(saleId: string, newStatus: 'Cancelled' | 'Retur
         if (!sale || ['Cancelled', 'Return Selesai'].includes(sale.status || '')) {
             throw new Error("Sale already reverted or not found.");
         }
-
-        const idToAdjust = sale.variantId ? sale.variantId.toString() : (sale.productId ? sale.productId.toString() : '');
-        if (!idToAdjust) throw new Error("Sale item reference not found.");
-
+        
         const reason = `${newStatus} Sale: ${sale.transactionId || `ID ${sale.id}`}`;
 
-        adjustStock(idToAdjust, sale.quantity, reason);
-        
+        if (sale.variantId) {
+             adjustStock(sale.variantId.toString(), sale.quantity, reason);
+        } else if (sale.productId) {
+             adjustStock(sale.productId.toString(), sale.quantity, reason);
+        } else if (sale.accessoryId) {
+            adjustAccessoryStock(sale.accessoryId.toString(), sale.quantity, reason);
+        } else {
+            throw new Error("Sale item reference not found.");
+        }
+
         updateSaleStatusStmt.run(newStatus, saleId);
         
         const updatedSale = db.prepare('SELECT * FROM sales WHERE id = ?').get(saleId) as Sale;
