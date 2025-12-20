@@ -79,7 +79,7 @@ export function PosCart() {
         setIsClient(true);
         try {
             if (pendingTransaction) {
-                const aggregatedCart = new Map<string, CartItem>();
+                 const aggregatedCart = new Map<string, CartItem>();
                 pendingTransaction.forEach(saleItem => {
                     const id = saleItem.accessoryId?.toString() || saleItem.variantId?.toString() || saleItem.productId!.toString();
                     const type = saleItem.accessoryId ? 'accessory' : 'product';
@@ -92,7 +92,7 @@ export function PosCart() {
                         aggregatedCart.set(key, {
                             id,
                             type,
-                            productId: saleItem.productId?.toString() || saleItem.accessoryId?.toString() || '',
+                            productId: saleItem.productId?.toString() || saleItem.accessoryId!.toString(),
                             productName: saleItem.productName,
                             variantName: saleItem.variantName,
                             sku: saleItem.sku!,
@@ -264,23 +264,33 @@ export function PosCart() {
 
     const updateQuantity = (itemId: string, itemType: 'product' | 'accessory', newQuantity: number) => {
         setCart(currentCart => {
+            const item = currentCart.find(ci => ci.id === itemId && ci.type === itemType);
+            if (!item) return currentCart;
+
             if (newQuantity <= 0) {
                 return currentCart.filter(ci => !(ci.id === itemId && ci.type === itemType));
             }
-            
-            const item = currentCart.find(ci => ci.id === itemId && ci.type === itemType);
-            if (item && newQuantity > item.maxStock) {
-                toast({
-                    variant: "destructive",
-                    title: "Stok tidak mencukupi",
-                    description: `Hanya tersedia ${item.maxStock} stok.`,
-                });
+
+            if (newQuantity > item.maxStock) {
                 return currentCart.map(ci => ci.id === itemId && ci.type === itemType ? { ...ci, quantity: item.maxStock } : ci);
             }
 
             return currentCart.map(ci => ci.id === itemId && ci.type === itemType ? { ...ci, quantity: newQuantity } : ci);
         });
     };
+    
+    // Effect to show toast when quantity exceeds max stock
+    useEffect(() => {
+        cart.forEach(item => {
+            if (item.quantity > item.maxStock) {
+                toast({
+                    variant: "destructive",
+                    title: "Stok tidak mencukupi",
+                    description: `Hanya tersedia ${item.maxStock} stok untuk ${item.productName}.`,
+                });
+            }
+        });
+    }, [cart, toast]);
     
     const removeFromCart = (itemId: string, itemType: 'product' | 'accessory') => {
         setCart(currentCart => currentCart.filter(item => !(item.id === itemId && item.type === itemType)));
