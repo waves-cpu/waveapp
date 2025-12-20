@@ -60,7 +60,7 @@ export function AddAccessoryForm() {
     resolver: zodResolver(formSchema),
     defaultValues: {
         name: '',
-        category: 'Hangtag',
+        category: 'Aksesoris',
         sku: '',
         unit: 'Pcs',
         quantityPerUnit: undefined,

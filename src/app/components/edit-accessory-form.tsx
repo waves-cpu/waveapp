@@ -27,7 +27,7 @@ import { useLanguage } from '@/hooks/use-language';
 import { translations } from '@/types/language';
 import { Card, CardContent } from '@/components/ui/card';
 import { useRouter } from 'next/navigation';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import type { Accessory, AccessoryUnit } from '@/types';
 import { accessoryCategories } from '@/types';
 
@@ -69,7 +69,7 @@ export function EditAccessoryForm({ existingItem }: EditAccessoryFormProps) {
         category: existingItem.category || 'Aksesoris',
         sku: existingItem.sku || '',
         unit: existingItem.unit || 'Pcs',
-        quantityPerUnit: existingItem.quantityPerUnit,
+        quantityPerUnit: existingItem.quantityPerUnit ?? undefined,
         price: existingItem.price ?? '',
         stock: existingItem.stock ?? '',
     };
@@ -79,6 +79,10 @@ export function EditAccessoryForm({ existingItem }: EditAccessoryFormProps) {
     resolver: zodResolver(formSchema),
     defaultValues: defaultValues,
   });
+
+  useEffect(() => {
+    form.reset(defaultValues);
+  }, [defaultValues, form]);
   
   const selectedUnit = form.watch('unit') as AccessoryUnit;
 
@@ -234,7 +238,7 @@ export function EditAccessoryForm({ existingItem }: EditAccessoryFormProps) {
                 
                 <div className="flex justify-end gap-2 border-t pt-6">
                     <Button type="button" variant="ghost" onClick={() => router.push('/inventory/accessories')} disabled={isSubmitting}>{t.common.cancel}</Button>
-                    <Button type="submit" disabled={isSubmitting}>
+                    <Button type="submit" disabled={isSubmitting || !form.formState.isDirty}>
                         {isSubmitting ? t.common.saving : t.common.saveChanges}
                     </Button>
                 </div>
