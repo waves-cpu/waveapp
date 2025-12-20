@@ -12,7 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-import { Calendar as CalendarIcon, Package, AlertTriangle, ArrowUpRight, ArrowDownRight, DollarSign, BarChart2 } from 'lucide-react';
+import { Calendar as CalendarIcon, Package, AlertTriangle, ArrowUpRight, ArrowDownRight, DollarSign, BarChart2, Star, TrendingUp } from 'lucide-react';
 import { DateRange } from 'react-day-picker';
 import { format, subDays, startOfMonth, endOfMonth, startOfYear, endOfYear, isWithinInterval, parseISO, startOfDay, endOfDay } from 'date-fns';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -110,8 +110,10 @@ export default function StatementsPage() {
         cancelledSales,
         returnedSales,
         bestsellers,
+        topCategories,
+        topSizes,
     } = useMemo(() => {
-        if (!date?.from) return { grossRevenue: 0, grossProfit: 0, unitsSold: 0, cancelledSales: { count: 0, value: 0 }, returnedSales: { count: 0, value: 0 }, bestsellers: [] };
+        if (!date?.from) return { grossRevenue: 0, grossProfit: 0, unitsSold: 0, cancelledSales: { count: 0, value: 0 }, returnedSales: { count: 0, value: 0 }, bestsellers: [], topCategories: [], topSizes: [] };
         
         const salesInDateRange = allSales.filter(sale => {
             const saleDate = parseISO(sale.saleDate);
@@ -131,6 +133,8 @@ export default function StatementsPage() {
         let cancelled = { count: 0, value: 0 };
         let returned = { count: 0, value: 0 };
         const productAggregation = new Map<string, AggregatedProduct>();
+        const categoryAggregation = new Map<string, number>();
+        const sizeAggregation = new Map<string, number>();
 
         filteredSales.forEach(sale => {
             const salePrice = sale.priceAtSale * sale.quantity;
@@ -156,29 +160,42 @@ export default function StatementsPage() {
                 units += sale.quantity;
                 profit += saleProfit;
 
+                // Aggregate by product
                 const saleKey = sale.productId;
-                if (!saleKey) return;
-                
-                if (!productAggregation.has(saleKey)) {
-                    productAggregation.set(saleKey, {
-                        productId: sale.productId!,
-                        name: sale.productName,
-                        sku: sale.parentSku,
-                        category: sale.productCategory,
-                        imageUrl: sale.parentImageUrl,
-                        units: 0,
-                        revenue: 0,
-                        profit: 0
-                    });
+                if (saleKey) {
+                    if (!productAggregation.has(saleKey)) {
+                        productAggregation.set(saleKey, {
+                            productId: sale.productId!,
+                            name: sale.productName,
+                            sku: sale.parentSku,
+                            category: sale.productCategory,
+                            imageUrl: sale.parentImageUrl,
+                            units: 0,
+                            revenue: 0,
+                            profit: 0
+                        });
+                    }
+                    const agg = productAggregation.get(saleKey)!;
+                    agg.units += sale.quantity;
+                    agg.revenue += salePrice;
+                    agg.profit += saleProfit;
                 }
-                const agg = productAggregation.get(saleKey)!;
-                agg.units += sale.quantity;
-                agg.revenue += salePrice;
-                agg.profit += saleProfit;
+
+                // Aggregate by category
+                if (sale.productCategory) {
+                    categoryAggregation.set(sale.productCategory, (categoryAggregation.get(sale.productCategory) || 0) + sale.quantity);
+                }
+
+                // Aggregate by size (variant name)
+                if (sale.variantName) {
+                    sizeAggregation.set(sale.variantName, (sizeAggregation.get(sale.variantName) || 0) + sale.quantity);
+                }
             }
         });
         
         const sortedBestsellers = Array.from(productAggregation.values()).sort((a, b) => b.units - a.units);
+        const sortedCategories = Array.from(categoryAggregation.entries()).map(([name, units]) => ({ name, units })).sort((a,b) => b.units - a.units);
+        const sortedSizes = Array.from(sizeAggregation.entries()).map(([name, units]) => ({ name, units })).sort((a,b) => b.units - a.units);
 
         return {
             grossRevenue: revenue,
@@ -186,7 +203,9 @@ export default function StatementsPage() {
             unitsSold: units,
             cancelledSales: cancelled,
             returnedSales: returned,
-            bestsellers: sortedBestsellers
+            bestsellers: sortedBestsellers,
+            topCategories: sortedCategories,
+            topSizes: sortedSizes,
         };
     }, [allSales, date, categoryFilter, channelFilter]);
 
@@ -314,53 +333,111 @@ export default function StatementsPage() {
                     </Card>
                 </div>
                 
-                 <Card className="mt-6">
-                    <CardHeader className="flex flex-row items-center justify-between">
-                        <CardTitle>{t.bestsellers}</CardTitle>
-                         {bestsellers.length > 5 && (
-                            <Button variant="outline" size="sm" onClick={() => setBestsellerDialogOpen(true)}>{t.viewAll}</Button>
-                        )}
-                    </CardHeader>
-                    <CardContent>
-                        {bestsellers.length > 0 ? (
-                             <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead>{t.product}</TableHead>
-                                        <TableHead>{t.sku}</TableHead>
-                                        <TableHead>{t.category}</TableHead>
-                                        <TableHead className="text-right">{t.units}</TableHead>
-                                        <TableHead className="text-right">{t.revenue}</TableHead>
-                                        <TableHead className="text-right">{t.profit}</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {bestsellers.slice(0, 5).map(p => (
-                                         <TableRow key={p.productId}>
-                                            <TableCell>
-                                                <div className="flex items-center gap-3">
-                                                    <Image src={p.imageUrl || 'https://placehold.co/40x40.png'} alt={p.name} width={32} height={32} className="rounded-sm" data-ai-hint="product image" />
-                                                    <span className="font-medium text-sm">{p.name}</span>
-                                                </div>
-                                            </TableCell>
-                                            <TableCell>{p.sku || '-'}</TableCell>
-                                            <TableCell>{p.category}</TableCell>
-                                            <TableCell className="text-right">{p.units.toLocaleString('id-ID')}</TableCell>
-                                            <TableCell className="text-right">{formatCurrency(p.revenue)}</TableCell>
-                                            <TableCell className="text-right">{formatCurrency(p.profit)}</TableCell>
+                 <div className="grid gap-6 mt-6 md:grid-cols-3">
+                    <Card className="md:col-span-2">
+                        <CardHeader className="flex flex-row items-center justify-between">
+                            <CardTitle>{t.bestsellers}</CardTitle>
+                            {bestsellers.length > 5 && (
+                                <Button variant="outline" size="sm" onClick={() => setBestsellerDialogOpen(true)}>{t.viewAll}</Button>
+                            )}
+                        </CardHeader>
+                        <CardContent>
+                            {bestsellers.length > 0 ? (
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead>{t.product}</TableHead>
+                                            <TableHead>{t.sku}</TableHead>
+                                            <TableHead>{t.category}</TableHead>
+                                            <TableHead className="text-right">{t.units}</TableHead>
+                                            <TableHead className="text-right">{t.revenue}</TableHead>
+                                            <TableHead className="text-right">{t.profit}</TableHead>
                                         </TableRow>
-                                    ))}
-                                </TableBody>
-                             </Table>
-                        ) : (
-                            <div className="text-center py-10 text-muted-foreground">
-                                <p className="font-semibold">{t.noSales}</p>
-                                <p>{t.noSalesDesc}</p>
-                            </div>
-                        )}
-                       
-                    </CardContent>
-                 </Card>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {bestsellers.slice(0, 5).map(p => (
+                                            <TableRow key={p.productId}>
+                                                <TableCell>
+                                                    <div className="flex items-center gap-3">
+                                                        <Image src={p.imageUrl || 'https://placehold.co/40x40.png'} alt={p.name} width={32} height={32} className="rounded-sm" data-ai-hint="product image" />
+                                                        <span className="font-medium text-sm">{p.name}</span>
+                                                    </div>
+                                                </TableCell>
+                                                <TableCell>{p.sku || '-'}</TableCell>
+                                                <TableCell>{p.category}</TableCell>
+                                                <TableCell className="text-right">{p.units.toLocaleString('id-ID')}</TableCell>
+                                                <TableCell className="text-right">{formatCurrency(p.revenue)}</TableCell>
+                                                <TableCell className="text-right">{formatCurrency(p.profit)}</TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            ) : (
+                                <div className="text-center py-10 text-muted-foreground">
+                                    <p className="font-semibold">{t.noSales}</p>
+                                    <p>{t.noSalesDesc}</p>
+                                </div>
+                            )}
+                        
+                        </CardContent>
+                    </Card>
+                     <div className="space-y-6">
+                        <Card>
+                            <CardHeader>
+                                <CardTitle className="text-base flex items-center"><Star className="w-4 h-4 mr-2" /> Kategori Terlaris</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                {topCategories.length > 0 ? (
+                                    <Table>
+                                        <TableHeader>
+                                            <TableRow>
+                                                <TableHead>Kategori</TableHead>
+                                                <TableHead className="text-right">Unit Terjual</TableHead>
+                                            </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {topCategories.slice(0, 5).map(c => (
+                                                <TableRow key={c.name}>
+                                                    <TableCell className="font-medium">{c.name}</TableCell>
+                                                    <TableCell className="text-right">{c.units.toLocaleString('id-ID')}</TableCell>
+                                                </TableRow>
+                                            ))}
+                                        </TableBody>
+                                    </Table>
+                                ) : (
+                                    <div className="text-center py-4 text-sm text-muted-foreground">Tidak ada data.</div>
+                                )}
+                            </CardContent>
+                        </Card>
+                        <Card>
+                            <CardHeader>
+                                <CardTitle className="text-base flex items-center"><TrendingUp className="w-4 h-4 mr-2" /> Ukuran Terlaris</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                {topSizes.length > 0 ? (
+                                    <Table>
+                                        <TableHeader>
+                                            <TableRow>
+                                                <TableHead>Ukuran</TableHead>
+                                                <TableHead className="text-right">Unit Terjual</TableHead>
+                                            </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {topSizes.slice(0, 5).map(s => (
+                                                <TableRow key={s.name}>
+                                                    <TableCell className="font-medium">{s.name}</TableCell>
+                                                    <TableCell className="text-right">{s.units.toLocaleString('id-ID')}</TableCell>
+                                                </TableRow>
+                                            ))}
+                                        </TableBody>
+                                    </Table>
+                                ) : (
+                                    <div className="text-center py-4 text-sm text-muted-foreground">Tidak ada data.</div>
+                                )}
+                            </CardContent>
+                        </Card>
+                    </div>
+                </div>
                  
                  <AllBestsellersDialog 
                     open={isBestsellerDialogOpen}
