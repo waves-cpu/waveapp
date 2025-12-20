@@ -81,7 +81,7 @@ export function PosOrderSummary({ cart, onSaleComplete, clearCart, channel, pend
             paymentMethod,
             cashReceived: paymentMethod === 'Cash' ? cashReceived : total,
             change: paymentMethod === 'Cash' ? change : 0,
-            transactionId: `trans-${Date.now()}`
+            transactionId: `trans-${Date.now()}` // This is a placeholder, real ID is set in parent
         };
         
         try {
@@ -233,3 +233,5 @@ export function PosOrderSummary({ cart, onSaleComplete, clearCart, channel, pend
         </Card>
     );
 }
+
+    
