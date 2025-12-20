@@ -25,6 +25,7 @@ import { format, parseISO } from 'date-fns';
 import { Input } from '@/components/ui/input';
 import { Search } from 'lucide-react';
 import { id as localeId } from 'date-fns/locale';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface DailySalesDetailDialogProps {
   open: boolean;
@@ -57,19 +58,26 @@ const formatCurrency = (amount: number) => {
 
 export function DailySalesDetailDialog({ open, onOpenChange, sales, title, description }: DailySalesDetailDialogProps) {
     const [searchTerm, setSearchTerm] = useState('');
+    const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
 
     useEffect(() => {
         if (!open) {
             setSearchTerm('');
+            setCategoryFilter(null);
         }
     }, [open]);
+
+    const uniqueCategories = useMemo(() => {
+        if (!sales) return [];
+        const categories = new Set(sales.map(sale => sale.productCategory).filter(Boolean));
+        return Array.from(categories).sort();
+    }, [sales]);
     
     const { aggregatedSales, totalQuantity, totalRevenue } = useMemo(() => {
         if (!sales) return { aggregatedSales: [], totalQuantity: 0, totalRevenue: 0 };
         const aggregationMap = new Map<string, AggregatedSale>();
 
         sales.forEach(sale => {
-            // Aggregate by SKU, saleDate, and channel to group items sold in the same context
             const saleDate = format(parseISO(sale.saleDate), 'yyyy-MM-dd');
             const key = `${sale.sku}-${saleDate}-${sale.channel}`;
 
@@ -87,7 +95,7 @@ export function DailySalesDetailDialog({ open, onOpenChange, sales, title, descr
                     productCategory: sale.productCategory,
                     quantity: sale.quantity,
                     priceAtSale: sale.priceAtSale,
-                    size: sale.variantName, // Use variantName as size
+                    size: sale.variantName,
                     totalRevenue: sale.quantity * sale.priceAtSale,
                 });
             }
@@ -95,22 +103,26 @@ export function DailySalesDetailDialog({ open, onOpenChange, sales, title, descr
 
         const allAggregatedSales = Array.from(aggregationMap.values());
         
-        const filteredSales = searchTerm
-            ? allAggregatedSales.filter(sale => {
-                const lowerSearchTerm = searchTerm.toLowerCase();
-                return (
+        const filteredSales = allAggregatedSales.filter(sale => {
+            const lowerSearchTerm = searchTerm.toLowerCase();
+            const searchMatch = searchTerm
+                ? (
                     sale.productName.toLowerCase().includes(lowerSearchTerm) ||
                     (sale.variantName && sale.variantName.toLowerCase().includes(lowerSearchTerm)) ||
                     (sale.sku && sale.sku.toLowerCase().includes(lowerSearchTerm))
-                );
-              })
-            : allAggregatedSales;
+                  )
+                : true;
+            
+            const categoryMatch = categoryFilter ? sale.productCategory === categoryFilter : true;
+            
+            return searchMatch && categoryMatch;
+        });
 
         const totalQuantity = filteredSales.reduce((sum, sale) => sum + sale.quantity, 0);
         const totalRevenue = filteredSales.reduce((sum, sale) => sum + sale.totalRevenue, 0);
 
         return { aggregatedSales: filteredSales, totalQuantity, totalRevenue };
-    }, [sales, searchTerm]);
+    }, [sales, searchTerm, categoryFilter]);
 
     const salesDate = useMemo(() => {
         if (sales && sales.length > 0) {
@@ -132,14 +144,27 @@ export function DailySalesDetailDialog({ open, onOpenChange, sales, title, descr
           </DialogDescription>
         </DialogHeader>
 
-        <div className="relative my-2">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-                placeholder="Cari produk atau SKU..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-            />
+        <div className="flex flex-col sm:flex-row gap-2 my-2">
+            <div className="relative flex-grow">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                    placeholder="Cari produk atau SKU..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10"
+                />
+            </div>
+             <Select value={categoryFilter || 'all'} onValueChange={value => setCategoryFilter(value === 'all' ? null : value)}>
+                <SelectTrigger className="w-full sm:w-[200px]">
+                    <SelectValue placeholder="Filter Kategori" />
+                </SelectTrigger>
+                <SelectContent>
+                    <SelectItem value="all">Semua Kategori</SelectItem>
+                    {uniqueCategories.map(category => (
+                        <SelectItem key={category} value={category}>{category}</SelectItem>
+                    ))}
+                </SelectContent>
+            </Select>
         </div>
 
         <div className="border rounded-md">
