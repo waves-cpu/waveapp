@@ -332,23 +332,6 @@ const seedData = () => {
               .run('admin', 'admin123', 'admin');
         }
 
-        const receiptCount = db.prepare('SELECT COUNT(*) as count FROM shipping_receipts').get() as { count: number };
-        if (receiptCount.count === 0) {
-             const mockReceipts = [
-              { awb: 'SPXID0123456789A', date: '2024-08-01 10:00:00', channel: 'Shopee', status: 'Dikirim' },
-              { awb: 'SPXID0123456789B', date: '2024-08-01 11:00:00', channel: 'Shopee', status: 'Perlu Diproses' },
-              { awb: 'JP1234567890', date: '2024-07-31 15:00:00', channel: 'Tokopedia', status: 'Selesai' },
-            ];
-
-            const insert = db.prepare('INSERT INTO shipping_receipts (awb, date, channel, status) VALUES (@awb, @date, @channel, @status)');
-
-            db.transaction(() => {
-                for (const receipt of mockReceipts) {
-                    try { insert.run(receipt); } catch (e) {}
-                }
-            })();
-        }
-
     } catch (e) {
     }
 };
