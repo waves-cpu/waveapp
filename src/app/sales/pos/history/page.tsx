@@ -1,4 +1,3 @@
-
 'use client'
 
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
@@ -128,7 +127,7 @@ export default function PosHistoryPage() {
     const triggerPrint = (group: GroupedSale) => {
         const cartItems: CartItem[] = group.items.map(item => ({
             id: item.accessoryId?.toString() || item.variantId?.toString() || item.productId!.toString(),
-            productId: item.productId!,
+            productId: item.productId! || item.accessoryId!.toString(),
             productName: item.productName,
             variantName: item.variantName,
             sku: item.sku!,
@@ -304,4 +303,3 @@ export default function PosHistoryPage() {
         </>
     );
 }
-
