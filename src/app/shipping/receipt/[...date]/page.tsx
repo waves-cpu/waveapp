@@ -307,16 +307,16 @@ export default function ReceiptPage() {
                      <div className="border-b">
                          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-2">
                             {(['Shopee', 'Tiktok', 'Lazada'] as const).map(tab => (
-                                salesChannelCounts[tab] > 0 && <Button 
+                                <Button 
                                     key={tab}
                                     variant={activeSalesChannelTab === tab ? 'secondary' : 'ghost'}
                                     size="sm"
                                     onClick={() => setActiveSalesChannelTab(prev => prev === tab ? null : tab)}
-                                    className="shrink-0"
+                                    className={cn("shrink-0", activeSalesChannelTab === tab && "text-primary")}
                                 >
                                     {tab}
                                     <Badge variant={activeSalesChannelTab === tab ? 'default' : 'secondary'} className="ml-2">
-                                        {salesChannelCounts[tab]}
+                                        {salesChannelCounts[tab] || 0}
                                     </Badge>
                                 </Button>
                             ))}
@@ -324,32 +324,32 @@ export default function ReceiptPage() {
                     </div>
                     <div className="flex items-center gap-2 overflow-x-auto no-scrollbar border-b pb-2">
                         {(['SPX', 'J&T', 'JNE', 'INSTANT', 'CARGO'] as ShippingProvider[]).map(tab => (
-                             shippingChannelCounts[tab] > 0 && <Button 
+                             <Button 
                                 key={tab}
                                 variant={activeShippingTab === tab ? 'secondary' : 'ghost'}
                                 size="sm"
                                 onClick={() => setActiveShippingTab(prev => prev === tab ? null : tab)}
-                                className="shrink-0"
+                                className={cn("shrink-0", activeShippingTab === tab && "text-primary")}
                             >
                                 {tab}
                                 <Badge variant={activeShippingTab === tab ? 'default' : 'secondary'} className="ml-2">
-                                    {shippingChannelCounts[tab]}
+                                    {shippingChannelCounts[tab] || 0}
                                 </Badge>
                             </Button>
                         ))}
                     </div>
                      <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
                         {STATUS_OPTIONS.map(status => (
-                            statusCounts[status] > 0 && <Button
+                            <Button
                                 key={status}
                                 variant={activeStatusFilter === status ? 'secondary' : 'ghost'}
                                 size="sm"
                                 onClick={() => setActiveStatusFilter(status)}
-                                className="shrink-0"
+                                className={cn("shrink-0", activeStatusFilter === status && "text-primary")}
                             >
                                 {status}
                                 <Badge variant={activeStatusFilter === status ? 'default' : 'secondary'} className="ml-2">
-                                    {statusCounts[status]}
+                                    {statusCounts[status] || 0}
                                 </Badge>
                             </Button>
                         ))}
