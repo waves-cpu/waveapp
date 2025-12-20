@@ -31,7 +31,6 @@ const formatCurrency = (amount: number) => {
 
 interface AggregatedProduct {
     productId: string;
-    variantId?: string;
     name: string;
     sku?: string;
     category: string;
@@ -68,7 +67,7 @@ function AllBestsellersDialog({ open, onOpenChange, products, filters }: { open:
                         </TableHeader>
                         <TableBody>
                             {products.map(p => (
-                                <TableRow key={p.variantId || p.productId}>
+                                <TableRow key={p.productId}>
                                     <TableCell>
                                         <div className="flex items-center gap-3">
                                             <Image src={p.imageUrl || 'https://placehold.co/40x40.png'} alt={p.name} width={32} height={32} className="rounded-sm" data-ai-hint="product image" />
@@ -134,9 +133,6 @@ export default function StatementsPage() {
         const productAggregation = new Map<string, AggregatedProduct>();
 
         filteredSales.forEach(sale => {
-            const saleKey = sale.variantId || sale.productId;
-            if (!saleKey) return;
-            
             const salePrice = sale.priceAtSale * sale.quantity;
             const cogs = (sale.cogsAtSale ?? 0) * sale.quantity;
             const saleProfit = salePrice - cogs;
@@ -146,13 +142,11 @@ export default function StatementsPage() {
                 cancelled.value += salePrice;
                 return; // Do not include in main calculations
             }
-            if (sale.status === 'Return' || sale.status === 'Return Selesai') {
+             if (sale.status === 'Return' || sale.status === 'Return Selesai') {
                 returned.count++;
-                returned.value += salePrice;
-                // Subtract from revenue and profit
+                // Subtract from revenue and profit because the item was returned
                 revenue -= salePrice;
                 profit -= saleProfit;
-                // No change in units sold, as it was sold and then returned. If you want to track net units, you would subtract here.
                 return; 
             }
 
@@ -162,12 +156,14 @@ export default function StatementsPage() {
                 units += sale.quantity;
                 profit += saleProfit;
 
+                const saleKey = sale.productId;
+                if (!saleKey) return;
+                
                 if (!productAggregation.has(saleKey)) {
                     productAggregation.set(saleKey, {
                         productId: sale.productId!,
-                        variantId: sale.variantId,
-                        name: sale.variantName ? `${sale.productName} - ${sale.variantName}` : sale.productName,
-                        sku: sale.sku,
+                        name: sale.productName,
+                        sku: sale.parentSku,
                         category: sale.productCategory,
                         imageUrl: sale.parentImageUrl,
                         units: 0,
@@ -340,7 +336,7 @@ export default function StatementsPage() {
                                 </TableHeader>
                                 <TableBody>
                                     {bestsellers.slice(0, 5).map(p => (
-                                         <TableRow key={p.variantId || p.productId}>
+                                         <TableRow key={p.productId}>
                                             <TableCell>
                                                 <div className="flex items-center gap-3">
                                                     <Image src={p.imageUrl || 'https://placehold.co/40x40.png'} alt={p.name} width={32} height={32} className="rounded-sm" data-ai-hint="product image" />
