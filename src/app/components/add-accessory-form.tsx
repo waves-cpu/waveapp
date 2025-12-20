@@ -64,8 +64,8 @@ export function AddAccessoryForm() {
         sku: '',
         unit: 'Pcs',
         quantityPerUnit: undefined,
-        price: undefined,
-        stock: undefined,
+        price: '' as any,
+        stock: '' as any,
     },
   });
 
@@ -169,7 +169,7 @@ export function AddAccessoryForm() {
                                 <FormItem>
                                     <FormLabel>Jumlah per {selectedUnit}</FormLabel>
                                     <FormControl>
-                                        <Input type="number" placeholder={`e.g., 100`} {...field} />
+                                        <Input type="number" placeholder={`e.g., 100`} {...field} value={field.value ?? ''} />
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>

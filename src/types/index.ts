@@ -18,12 +18,8 @@ export const categories = [
 ].sort();
 
 export const accessoryCategories = [
-    "Label",
-    "Hangtag",
-    "Sticker",
-    "Packaging",
-    "Other"
-].sort();
+    "Aksesoris"
+];
 
 
 export const chartOfAccounts = [
@@ -148,3 +144,4 @@ export interface User {
   username: string;
   role: 'admin' | 'user';
 }
+

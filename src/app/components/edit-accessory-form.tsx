@@ -66,7 +66,7 @@ export function EditAccessoryForm({ existingItem }: EditAccessoryFormProps) {
     return {
         id: existingItem.id,
         name: existingItem.name,
-        category: existingItem.category,
+        category: existingItem.category || 'Aksesoris',
         sku: existingItem.sku || '',
         unit: existingItem.unit || 'Pcs',
         quantityPerUnit: existingItem.quantityPerUnit,
