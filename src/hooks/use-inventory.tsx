@@ -30,6 +30,7 @@ import {
   archiveProduct as archiveProductDb,
   deleteProductPermanently as deleteProductPermanentlyDb,
   fetchShippingReceipts as fetchShippingReceiptsDb,
+  findShippingReceiptByAwb as findShippingReceiptByAwbDb,
   addShippingReceipt as addShippingReceiptDb,
   deleteShippingReceipt as deleteShippingReceiptDb,
   updateShippingReceiptsStatus as updateShippingReceiptsDbStatus,
@@ -85,6 +86,7 @@ interface InventoryContextType {
   // Shipping
   allShippingReceipts: ShippingReceipt[];
   fetchShippingReceipts: (options: { page: number; limit: number; salesChannel?: string; channel?: string; date_range?: { from: Date | null; to: Date }; status?: string[]; awb?: string; }) => Promise<{ receipts: ShippingReceipt[]; total: number; }>;
+  findShippingReceiptByAwb: (awb: string) => Promise<ShippingReceipt | null>;
   addShippingReceipt: (receipt: Omit<ShippingReceipt, 'id'>) => Promise<ShippingReceipt>;
   deleteShippingReceipt: (id: number) => Promise<void>;
   updateShippingReceiptsStatus: (ids: number[], status: string) => Promise<void>;
@@ -398,6 +400,10 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
     setAccessories(prev => prev.map(acc => acc.id === accessoryId ? updatedAccessory : acc));
   };
 
+  const findShippingReceiptByAwb = async (awb: string) => {
+    return await findShippingReceiptByAwbDb(awb);
+  };
+  
   const fetchShippingReceipts = async (options: { page: number; limit: number; channel?: string; salesChannel?: string; date_range?: {from: Date | null, to: Date}; status?: string[]; awb?: string; }) => {
     return await fetchShippingReceiptsDb({ ...options });
   };
@@ -471,6 +477,7 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
         adjustAccessoryStock,
         allShippingReceipts,
         fetchShippingReceipts,
+        findShippingReceiptByAwb,
         addShippingReceipt,
         deleteShippingReceipt,
         updateShippingReceiptsStatus,

@@ -5,133 +5,100 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowLeft, ScanLine, Camera, Calendar as CalendarIcon, ShoppingBag, Truck } from 'lucide-react';
+import { ArrowLeft, ScanLine, Camera, Calendar as CalendarIcon, ShoppingBag, Truck, CheckCircle, XCircle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useInventory } from '@/hooks/use-inventory';
 import { useToast } from '@/hooks/use-toast';
 import { useScanSounds } from '@/hooks/use-scan-sounds';
 import type { ShippingReceipt } from '@/types';
 import { format, parseISO } from 'date-fns';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Calendar } from '@/components/ui/calendar';
-import { cn } from '@/lib/utils';
 import { QrScanner } from '@yudiel/react-qr-scanner';
 
-
-type ShippingProvider = 'SPX' | 'J&T' | 'JNE' | 'INSTANT' | 'CARGO';
-
-const shippingProviders: { name: ShippingProvider, icon: React.ElementType }[] = [
-    { name: 'SPX', icon: ShoppingBag },
-    { name: 'J&T', icon: ShoppingBag },
-    { name: 'JNE', icon: ShoppingBag },
-    { name: 'INSTANT', icon: Truck },
-    { name: 'CARGO', icon: Truck },
-];
-
-export default function MobileScanReceiptPage() {
-    const { addShippingReceipt } = useInventory();
+export default function MobileScanShipmentPage() {
+    const { updateShippingReceiptStatus, findShippingReceiptByAwb } = useInventory();
     const { toast } = useToast();
     const { playSuccessSound, playErrorSound, initializeAudio } = useScanSounds();
-    const router = useRouter();
 
-    const [selectedChannel, setSelectedChannel] = useState<ShippingProvider | null>(null);
     const [awb, setAwb] = useState('');
-    const [scanDate, setScanDate] = useState<Date | undefined>(undefined);
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [recentlyAdded, setRecentlyAdded] = useState<ShippingReceipt[]>([]);
+    const [recentlyProcessed, setRecentlyProcessed] = useState<(ShippingReceipt & { success: boolean; message: string })[]>([]);
     const inputRef = useRef<HTMLInputElement>(null);
     const [isCameraOpen, setIsCameraOpen] = useState(false);
     const [isScanningPaused, setIsScanningPaused] = useState(false);
 
     useEffect(() => {
         initializeAudio();
-        setScanDate(new Date());
     }, [initializeAudio]);
     
     useEffect(() => {
-        if(selectedChannel && !isCameraOpen) {
+        if(!isCameraOpen) {
             inputRef.current?.focus();
         }
-    }, [selectedChannel, isCameraOpen]);
+    }, [isCameraOpen]);
 
-    const handleSubmit = useCallback(async (scannedAwb: string) => {
+    const processAwb = useCallback(async (scannedAwb: string) => {
         const trimmedAwb = scannedAwb.trim();
-        if (!trimmedAwb || !selectedChannel || !scanDate) return;
+        if (!trimmedAwb) return;
         if (isSubmitting) return;
-
-        // Client-side duplicate check
-        const recentDuplicate = recentlyAdded.find(receipt => receipt.awb === trimmedAwb);
-        if (recentDuplicate) {
-            playErrorSound();
-            toast({
-                variant: 'destructive',
-                title: 'Resi Duplikat',
-                description: `Resi ini sudah discan pada ${format(parseISO(recentDuplicate.date), 'dd MMM yyyy, HH:mm')}`,
-            });
-             if (isCameraOpen) {
-                // Allow for next scan without closing camera
-            } else {
-                setAwb(''); // Clear input for next scan
-                inputRef.current?.focus();
-            }
-            return;
-        }
 
         setIsSubmitting(true);
         
-        const newReceipt: Omit<ShippingReceipt, 'id'> = {
-            awb: trimmedAwb,
-            channel: selectedChannel,
-            date: format(scanDate, "yyyy-MM-dd'T'HH:mm:ss"),
-            status: 'Perlu Diproses'
-        };
-
         try {
-            const added = await addShippingReceipt(newReceipt);
-            playSuccessSound();
-            setRecentlyAdded(prev => [added, ...prev].slice(0, 10));
-            setAwb('');
-        } catch (error) {
-            playErrorSound();
-            let title = 'Input Gagal';
-            let errorMessage = 'Gagal menyimpan resi.';
+            const receipt = await findShippingReceiptByAwb(trimmedAwb);
 
-            if (error instanceof Error && error.message.startsWith('DUPLICATE_AWB_DATE::')) {
-                const dateStr = error.message.split('::')[1];
-                title = 'Resi Duplikat';
-                errorMessage = `Resi ini sudah discan pada ${format(parseISO(dateStr), 'dd MMM yyyy, HH:mm')}`;
-            } else if (error instanceof Error) {
-                errorMessage = error.message;
+            if (!receipt) {
+                throw new Error('Resi tidak ditemukan di sistem.');
             }
 
+            if (receipt.status !== 'Perlu Diproses') {
+                throw new Error(`Resi sudah berstatus "${receipt.status}".`);
+            }
+
+            await updateShippingReceiptStatus(receipt.id, 'Dikirim');
+            playSuccessSound();
+            const successMessage = 'Berhasil diproses menjadi "Dikirim".';
+            toast({ title: `Resi ${trimmedAwb}`, description: successMessage });
+            setRecentlyProcessed(prev => [{ ...receipt, success: true, message: successMessage }, ...prev].slice(0, 20));
+
+        } catch (error: any) {
+            playErrorSound();
+            const errorMessage = error.message || 'Terjadi kesalahan.';
             toast({
                 variant: 'destructive',
-                title: title,
+                title: `Resi ${trimmedAwb}`,
                 description: errorMessage,
             });
+            const failedReceipt = {
+                id: Date.now(), // Temporary ID for list key
+                awb: trimmedAwb,
+                date: new Date().toISOString(),
+                channel: 'N/A',
+                status: 'Error',
+                success: false,
+                message: errorMessage
+            };
+            setRecentlyProcessed(prev => [failedReceipt as any, ...prev].slice(0, 20));
         } finally {
             setIsSubmitting(false);
-            if (!isCameraOpen) {
+            if (isCameraOpen) {
+                 setTimeout(() => setIsScanningPaused(false), 1500);
+            } else {
+                 setAwb('');
                  inputRef.current?.focus();
             }
         }
-    }, [isSubmitting, selectedChannel, scanDate, addShippingReceipt, playSuccessSound, playErrorSound, toast, isCameraOpen, recentlyAdded]);
+    }, [isSubmitting, findShippingReceiptByAwb, updateShippingReceiptStatus, playSuccessSound, playErrorSound, toast, isCameraOpen]);
 
 
     const handleFormSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        handleSubmit(awb);
+        processAwb(awb);
     }
     
     const handleDecode = (result: string) => {
         if (isScanningPaused) return;
-
         setIsScanningPaused(true);
-        handleSubmit(result);
-
-        setTimeout(() => {
-            setIsScanningPaused(false);
-        }, 2000); // 2 second delay
+        processAwb(result);
     };
     
     if (isCameraOpen) {
@@ -141,7 +108,7 @@ export default function MobileScanReceiptPage() {
                      <Button variant="ghost" size="icon" onClick={() => setIsCameraOpen(false)} className="rounded-full hover:bg-white/10">
                         <ArrowLeft className="h-5 w-5" />
                     </Button>
-                    <h1 className="text-lg font-bold ml-2">Scan Barcode - {selectedChannel}</h1>
+                    <h1 className="text-lg font-bold ml-2">Pindai Resi Pengiriman</h1>
                 </header>
                  <main className="flex-grow flex flex-col justify-center items-center relative">
                     <div className="absolute inset-0">
@@ -158,60 +125,14 @@ export default function MobileScanReceiptPage() {
             </div>
         )
     }
-    
-    if (!selectedChannel) {
-        return (
-            <div className="min-h-screen bg-muted flex flex-col p-4">
-                 <header className="flex items-center justify-between mb-4">
-                    <h1 className="text-lg font-bold">Pilih Jasa Kirim</h1>
-                     <Popover>
-                        <PopoverTrigger asChild>
-                        <Button
-                            id="date"
-                            variant={"outline"}
-                            className={cn(
-                            "w-[150px] justify-start text-left font-normal h-9",
-                            !scanDate && "text-muted-foreground"
-                            )}
-                        >
-                            <CalendarIcon className="mr-2 h-4 w-4" />
-                            {scanDate ? format(scanDate, "d MMM yyyy") : <span>Pilih tanggal</span>}
-                        </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="end">
-                        <Calendar
-                            mode="single"
-                            selected={scanDate}
-                            onSelect={(date) => setScanDate(date || new Date())}
-                            initialFocus
-                        />
-                        </PopoverContent>
-                    </Popover>
-                </header>
-                <main className="flex-grow grid grid-cols-2 gap-4">
-                    {shippingProviders.map(provider => (
-                        <Button 
-                            key={provider.name} 
-                            variant="outline" 
-                            className="h-full bg-card flex-col gap-2 text-base font-semibold"
-                            onClick={() => setSelectedChannel(provider.name)}
-                        >
-                            <provider.icon className="h-8 w-8 text-muted-foreground" />
-                            {provider.name}
-                        </Button>
-                    ))}
-                </main>
-            </div>
-        )
-    }
 
     return (
         <div className="min-h-screen bg-muted flex flex-col p-4">
             <header className="flex items-center justify-between mb-4">
-                 <Button variant="ghost" size="icon" onClick={() => setSelectedChannel(null)}>
-                    <ArrowLeft className="h-5 w-5" />
+                 <Button variant="ghost" size="icon" disabled>
+                    <Truck className="h-5 w-5" />
                 </Button>
-                <h1 className="text-lg font-bold">Scan Resi {selectedChannel}</h1>
+                <h1 className="text-lg font-bold">Proses Kirim</h1>
                  <div className="w-9 h-9" />
             </header>
 
@@ -222,7 +143,7 @@ export default function MobileScanReceiptPage() {
                             <ScanLine className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                             <Input
                                 ref={inputRef}
-                                placeholder="Scan atau ketik No. Resi (AWB)"
+                                placeholder="Pindai resi untuk dikirim"
                                 className="pl-10 text-base h-12"
                                 value={awb}
                                 onChange={(e) => setAwb(e.target.value)}
@@ -238,22 +159,28 @@ export default function MobileScanReceiptPage() {
 
                 <Card className="flex-grow">
                     <CardHeader>
-                        <CardTitle className="text-base">Baru Saja Di-scan ({selectedChannel})</CardTitle>
+                        <CardTitle className="text-base">Hasil Pemindaian</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        {recentlyAdded.length === 0 ? (
+                        {recentlyProcessed.length === 0 ? (
                              <div className="text-center py-10 text-muted-foreground">
-                                <p>Belum ada resi yang di-scan untuk channel ini.</p>
+                                <p>Hasil pemindaian akan muncul di sini.</p>
                             </div>
                         ) : (
                             <ul className="space-y-2">
-                                {recentlyAdded.filter(r => r.channel === selectedChannel).map(item => (
+                                {recentlyProcessed.map(item => (
                                     <li key={item.id} className="flex justify-between items-center bg-secondary/50 p-2 rounded-md text-sm">
-                                        <div>
-                                            <p className="font-semibold">{item.awb}</p>
-                                            <p className="text-xs text-muted-foreground">{item.channel}</p>
+                                        <div className="flex items-center gap-3">
+                                            {item.success ? 
+                                                <CheckCircle className="h-5 w-5 text-green-500 shrink-0" /> : 
+                                                <XCircle className="h-5 w-5 text-red-500 shrink-0" />
+                                            }
+                                            <div>
+                                                <p className="font-semibold">{item.awb}</p>
+                                                <p className="text-xs text-muted-foreground">{item.message}</p>
+                                            </div>
                                         </div>
-                                        <p className="text-xs text-muted-foreground">{format(parseISO(item.date), 'HH:mm:ss')}</p>
+                                        <p className="text-xs text-muted-foreground shrink-0">{format(parseISO(item.date), 'HH:mm:ss')}</p>
                                     </li>
                                 ))}
                             </ul>

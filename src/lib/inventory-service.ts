@@ -154,6 +154,12 @@ export async function fetchShippingReceipts(options: {
     return { receipts, total };
 }
 
+export async function findShippingReceiptByAwb(awb: string): Promise<ShippingReceipt | null> {
+    const query = db.prepare('SELECT * FROM shipping_receipts WHERE awb = ?');
+    const receipt = query.get(awb) as ShippingReceipt | undefined;
+    return receipt || null;
+}
+
 export async function getPendingReceiptsBeforeDate(date: Date): Promise<number> {
     const dateString = date.toISOString().split('T')[0];
     const query = db.prepare(`
@@ -1398,5 +1404,6 @@ async function updateShippingReceiptStatusByAwb(awb: string, status: string) {
     stmt.run(status, awb);
 }
     
+
 
 
