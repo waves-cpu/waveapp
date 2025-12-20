@@ -335,18 +335,20 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
   }
   
   const addAccessory = async (accessory: Omit<Accessory, 'id' | 'history'>) => {
-    const newAccessoryId = await addAccessoryDb(accessory);
-    const accessoriesData = await fetchInventoryData(); // Simplified, in real app might fetch one.
+    await addAccessoryDb(accessory);
+    const accessoriesData = await fetchInventoryData(); // Refetch all to be safe, could be optimized
     setAccessories(accessoriesData.accessories);
   };
+
   const updateAccessory = async (accessoryId: string, accessoryData: Omit<Accessory, 'id'| 'history'>) => {
     await updateAccessoryDb(accessoryId, accessoryData);
-    const accessoriesData = await fetchInventoryData();
+    const accessoriesData = await fetchInventoryData(); // Refetch for consistency
     setAccessories(accessoriesData.accessories);
   };
+  
   const adjustAccessoryStock = async (accessoryId: string, change: number, reason: string) => {
     await adjustAccessoryStockDb(accessoryId, change, reason);
-    const accessoriesData = await fetchInventoryData();
+    const accessoriesData = await fetchInventoryData(); // Refetch for consistency
     setAccessories(accessoriesData.accessories);
   };
 
@@ -442,4 +444,5 @@ export const useInventory = () => {
 };
 
     
+
 
