@@ -44,6 +44,7 @@ type GroupedSale = {
     totalAmount: number;
     totalItems: number;
     paymentMethod?: string;
+    isAccessoryUsage: boolean;
 }
 
 export default function PosHistoryPage() {
@@ -63,9 +64,13 @@ export default function PosHistoryPage() {
         setDate(new Date());
     }, []);
 
-    useEffect(() => {
-        fetchItems();
+    const fetchAllData = useCallback(async () => {
+        await fetchItems();
     }, [fetchItems]);
+    
+    useEffect(() => {
+        fetchAllData();
+    }, [fetchAllData]);
     
     const posSales = useMemo(() => {
         const filtered = allSales.filter(s => s.channel === 'pos');
@@ -91,6 +96,7 @@ export default function PosHistoryPage() {
                     items: [],
                     totalAmount: 0,
                     totalItems: 0,
+                    isAccessoryUsage: false,
                 });
             }
 
@@ -98,6 +104,12 @@ export default function PosHistoryPage() {
             group.items.push(sale);
             group.totalAmount += sale.priceAtSale * sale.quantity;
             group.totalItems += sale.quantity;
+            
+        });
+
+        // Determine if it's an accessory usage transaction
+        groups.forEach(group => {
+            group.isAccessoryUsage = group.items.every(item => !!item.accessoryId);
         });
 
         return Array.from(groups.values()).sort((a,b) => new Date(b.saleDate).getTime() - new Date(a.saleDate).getTime());
@@ -110,7 +122,7 @@ export default function PosHistoryPage() {
                 title: t.pos.transactionCancelled,
                 description: "Stok telah dikembalikan.",
             });
-            await fetchItems(); // Refetch all data to update UI
+            await fetchAllData();
         } catch (error) {
             console.error("Error cancelling transaction:", error);
             toast({
@@ -119,7 +131,7 @@ export default function PosHistoryPage() {
                 description: "Terjadi kesalahan saat membatalkan transaksi.",
             });
         }
-    }, [cancelSaleTransaction, t.pos.transactionCancelled, toast, fetchItems]);
+    }, [cancelSaleTransaction, t.pos.transactionCancelled, toast, fetchAllData]);
 
     const handleViewDetails = (items: Sale[]) => {
         setSelectedSaleItems(items);
@@ -129,7 +141,7 @@ export default function PosHistoryPage() {
     const triggerPrint = (group: GroupedSale) => {
         const cartItems: CartItem[] = group.items.map(item => ({
             id: item.accessoryId?.toString() || item.variantId?.toString() || item.productId!.toString(),
-            productId: item.productId?.toString() || item.accessoryId!.toString(),
+            productId: item.productId?.toString() || item.accessoryId?.toString() || '',
             productName: item.productName,
             variantName: item.variantName,
             sku: item.sku!,
@@ -139,9 +151,7 @@ export default function PosHistoryPage() {
             maxStock: 0, // Not relevant for reprint
         }));
 
-        const isAccessoryOnly = cartItems.every(item => item.type === 'accessory');
-
-        if (isAccessoryOnly) {
+        if (group.isAccessoryUsage) {
              setVoucherToPrint({
                 items: cartItems,
                 transactionId: group.transactionId,
@@ -232,15 +242,18 @@ export default function PosHistoryPage() {
                                                 {format(new Date(group.saleDate), 'HH:mm:ss')}
                                             </TableCell>
                                             <TableCell onClick={() => handleViewDetails(group.items)}>
-                                                <div className="font-medium text-sm">{group.items[0].productName} {group.items[0].variantName || ''}</div>
+                                                <div className="font-medium text-sm">
+                                                    {group.isAccessoryUsage ? 'Pemakaian Aksesoris' : group.items[0].productName}
+                                                    {!group.isAccessoryUsage && ` ${group.items[0].variantName || ''}`}
+                                                </div>
                                                 {group.items.length > 1 && (
                                                     <div className="text-xs text-muted-foreground">
-                                                        + {group.items.length - 1} produk lainnya
+                                                        + {group.items.length - 1} {group.isAccessoryUsage ? 'aksesoris' : 'produk'} lainnya
                                                     </div>
                                                 )}
                                             </TableCell>
                                             <TableCell onClick={() => handleViewDetails(group.items)}>
-                                                <Badge variant="outline">{group.paymentMethod || 'N/A'}</Badge>
+                                                <Badge variant="outline">{group.isAccessoryUsage ? 'Pemakaian Internal' : group.paymentMethod || 'N/A'}</Badge>
                                             </TableCell>
                                             <TableCell className="text-right font-semibold text-sm" onClick={() => handleViewDetails(group.items)}>
                                                 {group.totalAmount.toLocaleString('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0, maximumFractionDigits: 0 })}
