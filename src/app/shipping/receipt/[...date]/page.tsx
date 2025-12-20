@@ -325,26 +325,26 @@ export default function ReceiptPage() {
                      <div className="border-b">
                          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-2">
                             <Button 
-                                variant={activeSalesChannelTab === null ? 'default' : 'ghost'}
+                                variant={activeSalesChannelTab === null ? 'secondary' : 'ghost'}
                                 size="sm"
                                 onClick={() => setActiveSalesChannelTab(null)}
                                 className="shrink-0"
                             >
                                 Semua Kanal
-                                <Badge variant={activeSalesChannelTab === null ? 'destructive' : 'secondary'} className="ml-2">
+                                <Badge variant={activeSalesChannelTab === null ? 'default' : 'secondary'} className="ml-2">
                                     {Object.values(salesChannelCounts).reduce((a,b)=>a+b, 0)}
                                 </Badge>
                             </Button>
                             {(['Shopee', 'Tiktok', 'Lazada'] as const).map(tab => (
                                 <Button 
                                     key={tab}
-                                    variant={activeSalesChannelTab === tab ? 'default' : 'ghost'}
+                                    variant={activeSalesChannelTab === tab ? 'secondary' : 'ghost'}
                                     size="sm"
                                     onClick={() => setActiveSalesChannelTab(tab)}
                                     className="shrink-0"
                                 >
                                     {tab}
-                                    <Badge variant={activeSalesChannelTab === tab ? 'destructive' : 'secondary'} className="ml-2">
+                                    <Badge variant={activeSalesChannelTab === tab ? 'default' : 'secondary'} className="ml-2">
                                         {salesChannelCounts[tab] || 0}
                                     </Badge>
                                 </Button>
@@ -353,26 +353,26 @@ export default function ReceiptPage() {
                     </div>
                     <div className="flex items-center gap-2 overflow-x-auto no-scrollbar border-b pb-2">
                          <Button 
-                            variant={activeShippingTab === null ? 'default' : 'ghost'}
+                            variant={activeShippingTab === null ? 'secondary' : 'ghost'}
                             size="sm"
                             onClick={() => setActiveShippingTab(null)}
                             className="shrink-0"
                         >
                             Semua Jasa Kirim
-                            <Badge variant={activeShippingTab === null ? 'destructive' : 'secondary'} className="ml-2">
+                            <Badge variant={activeShippingTab === null ? 'default' : 'secondary'} className="ml-2">
                                  {Object.values(channelCounts).reduce((a, b) => a + b, 0)}
                             </Badge>
                         </Button>
                         {(['SPX', 'J&T', 'JNE', 'INSTANT', 'CARGO'] as ShippingProvider[]).map(tab => (
                             <Button 
                                 key={tab}
-                                variant={activeShippingTab === tab ? 'default' : 'ghost'}
+                                variant={activeShippingTab === tab ? 'secondary' : 'ghost'}
                                 size="sm"
                                 onClick={() => setActiveShippingTab(tab)}
                                 className="shrink-0"
                             >
                                 {tab}
-                                <Badge variant={activeShippingTab === tab ? 'destructive' : 'secondary'} className="ml-2">
+                                <Badge variant={activeShippingTab === tab ? 'default' : 'secondary'} className="ml-2">
                                     {channelCounts[tab] || 0}
                                 </Badge>
                             </Button>
@@ -382,13 +382,13 @@ export default function ReceiptPage() {
                         {STATUS_OPTIONS.map(status => (
                             <Button
                                 key={status}
-                                variant={activeStatusFilter === status ? 'default' : 'ghost'}
+                                variant={activeStatusFilter === status ? 'secondary' : 'ghost'}
                                 size="sm"
                                 onClick={() => setActiveStatusFilter(status)}
                                 className="shrink-0"
                             >
                                 {status}
-                                <Badge variant={activeStatusFilter === status ? 'destructive' : 'secondary'} className="ml-2">
+                                <Badge variant={activeStatusFilter === status ? 'default' : 'secondary'} className="ml-2">
                                     {status === 'Semua Status'
                                         ? Object.values(statusCounts).reduce((a, b) => a + b, 0)
                                         : statusCounts[status] || 0}
@@ -513,3 +513,6 @@ export default function ReceiptPage() {
     );
 }
 
+
+
+    
