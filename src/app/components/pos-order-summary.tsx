@@ -41,6 +41,8 @@ export function PosOrderSummary({ cart, onSaleComplete, clearCart, channel }: Po
     const [cashReceived, setCashReceived] = useState(0);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(channel === 'reseller' ? 'Transfer' : 'Cash');
+    
+    const isAccessoryOnlyTx = useMemo(() => cart.length > 0 && cart.every(item => item.type === 'accessory'), [cart]);
 
     useEffect(() => {
         setPaymentMethod(channel === 'reseller' ? 'Transfer' : 'Cash');
@@ -93,65 +95,76 @@ export function PosOrderSummary({ cart, onSaleComplete, clearCart, channel }: Po
                         <span>{t.pos.subtotal}</span>
                         <span>{subtotal.toLocaleString('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0, maximumFractionDigits: 0 })}</span>
                     </div>
-                    <div className="flex justify-between items-center">
-                        <Label htmlFor="discount">{t.pos.discount}</Label>
-                        <Input id="discount" type="number" value={discount} onChange={(e) => setDiscount(Number(e.target.value))} className="w-32 h-8 text-sm"/>
-                    </div>
-                </div>
-                <Separator />
-                <div className="space-y-3">
-                    <Label>{t.pos.paymentMethod}</Label>
-                     {channel === 'reseller' ? (
-                        <Input value="Transfer" disabled className="h-10 text-base" />
-                    ) : (
-                        <RadioGroup value={paymentMethod} onValueChange={(value: PaymentMethod) => setPaymentMethod(value)} className="grid grid-cols-2 gap-2">
-                            <div>
-                                <RadioGroupItem value="Cash" id="cash" className="peer sr-only" />
-                                <Label htmlFor="cash" className="flex items-center justify-center rounded-md border-2 border-muted bg-popover p-2 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary text-sm cursor-pointer">
-                                    {t.pos.cash}
-                                </Label>
-                            </div>
-                            <div>
-                                <RadioGroupItem value="Qris" id="qris" className="peer sr-only" />
-                                <Label htmlFor="qris" className="flex items-center justify-center rounded-md border-2 border-muted bg-popover p-2 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary text-sm cursor-pointer">
-                                    QRIS
-                                </Label>
-                            </div>
-                            <div>
-                                <RadioGroupItem value="Debit" id="debit" className="peer sr-only" />
-                                <Label htmlFor="debit" className="flex items-center justify-center rounded-md border-2 border-muted bg-popover p-2 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary text-sm cursor-pointer">
-                                    Debit
-                                </Label>
-                            </div>
-                            <div>
-                                <RadioGroupItem value="Transfer" id="transfer" className="peer sr-only" />
-                                <Label htmlFor="transfer" className="flex items-center justify-center rounded-md border-2 border-muted bg-popover p-2 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary text-sm cursor-pointer">
-                                    Transfer
-                                </Label>
-                            </div>
-                        </RadioGroup>
+                    {!isAccessoryOnlyTx && (
+                        <div className="flex justify-between items-center">
+                            <Label htmlFor="discount">{t.pos.discount}</Label>
+                            <Input id="discount" type="number" value={discount} onChange={(e) => setDiscount(Number(e.target.value))} className="w-32 h-8 text-sm"/>
+                        </div>
                     )}
                 </div>
-                {paymentMethod === 'Cash' && channel !== 'reseller' && (
+                <Separator />
+                {!isAccessoryOnlyTx && (
+                    <div className="space-y-3">
+                        <Label>{t.pos.paymentMethod}</Label>
+                        {channel === 'reseller' ? (
+                            <Input value="Transfer" disabled className="h-10 text-base" />
+                        ) : (
+                            <RadioGroup value={paymentMethod} onValueChange={(value: PaymentMethod) => setPaymentMethod(value)} className="grid grid-cols-2 gap-2">
+                                <div>
+                                    <RadioGroupItem value="Cash" id="cash" className="peer sr-only" />
+                                    <Label htmlFor="cash" className="flex items-center justify-center rounded-md border-2 border-muted bg-popover p-2 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary text-sm cursor-pointer">
+                                        {t.pos.cash}
+                                    </Label>
+                                </div>
+                                <div>
+                                    <RadioGroupItem value="Qris" id="qris" className="peer sr-only" />
+                                    <Label htmlFor="qris" className="flex items-center justify-center rounded-md border-2 border-muted bg-popover p-2 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary text-sm cursor-pointer">
+                                        QRIS
+                                    </Label>
+                                </div>
+                                <div>
+                                    <RadioGroupItem value="Debit" id="debit" className="peer sr-only" />
+                                    <Label htmlFor="debit" className="flex items-center justify-center rounded-md border-2 border-muted bg-popover p-2 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary text-sm cursor-pointer">
+                                        Debit
+                                    </Label>
+                                </div>
+                                <div>
+                                    <RadioGroupItem value="Transfer" id="transfer" className="peer sr-only" />
+                                    <Label htmlFor="transfer" className="flex items-center justify-center rounded-md border-2 border-muted bg-popover p-2 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary text-sm cursor-pointer">
+                                        Transfer
+                                    </Label>
+                                </div>
+                            </RadioGroup>
+                        )}
+                    </div>
+                )}
+                {paymentMethod === 'Cash' && channel !== 'reseller' && !isAccessoryOnlyTx && (
                     <div className="space-y-2">
                         <Label htmlFor="cashReceived">{t.pos.cashReceived}</Label>
                         <Input id="cashReceived" type="number" placeholder="0" value={cashReceived || ''} onChange={(e) => setCashReceived(Number(e.target.value))} className="h-10 text-base" />
                     </div>
                 )}
+                 {isAccessoryOnlyTx && (
+                    <div className="text-center text-sm text-muted-foreground p-4 border rounded-md">
+                        Ini adalah transaksi pengambilan barang (aksesoris) dan tidak akan memengaruhi laporan penjualan.
+                    </div>
+                 )}
             </CardContent>
             <CardFooter className="flex-col !p-4 mt-auto">
-                <div className="w-full space-y-2 text-base font-bold mb-4 p-4 bg-muted rounded-md">
-                    <div className="flex justify-between">
-                        <span>{t.pos.total}</span>
-                        <span className="text-primary">{total.toLocaleString('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0, maximumFractionDigits: 0 })}</span>
-                    </div>
-                     {paymentMethod === 'Cash' && channel !== 'reseller' && (
-                        <div className="flex justify-between text-sm">
-                            <span>{t.pos.change}</span>
-                            <span>{change >= 0 ? change.toLocaleString('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0, maximumFractionDigits: 0 }) : '-'}</span>
+                 {!isAccessoryOnlyTx && (
+                    <div className="w-full space-y-2 text-base font-bold mb-4 p-4 bg-muted rounded-md">
+                        <div className="flex justify-between">
+                            <span>{t.pos.total}</span>
+                            <span className="text-primary">{total.toLocaleString('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0, maximumFractionDigits: 0 })}</span>
                         </div>
-                     )}
-                </div>
+                        {paymentMethod === 'Cash' && channel !== 'reseller' && (
+                            <div className="flex justify-between text-sm">
+                                <span>{t.pos.change}</span>
+                                <span>{change >= 0 ? change.toLocaleString('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0, maximumFractionDigits: 0 }) : '-'}</span>
+                            </div>
+                        )}
+                    </div>
+                 )}
                 <div className="w-full grid grid-cols-2 gap-2">
                     <AlertDialog>
                          <AlertDialogTrigger asChild>
@@ -176,9 +189,9 @@ export function PosOrderSummary({ cart, onSaleComplete, clearCart, channel }: Po
                          </AlertDialogContent>
                     </AlertDialog>
 
-                    <Button size="lg" onClick={handleSale} disabled={cart.length === 0 || (paymentMethod === 'Cash' && change < 0) || isSubmitting}>
+                    <Button size="lg" onClick={handleSale} disabled={cart.length === 0 || (paymentMethod === 'Cash' && change < 0 && !isAccessoryOnlyTx) || isSubmitting}>
                         <Printer className="mr-2 h-4 w-4" />
-                        {isSubmitting ? 'Memproses...' : (channel === 'reseller' ? t.reseller.printInvoice : t.pos.completeSale)}
+                        {isSubmitting ? 'Memproses...' : (isAccessoryOnlyTx ? 'Cetak Voucher' : (channel === 'reseller' ? t.reseller.printInvoice : t.pos.completeSale))}
                     </Button>
                 </div>
             </CardFooter>

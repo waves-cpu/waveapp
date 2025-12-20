@@ -20,6 +20,8 @@ import { translations } from '@/types/language';
 import { useScanSounds } from '@/hooks/use-scan-sounds';
 import { PosReceipt, type ReceiptData } from './pos-receipt';
 import { useDebounce } from '@/hooks/use-debounce';
+import { AccessoryUsageVoucher, type VoucherData } from './accessory-usage-voucher';
+
 
 export type CartItem = {
     id: string; // variantId or accessoryId or productId
@@ -47,6 +49,7 @@ export function PosCart() {
     const [productForVariantSelection, setProductForVariantSelection] = useState<InventoryItem | null>(null);
     const [isClient, setIsClient] = useState(false);
     const [receiptToPrint, setReceiptToPrint] = useState<ReceiptData | null>(null);
+    const [voucherToPrint, setVoucherToPrint] = useState<VoucherData | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
     const debouncedSearchTerm = useDebounce(searchTerm, 300);
 
@@ -95,15 +98,16 @@ export function PosCart() {
 
     // This useEffect handles the printing after the state has been updated
     useEffect(() => {
-        if (receiptToPrint) {
+        if (receiptToPrint || voucherToPrint) {
             // Timeout ensures the component has time to render before printing
             const timer = setTimeout(() => {
                 window.print();
                 setReceiptToPrint(null); // Reset after printing
+                setVoucherToPrint(null);
             }, 100); 
             return () => clearTimeout(timer);
         }
-    }, [receiptToPrint]);
+    }, [receiptToPrint, voucherToPrint]);
 
     const getPriceForChannel = (item: InventoryItem | InventoryItemVariant | Accessory, channel: string): number => {
         if ('channelPrices' in item) {
@@ -254,13 +258,12 @@ export function PosCart() {
 
     const handleSaleComplete = async (paymentMethod: string, receiptData: ReceiptData) => {
         try {
+            const isAccessoryOnly = cart.every(item => item.type === 'accessory');
             const { discount, subtotal } = receiptData;
             const discountRatio = subtotal > 0 ? discount / subtotal : 0;
 
             const salePromises = cart.map(item => {
-                const itemSubtotal = item.price * item.quantity;
-                const itemDiscount = itemSubtotal * discountRatio;
-                const pricePerItemAfterDiscount = item.price - (item.price * discountRatio);
+                const pricePerItemAfterDiscount = isAccessoryOnly ? 0 : item.price - (item.price * discountRatio);
 
                 return recordSale(item.sku, 'pos', item.quantity, {
                     saleDate: new Date(),
@@ -271,11 +274,24 @@ export function PosCart() {
             });
 
             await Promise.all(salePromises);
-            toast({
-                title: "Penjualan Berhasil",
-                description: "Transaksi telah berhasil dicatat."
-            });
-            setReceiptToPrint(receiptData); // Set the receipt data to trigger printing
+            
+            if (isAccessoryOnly) {
+                toast({
+                    title: "Pemakaian Aksesoris Dicatat",
+                    description: "Voucher pengambilan barang sedang dicetak."
+                });
+                setVoucherToPrint({
+                    items: cart,
+                    transactionId: receiptData.transactionId,
+                    date: new Date(),
+                });
+            } else {
+                toast({
+                    title: "Penjualan Berhasil",
+                    description: "Transaksi telah berhasil dicatat."
+                });
+                setReceiptToPrint(receiptData);
+            }
         } catch (error) {
             console.error("Failed to complete sale:", error);
             toast({
@@ -385,6 +401,7 @@ export function PosCart() {
         </div>
          <div className="print-only">
             {receiptToPrint && <PosReceipt ref={null} receipt={receiptToPrint} />}
+            {voucherToPrint && <AccessoryUsageVoucher ref={null} voucher={voucherToPrint} />}
         </div>
         </>
     );
