@@ -94,29 +94,35 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                   </SidebarMenuItem>
                    <SidebarMenu className="ml-4 mt-2 border-l border-muted-foreground/20 pl-4 mb-4">
                         <SidebarMenuItem>
-                            <Link href="/sales/shopee">
-                                <SidebarMenuButton variant="ghost" size="sm" isActive={pathname.startsWith('/sales/shopee')}>
-                                    <ShoppingBag />
-                                    {t.sales.shopee}
-                                </SidebarMenuButton>
-                            </Link>
+                           <SidebarMenuButton variant="ghost" size="sm">
+                                <ShoppingBag />
+                                <span className="flex-grow font-semibold">Marketplace</span>
+                                <ChevronDown className="ml-auto transition-transform" />
+                           </SidebarMenuButton>
                         </SidebarMenuItem>
-                        <SidebarMenuItem>
-                            <Link href="/sales/tiktok">
-                                <SidebarMenuButton variant="ghost" size="sm" isActive={pathname.startsWith('/sales/tiktok')}>
-                                    <ShoppingBag />
-                                    {t.sales.tiktok}
-                                </SidebarMenuButton>
-                            </Link>
-                        </SidebarMenuItem>
-                        <SidebarMenuItem>
-                            <Link href="/sales/lazada">
-                                <SidebarMenuButton variant="ghost" size="sm" isActive={pathname.startsWith('/sales/lazada')}>
-                                    <ShoppingBag />
-                                    {t.sales.lazada}
-                                </SidebarMenuButton>
-                            </Link>
-                        </SidebarMenuItem>
+                        <SidebarMenu className="ml-4 mt-2 border-l border-muted-foreground/20 pl-4 mb-2">
+                             <SidebarMenuItem>
+                                <Link href="/sales/shopee">
+                                    <SidebarMenuButton variant="ghost" size="sm" isActive={pathname.startsWith('/sales/shopee')}>
+                                        {t.sales.shopee}
+                                    </SidebarMenuButton>
+                                </Link>
+                            </SidebarMenuItem>
+                             <SidebarMenuItem>
+                                <Link href="/sales/tiktok">
+                                    <SidebarMenuButton variant="ghost" size="sm" isActive={pathname.startsWith('/sales/tiktok')}>
+                                        {t.sales.tiktok}
+                                    </SidebarMenuButton>
+                                </Link>
+                            </SidebarMenuItem>
+                             <SidebarMenuItem>
+                                <Link href="/sales/lazada">
+                                    <SidebarMenuButton variant="ghost" size="sm" isActive={pathname.startsWith('/sales/lazada')}>
+                                        {t.sales.lazada}
+                                    </SidebarMenuButton>
+                                </Link>
+                            </SidebarMenuItem>
+                        </SidebarMenu>
                         <SidebarMenuItem>
                            <Link href="/sales/pos">
                                <SidebarMenuButton variant="ghost" size="sm" isActive={pathname.startsWith('/sales/pos')}>
@@ -145,7 +151,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                        <SidebarMenuItem>
                           <Link href="/">
                               <SidebarMenuButton variant="ghost" size="sm" isActive={pathname === '/'}>
-                                  <Home />
+                                  <Package />
                                   {t.dashboard.myProducts}
                               </SidebarMenuButton>
                           </Link>
@@ -158,46 +164,59 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                               </SidebarMenuButton>
                           </Link>
                       </SidebarMenuItem>
-                        <SidebarMenuItem>
-                            <Link href="/add-product">
-                                <SidebarMenuButton variant="ghost" size="sm" isActive={pathname === '/add-product'}>
-                                    <PlusCircle />
-                                    {t.dashboard.addItem}
-                                </SidebarMenuButton>
-                            </Link>
+                      <SidebarMenuItem>
+                           <SidebarMenuButton variant="ghost" size="sm">
+                                <PackagePlus />
+                                <span className="flex-grow font-semibold">Manajemen Produk</span>
+                                <ChevronDown className="ml-auto transition-transform" />
+                           </SidebarMenuButton>
                         </SidebarMenuItem>
-                        <SidebarMenuItem>
-                            <Link href="/bulk-add-products">
-                                <SidebarMenuButton variant="ghost" size="sm" isActive={pathname === '/bulk-add-products'}>
-                                    <PackagePlus />
-                                    {t.dashboard.bulk}
-                                </SidebarMenuButton>
-                            </Link>
+                        <SidebarMenu className="ml-4 mt-2 border-l border-muted-foreground/20 pl-4 mb-2">
+                             <SidebarMenuItem>
+                                <Link href="/add-product">
+                                    <SidebarMenuButton variant="ghost" size="sm" isActive={pathname === '/add-product'}>
+                                        {t.dashboard.addItem}
+                                    </SidebarMenuButton>
+                                </Link>
+                            </SidebarMenuItem>
+                             <SidebarMenuItem>
+                                <Link href="/bulk-add-products">
+                                    <SidebarMenuButton variant="ghost" size="sm" isActive={pathname === '/bulk-add-products'}>
+                                        {t.dashboard.bulk}
+                                    </SidebarMenuButton>
+                                </Link>
+                            </SidebarMenuItem>
+                        </SidebarMenu>
+                       <SidebarMenuItem>
+                           <SidebarMenuButton variant="ghost" size="sm">
+                                <Activity />
+                                <span className="flex-grow font-semibold">Aktivitas Stok</span>
+                                <ChevronDown className="ml-auto transition-transform" />
+                           </SidebarMenuButton>
                         </SidebarMenuItem>
-                        <SidebarMenuItem>
-                            <Link href="/stock-in">
-                                <SidebarMenuButton variant="ghost" size="sm" isActive={pathname === '/stock-in'}>
-                                    <ArrowRightLeft />
-                                    {t.dashboard.stockIn}
-                                </SidebarMenuButton>
-                            </Link>
-                        </SidebarMenuItem>
-                        <SidebarMenuItem>
-                            <Link href="/stock-out">
-                                <SidebarMenuButton variant="ghost" size="sm" isActive={pathname === '/stock-out'}>
-                                    <PackageMinus />
-                                    {t.dashboard.stockOut}
-                                </SidebarMenuButton>
-                            </Link>
-                        </SidebarMenuItem>
-                         <SidebarMenuItem>
-                            <Link href="/history">
-                                <SidebarMenuButton variant="ghost" size="sm" isActive={pathname === '/history'}>
-                                    <FileClock />
-                                    {t.stockHistory.title}
-                                </SidebarMenuButton>
-                            </Link>
-                        </SidebarMenuItem>
+                        <SidebarMenu className="ml-4 mt-2 border-l border-muted-foreground/20 pl-4 mb-2">
+                            <SidebarMenuItem>
+                                <Link href="/stock-in">
+                                    <SidebarMenuButton variant="ghost" size="sm" isActive={pathname === '/stock-in'}>
+                                        {t.dashboard.stockIn}
+                                    </SidebarMenuButton>
+                                </Link>
+                            </SidebarMenuItem>
+                            <SidebarMenuItem>
+                                <Link href="/stock-out">
+                                    <SidebarMenuButton variant="ghost" size="sm" isActive={pathname === '/stock-out'}>
+                                        {t.dashboard.stockOut}
+                                    </SidebarMenuButton>
+                                </Link>
+                            </SidebarMenuItem>
+                             <SidebarMenuItem>
+                                <Link href="/history">
+                                    <SidebarMenuButton variant="ghost" size="sm" isActive={pathname === '/history'}>
+                                        {t.stockHistory.title}
+                                    </SidebarMenuButton>
+                                </Link>
+                            </SidebarMenuItem>
+                        </SidebarMenu>
                         <SidebarMenuItem>
                             <Link href="/inventory/archived">
                                 <SidebarMenuButton variant="ghost" size="sm" isActive={pathname === '/inventory/archived'}>
