@@ -26,28 +26,22 @@ import {
   History,
   ShoppingCart,
   ShoppingBag,
-  SquareTerminal,
   Users,
-  BookCopy,
-  BookText,
-  FileText,
   Archive,
   FileBarChart,
   Settings2,
   DollarSign,
-  Scale,
-  ArchiveIcon,
-  Sheet,
-  Tags,
   Truck,
   Receipt,
   Undo2,
   PackagePlus,
-  TicketPercent,
-  Activity,
-  BarChart,
   LogOut,
   PackageMinus,
+  LayoutGrid,
+  Activity,
+  Warehouse,
+  FilePlus2,
+  FileClock,
 } from 'lucide-react';
 import { Logo } from './logo';
 import { Separator } from '@/components/ui/separator';
@@ -81,6 +75,10 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     const [isShippingOpen, setShippingOpen] = useState(true);
     const [isFinanceOpen, setFinanceOpen] = useState(true);
     
+    const [isMarketplaceOpen, setMarketplaceOpen] = useState(false);
+    const [isProductManagementOpen, setProductManagementOpen] = useState(false);
+    const [isStockActivityOpen, setStockActivityOpen] = useState(false);
+
     const hasArchivedItems = useMemo(() => items.some(item => item.isArchived), [items]);
 
     const handleLogout = () => {
@@ -107,34 +105,47 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                       </CollapsibleTrigger>
                       <CollapsibleContent>
                           <SidebarMenu className="ml-4 mt-2 border-l border-muted-foreground/20 pl-4">
-                               <SidebarMenuItem>
-                                  <Link href="/sales/shopee">
-                                      <SidebarMenuButton variant="ghost" size="sm" isActive={pathname.startsWith('/sales/shopee')}>
-                                          <ShoppingBag />
-                                          {t.sales.shopee}
-                                      </SidebarMenuButton>
-                                  </Link>
-                              </SidebarMenuItem>
-                              <SidebarMenuItem>
-                                  <Link href="/sales/tiktok">
-                                      <SidebarMenuButton variant="ghost" size="sm" isActive={pathname.startsWith('/sales/tiktok')}>
-                                          <ShoppingBag />
-                                          {t.sales.tiktok}
-                                      </SidebarMenuButton>
-                                  </Link>
-                              </SidebarMenuItem>
-                              <SidebarMenuItem>
-                                  <Link href="/sales/lazada">
-                                      <SidebarMenuButton variant="ghost" size="sm" isActive={pathname.startsWith('/sales/lazada')}>
-                                          <ShoppingBag />
-                                          {t.sales.lazada}
-                                      </SidebarMenuButton>
-                                  </Link>
-                              </SidebarMenuItem>
+                                <Collapsible open={isMarketplaceOpen} onOpenChange={setMarketplaceOpen}>
+                                    <CollapsibleTrigger asChild>
+                                        <SidebarMenuButton variant="ghost" size="sm">
+                                            <Store />
+                                            <span>Marketplace</span>
+                                            <ChevronDown className={cn("ml-auto transition-transform", isMarketplaceOpen && "rotate-180")} />
+                                        </SidebarMenuButton>
+                                    </CollapsibleTrigger>
+                                    <CollapsibleContent>
+                                        <SidebarMenu className="ml-4 mt-2 border-l border-muted-foreground/20 pl-4">
+                                            <SidebarMenuItem>
+                                                <Link href="/sales/shopee">
+                                                    <SidebarMenuButton variant="ghost" size="sm" isActive={pathname.startsWith('/sales/shopee')}>
+                                                        <ShoppingBag />
+                                                        {t.sales.shopee}
+                                                    </SidebarMenuButton>
+                                                </Link>
+                                            </SidebarMenuItem>
+                                            <SidebarMenuItem>
+                                                <Link href="/sales/tiktok">
+                                                    <SidebarMenuButton variant="ghost" size="sm" isActive={pathname.startsWith('/sales/tiktok')}>
+                                                        <ShoppingBag />
+                                                        {t.sales.tiktok}
+                                                    </SidebarMenuButton>
+                                                </Link>
+                                            </SidebarMenuItem>
+                                            <SidebarMenuItem>
+                                                <Link href="/sales/lazada">
+                                                    <SidebarMenuButton variant="ghost" size="sm" isActive={pathname.startsWith('/sales/lazada')}>
+                                                        <ShoppingBag />
+                                                        {t.sales.lazada}
+                                                    </SidebarMenuButton>
+                                                </Link>
+                                            </SidebarMenuItem>
+                                        </SidebarMenu>
+                                    </CollapsibleContent>
+                                </Collapsible>
                                 <SidebarMenuItem>
                                    <Link href="/sales/pos">
                                        <SidebarMenuButton variant="ghost" size="sm" isActive={pathname.startsWith('/sales/pos')}>
-                                           <Store />
+                                           <LayoutGrid />
                                            {t.sales.pos}
                                        </SidebarMenuButton>
                                    </Link>
@@ -154,7 +165,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                   <Collapsible open={isInventoryOpen} onOpenChange={setInventoryOpen}>
                       <CollapsibleTrigger asChild>
                           <SidebarMenuButton>
-                              <Store />
+                              <Warehouse />
                               <span>{t.dashboard.inventoryMenu}</span>
                               <ChevronDown className={cn("ml-auto transition-transform", isInventoryOpen && "rotate-180")} />
                           </SidebarMenuButton>
@@ -172,51 +183,77 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                                <SidebarMenuItem>
                                   <Link href="/inventory/accessories">
                                       <SidebarMenuButton variant="ghost" size="sm" isActive={pathname.startsWith('/inventory/accessories')}>
-                                          <Tags />
+                                          <Package />
                                           {t.dashboard.accessories}
                                       </SidebarMenuButton>
                                   </Link>
                               </SidebarMenuItem>
-                              <SidebarMenuItem>
-                                  <Link href="/add-product">
-                                      <SidebarMenuButton variant="ghost" size="sm" isActive={pathname === '/add-product'}>
-                                          <PlusCircle />
-                                          {t.dashboard.addItem}
-                                      </SidebarMenuButton>
-                                  </Link>
-                              </SidebarMenuItem>
-                               <SidebarMenuItem>
-                                  <Link href="/bulk-add-products">
-                                      <SidebarMenuButton variant="ghost" size="sm" isActive={pathname === '/bulk-add-products'}>
-                                          <PackagePlus />
-                                          {t.dashboard.bulk}
-                                      </SidebarMenuButton>
-                                  </Link>
-                              </SidebarMenuItem>
-                              <SidebarMenuItem>
-                                  <Link href="/stock-in">
-                                      <SidebarMenuButton variant="ghost" size="sm" isActive={pathname === '/stock-in'}>
-                                          <ArrowRightLeft />
-                                          {t.dashboard.stockIn}
-                                      </SidebarMenuButton>
-                                  </Link>
-                              </SidebarMenuItem>
-                              <SidebarMenuItem>
-                                  <Link href="/stock-out">
-                                      <SidebarMenuButton variant="ghost" size="sm" isActive={pathname === '/stock-out'}>
-                                          <PackageMinus />
-                                          {t.dashboard.stockOut}
-                                      </SidebarMenuButton>
-                                  </Link>
-                              </SidebarMenuItem>
-                              <SidebarMenuItem>
-                                  <Link href="/history">
-                                      <SidebarMenuButton variant="ghost" size="sm" isActive={pathname === '/history'}>
-                                          <History />
-                                          {t.stockHistory.title}
-                                      </SidebarMenuButton>
-                                  </Link>
-                              </SidebarMenuItem>
+                              <Collapsible open={isProductManagementOpen} onOpenChange={setProductManagementOpen}>
+                                    <CollapsibleTrigger asChild>
+                                        <SidebarMenuButton variant="ghost" size="sm">
+                                            <FilePlus2 />
+                                            <span>Manajemen Produk</span>
+                                            <ChevronDown className={cn("ml-auto transition-transform", isProductManagementOpen && "rotate-180")} />
+                                        </SidebarMenuButton>
+                                    </CollapsibleTrigger>
+                                    <CollapsibleContent>
+                                        <SidebarMenu className="ml-4 mt-2 border-l border-muted-foreground/20 pl-4">
+                                            <SidebarMenuItem>
+                                                <Link href="/add-product">
+                                                    <SidebarMenuButton variant="ghost" size="sm" isActive={pathname === '/add-product'}>
+                                                        <PlusCircle />
+                                                        {t.dashboard.addItem}
+                                                    </SidebarMenuButton>
+                                                </Link>
+                                            </SidebarMenuItem>
+                                            <SidebarMenuItem>
+                                                <Link href="/bulk-add-products">
+                                                    <SidebarMenuButton variant="ghost" size="sm" isActive={pathname === '/bulk-add-products'}>
+                                                        <PackagePlus />
+                                                        {t.dashboard.bulk}
+                                                    </SidebarMenuButton>
+                                                </Link>
+                                            </SidebarMenuItem>
+                                        </SidebarMenu>
+                                    </CollapsibleContent>
+                                </Collapsible>
+                                <Collapsible open={isStockActivityOpen} onOpenChange={setStockActivityOpen}>
+                                    <CollapsibleTrigger asChild>
+                                        <SidebarMenuButton variant="ghost" size="sm">
+                                            <Activity />
+                                            <span>Aktivitas Stok</span>
+                                            <ChevronDown className={cn("ml-auto transition-transform", isStockActivityOpen && "rotate-180")} />
+                                        </SidebarMenuButton>
+                                    </CollapsibleTrigger>
+                                    <CollapsibleContent>
+                                        <SidebarMenu className="ml-4 mt-2 border-l border-muted-foreground/20 pl-4">
+                                            <SidebarMenuItem>
+                                                <Link href="/stock-in">
+                                                    <SidebarMenuButton variant="ghost" size="sm" isActive={pathname === '/stock-in'}>
+                                                        <ArrowRightLeft />
+                                                        {t.dashboard.stockIn}
+                                                    </SidebarMenuButton>
+                                                </Link>
+                                            </SidebarMenuItem>
+                                            <SidebarMenuItem>
+                                                <Link href="/stock-out">
+                                                    <SidebarMenuButton variant="ghost" size="sm" isActive={pathname === '/stock-out'}>
+                                                        <PackageMinus />
+                                                        {t.dashboard.stockOut}
+                                                    </SidebarMenuButton>
+                                                </Link>
+                                            </SidebarMenuItem>
+                                             <SidebarMenuItem>
+                                                <Link href="/history">
+                                                    <SidebarMenuButton variant="ghost" size="sm" isActive={pathname === '/history'}>
+                                                        <FileClock />
+                                                        {t.stockHistory.title}
+                                                    </SidebarMenuButton>
+                                                </Link>
+                                            </SidebarMenuItem>
+                                        </SidebarMenu>
+                                    </CollapsibleContent>
+                                </Collapsible>
                                 <SidebarMenuItem>
                                     <Link href="/inventory/archived">
                                         <SidebarMenuButton variant="ghost" size="sm" isActive={pathname === '/inventory/archived'}>
