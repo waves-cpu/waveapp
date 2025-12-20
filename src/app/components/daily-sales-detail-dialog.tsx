@@ -122,7 +122,7 @@ export function DailySalesDetailDialog({ open, onOpenChange, sales, title, descr
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-3xl">
         <DialogHeader>
           <DialogTitle>{title || defaultTitle}</DialogTitle>
           <DialogDescription>
@@ -142,14 +142,14 @@ export function DailySalesDetailDialog({ open, onOpenChange, sales, title, descr
 
         <div className="border rounded-md">
           <ScrollArea className="h-96">
-              <Table>
+              <Table className="table-fixed">
                   <TableHeader className="sticky top-0 bg-card">
                       <TableRow>
-                          <TableHead className="w-[50%]">Produk</TableHead>
+                          <TableHead className="w-[45%]">Produk</TableHead>
                           <TableHead className="w-[15%]">Ukuran</TableHead>
                           <TableHead className="text-center w-[10%]">Jumlah</TableHead>
-                          <TableHead className="text-right w-[20%]">Harga Satuan</TableHead>
-                          <TableHead className="text-right w-[20%]">Total</TableHead>
+                          <TableHead className="text-right w-[15%]">Harga Satuan</TableHead>
+                          <TableHead className="text-right w-[15%]">Total</TableHead>
                       </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -157,7 +157,7 @@ export function DailySalesDetailDialog({ open, onOpenChange, sales, title, descr
                           aggregatedSales.map((sale, index) => (
                               <TableRow key={`${sale.sku}-${index}` || `${sale.productName}-${index}`}>
                                   <TableCell>
-                                      <div className="font-medium">{sale.productName}</div>
+                                      <div className="font-medium truncate whitespace-nowrap">{sale.productName}</div>
                                       {sale.sku && <div className="text-xs text-muted-foreground">SKU: {sale.sku}</div>}
                                   </TableCell>
                                   <TableCell>
