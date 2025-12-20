@@ -85,7 +85,7 @@ export default function ReceiptPage() {
     const router = useRouter();
     const params = useParams();
     
-    const { fetchShippingReceipts, deleteShippingReceipt, updateShippingReceiptsStatus, updateShippingReceiptStatus, fetchShippingReceiptCountsByChannel, fetchShippingReceiptCountsByStatus, getPendingReceiptsBeforeDate, cancelSaleTransaction } = useInventory();
+    const { fetchShippingReceipts, deleteShippingReceipt, updateShippingReceiptsStatus, updateShippingReceiptStatus, fetchShippingReceiptCountsByChannel, fetchShippingReceiptCountsByStatus, getPendingReceiptsBeforeDate, cancelSaleTransaction, returnSaleTransaction } = useInventory();
 
     const [activeShippingTab, setActiveShippingTab] = useState<string | null>(null);
     const [activeSalesChannelTab, setActiveSalesChannelTab] = useState<string | null>(null);
@@ -197,9 +197,12 @@ export default function ReceiptPage() {
     
     const handleChangeStatus = async (receipt: ShippingReceipt, newStatus: string) => {
         try {
-            if ((newStatus === 'Dibatalkan' || newStatus === 'Return') && receipt.transactionId) {
+            if (newStatus === 'Dibatalkan' && receipt.transactionId) {
                 await cancelSaleTransaction(receipt.transactionId);
+            } else if (newStatus === 'Return' && receipt.transactionId) {
+                await returnSaleTransaction(receipt.transactionId);
             }
+
             await updateShippingReceiptStatus(receipt.id, newStatus);
             toast({ title: t.statusUpdateSuccess, description: t.statusUpdateSuccessDesc.replace('{status}', newStatus) });
             fetchReceipts();

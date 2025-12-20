@@ -42,6 +42,7 @@ import {
   fetchBulkImportHistory,
   deleteBulkImportHistory as deleteBulkImportHistoryDb,
   getPendingReceiptsBeforeDate as getPendingReceiptsBeforeDateDb,
+  returnSaleTransaction,
 } from '@/lib/inventory-service';
 
 
@@ -61,6 +62,7 @@ interface InventoryContextType {
   fetchSales: (channel: string, date: Date, page: number, limit: number) => Promise<{sales: Sale[], total: number}>;
   cancelSale: (saleId: string) => Promise<void>;
   cancelSaleTransaction: (transactionId: string) => Promise<void>;
+  returnSaleTransaction: (transactionId: string) => Promise<void>;
   revertSaleItem: (transactionId: string, sku: string) => Promise<void>;
   getProductBySku: (sku: string) => Promise<InventoryItem | null>;
   allSales: Sale[];
@@ -245,9 +247,14 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
     await fetchAllData();
   };
 
-  const cancelSaleTransaction = async (transactionId: string) => {
-    await revertSaleByTransaction(transactionId);
+  const _cancelSaleTransaction = async (transactionId: string) => {
+    await revertSaleByTransaction(transactionId, 'Cancelled');
     await fetchAllData();
+  }
+  
+  const _returnSaleTransaction = async (transactionId: string) => {
+      await revertSaleByTransaction(transactionId, 'Return');
+      await fetchAllData();
   }
   
   const _revertSaleItem = async (transactionId: string, sku: string) => {
@@ -332,7 +339,8 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
         recordSale,
         fetchSales,
         cancelSale,
-        cancelSaleTransaction,
+        cancelSaleTransaction: _cancelSaleTransaction,
+        returnSaleTransaction: _returnSaleTransaction,
         revertSaleItem: _revertSaleItem,
         getProductBySku,
         allSales,

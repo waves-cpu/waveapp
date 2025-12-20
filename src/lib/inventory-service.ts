@@ -122,7 +122,7 @@ export async function fetchShippingReceipts(options: {
         }
         if (date_range?.from) {
             whereClauses.push("date >= @from AND date <= @to");
-            params.from = date_range.from.toISOString();
+            params.from = startOfDay(date_range.from).toISOString();
             params.to = endOfDay(date_range.to!).toISOString();
         }
     }
@@ -971,24 +971,24 @@ export async function getSalesByDate(channel: string, date: Date, page: number, 
     return { sales: mappedSales, total };
 }
 
-export async function revertSale(saleId: string) {
+export async function revertSale(saleId: string, newStatus: 'Cancelled' | 'Return' = 'Cancelled') {
     const getSaleStmt = db.prepare('SELECT * FROM sales WHERE id = ?');
-    const updateSaleStatusStmt = db.prepare("UPDATE sales SET status = 'Cancelled' WHERE id = ?");
+    const updateSaleStatusStmt = db.prepare("UPDATE sales SET status = ? WHERE id = ?");
     
     db.transaction(() => {
         const sale = getSaleStmt.get(saleId) as Sale | undefined;
-        if (!sale || sale.status === 'Cancelled') {
+        if (!sale || sale.status === 'Cancelled' || sale.status === 'Return') {
             return;
         }
 
         const idToAdjust = sale.variantId ? sale.variantId.toString() : (sale.productId ? sale.productId.toString() : '');
         if (!idToAdjust) return;
 
-        const reason = `Cancelled Sale: ${sale.transactionId || `ID ${sale.id}`}`;
+        const reason = `${newStatus} Sale: ${sale.transactionId || `ID ${sale.id}`}`;
 
         adjustStock(idToAdjust, sale.quantity, reason);
         
-        updateSaleStatusStmt.run(saleId);
+        updateSaleStatusStmt.run(newStatus, saleId);
     })();
 }
 
@@ -1008,51 +1008,34 @@ export async function revertSaleItem(transactionId: string, sku: string) {
     const sale = getSaleStmt.get({ transactionId, sku }) as Sale | undefined;
 
     if (sale) {
-        revertSale(sale.id);
+        revertSale(sale.id, 'Return');
     } else {
-        // Attempt a looser search for older data that might not have a transactionId link
-        const fallbackSale = db.prepare(`
-            SELECT s.*
-            FROM sales s
-            LEFT JOIN variants v ON s.variantId = v.id
-            LEFT JOIN products p ON s.productId = p.id
-            WHERE (v.sku = @sku OR (s.variantId IS NULL AND p.sku = @sku))
-            AND s.status != 'Cancelled'
-            ORDER BY s.id DESC
-            LIMIT 1
-        `).get({ sku }) as Sale | undefined;
-
-        if (fallbackSale) {
-            revertSale(fallbackSale.id);
-        } else {
-            throw new Error('Sale item not found in transaction');
-        }
+        throw new Error('Sale item not found in transaction');
     }
 }
 
 
-export async function revertSaleByTransaction(transactionId: string) {
-    const getSalesStmt = db.prepare("SELECT * FROM sales WHERE transactionId = ? AND status != 'Cancelled'");
+export async function revertSaleByTransaction(transactionId: string, newStatus: 'Cancelled' | 'Return') {
+    const getSalesStmt = db.prepare("SELECT * FROM sales WHERE transactionId = ? AND status != 'Cancelled' AND status != 'Return'");
     const sales = getSalesStmt.all(transactionId) as Sale[];
 
     if (!sales || sales.length === 0) {
-        const getReceiptStmt = db.prepare('SELECT * FROM shipping_receipts WHERE awb = ?');
-        const receipt = getReceiptStmt.get(transactionId) as ShippingReceipt;
-        if (receipt) {
-            // If we found a receipt but no sales, it means the sale was likely never recorded.
-            // We can just mark the receipt as "Cancelled" or another appropriate status.
-            updateShippingReceiptStatus(receipt.id, 'Dibatalkan');
-            return;
-        }
-        // This throw will be caught by the calling function to provide a user-friendly toast
-        throw new Error('TRANSACTION_NOT_FOUND');
+        return;
     }
 
     db.transaction(() => {
         sales.forEach(sale => {
-            revertSale(sale.id);
+            revertSale(sale.id, newStatus);
         });
     })();
+}
+
+export async function cancelSaleTransaction(transactionId: string) {
+    await revertSaleByTransaction(transactionId, 'Cancelled');
+}
+
+export async function returnSaleTransaction(transactionId: string) {
+    await revertSaleByTransaction(transactionId, 'Return');
 }
 
 function adjustStockByReason(identifier: string, reason: string) {
@@ -1326,3 +1309,4 @@ async function updateShippingReceiptStatusByAwb(awb: string, status: string) {
 
 
     
+
