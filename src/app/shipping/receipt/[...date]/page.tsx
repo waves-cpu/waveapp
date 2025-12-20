@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
@@ -102,16 +101,12 @@ export default function ReceiptPage() {
     const currentDate = useMemo(() => parseDateFromParams(Array.isArray(params.date) ? params.date : undefined), [params.date]);
     
     const loadInitialData = useCallback(async () => {
-        if (!currentDate) return;
         setLoading(true);
         try {
             const { receipts } = await fetchShippingReceipts({
                 page: 1,
-                limit: 10000, // Fetch a large number to get all for the day
-                date_range: {
-                    from: currentDate,
-                    to: endOfDay(currentDate),
-                },
+                limit: 10000, // Fetch all
+                ...(currentDate && { date_range: { from: currentDate, to: endOfDay(currentDate) }})
             });
             setAllReceiptsForDate(receipts);
         } catch (error) {
@@ -337,7 +332,7 @@ export default function ReceiptPage() {
                                 variant={activeSalesChannelTab === null ? 'secondary' : 'ghost'}
                                 size="sm"
                                 onClick={() => setActiveSalesChannelTab(null)}
-                                className="shrink-0"
+                                className={cn("shrink-0", activeSalesChannelTab === null && "text-primary")}
                             >
                                 Semua Kanal
                                 <Badge variant={activeSalesChannelTab === null ? 'default' : 'secondary'} className="ml-2">
@@ -350,7 +345,7 @@ export default function ReceiptPage() {
                                     variant={activeSalesChannelTab === tab ? 'secondary' : 'ghost'}
                                     size="sm"
                                     onClick={() => setActiveSalesChannelTab(tab)}
-                                    className="shrink-0"
+                                    className={cn("shrink-0", activeSalesChannelTab === tab && "text-primary")}
                                 >
                                     {tab}
                                     <Badge variant={activeSalesChannelTab === tab ? 'default' : 'secondary'} className="ml-2">
@@ -365,7 +360,7 @@ export default function ReceiptPage() {
                             variant={activeShippingTab === null ? 'secondary' : 'ghost'}
                             size="sm"
                             onClick={() => setActiveShippingTab(null)}
-                            className="shrink-0"
+                            className={cn("shrink-0", activeShippingTab === null && "text-primary")}
                         >
                             Semua Jasa Kirim
                             <Badge variant={activeShippingTab === null ? 'default' : 'secondary'} className="ml-2">
@@ -378,7 +373,7 @@ export default function ReceiptPage() {
                                 variant={activeShippingTab === tab ? 'secondary' : 'ghost'}
                                 size="sm"
                                 onClick={() => setActiveShippingTab(tab)}
-                                className="shrink-0"
+                                className={cn("shrink-0", activeShippingTab === tab && "text-primary")}
                             >
                                 {tab}
                                 <Badge variant={activeShippingTab === tab ? 'default' : 'secondary'} className="ml-2">
@@ -394,7 +389,7 @@ export default function ReceiptPage() {
                                 variant={activeStatusFilter === status ? 'secondary' : 'ghost'}
                                 size="sm"
                                 onClick={() => setActiveStatusFilter(status)}
-                                className="shrink-0"
+                                className={cn("shrink-0", activeStatusFilter === status && "text-primary")}
                             >
                                 {status}
                                 <Badge variant={activeStatusFilter === status ? 'default' : 'secondary'} className="ml-2">
@@ -519,9 +514,3 @@ export default function ReceiptPage() {
         </AppLayout>
     );
 }
-
-
-
-    
-
-    
