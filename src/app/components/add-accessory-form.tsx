@@ -51,7 +51,7 @@ export function AddAccessoryForm() {
     resolver: zodResolver(formSchema),
     defaultValues: {
         name: '',
-        category: undefined,
+        category: accessoryCategories[0],
         sku: '',
         price: undefined,
         stock: undefined,
