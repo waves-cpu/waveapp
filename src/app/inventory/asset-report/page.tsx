@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useMemo, useState } from 'react';
@@ -13,6 +14,7 @@ import { subDays, parseISO, isAfter } from 'date-fns';
 import { Flame, TrendingUp, Anchor, Activity, DollarSign, Package } from 'lucide-react';
 import Image from 'next/image';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 type ProductPerformance = {
     id: string;
@@ -37,7 +39,6 @@ const BEST_SELLER_THRESHOLD = 50;
 
 function PerformanceTable({ title, products, icon }: { title: string; products: ProductPerformance[]; icon: React.ReactNode }) {
     const totalAssetValue = useMemo(() => products.reduce((sum, p) => sum + p.totalAssetValue, 0), [products]);
-    const totalUnitsSold = useMemo(() => products.reduce((sum, p) => sum + p.unitsSold, 0), [products]);
 
     return (
         <Card>
@@ -54,7 +55,7 @@ function PerformanceTable({ title, products, icon }: { title: string; products: 
                         <TableRow>
                             <TableHead className="w-[50%]">Produk</TableHead>
                             <TableHead className="text-center">Stok Saat Ini</TableHead>
-                            <TableHead className="text-center">Unit Terjual (30 Hari)</TableHead>
+                            <TableHead className="text-center">Unit Terjual</TableHead>
                             <TableHead className="text-right">Nilai Aset</TableHead>
                         </TableRow>
                     </TableHeader>
@@ -97,14 +98,16 @@ export default function AssetReportPage() {
     const { language } = useLanguage();
     const t = translations[language];
     const { items, allSales, loading } = useInventory();
+    const [daysFilter, setDaysFilter] = useState<number>(30);
 
     const productPerformanceData = useMemo(() => {
         if (loading) return null;
 
-        const salesLast30Days = allSales.filter(sale => isAfter(parseISO(sale.saleDate), subDays(new Date(), 30)));
+        const dateFrom = subDays(new Date(), daysFilter);
+        const salesInDateRange = allSales.filter(sale => isAfter(parseISO(sale.saleDate), dateFrom));
         
         const salesBySku = new Map<string, number>();
-        salesLast30Days.forEach(sale => {
+        salesInDateRange.forEach(sale => {
             if (sale.sku && !['Cancelled', 'Return', 'Dibatalkan'].includes(sale.status || '')) {
                 salesBySku.set(sale.sku, (salesBySku.get(sale.sku) || 0) + sale.quantity);
             }
@@ -112,45 +115,48 @@ export default function AssetReportPage() {
 
         const allProducts: ProductPerformance[] = items
             .filter(item => !item.isArchived)
-            .flatMap(item => {
+            .map(item => {
+                let totalStock = 0;
+                let totalAssetValue = 0;
+                let unitsSold = 0;
+                
                 if (item.variants && item.variants.length > 0) {
-                    return item.variants.map(variant => ({
-                        id: variant.id,
-                        name: `${item.name} - ${variant.name}`,
-                        sku: variant.sku,
-                        category: item.category,
-                        imageUrl: item.imageUrl,
-                        totalStock: variant.stock,
-                        totalAssetValue: variant.stock * (variant.costPrice || 0),
-                        unitsSold: variant.sku ? (salesBySku.get(variant.sku) || 0) : 0,
-                    }));
+                    totalStock = item.variants.reduce((sum, v) => sum + v.stock, 0);
+                    totalAssetValue = item.variants.reduce((sum, v) => sum + v.stock * (v.costPrice || 0), 0);
+                    unitsSold = item.variants.reduce((sum, v) => sum + (v.sku ? salesBySku.get(v.sku) || 0 : 0), 0);
+                } else {
+                    totalStock = item.stock || 0;
+                    totalAssetValue = (item.stock || 0) * (item.costPrice || 0);
+                    unitsSold = item.sku ? salesBySku.get(item.sku) || 0 : 0;
                 }
+                
                 return {
                     id: item.id,
                     name: item.name,
                     sku: item.sku,
                     category: item.category,
                     imageUrl: item.imageUrl,
-                    totalStock: item.stock || 0,
-                    totalAssetValue: (item.stock || 0) * (item.costPrice || 0),
-                    unitsSold: item.sku ? (salesBySku.get(item.sku) || 0) : 0,
+                    totalStock,
+                    totalAssetValue,
+                    unitsSold,
                 };
             });
 
-        const bestSellers = allProducts.filter(p => p.unitsSold > BEST_SELLER_THRESHOLD).sort((a,b) => b.unitsSold - a.unitsSold);
-        const normalMovers = allProducts.filter(p => p.unitsSold > 0 && p.unitsSold <= BEST_SELLER_THRESHOLD).sort((a,b) => b.unitsSold - a.unitsSold);
+        const threshold = BEST_SELLER_THRESHOLD * (daysFilter / 30);
+        
+        const bestSellers = allProducts.filter(p => p.unitsSold > threshold).sort((a,b) => b.unitsSold - a.unitsSold);
+        const normalMovers = allProducts.filter(p => p.unitsSold > 0 && p.unitsSold <= threshold).sort((a,b) => b.unitsSold - a.unitsSold);
         const slowMovers = allProducts.filter(p => p.unitsSold === 0).sort((a,b) => b.totalAssetValue - a.totalAssetValue);
 
         return { bestSellers, normalMovers, slowMovers };
 
-    }, [items, allSales, loading]);
+    }, [items, allSales, loading, daysFilter]);
 
     if (loading || !productPerformanceData) {
         return (
              <AppLayout>
                 <main className="flex-1 p-4 md:p-10 space-y-6">
-                     <div className="flex items-center gap-4 mb-6">
-                        <SidebarTrigger className="md:hidden" />
+                     <div className="flex items-center justify-between mb-6">
                         <h1 className="text-lg font-bold">Laporan Aset Produk</h1>
                     </div>
                     <Skeleton className="h-64 w-full" />
@@ -166,24 +172,37 @@ export default function AssetReportPage() {
     return (
         <AppLayout>
             <main className="flex-1 p-4 md:p-10">
-                <div className="flex items-center gap-4 mb-6">
-                    <SidebarTrigger className="md:hidden" />
-                    <h1 className="text-lg font-bold">Laporan Aset Produk</h1>
+                <div className="flex items-center justify-between gap-4 mb-6">
+                    <div className="flex items-center gap-4">
+                        <SidebarTrigger className="md:hidden" />
+                        <h1 className="text-lg font-bold">Laporan Aset Produk</h1>
+                    </div>
+                     <Select value={daysFilter.toString()} onValueChange={(value) => setDaysFilter(Number(value))}>
+                        <SelectTrigger className="w-[180px]">
+                            <SelectValue placeholder="Pilih Periode" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="7">7 Hari Terakhir</SelectItem>
+                            <SelectItem value="30">30 Hari Terakhir</SelectItem>
+                            <SelectItem value="90">90 Hari Terakhir</SelectItem>
+                        </SelectContent>
+                    </Select>
                 </div>
+
 
                 <div className="space-y-6">
                     <PerformanceTable 
-                        title="Best Seller ( >50 Terjual / 30 Hari )" 
+                        title={`Best Seller (> ${Math.round(BEST_SELLER_THRESHOLD * (daysFilter/30))} Terjual)`} 
                         products={bestSellers} 
                         icon={<Flame className="h-6 w-6 text-red-500"/>} 
                     />
                     <PerformanceTable 
-                        title="Penjualan Normal ( 1-50 Terjual / 30 Hari )" 
+                        title="Penjualan Normal" 
                         products={normalMovers} 
                         icon={<TrendingUp className="h-6 w-6 text-green-500"/>}
                     />
                     <PerformanceTable 
-                        title="Slow Moving ( Tidak Terjual / 30 Hari )" 
+                        title="Slow Moving (Tidak Terjual)" 
                         products={slowMovers}
                         icon={<Anchor className="h-6 w-6 text-blue-500"/>} 
                     />
