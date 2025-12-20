@@ -40,7 +40,7 @@ export type CartItem = {
 const LOCAL_STORAGE_KEY = 'posCart';
 
 export function PosCart() {
-    const { recordSale, items: inventoryItems, accessories, loading: inventoryLoading, pendingTransaction, clearPendingTransaction } = useInventory();
+    const { recordSale, items: inventoryItems, accessories, loading: inventoryLoading, pendingTransaction, clearPendingTransaction, cancelSaleTransaction } = useInventory();
     const { language } = useLanguage();
     const { playSuccessSound, playErrorSound } = useScanSounds();
     const t = translations[language];
@@ -52,6 +52,7 @@ export function PosCart() {
     const [voucherToPrint, setVoucherToPrint] = useState<VoucherData | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
     const debouncedSearchTerm = useDebounce(searchTerm, 300);
+    const [pendingTransactionId, setPendingTransactionId] = useState<string | null>(null);
 
     const searchSuggestions = useMemo((): SearchableItem[] => {
         if (debouncedSearchTerm.length < 2) return [];
@@ -91,6 +92,7 @@ export function PosCart() {
                     maxStock: 999 // Placeholder, should be updated if possible
                 }));
                 setCart(loadedCart);
+                setPendingTransactionId(pendingTransaction[0]?.transactionId || null);
                 clearPendingTransaction();
             } else {
                 const savedCart = localStorage.getItem(LOCAL_STORAGE_KEY);
@@ -274,13 +276,21 @@ export function PosCart() {
 
     const clearCart = () => {
         setCart([]);
+        setPendingTransactionId(null);
         localStorage.removeItem(LOCAL_STORAGE_KEY);
     };
 
     const handleSaleComplete = async (paymentMethod: string, receiptData: ReceiptData, status: 'Completed' | 'Pending' = 'Completed') => {
         try {
             const isAccessoryOnly = cart.every(item => item.type === 'accessory');
-            const { discount, subtotal, transactionId } = receiptData;
+             // If we're updating a pending transaction, cancel the old one first
+            if (pendingTransactionId) {
+                await cancelSaleTransaction(pendingTransactionId);
+            }
+            
+            const transactionId = pendingTransactionId || `trans-${Date.now()}`;
+            
+            const { discount, subtotal } = receiptData;
             const discountRatio = subtotal > 0 ? discount / subtotal : 0;
 
             const salePromises = cart.map(item => {
@@ -305,7 +315,7 @@ export function PosCart() {
                     });
                     setVoucherToPrint({
                         items: cart,
-                        transactionId: receiptData.transactionId,
+                        transactionId: transactionId,
                         date: new Date(),
                     });
                 } else {
@@ -313,7 +323,7 @@ export function PosCart() {
                         title: "Penjualan Berhasil",
                         description: "Transaksi telah berhasil dicatat."
                     });
-                    setReceiptToPrint(receiptData);
+                    setReceiptToPrint({ ...receiptData, transactionId });
                 }
             } else { // Pending
                 toast({

@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
@@ -114,10 +113,12 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
   const [pendingTransaction, setPendingTransaction] = useState<Sale[] | null>(null);
 
   const loadPendingTransaction = (sales: Sale[]) => {
+      sessionStorage.setItem('pendingTransaction', JSON.stringify(sales));
       setPendingTransaction(sales);
   };
   
   const clearPendingTransaction = () => {
+      sessionStorage.removeItem('pendingTransaction');
       setPendingTransaction(null);
   };
 
@@ -145,6 +146,10 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     fetchAllData();
+    const storedPending = sessionStorage.getItem('pendingTransaction');
+    if (storedPending) {
+        setPendingTransaction(JSON.parse(storedPending));
+    }
   }, [fetchAllData]);
 
   
@@ -306,7 +311,8 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
       if (sale.accessoryId) affectedAccessoryIds.add(sale.accessoryId.toString());
     });
 
-    setAllSales(prev => prev.filter(s => s.transactionId !== transactionId));
+    // Instead of filtering, we just update the status locally for immediate feedback
+    setAllSales(prev => prev.map(s => s.transactionId === transactionId ? { ...s, status: 'Cancelled' } : s));
     
     for (const id of affectedItemIds) {
         const updatedItem = await fetchSingleItem(id);
