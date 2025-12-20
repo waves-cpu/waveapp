@@ -89,7 +89,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           </SidebarHeader>
           <SidebarContent>
               <SidebarMenu>
-                 <Collapsible>
+                 <Collapsible defaultOpen={true}>
                     <SidebarMenuItem>
                         <CollapsibleTrigger asChild>
                             <SidebarMenuButton>
@@ -142,7 +142,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                     </CollapsibleContent>
                 </Collapsible>
                   
-                <Collapsible>
+                <Collapsible defaultOpen={true}>
                     <SidebarMenuItem>
                         <CollapsibleTrigger asChild>
                             <SidebarMenuButton>
@@ -222,7 +222,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                     </CollapsibleContent>
                 </Collapsible>
 
-                <Collapsible>
+                <Collapsible defaultOpen={true}>
                     <SidebarMenuItem>
                         <CollapsibleTrigger asChild>
                             <SidebarMenuButton>
@@ -254,7 +254,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                     </CollapsibleContent>
                 </Collapsible>
                   
-                <Collapsible>
+                <Collapsible defaultOpen={true}>
                     <SidebarMenuItem>
                         <CollapsibleTrigger asChild>
                               <SidebarMenuButton>
