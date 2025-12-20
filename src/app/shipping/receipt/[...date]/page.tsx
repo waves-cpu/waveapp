@@ -12,7 +12,7 @@ import { Calendar as CalendarIcon, FileDown, Trash2, Truck, ScanLine, Search, Se
 import { Badge } from '@/components/ui/badge';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-import { format, parse, isValid, endOfDay } from 'date-fns';
+import { format, parse, isValid, endOfDay, startOfDay, parseISO } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { useInventory } from '@/hooks/use-inventory';
 import type { ShippingReceipt } from '@/types';
@@ -75,8 +75,7 @@ function parseDateFromParams(dateArray: string[] | undefined): Date | null {
 
 
 export default function ReceiptPage() {
-    const [receipts, setReceipts] = useState<ShippingReceipt[]>([]);
-    const [totalReceipts, setTotalReceipts] = useState(0);
+    const [allReceiptsForDate, setAllReceiptsForDate] = useState<ShippingReceipt[]>([]);
     const [loading, setLoading] = useState(true);
     const { toast } = useToast();
     const { language } = useLanguage();
@@ -85,7 +84,7 @@ export default function ReceiptPage() {
     const router = useRouter();
     const params = useParams();
     
-    const { fetchShippingReceipts, deleteShippingReceipt, updateShippingReceiptsStatus, updateShippingReceiptStatus, fetchShippingReceiptCounts, getPendingReceiptsBeforeDate, cancelSaleTransaction, returnSaleTransaction } = useInventory();
+    const { fetchShippingReceipts, deleteShippingReceipt, updateShippingReceiptsStatus, updateShippingReceiptStatus, getPendingReceiptsBeforeDate, cancelSaleTransaction, returnSaleTransaction } = useInventory();
 
     const [activeShippingTab, setActiveShippingTab] = useState<string | null>(null);
     const [activeSalesChannelTab, setActiveSalesChannelTab] = useState<string | null>(null);
@@ -96,61 +95,32 @@ export default function ReceiptPage() {
     const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
     const [isProcessing, setIsProcessing] = useState(false);
     
-    const [channelCounts, setChannelCounts] = useState<Record<string, number>>({});
-    const [salesChannelCounts, setSalesChannelCounts] = useState<Record<string, number>>({});
-    const [statusCounts, setStatusCounts] = useState<Record<string, number>>({});
-
     const [activeStatusFilter, setActiveStatusFilter] = useState<string>('Semua Status');
 
     const [pendingOldReceiptsCount, setPendingOldReceiptsCount] = useState(0);
 
     const currentDate = useMemo(() => parseDateFromParams(Array.isArray(params.date) ? params.date : undefined), [params.date]);
     
-    const fetchAllData = useCallback(async () => {
+    const loadInitialData = useCallback(async () => {
+        if (!currentDate) return;
         setLoading(true);
         try {
-            const searchOptions: any = {
-                page: currentPage,
-                limit: itemsPerPage,
-                awb: searchTerm || undefined,
-                salesChannel: activeSalesChannelTab || undefined,
-                channel: activeShippingTab || undefined,
-            };
-
-            if (currentDate && !searchTerm) {
-                searchOptions.date_range = {
+            const { receipts } = await fetchShippingReceipts({
+                page: 1,
+                limit: 10000, // Fetch a large number to get all for the day
+                date_range: {
                     from: currentDate,
                     to: endOfDay(currentDate),
-                };
-            }
-            
-            if (activeStatusFilter !== 'Semua Status') {
-                searchOptions.status = [activeStatusFilter];
-            }
-
-            const [{ receipts, total }, counts] = await Promise.all([
-                fetchShippingReceipts(searchOptions),
-                fetchShippingReceiptCounts({
-                    dateString: currentDate ? format(currentDate, 'yyyy-MM-dd') : undefined,
-                    salesChannel: activeSalesChannelTab || undefined,
-                    shippingChannel: activeShippingTab || undefined,
-                    status: activeStatusFilter !== 'Semua Status' ? activeStatusFilter : undefined,
-                })
-            ]);
-            
-            setReceipts(receipts);
-            setTotalReceipts(total);
-            setChannelCounts(counts.shippingChannels);
-            setSalesChannelCounts(counts.salesChannels);
-            setStatusCounts(counts.statuses);
-
+                },
+            });
+            setAllReceiptsForDate(receipts);
         } catch (error) {
             toast({ variant: 'destructive', title: t.fetchError });
         } finally {
             setLoading(false);
         }
-    }, [currentPage, itemsPerPage, activeShippingTab, activeSalesChannelTab, currentDate, searchTerm, fetchShippingReceipts, fetchShippingReceiptCounts, toast, t.fetchError, activeStatusFilter]);
-
+    }, [currentDate, fetchShippingReceipts, t.fetchError, toast]);
+    
     const checkOldPendingReceipts = useCallback(async () => {
         if (!currentDate) return;
         try {
@@ -161,18 +131,57 @@ export default function ReceiptPage() {
     }, [currentDate, getPendingReceiptsBeforeDate]);
 
     useEffect(() => {
-        fetchAllData();
+        loadInitialData();
         if(currentDate) checkOldPendingReceipts();
-    }, [fetchAllData, checkOldPendingReceipts, currentDate]);
+    }, [loadInitialData, checkOldPendingReceipts, currentDate]);
 
     useEffect(() => {
         setCurrentPage(1);
     }, [activeShippingTab, activeSalesChannelTab, searchTerm, activeStatusFilter]);
     
-    // Clear selection when filters change
     useEffect(() => {
         setSelectedIds(new Set());
     }, [activeShippingTab, activeSalesChannelTab, currentDate, searchTerm, currentPage, activeStatusFilter]);
+
+    const filteredReceipts = useMemo(() => {
+        return allReceiptsForDate.filter(receipt => {
+            const salesChannelMatch = !activeSalesChannelTab || receipt.salesChannel === activeSalesChannelTab;
+            const shippingChannelMatch = !activeShippingTab || receipt.channel === activeShippingTab;
+            const statusMatch = activeStatusFilter === 'Semua Status' || receipt.status === activeStatusFilter;
+            const searchMatch = !searchTerm || receipt.awb.toLowerCase().includes(searchTerm.toLowerCase());
+            return salesChannelMatch && shippingChannelMatch && statusMatch && searchMatch;
+        });
+    }, [allReceiptsForDate, activeSalesChannelTab, activeShippingTab, activeStatusFilter, searchTerm]);
+
+    const paginatedReceipts = useMemo(() => {
+        const startIndex = (currentPage - 1) * itemsPerPage;
+        return filteredReceipts.slice(startIndex, startIndex + itemsPerPage);
+    }, [filteredReceipts, currentPage, itemsPerPage]);
+
+    const { salesChannelCounts, shippingChannelCounts, statusCounts } = useMemo(() => {
+        const sc: Record<string, number> = {};
+        const shc: Record<string, number> = {};
+        const st: Record<string, number> = { 'Semua Status': 0 };
+        STATUS_OPTIONS.forEach(s => st[s] = 0);
+
+        allReceiptsForDate.forEach(r => {
+            // Count for sales channels, filtered by active shipping and status
+            if ((!activeShippingTab || r.channel === activeShippingTab) && (activeStatusFilter === 'Semua Status' || r.status === activeStatusFilter)) {
+                if (r.salesChannel) sc[r.salesChannel] = (sc[r.salesChannel] || 0) + 1;
+            }
+            // Count for shipping channels, filtered by active sales and status
+            if ((!activeSalesChannelTab || r.salesChannel === activeSalesChannelTab) && (activeStatusFilter === 'Semua Status' || r.status === activeStatusFilter)) {
+                shc[r.channel] = (shc[r.channel] || 0) + 1;
+            }
+            // Count for statuses, filtered by active sales and shipping
+            if ((!activeSalesChannelTab || r.salesChannel === activeSalesChannelTab) && (!activeShippingTab || r.channel === activeShippingTab)) {
+                st[r.status] = (st[r.status] || 0) + 1;
+                st['Semua Status']++;
+            }
+        });
+        return { salesChannelCounts: sc, shippingChannelCounts: shc, statusCounts: st };
+    }, [allReceiptsForDate, activeSalesChannelTab, activeShippingTab, activeStatusFilter]);
+
 
     const handleDelete = async (receiptToDelete: ShippingReceipt) => {
         if (!receiptToDelete) return;
@@ -182,7 +191,7 @@ export default function ReceiptPage() {
             }
             await deleteShippingReceipt(receiptToDelete.id);
             toast({ title: t.deleteSuccess, description: 'Resi dihapus dan stok telah dikembalikan.' });
-            fetchAllData();
+            loadInitialData(); // Refetch data for the day
         } catch (error) {
             toast({ variant: 'destructive', title: t.deleteError, description: 'Gagal menghapus resi dan mengembalikan stok.' });
         }
@@ -198,7 +207,7 @@ export default function ReceiptPage() {
 
             await updateShippingReceiptStatus(receipt.id, newStatus);
             toast({ title: t.statusUpdateSuccess, description: t.statusUpdateSuccessDesc.replace('{status}', newStatus) });
-            fetchAllData();
+            loadInitialData();
         } catch (error) {
             toast({ variant: 'destructive', title: t.statusUpdateError, description: t.statusUpdateErrorDesc });
         }
@@ -211,7 +220,7 @@ export default function ReceiptPage() {
             await updateShippingReceiptsStatus(Array.from(selectedIds), 'Dikirim');
             toast({ title: t.bulkProcessSuccess, description: t.bulkProcessSuccessDesc.replace('{count}', selectedIds.size.toString()) });
             setSelectedIds(new Set());
-            fetchAllData();
+            loadInitialData();
         } catch (error) {
             toast({ variant: 'destructive', title: t.bulkProcessError, description: t.bulkProcessErrorDesc });
         } finally {
@@ -231,7 +240,7 @@ export default function ReceiptPage() {
     
     const handleSelectAll = (checked: boolean) => {
         if (checked) {
-            const processableIds = receipts.filter(r => r.status === 'Perlu Diproses').map(r => r.id);
+            const processableIds = paginatedReceipts.filter(r => r.status === 'Perlu Diproses').map(r => r.id);
             setSelectedIds(new Set(processableIds));
         } else {
             setSelectedIds(new Set());
@@ -253,8 +262,8 @@ export default function ReceiptPage() {
         setActiveStatusFilter('Perlu Diproses');
     };
 
-    const totalPages = Math.ceil(totalReceipts / itemsPerPage);
-    const isAllSelected = receipts.length > 0 && receipts.filter(r => r.status === 'Perlu Diproses').length > 0 && receipts.filter(r => r.status === 'Perlu Diproses').every(r => selectedIds.has(r.id));
+    const totalPages = Math.ceil(filteredReceipts.length / itemsPerPage);
+    const isAllSelected = paginatedReceipts.length > 0 && paginatedReceipts.filter(r => r.status === 'Perlu Diproses').length > 0 && paginatedReceipts.filter(r => r.status === 'Perlu Diproses').every(r => selectedIds.has(r.id));
     const finalStatuses = ['Selesai', 'Return', 'Dibatalkan'];
 
     return (
@@ -360,7 +369,7 @@ export default function ReceiptPage() {
                         >
                             Semua Jasa Kirim
                             <Badge variant={activeShippingTab === null ? 'default' : 'secondary'} className="ml-2">
-                                 {Object.values(channelCounts).reduce((a, b) => a + b, 0)}
+                                 {Object.values(shippingChannelCounts).reduce((a, b) => a + b, 0)}
                             </Badge>
                         </Button>
                         {(['SPX', 'J&T', 'JNE', 'INSTANT', 'CARGO'] as ShippingProvider[]).map(tab => (
@@ -373,7 +382,7 @@ export default function ReceiptPage() {
                             >
                                 {tab}
                                 <Badge variant={activeShippingTab === tab ? 'default' : 'secondary'} className="ml-2">
-                                    {channelCounts[tab] || 0}
+                                    {shippingChannelCounts[tab] || 0}
                                 </Badge>
                             </Button>
                         ))}
@@ -389,9 +398,7 @@ export default function ReceiptPage() {
                             >
                                 {status}
                                 <Badge variant={activeStatusFilter === status ? 'default' : 'secondary'} className="ml-2">
-                                    {status === 'Semua Status'
-                                        ? Object.values(statusCounts).reduce((a, b) => a + b, 0)
-                                        : statusCounts[status] || 0}
+                                    {statusCounts[status] || 0}
                                 </Badge>
                             </Button>
                         ))}
@@ -407,7 +414,7 @@ export default function ReceiptPage() {
                                                 checked={isAllSelected}
                                                 onCheckedChange={handleSelectAll}
                                                 aria-label={t.selectAll}
-                                                disabled={receipts.filter(r => r.status === 'Perlu Diproses').length === 0}
+                                                disabled={paginatedReceipts.filter(r => r.status === 'Perlu Diproses').length === 0}
                                             />
                                         </TableHead>
                                         <TableHead>{t.table.awb}</TableHead>
@@ -421,7 +428,7 @@ export default function ReceiptPage() {
                                 <TableBody>
                                     {loading ? (
                                         <TableRow><TableCell colSpan={7} className="h-48 text-center">{t.loading}</TableCell></TableRow>
-                                    ) : receipts.length > 0 ? receipts.map(item => (
+                                    ) : paginatedReceipts.length > 0 ? paginatedReceipts.map(item => (
                                         <TableRow key={item.id} data-state={selectedIds.has(item.id) && 'selected'}>
                                             <TableCell>
                                                 <Checkbox
@@ -514,5 +521,7 @@ export default function ReceiptPage() {
 }
 
 
+
+    
 
     
