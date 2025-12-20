@@ -62,7 +62,7 @@ function DashboardContent() {
                         <DropdownMenuItem asChild>
                             <Link href="/finance/settings">
                                 <FilePenLine className="mr-2 h-4 w-4" />
-                                Edit Harga Massal
+                                Edit Produk Massal
                             </Link>
                         </DropdownMenuItem>
                     </DropdownMenuContent>
