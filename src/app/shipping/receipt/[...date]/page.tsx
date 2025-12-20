@@ -197,7 +197,7 @@ export default function ReceiptPage() {
     
     const handleChangeStatus = async (receipt: ShippingReceipt, newStatus: string) => {
         try {
-            if (newStatus === 'Dibatalkan' && receipt.transactionId) {
+            if ((newStatus === 'Dibatalkan' || newStatus === 'Return') && receipt.transactionId) {
                 await cancelSaleTransaction(receipt.transactionId);
             }
             await updateShippingReceiptStatus(receipt.id, newStatus);
@@ -512,4 +512,3 @@ export default function ReceiptPage() {
         </AppLayout>
     );
 }
-
