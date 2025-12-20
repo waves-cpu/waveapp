@@ -528,6 +528,55 @@ export async function bulkAddProducts(data: any[]): Promise<{ addedProducts: {sk
     return { addedProducts, skippedProducts };
 }
 
+export async function bulkUpdateProducts(data: any[]): Promise<{ updatedCount: number, notFoundCount: number }> {
+    const getProductStmt = db.prepare('SELECT id FROM products WHERE sku = ?');
+    const getVariantStmt = db.prepare('SELECT id FROM variants WHERE sku = ?');
+    const updateProductStmt = db.prepare('UPDATE products SET name=@name, category=@category, imageUrl=@imageUrl, price=@price, stock=@stock, costPrice=@costPrice WHERE sku = @sku');
+    const updateVariantStmt = db.prepare('UPDATE variants SET name=@name, price=@price, stock=@stock, costPrice=@costPrice WHERE sku = @sku');
+    
+    let updatedCount = 0;
+    let notFoundCount = 0;
+
+    db.transaction(() => {
+        data.forEach(row => {
+            if (row.variant_sku) { // It's a variant
+                const variant = getVariantStmt.get(row.variant_sku) as { id: number } | undefined;
+                if (variant) {
+                    updateVariantStmt.run({
+                        sku: row.variant_sku,
+                        name: row.variant_name,
+                        price: row.price,
+                        stock: row.stock,
+                        costPrice: row.cost_price
+                    });
+                    updatedCount++;
+                } else {
+                    notFoundCount++;
+                }
+            } else if (row.parent_sku) { // It's a simple product
+                const product = getProductStmt.get(row.parent_sku) as { id: number } | undefined;
+                if (product) {
+                    updateProductStmt.run({
+                        sku: row.parent_sku,
+                        name: row.product_name,
+                        category: row.category,
+                        imageUrl: row.image_url,
+                        price: row.price,
+                        stock: row.stock,
+                        costPrice: row.cost_price
+                    });
+                    updatedCount++;
+                } else {
+                    notFoundCount++;
+                }
+            }
+        });
+    })();
+
+    return { updatedCount, notFoundCount };
+}
+
+
 
 export async function editProduct(itemId: string, itemData: any) {
     const updateProductStmt = db.prepare(`
@@ -1059,7 +1108,27 @@ export async function revertSaleByTransaction(transactionId: string, newStatus: 
 }
 
 export async function cancelSaleTransaction(transactionId: string) {
-    return await revertSaleByTransaction(transactionId, 'Cancelled');
+    // This will now fully delete the sales records
+    const salesToDelete = db.prepare("SELECT * FROM sales WHERE transactionId = ?").all(transactionId) as Sale[];
+    
+    const transaction = db.transaction(() => {
+        salesToDelete.forEach(sale => {
+             const reason = `Cancelled Sale: ${sale.transactionId || `ID ${sale.id}`}`;
+            if (sale.status !== 'Cancelled' && sale.status !== 'Return Selesai') {
+                if (sale.variantId) {
+                    adjustStock(sale.variantId.toString(), sale.quantity, reason);
+                } else if (sale.productId) {
+                    adjustStock(sale.productId.toString(), sale.quantity, reason);
+                } else if (sale.accessoryId) {
+                    adjustAccessoryStock(sale.accessoryId.toString(), sale.quantity, reason);
+                }
+            }
+            db.prepare("DELETE FROM sales WHERE id = ?").run(sale.id);
+        });
+    });
+
+    transaction();
+    return salesToDelete;
 }
 
 export async function returnSaleTransaction(transactionId: string) {
@@ -1329,4 +1398,5 @@ async function updateShippingReceiptStatusByAwb(awb: string, status: string) {
     stmt.run(status, awb);
 }
     
+
 

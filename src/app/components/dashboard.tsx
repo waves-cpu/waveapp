@@ -16,6 +16,7 @@ import { translations } from '@/types/language';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import Link from 'next/link';
 import { BulkAddSheet } from './bulk-add-sheet';
+import { BulkEditSheet } from './bulk-edit-sheet';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -30,6 +31,7 @@ function DashboardContent() {
   const [isUpdateStockOpen, setUpdateStockOpen] = useState(false);
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
   const [isBulkAddOpen, setBulkAddOpen] = useState(false);
+  const [isBulkEditOpen, setBulkEditOpen] = useState(false);
 
   const handleUpdateStock = (itemId: string) => {
     setSelectedItemId(itemId);
@@ -59,11 +61,9 @@ function DashboardContent() {
                              <FileUp className="mr-2 h-4 w-4" />
                              Impor Produk
                         </DropdownMenuItem>
-                        <DropdownMenuItem asChild>
-                            <Link href="/finance/settings">
-                                <FilePenLine className="mr-2 h-4 w-4" />
-                                Edit Produk Massal
-                            </Link>
+                        <DropdownMenuItem onClick={() => setBulkEditOpen(true)}>
+                            <FilePenLine className="mr-2 h-4 w-4" />
+                            Edit Produk Massal
                         </DropdownMenuItem>
                     </DropdownMenuContent>
                 </DropdownMenu>
@@ -91,6 +91,10 @@ function DashboardContent() {
       <BulkAddSheet
         open={isBulkAddOpen}
         onOpenChange={setBulkAddOpen}
+      />
+      <BulkEditSheet
+        open={isBulkEditOpen}
+        onOpenChange={setBulkEditOpen}
       />
     </>
   );

@@ -8,6 +8,7 @@ import {
   fetchInventoryData,
   addProduct,
   bulkAddProducts as bulkAddProductsDb,
+  bulkUpdateProducts as bulkUpdateProductsDb,
   editProduct,
   adjustStock,
   editVariantsBulk,
@@ -51,6 +52,7 @@ interface InventoryContextType {
   items: InventoryItem[];
   addItem: (item: any) => Promise<void>;
   bulkAddProducts: (products: any[], fileName: string) => Promise<BulkImportHistory>;
+  bulkUpdateProducts: (products: any[]) => Promise<{ updatedCount: number; notFoundCount: number }>;
   updateItem: (itemId: string, itemData: any) => Promise<void>;
   updateStock: (itemId: string, change: number, reason: string) => Promise<void>;
   getItem: (itemId: string) => InventoryItem | undefined;
@@ -206,6 +208,12 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
         await fetchAllData();
         throw error;
     }
+  };
+  
+  const bulkUpdateProducts = async (products: any[]): Promise<{ updatedCount: number; notFoundCount: number }> => {
+    const result = await bulkUpdateProductsDb(products);
+    await fetchAllData();
+    return result;
   };
 
   const updateItem = async (itemId: string, itemData: any) => {
@@ -432,6 +440,7 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
         items, 
         addItem,
         bulkAddProducts,
+        bulkUpdateProducts,
         updateItem, 
         bulkUpdateVariants, 
         updateStock, 
@@ -488,4 +497,3 @@ export const useInventory = () => {
   }
   return context;
 };
-
