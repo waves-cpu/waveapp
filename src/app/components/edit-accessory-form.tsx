@@ -66,7 +66,7 @@ export function EditAccessoryForm({ existingItem }: EditAccessoryFormProps) {
     return {
         id: existingItem.id,
         name: existingItem.name,
-        category: existingItem.category || 'Aksesoris',
+        category: 'Aksesoris',
         sku: existingItem.sku || '',
         unit: existingItem.unit || 'Pcs',
         quantityPerUnit: existingItem.quantityPerUnit ?? undefined,
@@ -137,20 +137,9 @@ export function EditAccessoryForm({ existingItem }: EditAccessoryFormProps) {
                         render={({ field }) => (
                         <FormItem>
                             <FormLabel>Kategori</FormLabel>
-                            <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value}>
-                                <FormControl>
-                                    <SelectTrigger>
-                                    <SelectValue placeholder="Pilih Kategori" />
-                                    </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                    {accessoryCategories.map((category) => (
-                                    <SelectItem key={category} value={category}>
-                                        {category}
-                                    </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
+                             <FormControl>
+                                <Input {...field} disabled />
+                            </FormControl>
                             <FormMessage />
                         </FormItem>
                         )}

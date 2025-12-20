@@ -60,7 +60,7 @@ export function AddAccessoryForm() {
     resolver: zodResolver(formSchema),
     defaultValues: {
         name: '',
-        category: 'Hangtag',
+        category: 'Aksesoris',
         sku: '',
         unit: 'Pcs',
         quantityPerUnit: undefined,
@@ -117,20 +117,9 @@ export function AddAccessoryForm() {
                         render={({ field }) => (
                         <FormItem>
                             <FormLabel>Kategori</FormLabel>
-                            <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                <FormControl>
-                                    <SelectTrigger>
-                                    <SelectValue placeholder="Pilih Kategori" />
-                                    </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                    {accessoryCategories.map((category) => (
-                                    <SelectItem key={category} value={category}>
-                                        {category}
-                                    </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
+                            <FormControl>
+                                <Input {...field} disabled />
+                            </FormControl>
                             <FormMessage />
                         </FormItem>
                         )}
