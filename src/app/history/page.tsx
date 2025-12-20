@@ -71,17 +71,24 @@ export default function HistoryPage() {
   
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
-  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
-  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
-  const [adjustmentTypeFilter, setAdjustmentTypeFilter] = useState<'all' | 'in' | 'out'>('all');
+  const [selectedMonth, setSelectedMonth] = useState<number | undefined>(undefined);
+  const [selectedYear, setSelectedYear] = useState<number | undefined>(undefined);
+  const [adjustmentTypeFilter, setAdjustmentTypeFilter] = useState<'all' | 'out'>('all');
   const [selectedSales, setSelectedSales] = useState<Sale[]>([]);
   const [isSalesDetailOpen, setSalesDetailOpen] = useState(false);
   const [itemsPerPage, setItemsPerPage] = useState(20);
   const [currentPage, setCurrentPage] = useState(1);
   const [isExporting, setIsExporting] = useState(false);
   
+  useEffect(() => {
+    const currentDate = new Date();
+    setSelectedMonth(currentDate.getMonth());
+    setSelectedYear(currentDate.getFullYear());
+  }, []);
+
 
   const allHistoryForMonth = useMemo((): HistoryEntry[] => {
+    if (selectedMonth === undefined || selectedYear === undefined) return [];
     const historyList: HistoryEntry[] = [];
     const dateFilter = new Date(selectedYear, selectedMonth);
     const startDate = startOfMonth(dateFilter);
@@ -169,7 +176,8 @@ export default function HistoryPage() {
 
   const years = useMemo(() => {
     const allYears = new Set(allHistoryForMonth.map(h => h.date.getFullYear()));
-    if (allYears.size === 0) allYears.add(new Date().getFullYear());
+    const currentYear = new Date().getFullYear();
+    allYears.add(currentYear);
     return Array.from(allYears).sort((a, b) => b - a);
   }, [allHistoryForMonth]);
 
@@ -288,30 +296,35 @@ export default function HistoryPage() {
     await new Promise(resolve => setTimeout(resolve, 500)); // Simulate processing time
 
     const headers = ['Tanggal', 'Nama Produk', 'Varian', 'SKU', 'Kategori', 'Alasan', 'Perubahan', 'Stok Akhir'];
-    const data = filteredHistory.map(entry => {
-        if(entry.type === 'sales') {
-            return [
-                format(entry.date, 'yyyy-MM-dd HH:mm:ss'),
-                `Penjualan ${entry.channel}`,
-                '',
-                '',
-                entry.productCategories.join(', '),
-                `Total ${entry.totalItems} item terjual`,
-                -entry.totalItems,
-                'N/A'
-            ];
-        }
+    
+    const data: (string | number)[][] = [];
 
-        return [
-            format(entry.date, 'yyyy-MM-dd HH:mm:ss'),
-            entry.itemName || '',
-            entry.variantName || '',
-            entry.variantSku || '',
-            entry.itemCategory || '',
-            entry.reason,
-            entry.change,
-            entry.newStockLevel ?? 'N/A'
-        ];
+    filteredHistory.forEach(entry => {
+        if(entry.type === 'sales') {
+            entry.sales.forEach(sale => {
+                data.push([
+                    format(parseISO(sale.saleDate), 'yyyy-MM-dd HH:mm:ss'),
+                    sale.productName,
+                    sale.variantName || '',
+                    sale.sku || sale.parentSku || '',
+                    sale.productCategory || '',
+                    `Penjualan ${sale.channel}`,
+                    -sale.quantity,
+                    'N/A' // Cannot determine final stock level accurately here
+                ]);
+            });
+        } else { // 'adjustment'
+            data.push([
+                format(entry.date, 'yyyy-MM-dd HH:mm:ss'),
+                entry.itemName || '',
+                entry.variantName || '',
+                entry.variantSku || '',
+                entry.itemCategory || '',
+                entry.reason,
+                entry.change,
+                entry.newStockLevel ?? 'N/A'
+            ]);
+        }
     });
 
     const worksheet = XLSX.utils.aoa_to_sheet([headers, ...data]);
@@ -359,6 +372,7 @@ export default function HistoryPage() {
                             ))}
                             </SelectContent>
                         </Select>
+                        {selectedMonth !== undefined && (
                         <Select value={selectedMonth.toString()} onValueChange={(value) => setSelectedMonth(parseInt(value))}>
                             <SelectTrigger className="w-full md:w-[180px]">
                                 <SelectValue placeholder="Pilih Bulan" />
@@ -371,6 +385,8 @@ export default function HistoryPage() {
                                 ))}
                             </SelectContent>
                         </Select>
+                        )}
+                        {selectedYear !== undefined && (
                         <Select value={selectedYear.toString()} onValueChange={(value) => setSelectedYear(parseInt(value))}>
                             <SelectTrigger className="w-full md:w-[120px]">
                                 <SelectValue placeholder="Pilih Tahun" />
@@ -383,6 +399,7 @@ export default function HistoryPage() {
                                 ))}
                             </SelectContent>
                         </Select>
+                        )}
                         <Button onClick={downloadExcel} variant="outline" size="sm" disabled={isExporting}>
                             {isExporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileDown className="mr-2 h-4 w-4" />}
                             {isExporting ? "Mengekspor..." : t.inventoryTable.exportCsv.replace('CSV', 'Excel')}
