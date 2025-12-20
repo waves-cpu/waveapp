@@ -17,6 +17,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
+  TableFooter
 } from '@/components/ui/table';
 import { Undo2, Truck, CheckCircle, XCircle, Package, Trash2, Search, FileDown, MoreVertical, Loader2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
@@ -65,6 +66,7 @@ type ReturnedItem = {
     sku: string;
     name: string;
     quantity: number;
+    price: number;
 };
 
 
@@ -85,18 +87,15 @@ const ReturnProductDialog = ({
     dialogDescription: string;
     submitText: string;
 }) => {
-    const { getProductBySku, allSales } = useInventory();
+    const { allSales } = useInventory();
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [returnedItems, setReturnedItems] = useState<ReturnedItem[]>([]);
-    const { playSuccessSound, playErrorSound } = useScanSounds();
-    const { toast } = useToast();
     
     useEffect(() => {
         if (!open) {
             setReturnedItems([]);
             setIsSubmitting(false);
         } else if (receipt?.transactionId) {
-            // Pre-populate items from the original sale
             const originalSaleItems = allSales.filter(s => s.transactionId === receipt.transactionId);
             const itemsToReturn: ReturnedItem[] = [];
             
@@ -108,7 +107,7 @@ const ReturnProductDialog = ({
                     if(existing) {
                         existing.quantity += saleItem.quantity;
                     } else {
-                        itemsToReturn.push({ sku, name, quantity: saleItem.quantity });
+                        itemsToReturn.push({ sku, name, quantity: saleItem.quantity, price: saleItem.priceAtSale });
                     }
                 }
             });
@@ -116,19 +115,14 @@ const ReturnProductDialog = ({
         }
     }, [open, receipt, allSales]);
 
-    
-    const updateQuantity = (sku: string, newQuantity: number) => {
-        setReturnedItems(prevItems => {
-            if (newQuantity <= 0) {
-                return prevItems.filter(item => item.sku !== sku);
-            }
-            return prevItems.map(item => (item.sku === sku ? { ...item, quantity: newQuantity } : item));
-        });
-    };
-    
-    const removeItem = (sku: string) => {
-        setReturnedItems(prevItems => prevItems.filter(item => item.sku !== sku));
-    };
+    const { totalItems, totalValue } = useMemo(() => {
+        return returnedItems.reduce((acc, item) => {
+            acc.totalItems += item.quantity;
+            acc.totalValue += item.quantity * item.price;
+            return acc;
+        }, { totalItems: 0, totalValue: 0 });
+    }, [returnedItems]);
+
 
     const handleFinalizeReturn = async () => {
         if (returnedItems.length === 0 || !receipt || !receipt.transactionId) return;
@@ -137,36 +131,36 @@ const ReturnProductDialog = ({
             await onProcessReturn(receipt.transactionId, returnedItems);
             onOpenChange(false);
         } catch(e) {
-            // Error is handled in onProcessReturn, just prevent dialog from closing
         }
         finally {
             setIsSubmitting(false);
         }
     }
 
+    const formatCurrency = (amount: number) => {
+        return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(amount);
+    }
+
     return (
         <>
             <Dialog open={open} onOpenChange={onOpenChange}>
-                <DialogContent className="sm:max-w-xl">
+                <DialogContent className="max-w-2xl">
                     <DialogHeader>
                         <DialogTitle>{dialogTitle}</DialogTitle>
                         <DialogDescription>
-                            {dialogDescription}: <span className="font-semibold">{receipt?.awb}</span>
+                           {dialogDescription}: <span className="font-semibold">{receipt?.awb}</span>
                         </DialogDescription>
                     </DialogHeader>
                     <div className="space-y-4">
-                        <p className="text-sm text-muted-foreground">
-                            Berikut adalah daftar produk dari transaksi asli. Sesuaikan jumlah jika tidak semua barang dikembalikan.
-                        </p>
                          <Card>
                             <CardContent className="p-0">
-                                <ScrollArea className="h-64 border rounded-md">
+                                <ScrollArea className="h-72 border rounded-md">
                                     <Table>
-                                        <TableHeader>
+                                        <TableHeader className="sticky top-0 bg-background">
                                             <TableRow>
                                                 <TableHead>Produk</TableHead>
                                                 <TableHead className="w-[120px] text-center">Jumlah</TableHead>
-                                                <TableHead className="w-[50px]"></TableHead>
+                                                <TableHead className="w-[150px] text-right">Harga Satuan</TableHead>
                                             </TableRow>
                                         </TableHeader>
                                         <TableBody>
@@ -176,21 +170,8 @@ const ReturnProductDialog = ({
                                                         <p className="font-medium text-sm">{item.name}</p>
                                                         <p className="text-xs text-muted-foreground">SKU: {item.sku}</p>
                                                     </TableCell>
-                                                    <TableCell>
-                                                         <div className="flex items-center justify-center gap-1">
-                                                            <Input
-                                                                type="number"
-                                                                value={item.quantity}
-                                                                onChange={(e) => updateQuantity(item.sku, parseInt(e.target.value) || 0)}
-                                                                className="w-20 h-8 text-center"
-                                                            />
-                                                         </div>
-                                                    </TableCell>
-                                                    <TableCell>
-                                                        <Button variant="ghost" size="icon" className="text-destructive h-8 w-8" onClick={() => removeItem(item.sku)}>
-                                                            <Trash2 className="h-4 w-4" />
-                                                        </Button>
-                                                    </TableCell>
+                                                    <TableCell className="text-center font-medium">{item.quantity}</TableCell>
+                                                    <TableCell className="text-right">{formatCurrency(item.price)}</TableCell>
                                                 </TableRow>
                                             )) : (
                                                 <TableRow>
@@ -200,6 +181,13 @@ const ReturnProductDialog = ({
                                                 </TableRow>
                                             )}
                                         </TableBody>
+                                         <TableFooter>
+                                            <TableRow>
+                                                <TableHead>Total</TableHead>
+                                                <TableHead className="text-center font-bold">{totalItems}</TableHead>
+                                                <TableHead className="text-right font-bold">{formatCurrency(totalValue)}</TableHead>
+                                            </TableRow>
+                                        </TableFooter>
                                     </Table>
                                 </ScrollArea>
                             </CardContent>
@@ -350,7 +338,7 @@ export default function ReturnPage() {
                 await handleChangeStatus(selectedReceipt.id, finalStatus);
             }
 
-            toast({ title: t.stockReturnedSuccess, description: `${returnedItems.reduce((acc, item) => acc + item.quantity, 0)} item telah dikembalikan ke stok.` });
+            toast({ title: t.stockReturnedSuccess, description: `Stok untuk ${returnedItems.length} produk telah dikembalikan.` });
             fetchReturns();
             fetchCounts();
         } catch (error) {
@@ -570,7 +558,7 @@ export default function ReturnPage() {
                 onProcessReturn={handleProcessReturn}
                 receipt={selectedReceipt}
                 dialogTitle={selectedReceipt?.status === 'Dibatalkan' ? 'Proses Pembatalan' : 'Proses Barang Return'}
-                dialogDescription={selectedReceipt?.status === 'Dibatalkan' ? 'Pastikan produk dan jumlah yang dikembalikan ke stok sudah benar' : 'Pastikan produk dan jumlah yang telah kembali ke gudang sudah benar'}
+                dialogDescription={selectedReceipt?.status === 'Dibatalkan' ? 'Periksa barang yang stoknya akan dikembalikan' : 'Periksa barang yang telah kembali ke gudang'}
                 submitText={selectedReceipt?.status === 'Dibatalkan' ? 'Proses Pembatalan' : 'Proses Pengembalian'}
             />
         </AppLayout>
