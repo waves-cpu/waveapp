@@ -17,13 +17,12 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-  TableFooter
 } from '@/components/ui/table';
-import { Undo2, Truck, CheckCircle, XCircle, Package, Trash2, Search, FileDown, MoreVertical, Loader2 } from 'lucide-react';
+import { Undo2, Truck, CheckCircle, Package, Trash2, Search, FileDown, Loader2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { useInventory } from '@/hooks/use-inventory';
-import type { ShippingReceipt, InventoryItem, InventoryItemVariant, Sale } from '@/types';
-import { format, startOfMonth, endOfMonth, parseISO } from 'date-fns';
+import type { ShippingReceipt, ReturnedItem } from '@/types';
+import { format, parseISO, startOfMonth, endOfMonth } from 'date-fns';
 import { id as localeId } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
 import { Pagination } from '@/components/ui/pagination';
@@ -44,7 +43,6 @@ import { useLanguage } from '@/hooks/use-language';
 import { Dialog, DialogHeader, DialogTitle, DialogContent, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { useScanSounds } from '@/hooks/use-scan-sounds';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { translations } from '@/types/language';
 
@@ -60,13 +58,6 @@ const getStatusVariant = (status: string) => {
         case 'tidak sampai': return 'destructive';
         default: return 'outline';
     }
-};
-
-type ReturnedItem = {
-    sku: string;
-    name: string;
-    quantity: number;
-    price: number;
 };
 
 
@@ -208,8 +199,7 @@ const ReturnProductDialog = ({
 
 
 export default function ReturnPage() {
-    const [returns, setReturns] = useState<ShippingReceipt[]>([]);
-    const [totalReturns, setTotalReturns] = useState(0);
+    const [allReturnsForMonth, setAllReturnsForMonth] = useState<ShippingReceipt[]>([]);
     const [loading, setLoading] = useState(true);
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(25);
@@ -222,7 +212,6 @@ export default function ReturnPage() {
     const [selectedReceipt, setSelectedReceipt] = useState<ShippingReceipt | null>(null);
     const [isProductSelectionDialogOpen, setIsProductSelectionDialogOpen] = useState(false);
     const [activeChannel, setActiveChannel] = useState<string | null>(null);
-    const [channelCounts, setChannelCounts] = useState<Record<string, number> | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
     
     const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
@@ -230,75 +219,66 @@ export default function ReturnPage() {
 
     const years = useMemo(() => {
         const currentYear = new Date().getFullYear();
-        // Show current year and last 5 years
         return Array.from({ length: 6 }, (_, i) => currentYear - i);
     }, []);
 
-
-    const fetchReturns = useCallback(async () => {
+    const loadInitialData = useCallback(async () => {
         setLoading(true);
         try {
             const date = new Date(selectedYear, selectedMonth);
             const firstDay = startOfMonth(date);
             const lastDay = endOfMonth(date);
 
-            const { receipts, total } = await fetchShippingReceipts({
-                page: currentPage,
-                limit: itemsPerPage,
+            const { receipts } = await fetchShippingReceipts({
+                page: 1,
+                limit: 10000, // Fetch all for the month
                 status: ['Return', 'Return Selesai', 'Dibatalkan', 'Diantar', 'Tidak Sampai'],
-                channel: activeChannel ?? undefined,
-                awb: searchTerm || undefined,
                 date_range: { from: firstDay, to: lastDay }
             });
-            setReturns(receipts);
-            setTotalReturns(total);
+            setAllReturnsForMonth(receipts);
         } catch (error) {
             toast({ variant: 'destructive', title: t.fetchError });
         } finally {
             setLoading(false);
         }
-    }, [currentPage, itemsPerPage, activeChannel, searchTerm, toast, t.fetchError, fetchShippingReceipts, selectedMonth, selectedYear]);
-    
-    const fetchCounts = useCallback(async () => {
-        setChannelCounts(null); // Reset counts to show loading state
-        try {
-            const date = new Date(selectedYear, selectedMonth);
-            const firstDay = startOfMonth(date);
-            const lastDay = endOfMonth(date);
-
-            const allReturnReceipts = await fetchShippingReceipts({
-                page: 1,
-                limit: 10000,
-                status: ['Return', 'Return Selesai', 'Dibatalkan', 'Diantar', 'Tidak Sampai'],
-                date_range: { from: firstDay, to: lastDay }
-            });
-            const countsByChannel: Record<string, number> = {};
-            allReturnReceipts.receipts.forEach(r => {
-                countsByChannel[r.channel] = (countsByChannel[r.channel] || 0) + 1;
-            });
-
-            setChannelCounts(countsByChannel);
-        } catch (error) {
-        }
-    }, [fetchShippingReceipts, selectedMonth, selectedYear]);
-
+    }, [fetchShippingReceipts, selectedMonth, selectedYear, t.fetchError, toast]);
 
     useEffect(() => {
-        fetchReturns();
-    }, [fetchReturns]);
+        loadInitialData();
+    }, [loadInitialData]);
 
     useEffect(() => {
-        fetchCounts();
-    }, [fetchCounts]);
+        setCurrentPage(1);
+    }, [activeChannel, searchTerm]);
+
+    const channelCounts = useMemo(() => {
+        const counts: Record<string, number> = {};
+        allReturnsForMonth.forEach(r => {
+            counts[r.channel] = (counts[r.channel] || 0) + 1;
+        });
+        return counts;
+    }, [allReturnsForMonth]);
+
+    const filteredReturns = useMemo(() => {
+        return allReturnsForMonth.filter(receipt => {
+            const channelMatch = !activeChannel || receipt.channel === activeChannel;
+            const searchMatch = !searchTerm || receipt.awb.toLowerCase().includes(searchTerm.toLowerCase());
+            return channelMatch && searchMatch;
+        });
+    }, [allReturnsForMonth, activeChannel, searchTerm]);
     
-    const totalPages = Math.ceil(totalReturns / itemsPerPage);
+    const paginatedReturns = useMemo(() => {
+        const startIndex = (currentPage - 1) * itemsPerPage;
+        return filteredReturns.slice(startIndex, startIndex + itemsPerPage);
+    }, [filteredReturns, currentPage, itemsPerPage]);
+
+    const totalPages = Math.ceil(filteredReturns.length / itemsPerPage);
 
     const handleChangeStatus = async (id: number, newStatus: string) => {
         try {
             await updateShippingReceiptStatus(id, newStatus);
             toast({ title: t.statusUpdateSuccess, description: t.statusUpdateSuccessDesc.replace('{status}', newStatus) });
-            fetchReturns();
-            fetchCounts();
+            loadInitialData();
         } catch (error) {
             toast({ variant: 'destructive', title: t.statusUpdateError });
         }
@@ -309,8 +289,7 @@ export default function ReturnPage() {
         try {
             await deleteShippingReceipt(receiptToDelete.id);
             toast({ title: t.deleteSuccess, description: t.deleteSuccessDesc.replace('{awb}', receiptToDelete.awb) });
-            fetchReturns();
-            fetchCounts();
+            loadInitialData();
         } catch (error) {
             toast({ variant: 'destructive', title: t.deleteError });
         }
@@ -339,8 +318,7 @@ export default function ReturnPage() {
             }
 
             toast({ title: t.stockReturnedSuccess, description: `Stok untuk ${returnedItems.length} produk telah dikembalikan.` });
-            fetchReturns();
-            fetchCounts();
+            loadInitialData();
         } catch (error) {
             let errorMessage = t.stockReturnedError;
              if (error instanceof Error) {
@@ -358,7 +336,7 @@ export default function ReturnPage() {
     };
     
     const downloadExcel = useCallback(() => {
-        const dataToExport = returns.map(item => ({
+        const dataToExport = filteredReturns.map(item => ({
             'No. Resi': item.awb,
             'Tanggal': format(parseISO(item.date), 'dd MMM yyyy HH:mm'),
             'Kanal': item.channel,
@@ -371,7 +349,7 @@ export default function ReturnPage() {
 
         const monthName = format(new Date(selectedYear, selectedMonth), 'MMMM-yyyy', { locale: localeId });
         XLSX.writeFile(workbook, `Laporan_Return_${monthName}.xlsx`);
-    }, [returns, selectedMonth, selectedYear]);
+    }, [filteredReturns, selectedMonth, selectedYear]);
 
     return (
         <AppLayout>
@@ -419,7 +397,7 @@ export default function ReturnPage() {
                         </Select>
                         <Button onClick={downloadExcel} variant="outline" size="sm">
                             <FileDown className="mr-2 h-4 w-4" />
-                            Download Return
+                            Download Laporan
                         </Button>
                     </div>
                 </div>
@@ -433,7 +411,7 @@ export default function ReturnPage() {
                                 className="shrink-0"
                             >
                                 Semua
-                                {!channelCounts ? (
+                                {loading ? (
                                     <Loader2 className="ml-2 h-4 w-4 animate-spin" />
                                 ) : (
                                      <Badge variant={activeChannel === null ? 'default' : 'secondary'} className="ml-2">
@@ -450,7 +428,7 @@ export default function ReturnPage() {
                                     className="shrink-0"
                                 >
                                     {tab}
-                                    {!channelCounts ? (
+                                    {loading ? (
                                         <Loader2 className="ml-2 h-4 w-4 animate-spin" />
                                     ) : (
                                          <Badge variant={activeChannel === tab ? 'default' : 'secondary'} className="ml-2">
@@ -480,7 +458,7 @@ export default function ReturnPage() {
                                 <TableBody>
                                     {loading ? (
                                         <TableRow><TableCell colSpan={5} className="h-48 text-center">{t.loading}</TableCell></TableRow>
-                                    ) : returns.length > 0 ? returns.map(item => (
+                                    ) : paginatedReturns.length > 0 ? paginatedReturns.map(item => (
                                         <TableRow key={item.id}>
                                             <TableCell className="font-medium">{item.awb}</TableCell>
                                             <TableCell>{format(new Date(item.date), 'dd MMM yyyy')}</TableCell>
@@ -501,7 +479,7 @@ export default function ReturnPage() {
                                                         Proses Pembatalan
                                                     </Button>
                                                 )}
-                                                {item.status === 'Return Selesai' && (
+                                                {['Return Selesai', 'Selesai'].includes(item.status) && (
                                                      <AlertDialog>
                                                         <AlertDialogTrigger asChild>
                                                              <Button variant="ghost" size="icon" className="text-destructive h-8 w-8">
@@ -564,3 +542,5 @@ export default function ReturnPage() {
         </AppLayout>
     );
 }
+
+    
