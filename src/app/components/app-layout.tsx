@@ -61,6 +61,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
     const { language } = useLanguage();
@@ -77,6 +78,8 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         router.push('/login');
     }
 
+    const isActive = (path: string) => pathname === path || (path !== '/' && pathname.startsWith(path));
+
   return (
     <div className="flex h-full">
       <SidebarProvider>
@@ -86,187 +89,210 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           </SidebarHeader>
           <SidebarContent>
               <SidebarMenu>
-                  <SidebarMenuItem>
-                      <SidebarMenuButton>
-                          <ShoppingCart />
-                          <span className="flex-grow font-semibold">{t.sales.title}</span>
-                          <ChevronDown className="transition-transform" />
-                      </SidebarMenuButton>
-                  </SidebarMenuItem>
-                  <SidebarMenu className="ml-4 mt-2 border-l border-muted-foreground/20 pl-4 mb-4">
-                        <SidebarMenuItem>
-                           <Link href="/sales/shopee">
-                               <SidebarMenuButton variant="ghost" size="sm" isActive={pathname.startsWith('/sales/shopee')}>
-                                   Shopee
-                               </SidebarMenuButton>
-                           </Link>
-                        </SidebarMenuItem>
-                        <SidebarMenuItem>
-                           <Link href="/sales/tiktok">
-                               <SidebarMenuButton variant="ghost" size="sm" isActive={pathname.startsWith('/sales/tiktok')}>
-                                   Tiktok
-                               </SidebarMenuButton>
-                           </Link>
-                        </SidebarMenuItem>
-                        <SidebarMenuItem>
-                           <Link href="/sales/lazada">
-                               <SidebarMenuButton variant="ghost" size="sm" isActive={pathname.startsWith('/sales/lazada')}>
-                                   Lazada
-                               </SidebarMenuButton>
-                           </Link>
-                        </SidebarMenuItem>
-                        <SidebarMenuItem>
-                           <Link href="/sales/pos">
-                               <SidebarMenuButton variant="ghost" size="sm" isActive={pathname.startsWith('/sales/pos')}>
-                                   <LayoutGrid />
-                                   {t.sales.pos}
-                               </SidebarMenuButton>
-                           </Link>
-                        </SidebarMenuItem>
-                       <SidebarMenuItem>
-                          <Link href="/sales/reseller">
-                              <SidebarMenuButton variant="ghost" size="sm" isActive={pathname.startsWith('/sales/reseller')}>
-                                  <Users />
-                                  {t.sales.reseller}
-                              </SidebarMenuButton>
-                          </Link>
-                      </SidebarMenuItem>
-                  </SidebarMenu>
+                 <Collapsible>
+                    <SidebarMenuItem>
+                        <CollapsibleTrigger asChild>
+                            <SidebarMenuButton>
+                                <ShoppingCart />
+                                <span className="flex-grow font-semibold">{t.sales.title}</span>
+                                <ChevronDown className="transition-transform" />
+                            </SidebarMenuButton>
+                        </CollapsibleTrigger>
+                    </SidebarMenuItem>
+                    <CollapsibleContent>
+                        <SidebarMenu className="ml-4 mt-2 border-l border-muted-foreground/20 pl-4 mb-4">
+                              <SidebarMenuItem>
+                                 <Link href="/sales/shopee">
+                                     <SidebarMenuButton variant="ghost" size="sm" isActive={isActive('/sales/shopee')}>
+                                         Shopee
+                                     </SidebarMenuButton>
+                                 </Link>
+                              </SidebarMenuItem>
+                              <SidebarMenuItem>
+                                 <Link href="/sales/tiktok">
+                                     <SidebarMenuButton variant="ghost" size="sm" isActive={isActive('/sales/tiktok')}>
+                                         Tiktok
+                                     </SidebarMenuButton>
+                                 </Link>
+                              </SidebarMenuItem>
+                              <SidebarMenuItem>
+                                 <Link href="/sales/lazada">
+                                     <SidebarMenuButton variant="ghost" size="sm" isActive={isActive('/sales/lazada')}>
+                                         Lazada
+                                     </SidebarMenuButton>
+                                 </Link>
+                              </SidebarMenuItem>
+                              <SidebarMenuItem>
+                                 <Link href="/sales/pos">
+                                     <SidebarMenuButton variant="ghost" size="sm" isActive={isActive('/sales/pos')}>
+                                         <LayoutGrid />
+                                         {t.sales.pos}
+                                     </SidebarMenuButton>
+                                 </Link>
+                              </SidebarMenuItem>
+                             <SidebarMenuItem>
+                                <Link href="/sales/reseller">
+                                    <SidebarMenuButton variant="ghost" size="sm" isActive={isActive('/sales/reseller')}>
+                                        <Users />
+                                        {t.sales.reseller}
+                                    </SidebarMenuButton>
+                                </Link>
+                            </SidebarMenuItem>
+                        </SidebarMenu>
+                    </CollapsibleContent>
+                </Collapsible>
                   
-                  <SidebarMenuItem>
-                      <SidebarMenuButton>
-                          <Warehouse />
-                          <span className="flex-grow font-semibold">{t.dashboard.inventoryMenu}</span>
-                          <ChevronDown className="transition-transform" />
-                      </SidebarMenuButton>
-                  </SidebarMenuItem>
-                  <SidebarMenu className="ml-4 mt-2 border-l border-muted-foreground/20 pl-4 mb-4">
-                       <SidebarMenuItem>
-                          <Link href="/">
-                              <SidebarMenuButton variant="ghost" size="sm" isActive={pathname === '/'}>
-                                  <Package />
-                                  {t.dashboard.myProducts}
-                              </SidebarMenuButton>
-                          </Link>
-                      </SidebarMenuItem>
-                       <SidebarMenuItem>
-                          <Link href="/inventory/accessories">
-                              <SidebarMenuButton variant="ghost" size="sm" isActive={pathname.startsWith('/inventory/accessories')}>
-                                  <Package />
-                                  {t.dashboard.accessories}
-                              </SidebarMenuButton>
-                          </Link>
-                      </SidebarMenuItem>
-                        <SidebarMenuItem>
-                          <Link href="/add-product">
-                              <SidebarMenuButton variant="ghost" size="sm" isActive={pathname === '/add-product'}>
-                                  <PackagePlus/>
-                                  {t.dashboard.addItem}
-                              </SidebarMenuButton>
-                          </Link>
-                        </SidebarMenuItem>
-                        <SidebarMenuItem>
-                          <Link href="/bulk-add-products">
-                              <SidebarMenuButton variant="ghost" size="sm" isActive={pathname === '/bulk-add-products'}>
-                                  <FilePlus2/>
-                                  {t.dashboard.bulk}
-                              </SidebarMenuButton>
-                          </Link>
-                        </SidebarMenuItem>
-                        <SidebarMenuItem>
-                            <Link href="/stock-in">
-                                <SidebarMenuButton variant="ghost" size="sm" isActive={pathname === '/stock-in'}>
-                                    <PackagePlus/>
-                                    {t.dashboard.stockIn}
-                                </SidebarMenuButton>
-                            </Link>
-                        </SidebarMenuItem>
-                        <SidebarMenuItem>
-                            <Link href="/stock-out">
-                                <SidebarMenuButton variant="ghost" size="sm" isActive={pathname === '/stock-out'}>
-                                    <PackageMinus/>
-                                    {t.dashboard.stockOut}
-                                </SidebarMenuButton>
-                            </Link>
-                        </SidebarMenuItem>
-                         <SidebarMenuItem>
-                            <Link href="/history">
-                                <SidebarMenuButton variant="ghost" size="sm" isActive={pathname === '/history'}>
-                                    <History />
-                                    {t.stockHistory.title}
-                                </SidebarMenuButton>
-                            </Link>
-                        </SidebarMenuItem>
-                        <SidebarMenuItem>
-                            <Link href="/inventory/archived">
-                                <SidebarMenuButton variant="ghost" size="sm" isActive={pathname === '/inventory/archived'}>
-                                    <Archive />
-                                    {t.archived.title}
-                                </SidebarMenuButton>
-                            </Link>
-                        </SidebarMenuItem>
-                  </SidebarMenu>
+                <Collapsible>
+                    <SidebarMenuItem>
+                        <CollapsibleTrigger asChild>
+                            <SidebarMenuButton>
+                                <Warehouse />
+                                <span className="flex-grow font-semibold">{t.dashboard.inventoryMenu}</span>
+                                <ChevronDown className="transition-transform" />
+                            </SidebarMenuButton>
+                        </CollapsibleTrigger>
+                    </SidebarMenuItem>
+                     <CollapsibleContent>
+                        <SidebarMenu className="ml-4 mt-2 border-l border-muted-foreground/20 pl-4 mb-4">
+                             <SidebarMenuItem>
+                                <Link href="/">
+                                    <SidebarMenuButton variant="ghost" size="sm" isActive={pathname === '/'}>
+                                        <Package />
+                                        {t.dashboard.myProducts}
+                                    </SidebarMenuButton>
+                                </Link>
+                            </SidebarMenuItem>
+                             <SidebarMenuItem>
+                                <Link href="/inventory/accessories">
+                                    <SidebarMenuButton variant="ghost" size="sm" isActive={isActive('/inventory/accessories')}>
+                                        <Package />
+                                        {t.dashboard.accessories}
+                                    </SidebarMenuButton>
+                                </Link>
+                            </SidebarMenuItem>
+                              <SidebarMenuItem>
+                                <Link href="/add-product">
+                                    <SidebarMenuButton variant="ghost" size="sm" isActive={isActive('/add-product')}>
+                                        <PackagePlus/>
+                                        {t.dashboard.addItem}
+                                    </SidebarMenuButton>
+                                </Link>
+                              </SidebarMenuItem>
+                              <SidebarMenuItem>
+                                <Link href="/bulk-add-products">
+                                    <SidebarMenuButton variant="ghost" size="sm" isActive={isActive('/bulk-add-products')}>
+                                        <FilePlus2/>
+                                        {t.dashboard.bulk}
+                                    </SidebarMenuButton>
+                                </Link>
+                              </SidebarMenuItem>
+                              <SidebarMenuItem>
+                                  <Link href="/stock-in">
+                                      <SidebarMenuButton variant="ghost" size="sm" isActive={isActive('/stock-in')}>
+                                          <PackagePlus/>
+                                          {t.dashboard.stockIn}
+                                      </SidebarMenuButton>
+                                  </Link>
+                              </SidebarMenuItem>
+                              <SidebarMenuItem>
+                                  <Link href="/stock-out">
+                                      <SidebarMenuButton variant="ghost" size="sm" isActive={isActive('/stock-out')}>
+                                          <PackageMinus/>
+                                          {t.dashboard.stockOut}
+                                      </SidebarMenuButton>
+                                  </Link>
+                              </SidebarMenuItem>
+                               <SidebarMenuItem>
+                                  <Link href="/history">
+                                      <SidebarMenuButton variant="ghost" size="sm" isActive={isActive('/history')}>
+                                          <History />
+                                          {t.stockHistory.title}
+                                      </SidebarMenuButton>
+                                  </Link>
+                              </SidebarMenuItem>
+                              <SidebarMenuItem>
+                                  <Link href="/inventory/archived">
+                                      <SidebarMenuButton variant="ghost" size="sm" isActive={isActive('/inventory/archived')}>
+                                          <Archive />
+                                          {t.archived.title}
+                                      </SidebarMenuButton>
+                                  </Link>
+                              </SidebarMenuItem>
+                        </SidebarMenu>
+                    </CollapsibleContent>
+                </Collapsible>
 
-                   <SidebarMenuItem>
-                        <SidebarMenuButton>
-                            <DollarSign />
-                            <span className="flex-grow font-semibold">{t.finance.title}</span>
-                            <ChevronDown className="transition-transform" />
-                        </SidebarMenuButton>
-                  </SidebarMenuItem>
-                   <SidebarMenu className="ml-4 mt-2 border-l border-muted-foreground/20 pl-4 mb-4">
-                        <SidebarMenuItem>
-                          <Link href="/finance/statements">
-                              <SidebarMenuButton variant="ghost" size="sm" isActive={pathname.startsWith('/finance/statements')}>
-                                  <FileBarChart />
-                                  {t.finance.statements}
-                              </SidebarMenuButton>
-                          </Link>
-                        </SidebarMenuItem>
-                       <SidebarMenuItem>
-                          <Link href="/finance/settings">
-                              <SidebarMenuButton variant="ghost" size="sm" isActive={pathname.startsWith('/finance/settings')}>
-                                  <Settings2 />
-                                  {t.finance.priceSettings}
-                              </SidebarMenuButton>
-                          </Link>
-                        </SidebarMenuItem>
-                  </SidebarMenu>
+                <Collapsible>
+                    <SidebarMenuItem>
+                        <CollapsibleTrigger asChild>
+                            <SidebarMenuButton>
+                                <DollarSign />
+                                <span className="flex-grow font-semibold">{t.finance.title}</span>
+                                <ChevronDown className="transition-transform" />
+                            </SidebarMenuButton>
+                        </CollapsibleTrigger>
+                    </SidebarMenuItem>
+                     <CollapsibleContent>
+                         <SidebarMenu className="ml-4 mt-2 border-l border-muted-foreground/20 pl-4 mb-4">
+                              <SidebarMenuItem>
+                                <Link href="/finance/statements">
+                                    <SidebarMenuButton variant="ghost" size="sm" isActive={isActive('/finance/statements')}>
+                                        <FileBarChart />
+                                        {t.finance.statements}
+                                    </SidebarMenuButton>
+                                </Link>
+                              </SidebarMenuItem>
+                             <SidebarMenuItem>
+                                <Link href="/finance/settings">
+                                    <SidebarMenuButton variant="ghost" size="sm" isActive={isActive('/finance/settings')}>
+                                        <Settings2 />
+                                        {t.finance.priceSettings}
+                                    </SidebarMenuButton>
+                                </Link>
+                              </SidebarMenuItem>
+                        </SidebarMenu>
+                    </CollapsibleContent>
+                </Collapsible>
                   
-                   <SidebarMenuItem>
-                        <SidebarMenuButton>
-                            <Truck />
-                            <span className="flex-grow font-semibold">{t.shipping.title}</span>
-                            <ChevronDown className="transition-transform" />
-                        </SidebarMenuButton>
-                  </SidebarMenuItem>
-                   <SidebarMenu className="ml-4 mt-2 border-l border-muted-foreground/20 pl-4 mb-4">
-                       <SidebarMenuItem>
-                          <Link href="/shipping/receipt">
-                              <SidebarMenuButton variant="ghost" size="sm" isActive={pathname.startsWith('/shipping/receipt')}>
-                                  <Receipt />
-                                  {t.shipping.receipt}
+                <Collapsible>
+                    <SidebarMenuItem>
+                        <CollapsibleTrigger asChild>
+                              <SidebarMenuButton>
+                                  <Truck />
+                                  <span className="flex-grow font-semibold">{t.shipping.title}</span>
+                                  <ChevronDown className="transition-transform" />
                               </SidebarMenuButton>
-                          </Link>
-                      </SidebarMenuItem>
-                      <SidebarMenuItem>
-                          <Link href="/shipping/return">
-                              <SidebarMenuButton variant="ghost" size="sm" isActive={pathname.startsWith('/shipping/return')}>
-                                  <Undo2 />
-                                  {t.shipping.return}
-                              </SidebarMenuButton>
-                          </Link>
-                      </SidebarMenuItem>
-                      <SidebarMenuItem>
-                          <Link href="/shipping/report">
-                              <SidebarMenuButton variant="ghost" size="sm" isActive={pathname.startsWith('/shipping/report')}>
-                                  <FileBarChart />
-                                  {t.shipping.report}
-                              </SidebarMenuButton>
-                          </Link>
-                      </SidebarMenuItem>
-                  </SidebarMenu>
-
+                        </CollapsibleTrigger>
+                    </SidebarMenuItem>
+                    <CollapsibleContent>
+                       <SidebarMenu className="ml-4 mt-2 border-l border-muted-foreground/20 pl-4 mb-4">
+                           <SidebarMenuItem>
+                              <Link href="/shipping/receipt">
+                                  <SidebarMenuButton variant="ghost" size="sm" isActive={isActive('/shipping/receipt')}>
+                                      <Receipt />
+                                      {t.shipping.receipt}
+                                  </SidebarMenuButton>
+                              </Link>
+                          </SidebarMenuItem>
+                          <SidebarMenuItem>
+                              <Link href="/shipping/return">
+                                  <SidebarMenuButton variant="ghost" size="sm" isActive={isActive('/shipping/return')}>
+                                      <Undo2 />
+                                      {t.shipping.return}
+                                  </SidebarMenuButton>
+                              </Link>
+                          </SidebarMenuItem>
+                          <SidebarMenuItem>
+                              <Link href="/shipping/report">
+                                  <SidebarMenuButton variant="ghost" size="sm" isActive={isActive('/shipping/report')}>
+                                      <FileBarChart />
+                                      {t.shipping.report}
+                                  </SidebarMenuButton>
+                              </Link>
+                          </SidebarMenuItem>
+                      </SidebarMenu>
+                    </CollapsibleContent>
+                </Collapsible>
               </SidebarMenu>
           </SidebarContent>
           <SidebarFooter>
