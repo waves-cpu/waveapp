@@ -85,7 +85,7 @@ export default function ReceiptPage() {
     const router = useRouter();
     const params = useParams();
     
-    const { fetchShippingReceipts, deleteShippingReceipt, updateShippingReceiptsStatus, updateShippingReceiptStatus, fetchShippingReceiptCountsByChannel, fetchShippingReceiptCountsByStatus, getPendingReceiptsBeforeDate, cancelSaleTransaction, returnSaleTransaction } = useInventory();
+    const { fetchShippingReceipts, deleteShippingReceipt, updateShippingReceiptsStatus, updateShippingReceiptStatus, fetchShippingReceiptCounts, getPendingReceiptsBeforeDate, cancelSaleTransaction, returnSaleTransaction } = useInventory();
 
     const [activeShippingTab, setActiveShippingTab] = useState<string | null>(null);
     const [activeSalesChannelTab, setActiveSalesChannelTab] = useState<string | null>(null);
@@ -95,15 +95,18 @@ export default function ReceiptPage() {
     const [itemsPerPage, setItemsPerPage] = useState(50);
     const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
     const [isProcessing, setIsProcessing] = useState(false);
+    
     const [channelCounts, setChannelCounts] = useState<Record<string, number>>({});
+    const [salesChannelCounts, setSalesChannelCounts] = useState<Record<string, number>>({});
     const [statusCounts, setStatusCounts] = useState<Record<string, number>>({});
+
     const [activeStatusFilter, setActiveStatusFilter] = useState<string>('Semua Status');
 
     const [pendingOldReceiptsCount, setPendingOldReceiptsCount] = useState(0);
 
     const currentDate = useMemo(() => parseDateFromParams(Array.isArray(params.date) ? params.date : undefined), [params.date]);
     
-    const fetchReceipts = useCallback(async () => {
+    const fetchAllData = useCallback(async () => {
         setLoading(true);
         try {
             const searchOptions: any = {
@@ -125,33 +128,28 @@ export default function ReceiptPage() {
                 searchOptions.status = [activeStatusFilter];
             }
 
-
-            const { receipts, total } = await fetchShippingReceipts(searchOptions);
+            const [{ receipts, total }, counts] = await Promise.all([
+                fetchShippingReceipts(searchOptions),
+                fetchShippingReceiptCounts({
+                    dateString: currentDate ? format(currentDate, 'yyyy-MM-dd') : undefined,
+                    salesChannel: activeSalesChannelTab || undefined,
+                    shippingChannel: activeShippingTab || undefined,
+                    status: activeStatusFilter !== 'Semua Status' ? activeStatusFilter : undefined,
+                })
+            ]);
+            
             setReceipts(receipts);
             setTotalReceipts(total);
+            setChannelCounts(counts.shippingChannels);
+            setSalesChannelCounts(counts.salesChannels);
+            setStatusCounts(counts.statuses);
+
         } catch (error) {
             toast({ variant: 'destructive', title: t.fetchError });
         } finally {
             setLoading(false);
         }
-    }, [currentPage, itemsPerPage, activeShippingTab, activeSalesChannelTab, currentDate, searchTerm, fetchShippingReceipts, toast, t.fetchError, activeStatusFilter]);
-    
-    const fetchCounts = useCallback(async () => {
-        try {
-            const dateString = currentDate ? format(currentDate, 'yyyy-MM-dd') : undefined;
-            
-            const channelStatusFilter = activeStatusFilter !== 'Semua Status' ? [activeStatusFilter] : undefined;
-            const channelCountsData = await fetchShippingReceiptCountsByChannel(dateString, channelStatusFilter);
-            setChannelCounts(channelCountsData);
-            
-            const statusChannelFilter = activeShippingTab ?? undefined;
-            const statusSalesChannelFilter = activeSalesChannelTab ?? undefined;
-            const statusCountsData = await fetchShippingReceiptCountsByStatus(dateString, statusChannelFilter, statusSalesChannelFilter);
-            setStatusCounts(statusCountsData);
-
-        } catch (error) {
-        }
-    }, [currentDate, fetchShippingReceiptCountsByChannel, fetchShippingReceiptCountsByStatus, activeStatusFilter, activeShippingTab, activeSalesChannelTab]);
+    }, [currentPage, itemsPerPage, activeShippingTab, activeSalesChannelTab, currentDate, searchTerm, fetchShippingReceipts, fetchShippingReceiptCounts, toast, t.fetchError, activeStatusFilter]);
 
     const checkOldPendingReceipts = useCallback(async () => {
         if (!currentDate) return;
@@ -163,13 +161,9 @@ export default function ReceiptPage() {
     }, [currentDate, getPendingReceiptsBeforeDate]);
 
     useEffect(() => {
-        fetchReceipts();
+        fetchAllData();
         if(currentDate) checkOldPendingReceipts();
-    }, [fetchReceipts, checkOldPendingReceipts, currentDate]);
-
-    useEffect(() => {
-        fetchCounts();
-    }, [fetchCounts]);
+    }, [fetchAllData, checkOldPendingReceipts, currentDate]);
 
     useEffect(() => {
         setCurrentPage(1);
@@ -188,8 +182,7 @@ export default function ReceiptPage() {
             }
             await deleteShippingReceipt(receiptToDelete.id);
             toast({ title: t.deleteSuccess, description: 'Resi dihapus dan stok telah dikembalikan.' });
-            fetchReceipts();
-            fetchCounts();
+            fetchAllData();
         } catch (error) {
             toast({ variant: 'destructive', title: t.deleteError, description: 'Gagal menghapus resi dan mengembalikan stok.' });
         }
@@ -205,8 +198,7 @@ export default function ReceiptPage() {
 
             await updateShippingReceiptStatus(receipt.id, newStatus);
             toast({ title: t.statusUpdateSuccess, description: t.statusUpdateSuccessDesc.replace('{status}', newStatus) });
-            fetchReceipts();
-            fetchCounts();
+            fetchAllData();
         } catch (error) {
             toast({ variant: 'destructive', title: t.statusUpdateError, description: t.statusUpdateErrorDesc });
         }
@@ -219,8 +211,7 @@ export default function ReceiptPage() {
             await updateShippingReceiptsStatus(Array.from(selectedIds), 'Dikirim');
             toast({ title: t.bulkProcessSuccess, description: t.bulkProcessSuccessDesc.replace('{count}', selectedIds.size.toString()) });
             setSelectedIds(new Set());
-            fetchReceipts();
-            fetchCounts();
+            fetchAllData();
         } catch (error) {
             toast({ variant: 'destructive', title: t.bulkProcessError, description: t.bulkProcessErrorDesc });
         } finally {
@@ -340,6 +331,9 @@ export default function ReceiptPage() {
                                 className="shrink-0"
                             >
                                 Semua Kanal
+                                <Badge variant={activeSalesChannelTab === null ? 'destructive' : 'secondary'} className="ml-2">
+                                    {Object.values(salesChannelCounts).reduce((a,b)=>a+b, 0)}
+                                </Badge>
                             </Button>
                             {(['Shopee', 'Tiktok', 'Lazada'] as const).map(tab => (
                                 <Button 
@@ -350,6 +344,9 @@ export default function ReceiptPage() {
                                     className="shrink-0"
                                 >
                                     {tab}
+                                    <Badge variant={activeSalesChannelTab === tab ? 'destructive' : 'secondary'} className="ml-2">
+                                        {salesChannelCounts[tab] || 0}
+                                    </Badge>
                                 </Button>
                             ))}
                         </div>
@@ -363,7 +360,7 @@ export default function ReceiptPage() {
                         >
                             Semua Jasa Kirim
                             <Badge variant={activeShippingTab === null ? 'destructive' : 'secondary'} className="ml-2">
-                                {Object.values(channelCounts).reduce((a, b) => a + b, 0)}
+                                 {Object.values(channelCounts).reduce((a, b) => a + b, 0)}
                             </Badge>
                         </Button>
                         {(['SPX', 'J&T', 'JNE', 'INSTANT', 'CARGO'] as ShippingProvider[]).map(tab => (
@@ -515,3 +512,4 @@ export default function ReceiptPage() {
         </AppLayout>
     );
 }
+

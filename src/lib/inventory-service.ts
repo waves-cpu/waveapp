@@ -166,66 +166,50 @@ export async function getPendingReceiptsBeforeDate(date: Date): Promise<number> 
     return result.count;
 }
 
-export async function fetchShippingReceiptCountsByChannel(dateString?: string, status?: string[]): Promise<Record<string, number>> {
-    const statusToQuery = status || ['Perlu Diproses', 'Dikirim', 'Selesai', 'Return', 'Return Selesai', 'Dibatalkan'];
+export async function fetchShippingReceiptCounts(filters: {
+    dateString?: string;
+    salesChannel?: string;
+    shippingChannel?: string;
+    status?: string;
+}): Promise<{
+    salesChannels: Record<string, number>;
+    shippingChannels: Record<string, number>;
+    statuses: Record<string, number>;
+}> {
+    const { dateString, salesChannel, shippingChannel, status } = filters;
 
-    let whereClause = `status IN (${statusToQuery.map(() => '?').join(',')})`;
-    const params: any[] = [...statusToQuery];
+    const buildCounts = (groupBy: 'salesChannel' | 'channel' | 'status') => {
+        const where: string[] = [];
+        const params: any[] = [];
+        
+        if (dateString) { where.push(`strftime('%Y-%m-%d', date) = ?`); params.push(dateString); }
+        if (salesChannel && groupBy !== 'salesChannel') { where.push('salesChannel = ?'); params.push(salesChannel); }
+        if (shippingChannel && groupBy !== 'channel') { where.push('channel = ?'); params.push(shippingChannel); }
+        if (status && groupBy !== 'status') { where.push('status = ?'); params.push(status); }
 
-    if (dateString) {
-        whereClause += ` AND strftime('%Y-%m-%d', date) = ?`;
-        params.push(dateString);
-    }
-    
-    const query = db.prepare(`
-        SELECT channel, COUNT(*) as count 
-        FROM shipping_receipts 
-        WHERE ${whereClause}
-        GROUP BY channel
-    `);
-    
-    const results = query.all(...params) as { channel: string, count: number }[];
-    const counts: Record<string, number> = {};
-    results.forEach(row => {
-        counts[row.channel] = row.count;
-    });
-    return counts;
+        const whereClause = where.length > 0 ? `WHERE ${where.join(' AND ')}` : '';
+
+        const query = db.prepare(`
+            SELECT ${groupBy}, COUNT(*) as count
+            FROM shipping_receipts
+            ${whereClause}
+            GROUP BY ${groupBy}
+        `);
+
+        const results = query.all(...params) as { [key: string]: string | number }[];
+        const counts: Record<string, number> = {};
+        results.forEach(row => {
+            counts[row[groupBy] as string] = row.count as number;
+        });
+        return counts;
+    };
+
+    return {
+        salesChannels: buildCounts('salesChannel'),
+        shippingChannels: buildCounts('channel'),
+        statuses: buildCounts('status'),
+    };
 }
-
-export async function fetchShippingReceiptCountsByStatus(dateString?: string, channel?: string, salesChannel?: string): Promise<Record<string, number>> {
-    let whereClauses: string[] = [];
-    const params: any[] = [];
-    
-    if (dateString) {
-        whereClauses.push("strftime('%Y-%m-%d', date) = ?");
-        params.push(dateString);
-    }
-    if (channel) {
-        whereClauses.push("channel = ?");
-        params.push(channel);
-    }
-    if (salesChannel) {
-        whereClauses.push("salesChannel = ?");
-        params.push(salesChannel);
-    }
-
-    const whereString = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
-
-    const query = db.prepare(`
-        SELECT status, COUNT(*) as count
-        FROM shipping_receipts
-        ${whereString}
-        GROUP BY status
-    `);
-    
-    const results = query.all(...params) as { status: string, count: number }[];
-    const counts: Record<string, number> = {};
-    results.forEach(row => {
-        counts[row.status] = row.count;
-    });
-    return counts;
-}
-
 
 export async function getReceiptCountByStatus(status: string[], dateRange: { from: Date, to: Date }): Promise<number> {
     const { from, to } = dateRange;
@@ -1309,5 +1293,6 @@ async function updateShippingReceiptStatusByAwb(awb: string, status: string) {
 
 
     
+
 
 

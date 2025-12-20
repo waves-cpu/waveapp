@@ -34,8 +34,7 @@ import {
   deleteShippingReceipt as deleteShippingReceiptDb,
   updateShippingReceiptsStatus,
   updateShippingReceiptStatus,
-  fetchShippingReceiptCountsByChannel,
-  fetchShippingReceiptCountsByStatus,
+  fetchShippingReceiptCounts,
   getReceiptCountByStatus as getReceiptCountByStatusDb,
   addBulkImportHistory,
   updateBulkImportHistory,
@@ -86,8 +85,7 @@ interface InventoryContextType {
   deleteShippingReceipt: (id: number) => Promise<void>;
   updateShippingReceiptsStatus: (ids: number[], status: string) => Promise<void>;
   updateShippingReceiptStatus: (id: number, status: string) => Promise<void>;
-  fetchShippingReceiptCountsByChannel: (dateString?: string, status?: string[]) => Promise<Record<string, number>>;
-  fetchShippingReceiptCountsByStatus: (dateString?: string, channel?: string, salesChannel?: string) => Promise<Record<string, number>>;
+  fetchShippingReceiptCounts: (filters: { dateString?: string; salesChannel?: string; shippingChannel?: string; status?: string; }) => Promise<{ salesChannels: Record<string, number>; shippingChannels: Record<string, number>; statuses: Record<string, number>; }>;
   getReceiptCountByStatus: (status: string[], dateRange: { from: Date, to: Date }) => Promise<number>;
   getPendingReceiptsBeforeDate: (date: Date) => Promise<number>;
   // Bulk Import History
@@ -253,7 +251,7 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
   }
   
   const _returnSaleTransaction = async (transactionId: string) => {
-      await revertSaleByTransaction(transactionId, 'Return');
+      await revertSaleByTransaction(transactionId, 'Return Selesai');
       await fetchAllData();
   }
   
@@ -362,8 +360,7 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
         deleteShippingReceipt,
         updateShippingReceiptsStatus,
         updateShippingReceiptStatus,
-        fetchShippingReceiptCountsByChannel,
-        fetchShippingReceiptCountsByStatus,
+        fetchShippingReceiptCounts,
         getReceiptCountByStatus,
         getPendingReceiptsBeforeDate,
         fetchImportHistory: fetchBulkImportHistory,
