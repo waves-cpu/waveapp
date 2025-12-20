@@ -99,8 +99,8 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                       <CollapsibleTrigger asChild>
                           <SidebarMenuButton>
                               <ShoppingCart />
-                              <span>{t.sales.title}</span>
-                              <ChevronDown className={cn("ml-auto transition-transform", isSalesOpen && "rotate-180")} />
+                              <span className="flex-grow">{t.sales.title}</span>
+                              <ChevronDown className={cn("transition-transform", isSalesOpen && "rotate-180")} />
                           </SidebarMenuButton>
                       </CollapsibleTrigger>
                       <CollapsibleContent>
@@ -109,8 +109,8 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                                     <CollapsibleTrigger asChild>
                                         <SidebarMenuButton variant="ghost" size="sm">
                                             <Store />
-                                            <span>Marketplace</span>
-                                            <ChevronDown className={cn("ml-auto transition-transform", isMarketplaceOpen && "rotate-180")} />
+                                            <span className="flex-grow">Marketplace</span>
+                                            <ChevronDown className={cn("transition-transform", isMarketplaceOpen && "rotate-180")} />
                                         </SidebarMenuButton>
                                     </CollapsibleTrigger>
                                     <CollapsibleContent>
@@ -166,8 +166,8 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                       <CollapsibleTrigger asChild>
                           <SidebarMenuButton>
                               <Warehouse />
-                              <span>{t.dashboard.inventoryMenu}</span>
-                              <ChevronDown className={cn("ml-auto transition-transform", isInventoryOpen && "rotate-180")} />
+                              <span className="flex-grow">{t.dashboard.inventoryMenu}</span>
+                              <ChevronDown className={cn("transition-transform", isInventoryOpen && "rotate-180")} />
                           </SidebarMenuButton>
                       </CollapsibleTrigger>
                       <CollapsibleContent>
@@ -192,8 +192,8 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                                     <CollapsibleTrigger asChild>
                                         <SidebarMenuButton variant="ghost" size="sm">
                                             <FilePlus2 />
-                                            <span>Manajemen Produk</span>
-                                            <ChevronDown className={cn("ml-auto transition-transform", isProductManagementOpen && "rotate-180")} />
+                                            <span className="flex-grow">Manajemen Produk</span>
+                                            <ChevronDown className={cn("transition-transform", isProductManagementOpen && "rotate-180")} />
                                         </SidebarMenuButton>
                                     </CollapsibleTrigger>
                                     <CollapsibleContent>
@@ -221,8 +221,8 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                                     <CollapsibleTrigger asChild>
                                         <SidebarMenuButton variant="ghost" size="sm">
                                             <Activity />
-                                            <span>Aktivitas Stok</span>
-                                            <ChevronDown className={cn("ml-auto transition-transform", isStockActivityOpen && "rotate-180")} />
+                                            <span className="flex-grow">Aktivitas Stok</span>
+                                            <ChevronDown className={cn("transition-transform", isStockActivityOpen && "rotate-180")} />
                                         </SidebarMenuButton>
                                     </CollapsibleTrigger>
                                     <CollapsibleContent>
@@ -270,8 +270,8 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                       <CollapsibleTrigger asChild>
                           <SidebarMenuButton>
                               <DollarSign />
-                              <span>{t.finance.title}</span>
-                              <ChevronDown className={cn("ml-auto transition-transform", isFinanceOpen && "rotate-180")} />
+                              <span className="flex-grow">{t.finance.title}</span>
+                              <ChevronDown className={cn("transition-transform", isFinanceOpen && "rotate-180")} />
                           </SidebarMenuButton>
                       </CollapsibleTrigger>
                       <CollapsibleContent>
@@ -300,8 +300,8 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                       <CollapsibleTrigger asChild>
                           <SidebarMenuButton>
                               <Truck />
-                              <span>{t.shipping.title}</span>
-                              <ChevronDown className={cn("ml-auto transition-transform", isShippingOpen && "rotate-180")} />
+                              <span className="flex-grow">{t.shipping.title}</span>
+                              <ChevronDown className={cn("transition-transform", isShippingOpen && "rotate-180")} />
                           </SidebarMenuButton>
                       </CollapsibleTrigger>
                       <CollapsibleContent>
