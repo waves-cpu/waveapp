@@ -172,9 +172,8 @@ export function DailySalesDetailDialog({ open, onOpenChange, sales, title, descr
               <Table className="table-fixed">
                   <TableHeader className="sticky top-0 bg-card">
                       <TableRow>
-                          <TableHead className="w-[35%]">Produk</TableHead>
-                          <TableHead className="w-[20%]">Kategori</TableHead>
-                          <TableHead className="w-[10%]">Ukuran</TableHead>
+                          <TableHead className="w-[45%]">Produk</TableHead>
+                          <TableHead className="w-[15%]">Ukuran</TableHead>
                           <TableHead className="text-center w-[10%]">Jumlah</TableHead>
                           <TableHead className="text-right w-[15%]">Harga Satuan</TableHead>
                           <TableHead className="text-right w-[15%]">Total</TableHead>
@@ -188,7 +187,6 @@ export function DailySalesDetailDialog({ open, onOpenChange, sales, title, descr
                                       <div className="font-medium truncate whitespace-nowrap">{sale.productName}</div>
                                       {sale.sku && <div className="text-xs text-muted-foreground">SKU: {sale.sku}</div>}
                                   </TableCell>
-                                  <TableCell>{sale.productCategory}</TableCell>
                                   <TableCell>
                                       {sale.size || '-'}
                                   </TableCell>
@@ -199,7 +197,7 @@ export function DailySalesDetailDialog({ open, onOpenChange, sales, title, descr
                           ))
                       ) : (
                            <TableRow>
-                              <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
+                              <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
                                   Tidak ada produk yang cocok dengan pencarian Anda.
                               </TableCell>
                           </TableRow>
@@ -207,7 +205,7 @@ export function DailySalesDetailDialog({ open, onOpenChange, sales, title, descr
                   </TableBody>
                    <TableFooter>
                       <TableRow>
-                          <TableCell colSpan={3} className="text-left font-bold">Total</TableCell>
+                          <TableCell colSpan={2} className="text-left font-bold">Total</TableCell>
                           <TableCell className="text-center font-bold">{totalQuantity}</TableCell>
                           <TableCell colSpan={2} className="text-right font-bold">{formatCurrency(totalRevenue)}</TableCell>
                       </TableRow>
