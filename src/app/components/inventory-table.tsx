@@ -40,7 +40,7 @@ import {
   Archive,
   DollarSign,
 } from 'lucide-react';
-import type { InventoryItem, InventoryItemVariant } from '@/types';
+import type { InventoryItem, InventoryItemVariant, Accessory } from '@/types';
 import { categories as allCategories } from '@/types';
 import { useLanguage } from '@/hooks/use-language';
 import { translations } from '@/types/language';
@@ -110,6 +110,26 @@ function InventoryTableSkeleton() {
             <div className="p-4 border-t"><Skeleton className="h-9 w-1/2" /></div>
         </div>
     )
+}
+
+function AccessoryStockDisplay({ item, onUpdateClick }: { item: Accessory; onUpdateClick: () => void }) {
+    const totalPcs = (item.quantityPerUnit && item.quantityPerUnit > 0) 
+        ? item.stock * item.quantityPerUnit 
+        : null;
+
+    return (
+        <div className="flex items-center gap-2 group">
+            <div>
+                <p className="font-medium text-sm">{item.stock.toLocaleString('id-ID')} {item.unit}</p>
+                {totalPcs !== null && (
+                    <p className="text-xs text-muted-foreground">({totalPcs.toLocaleString('id-ID')} Pcs)</p>
+                )}
+            </div>
+            <Button variant="ghost" size="icon" onClick={onUpdateClick} className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity" aria-label="Update Stock">
+                <Edit className="h-3 w-3 text-foreground/80" />
+            </Button>
+        </div>
+    );
 }
 
 function StockBar({ stock, onUpdateClick, item }: { stock: number; onUpdateClick: () => void, item: InventoryItem }) {
@@ -494,7 +514,11 @@ export function InventoryTable({ onUpdateStock, isAccessoryTable = false }: Inve
                                 <PriceWithDetails item={item} />
                              </TableCell>
                             <TableCell>
-                               <StockBar stock={item.stock ?? 0} onUpdateClick={() => onUpdateStock(item.id)} item={item} />
+                                {isAccessoryTable ? (
+                                    <AccessoryStockDisplay item={item as Accessory} onUpdateClick={() => onUpdateStock(item.id)} />
+                                ) : (
+                                    <StockBar stock={item.stock ?? 0} onUpdateClick={() => onUpdateStock(item.id)} item={item} />
+                                )}
                             </TableCell>
                              <TableCell className="text-center">
                                 <DropdownMenu>
@@ -591,4 +615,5 @@ export function InventoryTable({ onUpdateStock, isAccessoryTable = false }: Inve
     </>
   );
 }
+
 
