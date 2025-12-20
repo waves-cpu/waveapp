@@ -21,7 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Search, Calendar as CalendarIcon, Eye, ShoppingCart, ShoppingBag, FileDown, History, ExternalLink } from 'lucide-react';
+import { Search, Calendar as CalendarIcon, Eye, ShoppingCart, ShoppingBag, FileDown, History, ExternalLink, Loader2 } from 'lucide-react';
 import type { InventoryItem, AdjustmentHistory, InventoryItemVariant, Sale } from '@/types';
 import { useLanguage } from '@/hooks/use-language';
 import { translations } from '@/types/language';
@@ -78,6 +78,7 @@ export default function HistoryPage() {
   const [isSalesDetailOpen, setSalesDetailOpen] = useState(false);
   const [itemsPerPage, setItemsPerPage] = useState(20);
   const [currentPage, setCurrentPage] = useState(1);
+  const [isExporting, setIsExporting] = useState(false);
   
 
   const allHistoryForMonth = useMemo((): HistoryEntry[] => {
@@ -282,7 +283,10 @@ export default function HistoryPage() {
       return '#';
   }
 
-  const downloadExcel = () => {
+  const downloadExcel = async () => {
+    setIsExporting(true);
+    await new Promise(resolve => setTimeout(resolve, 500)); // Simulate processing time
+
     const headers = ['Tanggal', 'Nama Produk', 'Varian', 'SKU', 'Kategori', 'Alasan', 'Perubahan', 'Stok Akhir'];
     const data = filteredHistory.map(entry => {
         if(entry.type === 'sales') {
@@ -317,6 +321,7 @@ export default function HistoryPage() {
     const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
     const blob = new Blob([excelBuffer], { type: 'application/octet-stream' });
     saveAs(blob, 'riwayat_stok.xlsx');
+    setIsExporting(false);
   };
 
   return (
@@ -378,9 +383,9 @@ export default function HistoryPage() {
                                 ))}
                             </SelectContent>
                         </Select>
-                        <Button onClick={downloadExcel} variant="outline" size="sm">
-                            <FileDown className="mr-2 h-4 w-4" />
-                            {t.inventoryTable.exportCsv}
+                        <Button onClick={downloadExcel} variant="outline" size="sm" disabled={isExporting}>
+                            {isExporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileDown className="mr-2 h-4 w-4" />}
+                            {isExporting ? "Mengekspor..." : t.inventoryTable.exportCsv.replace('CSV', 'Excel')}
                         </Button>
                     </div>
                 </div>
