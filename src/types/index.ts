@@ -18,8 +18,12 @@ export const categories = [
 ].sort();
 
 export const accessoryCategories = [
-    "Aksesoris"
-];
+    "Hangtag",
+    "Sticker",
+    "Plastik",
+    "Karet",
+    "Label"
+].sort();
 
 
 export const chartOfAccounts = [
@@ -37,7 +41,7 @@ export interface AdjustmentHistory {
   newStockLevel: number;
 }
 
-export type AccessoryUnit = 'Box' | 'Pcs' | 'Pack';
+export type AccessoryUnit = 'Box' | 'Pcs' | 'Pack' | 'Bundle';
 
 export interface Accessory {
     id: string;
@@ -145,3 +149,9 @@ export interface User {
   role: 'admin' | 'user';
 }
 
+export interface ReturnedItem {
+    sku: string;
+    name: string;
+    quantity: number;
+    price: number;
+}

@@ -36,17 +36,17 @@ const formSchema = z.object({
   name: z.string().min(2, { message: 'Nama harus diisi minimal 2 karakter.' }),
   category: z.string().min(1, { message: 'Kategori harus diisi.' }),
   sku: z.string().optional(),
-  unit: z.enum(['Box', 'Pcs', 'Pack'], { required_error: "Satuan harus dipilih."}),
+  unit: z.enum(['Box', 'Pcs', 'Pack', 'Bundle'], { required_error: "Satuan harus dipilih."}),
   quantityPerUnit: z.coerce.number().int().optional(),
   price: z.coerce.number().min(0, "Harga harus non-negatif."),
   stock: z.coerce.number().int().min(0, "Stok harus berupa angka non-negatif."),
 }).refine(data => {
-    if (data.unit === 'Box' || data.unit === 'Pack') {
+    if (data.unit === 'Box' || data.unit === 'Pack' || data.unit === 'Bundle') {
         return data.quantityPerUnit !== undefined && data.quantityPerUnit > 0;
     }
     return true;
 }, {
-    message: "Jumlah per unit harus diisi jika satuan adalah Box atau Pack.",
+    message: "Jumlah per unit harus diisi jika satuan adalah Box, Pack, atau Bundle.",
     path: ["quantityPerUnit"],
 });
 
@@ -92,7 +92,7 @@ export function EditAccessoryForm({ existingItem }: EditAccessoryFormProps) {
     try {
         const submissionData = {
             ...values,
-            quantityPerUnit: (values.unit === 'Box' || values.unit === 'Pack') ? values.quantityPerUnit : undefined,
+            quantityPerUnit: (values.unit === 'Box' || values.unit === 'Pack' || values.unit === 'Bundle') ? values.quantityPerUnit : undefined,
         };
         await updateAccessory(values.id, submissionData);
         toast({
@@ -170,7 +170,7 @@ export function EditAccessoryForm({ existingItem }: EditAccessoryFormProps) {
                                     </SelectTrigger>
                                 </FormControl>
                                 <SelectContent>
-                                    {(['Pcs', 'Box', 'Pack'] as AccessoryUnit[]).map((unit) => (
+                                    {(['Pcs', 'Box', 'Pack', 'Bundle'] as AccessoryUnit[]).map((unit) => (
                                     <SelectItem key={unit} value={unit}>
                                         {unit}
                                     </SelectItem>
@@ -181,7 +181,7 @@ export function EditAccessoryForm({ existingItem }: EditAccessoryFormProps) {
                         </FormItem>
                         )}
                     />
-                    {(selectedUnit === 'Box' || selectedUnit === 'Pack') && (
+                    {(selectedUnit === 'Box' || selectedUnit === 'Pack' || selectedUnit === 'Bundle') && (
                         <FormField
                             control={form.control}
                             name="quantityPerUnit"
