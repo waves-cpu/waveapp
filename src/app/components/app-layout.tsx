@@ -93,7 +93,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                           <ChevronDown className="transition-transform" />
                       </SidebarMenuButton>
                   </SidebarMenuItem>
-                   <SidebarMenu className="ml-4 mt-2 border-l border-muted-foreground/20 pl-4 mb-4">
+                  <SidebarMenu className="ml-4 mt-2 border-l border-muted-foreground/20 pl-4 mb-4">
                         <SidebarMenuItem>
                            <Link href="/sales/shopee">
                                <SidebarMenuButton variant="ghost" size="sm" isActive={pathname.startsWith('/sales/shopee')}>
@@ -140,10 +140,10 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                           <ChevronDown className="transition-transform" />
                       </SidebarMenuButton>
                   </SidebarMenuItem>
-                  <SidebarMenu className="ml-4 mt-2 border-l border-muted-foreground/20 pl-4 mb-4">
+                  <SidebarMenu>
                        <SidebarMenuItem>
                           <Link href="/">
-                              <SidebarMenuButton variant="ghost" size="sm" isActive={pathname === '/'}>
+                              <SidebarMenuButton variant="ghost" size="sm" isActive={pathname === '/'} className="pl-8">
                                   <Package />
                                   {t.dashboard.myProducts}
                               </SidebarMenuButton>
@@ -151,60 +151,58 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                       </SidebarMenuItem>
                        <SidebarMenuItem>
                           <Link href="/inventory/accessories">
-                              <SidebarMenuButton variant="ghost" size="sm" isActive={pathname.startsWith('/inventory/accessories')}>
+                              <SidebarMenuButton variant="ghost" size="sm" isActive={pathname.startsWith('/inventory/accessories')} className="pl-8">
                                   <Package />
                                   {t.dashboard.accessories}
                               </SidebarMenuButton>
                           </Link>
                       </SidebarMenuItem>
                       <SidebarMenuItem>
-                           <SidebarMenuButton variant="ghost" size="sm">
+                           <SidebarMenuButton variant="ghost" size="sm" className="pl-8 pointer-events-none">
                                 <PackagePlus />
                                 <span className="flex-grow font-semibold">Manajemen Produk</span>
-                                <ChevronDown className="transition-transform" />
                            </SidebarMenuButton>
-                        </SidebarMenuItem>
-                        <SidebarMenu className="ml-4 mt-2 border-l border-muted-foreground/20 pl-4 mb-2">
-                             <SidebarMenuItem>
-                                <Link href="/add-product">
-                                    <SidebarMenuButton variant="ghost" size="sm" isActive={pathname === '/add-product'}>
-                                        {t.dashboard.addItem}
-                                    </SidebarMenuButton>
-                                </Link>
-                            </SidebarMenuItem>
-                             <SidebarMenuItem>
-                                <Link href="/bulk-add-products">
-                                    <SidebarMenuButton variant="ghost" size="sm" isActive={pathname === '/bulk-add-products'}>
-                                        {t.dashboard.bulk}
-                                    </SidebarMenuButton>
-                                </Link>
-                            </SidebarMenuItem>
-                        </SidebarMenu>
+                      </SidebarMenuItem>
+                      <SidebarMenu>
+                          <SidebarMenuItem>
+                            <Link href="/add-product">
+                                <SidebarMenuButton variant="ghost" size="sm" isActive={pathname === '/add-product'} className="pl-16">
+                                    {t.dashboard.addItem}
+                                </SidebarMenuButton>
+                            </Link>
+                          </SidebarMenuItem>
+                          <SidebarMenuItem>
+                            <Link href="/bulk-add-products">
+                                <SidebarMenuButton variant="ghost" size="sm" isActive={pathname === '/bulk-add-products'} className="pl-16">
+                                    {t.dashboard.bulk}
+                                </SidebarMenuButton>
+                            </Link>
+                          </SidebarMenuItem>
+                      </SidebarMenu>
                        <SidebarMenuItem>
-                           <SidebarMenuButton variant="ghost" size="sm">
+                           <SidebarMenuButton variant="ghost" size="sm" className="pl-8 pointer-events-none">
                                 <Activity />
                                 <span className="flex-grow font-semibold">Aktivitas Stok</span>
-                                <ChevronDown className="transition-transform" />
                            </SidebarMenuButton>
                         </SidebarMenuItem>
-                        <SidebarMenu className="ml-4 mt-2 border-l border-muted-foreground/20 pl-4 mb-2">
+                        <SidebarMenu>
                             <SidebarMenuItem>
                                 <Link href="/stock-in">
-                                    <SidebarMenuButton variant="ghost" size="sm" isActive={pathname === '/stock-in'}>
+                                    <SidebarMenuButton variant="ghost" size="sm" isActive={pathname === '/stock-in'} className="pl-16">
                                         {t.dashboard.stockIn}
                                     </SidebarMenuButton>
                                 </Link>
                             </SidebarMenuItem>
                             <SidebarMenuItem>
                                 <Link href="/stock-out">
-                                    <SidebarMenuButton variant="ghost" size="sm" isActive={pathname === '/stock-out'}>
+                                    <SidebarMenuButton variant="ghost" size="sm" isActive={pathname === '/stock-out'} className="pl-16">
                                         {t.dashboard.stockOut}
                                     </SidebarMenuButton>
                                 </Link>
                             </SidebarMenuItem>
                              <SidebarMenuItem>
                                 <Link href="/history">
-                                    <SidebarMenuButton variant="ghost" size="sm" isActive={pathname === '/history'}>
+                                    <SidebarMenuButton variant="ghost" size="sm" isActive={pathname === '/history'} className="pl-16">
                                         <History />
                                         {t.stockHistory.title}
                                     </SidebarMenuButton>
@@ -213,7 +211,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                         </SidebarMenu>
                         <SidebarMenuItem>
                             <Link href="/inventory/archived">
-                                <SidebarMenuButton variant="ghost" size="sm" isActive={pathname === '/inventory/archived'}>
+                                <SidebarMenuButton variant="ghost" size="sm" isActive={pathname === '/inventory/archived'} className="pl-8">
                                     <Archive />
                                     {t.archived.title}
                                 </SidebarMenuButton>
