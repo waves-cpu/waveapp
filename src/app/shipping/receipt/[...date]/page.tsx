@@ -57,7 +57,7 @@ const getStatusVariant = (status: string) => {
     }
 };
 
-const STATUS_OPTIONS = ['Semua Status', 'Perlu Diproses', 'Dikirim', 'Selesai', 'Return', 'Return Selesai', 'Dibatalkan'];
+const STATUS_OPTIONS = ['Perlu Diproses', 'Dikirim', 'Selesai', 'Return', 'Return Selesai', 'Dibatalkan'];
 
 function parseDateFromParams(dateArray: string[] | undefined): Date | null {
     if (dateArray && dateArray.length > 0) {
@@ -94,7 +94,7 @@ export default function ReceiptPage() {
     const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
     const [isProcessing, setIsProcessing] = useState(false);
     
-    const [activeStatusFilter, setActiveStatusFilter] = useState<string>('Semua Status');
+    const [activeStatusFilter, setActiveStatusFilter] = useState<string>(STATUS_OPTIONS[0]);
 
     const [pendingOldReceiptsCount, setPendingOldReceiptsCount] = useState(0);
 
@@ -156,7 +156,7 @@ export default function ReceiptPage() {
     const { salesChannelCounts, shippingChannelCounts, statusCounts } = useMemo(() => {
         const sc: Record<string, number> = {};
         const shc: Record<string, number> = {};
-        const st: Record<string, number> = { 'Semua Status': 0 };
+        const st: Record<string, number> = {};
         STATUS_OPTIONS.forEach(s => st[s] = 0);
 
         allReceiptsForDate.forEach(r => {
@@ -171,7 +171,6 @@ export default function ReceiptPage() {
             // Count for statuses, filtered by active sales and shipping
             if ((!activeSalesChannelTab || r.salesChannel === activeSalesChannelTab) && (!activeShippingTab || r.channel === activeShippingTab)) {
                 st[r.status] = (st[r.status] || 0) + 1;
-                st['Semua Status']++;
             }
         });
         return { salesChannelCounts: sc, shippingChannelCounts: shc, statusCounts: st };
@@ -328,17 +327,6 @@ export default function ReceiptPage() {
                 <div className="flex flex-col gap-4">
                      <div className="border-b">
                          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-2">
-                            <Button 
-                                variant={activeSalesChannelTab === null ? 'secondary' : 'ghost'}
-                                size="sm"
-                                onClick={() => setActiveSalesChannelTab(null)}
-                                className={cn("shrink-0", activeSalesChannelTab === null && "text-primary")}
-                            >
-                                Semua Kanal
-                                <Badge variant={activeSalesChannelTab === null ? 'default' : 'secondary'} className="ml-2">
-                                    {Object.values(salesChannelCounts).reduce((a,b)=>a+b, 0)}
-                                </Badge>
-                            </Button>
                             {(['Shopee', 'Tiktok', 'Lazada'] as const).map(tab => (
                                 <Button 
                                     key={tab}
@@ -356,17 +344,6 @@ export default function ReceiptPage() {
                         </div>
                     </div>
                     <div className="flex items-center gap-2 overflow-x-auto no-scrollbar border-b pb-2">
-                         <Button 
-                            variant={activeShippingTab === null ? 'secondary' : 'ghost'}
-                            size="sm"
-                            onClick={() => setActiveShippingTab(null)}
-                            className={cn("shrink-0", activeShippingTab === null && "text-primary")}
-                        >
-                            Semua Jasa Kirim
-                            <Badge variant={activeShippingTab === null ? 'default' : 'secondary'} className="ml-2">
-                                 {Object.values(shippingChannelCounts).reduce((a, b) => a + b, 0)}
-                            </Badge>
-                        </Button>
                         {(['SPX', 'J&T', 'JNE', 'INSTANT', 'CARGO'] as ShippingProvider[]).map(tab => (
                             <Button 
                                 key={tab}
