@@ -1,4 +1,3 @@
-
 'use client'
 
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
@@ -33,6 +32,8 @@ import Link from 'next/link';
 import { History as HistoryIcon } from 'lucide-react';
 import { DailySalesDetailDialog } from '@/app/components/daily-sales-detail-dialog';
 import { PosReceipt, type ReceiptData } from '@/app/components/pos-receipt';
+import { AccessoryUsageVoucher, type VoucherData } from '@/app/components/accessory-usage-voucher';
+import type { CartItem } from '@/app/components/pos-cart';
 
 
 type GroupedSale = {
@@ -55,6 +56,7 @@ export default function PosHistoryPage() {
     const [isDetailOpen, setIsDetailOpen] = useState(false);
     
     const [receiptToPrint, setReceiptToPrint] = useState<ReceiptData | null>(null);
+    const [voucherToPrint, setVoucherToPrint] = useState<VoucherData | null>(null);
 
     useEffect(() => {
         setDate(new Date());
@@ -123,34 +125,48 @@ export default function PosHistoryPage() {
     };
     
     const triggerPrint = (group: GroupedSale) => {
-        const receiptData: ReceiptData = {
-            items: group.items.map(item => ({
-                ...item,
-                productId: item.productId,
-                productName: item.productName,
-                quantity: item.quantity,
-                price: item.priceAtSale,
-                stock: 0, // Not relevant for receipt
-                id: item.variantId || item.productId,
-            })),
-            subtotal: group.totalAmount,
-            discount: 0, // Assuming no discount data is stored for reprint
-            total: group.totalAmount,
-            paymentMethod: group.paymentMethod || 'N/A',
-            cashReceived: group.totalAmount, // For non-cash, cash received equals total
-            change: 0,
-            transactionId: group.transactionId,
-        };
-        
-        setReceiptToPrint(receiptData);
+        const cartItems: CartItem[] = group.items.map(item => ({
+            id: item.variantId?.toString() || item.productId!.toString(),
+            productId: item.productId!,
+            productName: item.productName,
+            variantName: item.variantName,
+            sku: item.sku!,
+            quantity: item.quantity,
+            price: item.priceAtSale,
+            type: item.accessoryId ? 'accessory' : 'product',
+            maxStock: 0, // Not relevant for reprint
+        }));
+
+        const isAccessoryOnly = cartItems.every(item => item.type === 'accessory');
+
+        if (isAccessoryOnly) {
+             setVoucherToPrint({
+                items: cartItems,
+                transactionId: group.transactionId,
+                date: new Date(group.saleDate),
+            });
+        } else {
+             const receiptData: ReceiptData = {
+                items: cartItems,
+                subtotal: group.totalAmount,
+                discount: 0, // Assuming no discount data is stored for reprint
+                total: group.totalAmount,
+                paymentMethod: group.paymentMethod || 'N/A',
+                cashReceived: group.totalAmount, // For non-cash, cash received equals total
+                change: 0,
+                transactionId: group.transactionId,
+            };
+            setReceiptToPrint(receiptData);
+        }
     };
 
     useEffect(() => {
-        if (receiptToPrint) {
+        if (receiptToPrint || voucherToPrint) {
             window.print();
-            setReceiptToPrint(null); // Reset after printing
+            setReceiptToPrint(null);
+            setVoucherToPrint(null);
         }
-    }, [receiptToPrint]);
+    }, [receiptToPrint, voucherToPrint]);
 
 
     return (
@@ -277,6 +293,7 @@ export default function PosHistoryPage() {
         </AppLayout>
         <div className="print-only">
             {receiptToPrint && <PosReceipt receipt={receiptToPrint} />}
+            {voucherToPrint && <AccessoryUsageVoucher voucher={voucherToPrint} />}
         </div>
         </>
     );
