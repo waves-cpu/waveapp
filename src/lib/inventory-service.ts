@@ -982,10 +982,11 @@ export async function getSalesByDate(channel: string, date: Date, page: number, 
 export async function revertSale(saleId: string, newStatus: 'Cancelled' | 'Return Selesai' | 'Return'): Promise<Sale> {
     const getSaleStmt = db.prepare('SELECT * FROM sales WHERE id = ?');
     const updateSaleStatusStmt = db.prepare("UPDATE sales SET status = ? WHERE id = ?");
-    
+    const deleteSaleStmt = db.prepare("DELETE FROM sales WHERE id = ?");
+
     const transaction = db.transaction(() => {
         const sale = getSaleStmt.get(saleId) as Sale | undefined;
-        if (!sale || ['Cancelled', 'Return Selesai'].includes(sale.status || '')) {
+        if (!sale || sale.status === 'Cancelled' || sale.status === 'Return Selesai') {
             throw new Error("Sale already reverted or not found.");
         }
         
@@ -1001,10 +1002,14 @@ export async function revertSale(saleId: string, newStatus: 'Cancelled' | 'Retur
             throw new Error("Sale item reference not found.");
         }
 
-        updateSaleStatusStmt.run(newStatus, saleId);
-        
-        const updatedSale = db.prepare('SELECT * FROM sales WHERE id = ?').get(saleId) as Sale;
-        return updatedSale;
+        if (newStatus === 'Cancelled') {
+            deleteSaleStmt.run(saleId);
+            return { ...sale, status: 'Cancelled' }; // Return a representative object
+        } else {
+            updateSaleStatusStmt.run(newStatus, saleId);
+            const updatedSale = db.prepare('SELECT * FROM sales WHERE id = ?').get(saleId) as Sale;
+            return updatedSale;
+        }
     });
     
     return transaction();
@@ -1034,7 +1039,7 @@ export async function revertSaleItem(transactionId: string, sku: string): Promis
 
 
 export async function revertSaleByTransaction(transactionId: string, newStatus: 'Cancelled' | 'Return Selesai' | 'Return'): Promise<Sale[]> {
-    const getSalesStmt = db.prepare("SELECT * FROM sales WHERE transactionId = ? AND status != 'Cancelled' AND status != 'Return Selesai'");
+    const getSalesStmt = db.prepare("SELECT * FROM sales WHERE transactionId = ? AND status NOT IN ('Cancelled', 'Return Selesai')");
     const sales = getSalesStmt.all(transactionId) as Sale[];
 
     if (!sales || sales.length === 0) {
@@ -1054,13 +1059,7 @@ export async function revertSaleByTransaction(transactionId: string, newStatus: 
 }
 
 export async function cancelSaleTransaction(transactionId: string) {
-    // Delete sales records for the transaction
-    const deleteSalesStmt = db.prepare("DELETE FROM sales WHERE transactionId = ?");
-    deleteSalesStmt.run(transactionId);
-    
-    // In a real app, you might want to revert stock changes here too if they are not handled by revertSaleByTransaction
-    // But for this simplified version, we just delete.
-    return;
+    return await revertSaleByTransaction(transactionId, 'Cancelled');
 }
 
 export async function returnSaleTransaction(transactionId: string) {
@@ -1330,3 +1329,4 @@ async function updateShippingReceiptStatusByAwb(awb: string, status: string) {
     stmt.run(status, awb);
 }
     
+

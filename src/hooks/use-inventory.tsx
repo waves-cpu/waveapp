@@ -311,8 +311,7 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
       if (sale.accessoryId) affectedAccessoryIds.add(sale.accessoryId.toString());
     });
 
-    // Instead of filtering, we just update the status locally for immediate feedback
-    setAllSales(prev => prev.map(s => s.transactionId === transactionId ? { ...s, status: 'Cancelled' } : s));
+    setAllSales(prev => prev.filter(s => s.transactionId !== transactionId));
     
     for (const id of affectedItemIds) {
         const updatedItem = await fetchSingleItem(id);
@@ -489,3 +488,4 @@ export const useInventory = () => {
   }
   return context;
 };
+
