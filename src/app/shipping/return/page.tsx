@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
@@ -17,6 +16,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
+  TableFooter,
 } from '@/components/ui/table';
 import { Undo2, Truck, CheckCircle, Package, Trash2, Search, FileDown, Loader2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
