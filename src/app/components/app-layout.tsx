@@ -94,35 +94,26 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                   </SidebarMenuItem>
                    <SidebarMenu className="ml-4 mt-2 border-l border-muted-foreground/20 pl-4 mb-4">
                         <SidebarMenuItem>
-                           <SidebarMenuButton variant="ghost" size="sm">
-                                <ShoppingBag />
-                                <span className="flex-grow font-semibold">Marketplace</span>
-                                <ChevronDown className="ml-auto transition-transform" />
-                           </SidebarMenuButton>
+                           <Link href="/sales/shopee">
+                               <SidebarMenuButton variant="ghost" size="sm" isActive={pathname.startsWith('/sales/shopee')}>
+                                   {t.sales.shopee}
+                               </SidebarMenuButton>
+                           </Link>
                         </SidebarMenuItem>
-                        <SidebarMenu className="ml-4 mt-2 border-l border-muted-foreground/20 pl-4 mb-2">
-                             <SidebarMenuItem>
-                                <Link href="/sales/shopee">
-                                    <SidebarMenuButton variant="ghost" size="sm" isActive={pathname.startsWith('/sales/shopee')}>
-                                        {t.sales.shopee}
-                                    </SidebarMenuButton>
-                                </Link>
-                            </SidebarMenuItem>
-                             <SidebarMenuItem>
-                                <Link href="/sales/tiktok">
-                                    <SidebarMenuButton variant="ghost" size="sm" isActive={pathname.startsWith('/sales/tiktok')}>
-                                        {t.sales.tiktok}
-                                    </SidebarMenuButton>
-                                </Link>
-                            </SidebarMenuItem>
-                             <SidebarMenuItem>
-                                <Link href="/sales/lazada">
-                                    <SidebarMenuButton variant="ghost" size="sm" isActive={pathname.startsWith('/sales/lazada')}>
-                                        {t.sales.lazada}
-                                    </SidebarMenuButton>
-                                </Link>
-                            </SidebarMenuItem>
-                        </SidebarMenu>
+                        <SidebarMenuItem>
+                           <Link href="/sales/tiktok">
+                               <SidebarMenuButton variant="ghost" size="sm" isActive={pathname.startsWith('/sales/tiktok')}>
+                                   {t.sales.tiktok}
+                               </SidebarMenuButton>
+                           </Link>
+                        </SidebarMenuItem>
+                        <SidebarMenuItem>
+                           <Link href="/sales/lazada">
+                               <SidebarMenuButton variant="ghost" size="sm" isActive={pathname.startsWith('/sales/lazada')}>
+                                   {t.sales.lazada}
+                               </SidebarMenuButton>
+                           </Link>
+                        </SidebarMenuItem>
                         <SidebarMenuItem>
                            <Link href="/sales/pos">
                                <SidebarMenuButton variant="ghost" size="sm" isActive={pathname.startsWith('/sales/pos')}>
