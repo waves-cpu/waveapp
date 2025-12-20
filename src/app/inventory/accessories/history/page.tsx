@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useMemo } from 'react';
@@ -54,7 +55,7 @@ type HistoryEntry = {
 
 
 export default function AccessoryHistoryPage() {
-  const { items, categories, allSales, loading } = useInventory();
+  const { accessories, loading } = useInventory();
   const { language } = useLanguage();
   const t = translations[language];
   
@@ -63,18 +64,17 @@ export default function AccessoryHistoryPage() {
   const [tempDateRange, setTempDateRange] = useState<DateRange | undefined>(dateRange);
   const [isDatePickerOpen, setDatePickerOpen] = useState(false);
   const [adjustmentTypeFilter, setAdjustmentTypeFilter] = useState<'all' | 'in' | 'out'>('all');
-  const [selectedSales, setSelectedSales] = useState<Sale[]>([]);
-  const [isSalesDetailOpen, setIsSalesDetailOpen] = useState(false);
   const [itemsPerPage, setItemsPerPage] = useState(20);
   const [currentPage, setCurrentPage] = useState(1);
   const [isExporting, setIsExporting] = useState(false);
 
   const allHistory = useMemo((): HistoryEntry[] => {
+    if (loading) return [];
     const historyList: HistoryEntry[] = [];
 
-    items.forEach(item => {
-      const processHistory = (history: AdjustmentHistory[], parentItem: InventoryItem, variant?: InventoryItemVariant) => {
-        history.forEach(entry => {
+    accessories.forEach(item => {
+      if(item.history) {
+        item.history.forEach(entry => {
             if (entry.change !== 0 || entry.reason.toLowerCase() !== 'no change') {
                  historyList.push({
                     type: 'adjustment',
@@ -82,31 +82,19 @@ export default function AccessoryHistoryPage() {
                     change: entry.change,
                     reason: entry.reason,
                     newStockLevel: entry.newStockLevel,
-                    itemName: parentItem.name,
-                    itemCategory: parentItem.category,
-                    variantName: variant?.name,
-                    variantSku: variant?.sku,
-                    imageUrl: parentItem.imageUrl,
+                    itemName: item.name,
+                    itemCategory: item.category,
                 });
             }
         });
       }
-      
-      if (item.variants && item.variants.length > 0) {
-        item.variants.forEach(variant => {
-          if(variant.history) processHistory(variant.history, item, variant);
-        });
-      } else if(item.history) {
-        processHistory(item.history, item);
-      }
     });
 
     return historyList.sort((a, b) => b.date.getTime() - a.date.getTime());
-  }, [items]);
+  }, [accessories, loading]);
 
   const filteredHistory = useMemo(() => {
     const filtered = allHistory
-      .filter(entry => entry.itemCategory === 'Accessories')
       .filter(entry => {
         const lowerSearchTerm = searchTerm.toLowerCase();
         if(!lowerSearchTerm) return true;
@@ -375,11 +363,7 @@ export default function AccessoryHistoryPage() {
             </div>
         </div>
       </main>
-      <DailySalesDetailDialog 
-          open={isSalesDetailOpen}
-          onOpenChange={setSalesDetailOpen}
-          sales={selectedSales}
-      />
     </AppLayout>
   );
 }
+

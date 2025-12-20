@@ -32,7 +32,7 @@ import {
   fetchShippingReceipts as fetchShippingReceiptsDb,
   addShippingReceipt as addShippingReceiptDb,
   deleteShippingReceipt as deleteShippingReceiptDb,
-  updateShippingReceiptsStatus,
+  updateShippingReceiptsStatus as updateShippingReceiptsDbStatus,
   updateShippingReceiptStatus,
   fetchShippingReceiptCounts,
   getReceiptCountByStatus as getReceiptCountByStatusDb,
@@ -42,6 +42,7 @@ import {
   deleteBulkImportHistory as deleteBulkImportHistoryDb,
   getPendingReceiptsBeforeDate as getPendingReceiptsBeforeDateDb,
   returnSaleTransaction,
+  fetchSingleItem
 } from '@/lib/inventory-service';
 
 
@@ -79,7 +80,7 @@ interface InventoryContextType {
   updateAccessory: (accessoryId: string, accessoryData: Omit<Accessory, 'id' | 'history'>) => Promise<void>;
   adjustAccessoryStock: (accessoryId: string, change: number, reason: string) => Promise<void>;
   // Shipping
-  shippingReceipts: ShippingReceipt[];
+  allShippingReceipts: ShippingReceipt[];
   fetchShippingReceipts: (options: { page: number; limit: number; salesChannel?: string; channel?: string; date_range?: { from: Date | null; to: Date }; status?: string[]; awb?: string; }) => Promise<{ receipts: ShippingReceipt[]; total: number; }>;
   addShippingReceipt: (receipt: Omit<ShippingReceipt, 'id'>) => Promise<ShippingReceipt>;
   deleteShippingReceipt: (id: number) => Promise<void>;
@@ -101,22 +102,24 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
   const [categories, setCategories] = useState<string[]>(allCategories);
   const [allSales, setAllSales] = useState<Sale[]>([]);
   const [resellers, setResellers] = useState<Reseller[]>([]);
-  const [shippingReceipts, setShippingReceipts] = useState<ShippingReceipt[]>([]);
+  const [allShippingReceipts, setAllShippingReceipts] = useState<ShippingReceipt[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchAllData = useCallback(async () => {
     setLoading(true);
     try {
-      const [inventoryData, salesData, resellerData] = await Promise.all([
+      const [inventoryData, salesData, resellerData, receiptData] = await Promise.all([
         fetchInventoryData(),
         fetchAllSales(),
         getResellers(),
+        fetchShippingReceiptsDb({ page: 1, limit: 100000 }) // Fetch all receipts
       ]);
       
       setItems(inventoryData.items);
       setAccessories(inventoryData.accessories);
       setAllSales(salesData);
       setResellers(resellerData);
+      setAllShippingReceipts(receiptData.receipts);
 
     } catch (error) {
     } finally {
@@ -129,32 +132,25 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
   }, [fetchAllData]);
 
   
-  const fetchResellers = useCallback(async () => {
-    try {
-      const resellerData = await getResellers();
-      setResellers(resellerData);
-    } catch(error) {
-    }
-  }, []);
-
   const addReseller = async (name: string, phone?: string, address?: string) => {
-    await addResellerDb(name, phone, address);
-    await fetchResellers();
+    const newReseller = await addResellerDb(name, phone, address);
+    setResellers(prev => [...prev, newReseller].sort((a, b) => a.name.localeCompare(b.name)));
   };
   
   const editReseller = async (id: number, data: Omit<Reseller, 'id'>) => {
-    await editResellerDb(id, data);
-    await fetchResellers();
+    const updatedReseller = await editResellerDb(id, data);
+    setResellers(prev => prev.map(r => r.id === id ? updatedReseller : r).sort((a, b) => a.name.localeCompare(b.name)));
   };
   
   const deleteReseller = async (id: number) => {
     await deleteResellerDb(id);
-    await fetchResellers();
+    setResellers(prev => prev.filter(r => r.id !== id));
   };
 
   const addItem = async (itemData: any) => {
-    await addProduct(itemData);
-    await fetchAllData();
+    const newItemId = await addProduct(itemData);
+    const newItem = await fetchSingleItem(newItemId);
+    setItems(prev => [...prev, newItem]);
   };
   
   const bulkAddProducts = async (products: any[], fileName: string): Promise<BulkImportHistory> => {
@@ -176,10 +172,8 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
         };
         await updateBulkImportHistory(historyEntry.id, finalData);
         
-        // Refetch all data to update the inventory list
         await fetchAllData();
 
-        // Return the complete, updated history entry
         return { ...historyEntry, ...finalData, id: historyEntry.id };
         
     } catch (error) {
@@ -188,7 +182,6 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
             error: error instanceof Error ? error.message : 'Unknown error',
         };
         await updateBulkImportHistory(historyEntry.id, finalData);
-        // Even on failure, refetch to ensure UI is consistent
         await fetchAllData();
         throw error;
     }
@@ -196,17 +189,53 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
 
   const updateItem = async (itemId: string, itemData: any) => {
     await editProduct(itemId, itemData);
-    await fetchAllData();
+    const updatedItem = await fetchSingleItem(itemId);
+    setItems(prev => prev.map(item => item.id === itemId ? updatedItem : item));
   };
 
   const bulkUpdateVariants = async (itemId: string, variants: InventoryItemVariant[], reason: string) => {
     await editVariantsBulk(itemId, variants, reason);
-    await fetchAllData();
+    const updatedItem = await fetchSingleItem(itemId);
+    setItems(prev => prev.map(item => item.id === itemId ? updatedItem : item));
   };
 
   const updateStock = async (itemId: string, change: number, reason: string) => {
-    await adjustStock(itemId, change, reason);
-    await fetchAllData();
+    const itemToUpdateLocally = items.find(i => i.id === itemId || i.variants?.some(v => v.id === itemId));
+    
+    // Optimistic update
+    setItems(prevItems => prevItems.map(item => {
+        if (item.id === itemToUpdateLocally?.id) {
+            const updatedItem = JSON.parse(JSON.stringify(item)); // Deep copy
+            if (updatedItem.variants && updatedItem.variants.length > 0) {
+                const variant = updatedItem.variants.find((v: InventoryItemVariant) => v.id === itemId);
+                if (variant) {
+                    variant.stock += change;
+                }
+            } else if (updatedItem.id === itemId) {
+                updatedItem.stock = (updatedItem.stock ?? 0) + change;
+            }
+            return updatedItem;
+        }
+        return item;
+    }));
+
+    try {
+        await adjustStock(itemId, change, reason);
+        // Re-fetch the single item to ensure consistency with DB (especially history)
+        if (itemToUpdateLocally) {
+            const freshItem = await fetchSingleItem(itemToUpdateLocally.id);
+            setItems(prev => prev.map(i => i.id === itemToUpdateLocally.id ? freshItem : i));
+        }
+    } catch (error) {
+        // Revert optimistic update on error
+        setItems(prevItems => prevItems.map(item => {
+            if (item.id === itemToUpdateLocally?.id) {
+                return itemToUpdateLocally; // Revert to original state
+            }
+            return item;
+        }));
+        throw error;
+    }
   };
   
   const getHistory = async (itemId: string): Promise<AdjustmentHistory[]> => {
@@ -231,33 +260,51 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
 
   const recordSale = async (sku: string, channel: string, quantity: number, options?: { saleDate?: Date, transactionId?: string, paymentMethod?: string, resellerName?: string, priceAtSale?: number, status?: string }): Promise<void> => {
     const newSale = await performSale(sku, channel, quantity, options);
-    // Directly update the sales state instead of re-fetching everything
     setAllSales(prevSales => [newSale, ...prevSales].sort((a, b) => new Date(b.saleDate).getTime() - new Date(a.saleDate).getTime()));
-    await fetchAllData();
+    
+    // Update stock locally
+    const itemToUpdate = items.find(i => i.sku === newSale.parentSku || i.variants?.some(v => v.sku === sku));
+    if (itemToUpdate) {
+        const updatedItem = await fetchSingleItem(itemToUpdate.id);
+        setItems(prev => prev.map(item => item.id === itemToUpdate.id ? updatedItem : item));
+    }
   };
 
   const fetchSales = async (channel: string, date: Date, page: number, limit: number): Promise<{ sales: Sale[], total: number }> => {
     return await getSalesByDate(channel, date, page, limit);
   };
   
-  const cancelSale = async (saleId: string) => {
-    await revertSale(saleId);
-    await fetchAllData();
-  };
-
-  const _cancelSaleTransaction = async (transactionId: string) => {
-    await revertSaleByTransaction(transactionId, 'Cancelled');
-    await fetchAllData();
+  const cancelSaleTransaction = async (transactionId: string) => {
+    const affectedSales = await revertSaleByTransaction(transactionId, 'Cancelled');
+    const affectedItemIds = new Set(affectedSales.map(s => s.productId));
+    setAllSales(prev => prev.filter(s => s.transactionId !== transactionId));
+    affectedItemIds.forEach(async (id) => {
+        if(id) {
+          const updatedItem = await fetchSingleItem(id.toString());
+          setItems(prev => prev.map(item => item.id === id ? updatedItem : item));
+        }
+    });
   }
   
-  const _returnSaleTransaction = async (transactionId: string) => {
-      await revertSaleByTransaction(transactionId, 'Return Selesai');
-      await fetchAllData();
+  const returnSaleTransaction = async (transactionId: string) => {
+      const affectedSales = await revertSaleByTransaction(transactionId, 'Return Selesai');
+      const affectedItemIds = new Set(affectedSales.map(s => s.productId));
+      setAllSales(prev => prev.map(s => s.transactionId === transactionId ? { ...s, status: 'Return Selesai' } : s));
+      affectedItemIds.forEach(async (id) => {
+        if(id) {
+          const updatedItem = await fetchSingleItem(id.toString());
+          setItems(prev => prev.map(item => item.id === id ? updatedItem : item));
+        }
+      });
   }
   
-  const _revertSaleItem = async (transactionId: string, sku: string) => {
-      await revertSaleItem(transactionId, sku);
-      await fetchAllData();
+  const revertSaleItem = async (transactionId: string, sku: string) => {
+      const revertedSale = await revertSaleItem(transactionId, sku);
+      if(revertedSale && revertedSale.productId) {
+        const updatedItem = await fetchSingleItem(revertedSale.productId);
+        setItems(prev => prev.map(item => item.id === revertedSale.productId ? updatedItem : item));
+        setAllSales(prev => prev.map(s => s.id === revertedSale.id ? revertedSale : s));
+      }
   }
 
   const getProductBySku = async (sku: string) => {
@@ -266,47 +313,62 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
 
   const updatePrices = async (updates: any[]) => {
     await updatePricesDb(updates);
-    await fetchAllData();
+    const itemIds = new Set(updates.map(u => {
+        const item = items.find(i => i.id === u.id || i.variants?.some(v => v.id === u.id));
+        return item?.id;
+    }).filter(Boolean));
+
+    for (const id of itemIds) {
+        const updatedItem = await fetchSingleItem(id as string);
+        setItems(prev => prev.map(i => i.id === id ? updatedItem : i));
+    }
   };
 
   const archiveProduct = async (itemId: string, isArchived: boolean) => {
     await archiveProductDb(itemId, isArchived);
-    await fetchAllData();
+    setItems(prev => prev.map(i => i.id === itemId ? { ...i, isArchived: isArchived } : i));
   };
   
   const deleteProductPermanently = async (itemId: string) => {
     await deleteProductPermanentlyDb(itemId);
-    await fetchAllData();
+    setItems(prev => prev.filter(i => i.id !== itemId));
   }
   
   const addAccessory = async (accessory: Omit<Accessory, 'id' | 'history'>) => {
-    await addAccessoryDb(accessory);
-    await fetchAllData();
+    const newAccessoryId = await addAccessoryDb(accessory);
+    const accessoriesData = await fetchInventoryData(); // Simplified, in real app might fetch one.
+    setAccessories(accessoriesData.accessories);
   };
   const updateAccessory = async (accessoryId: string, accessoryData: Omit<Accessory, 'id'| 'history'>) => {
     await updateAccessoryDb(accessoryId, accessoryData);
-    await fetchAllData();
+    const accessoriesData = await fetchInventoryData();
+    setAccessories(accessoriesData.accessories);
   };
   const adjustAccessoryStock = async (accessoryId: string, change: number, reason: string) => {
     await adjustAccessoryStockDb(accessoryId, change, reason);
-    await fetchAllData();
+    const accessoriesData = await fetchInventoryData();
+    setAccessories(accessoriesData.accessories);
   };
 
-  const _fetchShippingReceipts = async (options: { page: number; limit: number; channel?: string; salesChannel?: string; date_range?: {from: Date | null, to: Date}; status?: string[]; awb?: string; }) => {
+  const fetchShippingReceipts = async (options: { page: number; limit: number; channel?: string; salesChannel?: string; date_range?: {from: Date | null, to: Date}; status?: string[]; awb?: string; }) => {
     return await fetchShippingReceiptsDb({ ...options });
   };
   
 
   const addShippingReceipt = async (receipt: Omit<ShippingReceipt, 'id'>) => {
     const newReceipt = await addShippingReceiptDb(receipt);
-    // Don't refetch all data here, it's too slow.
-    // The calling component will handle UI updates.
+    setAllShippingReceipts(prev => [newReceipt, ...prev].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
     return newReceipt;
   };
 
   const deleteShippingReceipt = async (id: number) => {
     await deleteShippingReceiptDb(id);
-    // Don't refetch all, let the component manage its own list
+    setAllShippingReceipts(prev => prev.filter(r => r.id !== id));
+  };
+
+  const updateShippingReceiptsStatus = async (ids: number[], status: string) => {
+    await updateShippingReceiptsDbStatus(ids, status);
+    setAllShippingReceipts(prev => prev.map(r => ids.includes(r.id) ? {...r, status} : r));
   };
 
   const deleteImportHistory = async (id: number) => {
@@ -336,17 +398,17 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
         loading,
         recordSale,
         fetchSales,
-        cancelSale,
-        cancelSaleTransaction: _cancelSaleTransaction,
-        returnSaleTransaction: _returnSaleTransaction,
-        revertSaleItem: _revertSaleItem,
+        cancelSale: revertSale,
+        cancelSaleTransaction,
+        returnSaleTransaction,
+        revertSaleItem,
         getProductBySku,
         allSales,
         resellers,
         addReseller,
         editReseller,
         deleteReseller,
-        fetchResellers,
+        fetchResellers: () => Promise.resolve(), // No-op as it's part of fetchAllData
         updatePrices,
         archiveProduct,
         deleteProductPermanently,
@@ -354,8 +416,8 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
         addAccessory,
         updateAccessory,
         adjustAccessoryStock,
-        shippingReceipts,
-        fetchShippingReceipts: _fetchShippingReceipts,
+        allShippingReceipts,
+        fetchShippingReceipts,
         addShippingReceipt,
         deleteShippingReceipt,
         updateShippingReceiptsStatus,
@@ -380,3 +442,4 @@ export const useInventory = () => {
 };
 
     
+

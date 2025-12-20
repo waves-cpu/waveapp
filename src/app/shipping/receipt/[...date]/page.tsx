@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
@@ -62,7 +63,6 @@ const STATUS_OPTIONS = ['Perlu Diproses', 'Dikirim', 'Selesai', 'Return', 'Retur
 function parseDateFromParams(dateArray: string[] | undefined): Date | null {
     if (dateArray && dateArray.length > 0) {
       if (dateArray[0] === 'semua') return null;
-      // Assuming the format is MM-dd-yyyy
       const [month, day, year] = dateArray[0].split('-');
       const parsedDate = parse(`${year}-${month}-${day}`, 'yyyy-MM-dd', new Date());
       if (isValid(parsedDate)) {
@@ -74,16 +74,7 @@ function parseDateFromParams(dateArray: string[] | undefined): Date | null {
 
 
 export default function ReceiptPage() {
-    const [allReceiptsForDate, setAllReceiptsForDate] = useState<ShippingReceipt[]>([]);
-    const [loading, setLoading] = useState(true);
-    const { toast } = useToast();
-    const { language } = useLanguage();
-    const t = translations[language].shipping.receiptPage;
-    const tCommon = translations[language].common;
-    const router = useRouter();
-    const params = useParams();
-    
-    const { fetchShippingReceipts, deleteShippingReceipt, updateShippingReceiptsStatus, updateShippingReceiptStatus, getPendingReceiptsBeforeDate, cancelSaleTransaction, returnSaleTransaction } = useInventory();
+    const { allShippingReceipts, loading, toast, language, t, router, params, deleteShippingReceipt, cancelSaleTransaction, updateShippingReceiptStatus, updateShippingReceiptsStatus, getPendingReceiptsBeforeDate } = useReceiptPageLogic();
 
     const [activeShippingTab, setActiveShippingTab] = useState<string | null>(null);
     const [activeSalesChannelTab, setActiveSalesChannelTab] = useState<string | null>(null);
@@ -100,22 +91,6 @@ export default function ReceiptPage() {
 
     const currentDate = useMemo(() => parseDateFromParams(Array.isArray(params.date) ? params.date : undefined), [params.date]);
     
-    const loadInitialData = useCallback(async () => {
-        setLoading(true);
-        try {
-            const { receipts } = await fetchShippingReceipts({
-                page: 1,
-                limit: 10000, // Fetch all
-                ...(currentDate && { date_range: { from: currentDate, to: endOfDay(currentDate) }})
-            });
-            setAllReceiptsForDate(receipts);
-        } catch (error) {
-            toast({ variant: 'destructive', title: t.fetchError });
-        } finally {
-            setLoading(false);
-        }
-    }, [currentDate, fetchShippingReceipts, t.fetchError, toast]);
-    
     const checkOldPendingReceipts = useCallback(async () => {
         if (!currentDate) return;
         try {
@@ -126,55 +101,68 @@ export default function ReceiptPage() {
     }, [currentDate, getPendingReceiptsBeforeDate]);
 
     useEffect(() => {
-        loadInitialData();
         if(currentDate) checkOldPendingReceipts();
-    }, [loadInitialData, checkOldPendingReceipts, currentDate]);
-
+    }, [checkOldPendingReceipts, currentDate]);
+    
     useEffect(() => {
         setCurrentPage(1);
-    }, [activeShippingTab, activeSalesChannelTab, searchTerm, activeStatusFilter]);
+        setActiveSalesChannelTab(null);
+        setActiveShippingTab(null);
+    }, [currentDate, searchTerm, activeStatusFilter]);
     
     useEffect(() => {
         setSelectedIds(new Set());
     }, [activeShippingTab, activeSalesChannelTab, currentDate, searchTerm, currentPage, activeStatusFilter]);
 
+    const filteredByDate = useMemo(() => {
+        if (!currentDate) return allShippingReceipts; // Show all if no date is selected
+        const start = startOfDay(currentDate);
+        const end = endOfDay(currentDate);
+        return allShippingReceipts.filter(r => {
+            const receiptDate = parseISO(r.date);
+            return receiptDate >= start && receiptDate <= end;
+        });
+    }, [allShippingReceipts, currentDate]);
+
+
     const filteredReceipts = useMemo(() => {
-        return allReceiptsForDate.filter(receipt => {
+        return filteredByDate.filter(receipt => {
             const salesChannelMatch = !activeSalesChannelTab || receipt.salesChannel === activeSalesChannelTab;
             const shippingChannelMatch = !activeShippingTab || receipt.channel === activeShippingTab;
             const statusMatch = activeStatusFilter === 'Semua Status' || receipt.status === activeStatusFilter;
             const searchMatch = !searchTerm || receipt.awb.toLowerCase().includes(searchTerm.toLowerCase());
             return salesChannelMatch && shippingChannelMatch && statusMatch && searchMatch;
         });
-    }, [allReceiptsForDate, activeSalesChannelTab, activeShippingTab, activeStatusFilter, searchTerm]);
+    }, [filteredByDate, activeSalesChannelTab, activeShippingTab, activeStatusFilter, searchTerm]);
 
     const paginatedReceipts = useMemo(() => {
         const startIndex = (currentPage - 1) * itemsPerPage;
         return filteredReceipts.slice(startIndex, startIndex + itemsPerPage);
     }, [filteredReceipts, currentPage, itemsPerPage]);
 
-    const { salesChannelCounts, shippingChannelCounts, statusCounts } = useMemo(() => {
+     const { salesChannelCounts, shippingChannelCounts, statusCounts } = useMemo(() => {
         const sc: Record<string, number> = {};
         const shc: Record<string, number> = {};
         const st: Record<string, number> = {};
         STATUS_OPTIONS.forEach(s => st[s] = 0);
 
-        allReceiptsForDate.forEach(r => {
-            // Count for sales channels, filtered by active shipping and status
-            if ((!activeShippingTab || r.channel === activeShippingTab) && (activeStatusFilter === 'Semua Status' || r.status === activeStatusFilter)) {
-                if (r.salesChannel) sc[r.salesChannel] = (sc[r.salesChannel] || 0) + 1;
+        filteredByDate.forEach(r => {
+            const salesChannelMatch = !activeSalesChannelTab || r.salesChannel === activeSalesChannelTab;
+            const shippingChannelMatch = !activeShippingTab || r.channel === activeShippingTab;
+            const statusMatch = activeStatusFilter === 'Semua Status' || r.status === activeStatusFilter;
+
+            if (shippingChannelMatch && statusMatch && r.salesChannel) {
+                sc[r.salesChannel] = (sc[r.salesChannel] || 0) + 1;
             }
-            // Count for shipping channels, filtered by active sales and status
-            if ((!activeSalesChannelTab || r.salesChannel === activeSalesChannelTab) && (activeStatusFilter === 'Semua Status' || r.status === activeStatusFilter)) {
+            if (salesChannelMatch && statusMatch) {
                 shc[r.channel] = (shc[r.channel] || 0) + 1;
             }
-            // Count for statuses, filtered by active sales and shipping
-            if ((!activeSalesChannelTab || r.salesChannel === activeSalesChannelTab) && (!activeShippingTab || r.channel === activeShippingTab)) {
+            if (salesChannelMatch && shippingChannelMatch) {
                 st[r.status] = (st[r.status] || 0) + 1;
             }
         });
         return { salesChannelCounts: sc, shippingChannelCounts: shc, statusCounts: st };
-    }, [allReceiptsForDate, activeSalesChannelTab, activeShippingTab, activeStatusFilter]);
+    }, [filteredByDate, activeSalesChannelTab, activeShippingTab, activeStatusFilter]);
 
 
     const handleDelete = async (receiptToDelete: ShippingReceipt) => {
@@ -185,7 +173,6 @@ export default function ReceiptPage() {
             }
             await deleteShippingReceipt(receiptToDelete.id);
             toast({ title: t.deleteSuccess, description: 'Resi dihapus dan stok telah dikembalikan.' });
-            loadInitialData(); // Refetch data for the day
         } catch (error) {
             toast({ variant: 'destructive', title: t.deleteError, description: 'Gagal menghapus resi dan mengembalikan stok.' });
         }
@@ -193,15 +180,8 @@ export default function ReceiptPage() {
     
     const handleChangeStatus = async (receipt: ShippingReceipt, newStatus: string) => {
         try {
-            if (newStatus === 'Dibatalkan' && receipt.transactionId) {
-                await cancelSaleTransaction(receipt.transactionId);
-            } else if (newStatus === 'Return' && receipt.transactionId) {
-                await returnSaleTransaction(receipt.transactionId);
-            }
-
             await updateShippingReceiptStatus(receipt.id, newStatus);
             toast({ title: t.statusUpdateSuccess, description: t.statusUpdateSuccessDesc.replace('{status}', newStatus) });
-            loadInitialData();
         } catch (error) {
             toast({ variant: 'destructive', title: t.statusUpdateError, description: t.statusUpdateErrorDesc });
         }
@@ -214,7 +194,6 @@ export default function ReceiptPage() {
             await updateShippingReceiptsStatus(Array.from(selectedIds), 'Dikirim');
             toast({ title: t.bulkProcessSuccess, description: t.bulkProcessSuccessDesc.replace('{count}', selectedIds.size.toString()) });
             setSelectedIds(new Set());
-            loadInitialData();
         } catch (error) {
             toast({ variant: 'destructive', title: t.bulkProcessError, description: t.bulkProcessErrorDesc });
         } finally {
@@ -298,7 +277,7 @@ export default function ReceiptPage() {
                             <PopoverContent className="w-auto p-0" align="end">
                             <Calendar
                                 mode="single"
-                                selected={currentDate}
+                                selected={currentDate || undefined}
                                 onSelect={handleDateSelect}
                                 initialFocus
                             />
@@ -328,16 +307,16 @@ export default function ReceiptPage() {
                      <div className="border-b">
                          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-2">
                             {(['Shopee', 'Tiktok', 'Lazada'] as const).map(tab => (
-                                <Button 
+                                salesChannelCounts[tab] > 0 && <Button 
                                     key={tab}
                                     variant={activeSalesChannelTab === tab ? 'secondary' : 'ghost'}
                                     size="sm"
-                                    onClick={() => setActiveSalesChannelTab(tab)}
-                                    className={cn("shrink-0", activeSalesChannelTab === tab && "text-primary")}
+                                    onClick={() => setActiveSalesChannelTab(prev => prev === tab ? null : tab)}
+                                    className="shrink-0"
                                 >
                                     {tab}
                                     <Badge variant={activeSalesChannelTab === tab ? 'default' : 'secondary'} className="ml-2">
-                                        {salesChannelCounts[tab] || 0}
+                                        {salesChannelCounts[tab]}
                                     </Badge>
                                 </Button>
                             ))}
@@ -345,32 +324,32 @@ export default function ReceiptPage() {
                     </div>
                     <div className="flex items-center gap-2 overflow-x-auto no-scrollbar border-b pb-2">
                         {(['SPX', 'J&T', 'JNE', 'INSTANT', 'CARGO'] as ShippingProvider[]).map(tab => (
-                            <Button 
+                             shippingChannelCounts[tab] > 0 && <Button 
                                 key={tab}
                                 variant={activeShippingTab === tab ? 'secondary' : 'ghost'}
                                 size="sm"
-                                onClick={() => setActiveShippingTab(tab)}
-                                className={cn("shrink-0", activeShippingTab === tab && "text-primary")}
+                                onClick={() => setActiveShippingTab(prev => prev === tab ? null : tab)}
+                                className="shrink-0"
                             >
                                 {tab}
                                 <Badge variant={activeShippingTab === tab ? 'default' : 'secondary'} className="ml-2">
-                                    {shippingChannelCounts[tab] || 0}
+                                    {shippingChannelCounts[tab]}
                                 </Badge>
                             </Button>
                         ))}
                     </div>
                      <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
                         {STATUS_OPTIONS.map(status => (
-                            <Button
+                            statusCounts[status] > 0 && <Button
                                 key={status}
                                 variant={activeStatusFilter === status ? 'secondary' : 'ghost'}
                                 size="sm"
                                 onClick={() => setActiveStatusFilter(status)}
-                                className={cn("shrink-0", activeStatusFilter === status && "text-primary")}
+                                className="shrink-0"
                             >
                                 {status}
                                 <Badge variant={activeStatusFilter === status ? 'default' : 'secondary'} className="ml-2">
-                                    {statusCounts[status] || 0}
+                                    {statusCounts[status]}
                                 </Badge>
                             </Button>
                         ))}
@@ -451,7 +430,7 @@ export default function ReceiptPage() {
                                                                     </AlertDialogDescription>
                                                                 </AlertDialogHeader>
                                                                 <AlertDialogFooter>
-                                                                    <AlertDialogCancel>{tCommon.cancel}</AlertDialogCancel>
+                                                                    <AlertDialogCancel>{translations[language].common.cancel}</AlertDialogCancel>
                                                                     <AlertDialogAction onClick={() => handleDelete(item)} className="bg-destructive hover:bg-destructive/90">
                                                                         {t.deleteConfirmAction}
                                                                     </AlertDialogAction>
@@ -490,4 +469,36 @@ export default function ReceiptPage() {
             </main>
         </AppLayout>
     );
+}
+
+function useReceiptPageLogic() {
+    const { 
+        allShippingReceipts, 
+        loading: inventoryLoading, 
+        deleteShippingReceipt, 
+        cancelSaleTransaction, 
+        updateShippingReceiptStatus,
+        updateShippingReceiptsStatus,
+        getPendingReceiptsBeforeDate
+    } = useInventory();
+    const { toast } = useToast();
+    const { language } = useLanguage();
+    const t = translations[language].shipping.receiptPage;
+    const router = useRouter();
+    const params = useParams();
+
+    return {
+        allShippingReceipts,
+        loading: inventoryLoading,
+        toast,
+        language,
+        t,
+        router,
+        params,
+        deleteShippingReceipt,
+        cancelSaleTransaction,
+        updateShippingReceiptStatus,
+        updateShippingReceiptsStatus,
+        getPendingReceiptsBeforeDate,
+    };
 }

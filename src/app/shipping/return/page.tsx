@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
@@ -199,12 +200,11 @@ const ReturnProductDialog = ({
 
 
 export default function ReturnPage() {
-    const [allReturnsForMonth, setAllReturnsForMonth] = useState<ShippingReceipt[]>([]);
+    const { loading: inventoryLoading, allShippingReceipts, updateShippingReceiptStatus, deleteShippingReceipt, returnSaleTransaction } = useInventory();
     const [loading, setLoading] = useState(true);
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(25);
     const { toast } = useToast();
-    const { updateShippingReceiptStatus, fetchShippingReceipts, deleteShippingReceipt, returnSaleTransaction } = useInventory();
     const { language } = useLanguage();
     const t = translations[language].shipping.returnPage;
     const tCommon = translations[language].common;
@@ -222,34 +222,27 @@ export default function ReturnPage() {
         return Array.from({ length: 6 }, (_, i) => currentYear - i);
     }, []);
 
-    const loadInitialData = useCallback(async () => {
-        setLoading(true);
-        try {
-            const date = new Date(selectedYear, selectedMonth);
-            const firstDay = startOfMonth(date);
-            const lastDay = endOfMonth(date);
+    const allReturnsForMonth = useMemo(() => {
+        const date = new Date(selectedYear, selectedMonth);
+        const firstDay = startOfMonth(date);
+        const lastDay = endOfMonth(date);
 
-            const { receipts } = await fetchShippingReceipts({
-                page: 1,
-                limit: 10000, // Fetch all for the month
-                status: ['Return', 'Return Selesai', 'Dibatalkan', 'Diantar', 'Tidak Sampai'],
-                date_range: { from: firstDay, to: lastDay }
-            });
-            setAllReturnsForMonth(receipts);
-        } catch (error) {
-            toast({ variant: 'destructive', title: t.fetchError });
-        } finally {
+        return allShippingReceipts.filter(receipt => {
+            const receiptDate = parseISO(receipt.date);
+            return receiptDate >= firstDay && receiptDate <= lastDay && 
+                   ['Return', 'Return Selesai', 'Dibatalkan', 'Diantar', 'Tidak Sampai'].includes(receipt.status);
+        });
+    }, [allShippingReceipts, selectedMonth, selectedYear]);
+
+    useEffect(() => {
+        if (!inventoryLoading) {
             setLoading(false);
         }
-    }, [fetchShippingReceipts, selectedMonth, selectedYear, t.fetchError, toast]);
-
-    useEffect(() => {
-        loadInitialData();
-    }, [loadInitialData]);
-
+    }, [inventoryLoading]);
+    
     useEffect(() => {
         setCurrentPage(1);
-    }, [activeChannel, searchTerm]);
+    }, [activeChannel, searchTerm, selectedMonth, selectedYear]);
 
     const channelCounts = useMemo(() => {
         const counts: Record<string, number> = {};
@@ -278,7 +271,6 @@ export default function ReturnPage() {
         try {
             await updateShippingReceiptStatus(id, newStatus);
             toast({ title: t.statusUpdateSuccess, description: t.statusUpdateSuccessDesc.replace('{status}', newStatus) });
-            loadInitialData();
         } catch (error) {
             toast({ variant: 'destructive', title: t.statusUpdateError });
         }
@@ -289,7 +281,6 @@ export default function ReturnPage() {
         try {
             await deleteShippingReceipt(receiptToDelete.id);
             toast({ title: t.deleteSuccess, description: t.deleteSuccessDesc.replace('{awb}', receiptToDelete.awb) });
-            loadInitialData();
         } catch (error) {
             toast({ variant: 'destructive', title: t.deleteError });
         }
@@ -318,7 +309,6 @@ export default function ReturnPage() {
             }
 
             toast({ title: t.stockReturnedSuccess, description: `Stok untuk ${returnedItems.length} produk telah dikembalikan.` });
-            loadInitialData();
         } catch (error) {
             let errorMessage = t.stockReturnedError;
              if (error instanceof Error) {
@@ -420,7 +410,7 @@ export default function ReturnPage() {
                                 )}
                             </Button>
                             {(['SPX', 'J&T', 'JNE', 'INSTANT', 'CARGO'] as const).map(tab => (
-                                <Button 
+                                channelCounts[tab] > 0 && <Button 
                                     key={tab}
                                     variant={activeChannel === tab ? 'secondary' : 'ghost'}
                                     size="sm"
@@ -432,7 +422,7 @@ export default function ReturnPage() {
                                         <Loader2 className="ml-2 h-4 w-4 animate-spin" />
                                     ) : (
                                          <Badge variant={activeChannel === tab ? 'default' : 'secondary'} className="ml-2">
-                                            {channelCounts[tab] || 0}
+                                            {channelCounts[tab]}
                                         </Badge>
                                     )}
                                 </Button>
@@ -544,3 +534,4 @@ export default function ReturnPage() {
 }
 
     
+

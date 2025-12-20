@@ -366,7 +366,7 @@ export async function fetchInventoryData() {
     return { items: fullItems, accessories: fullAccessories, categories: uniqueCategories };
 }
 
-export async function addProduct(itemData: any) {
+export async function addProduct(itemData: any): Promise<string> {
     const addProductStmt = db.prepare(`
         INSERT INTO products (name, category, sku, releaseDate, imageUrl, hasVariants, stock, price, size, costPrice)
         VALUES (@name, @category, @sku, @releaseDate, @imageUrl, @hasVariants, @stock, @price, @size, @costPrice)
@@ -382,7 +382,7 @@ export async function addProduct(itemData: any) {
         VALUES (@productId, @variantId, @change, @reason, @newStockLevel, @date)
     `);
 
-    db.transaction(() => {
+    const transaction = db.transaction(() => {
         const hasVariants = !!(itemData.hasVariants && itemData.variants && itemData.variants.length > 0);
 
         const productResult = addProductStmt.run({
@@ -434,7 +434,10 @@ export async function addProduct(itemData: any) {
                 });
             }
         }
-    })();
+        return productId.toString();
+    });
+
+    return transaction();
 }
 
 export async function bulkAddProducts(data: any[]): Promise<{ addedProducts: {sku: string, name: string}[], skippedProducts: {sku: string, name: string}[] }> {
@@ -860,7 +863,14 @@ export async function performSale(
 
 export async function fetchSingleItem(itemId: string): Promise<InventoryItem> {
     const product = db.prepare("SELECT * FROM products WHERE id = ?").get(itemId) as any;
-    if (!product) throw new Error('Product not found');
+    if (!product) {
+        // If not found in products, it might be a variant ID. Find its parent.
+        const variantParent = db.prepare('SELECT productId FROM variants WHERE id = ?').get(itemId) as { productId: number } | undefined;
+        if(variantParent) {
+            return fetchSingleItem(variantParent.productId.toString());
+        }
+        throw new Error('Product not found');
+    }
     
     if (product.hasVariants) {
         const variants = db.prepare('SELECT * FROM variants WHERE productId = ?').all(itemId) as any[];
@@ -955,28 +965,33 @@ export async function getSalesByDate(channel: string, date: Date, page: number, 
     return { sales: mappedSales, total };
 }
 
-export async function revertSale(saleId: string, newStatus: 'Cancelled' | 'Return Selesai' | 'Return') {
+export async function revertSale(saleId: string, newStatus: 'Cancelled' | 'Return Selesai' | 'Return'): Promise<Sale> {
     const getSaleStmt = db.prepare('SELECT * FROM sales WHERE id = ?');
     const updateSaleStatusStmt = db.prepare("UPDATE sales SET status = ? WHERE id = ?");
     
-    db.transaction(() => {
+    const transaction = db.transaction(() => {
         const sale = getSaleStmt.get(saleId) as Sale | undefined;
         if (!sale || ['Cancelled', 'Return Selesai'].includes(sale.status || '')) {
-            return; // Don't revert if already cancelled or return is complete
+            throw new Error("Sale already reverted or not found.");
         }
 
         const idToAdjust = sale.variantId ? sale.variantId.toString() : (sale.productId ? sale.productId.toString() : '');
-        if (!idToAdjust) return;
+        if (!idToAdjust) throw new Error("Sale item reference not found.");
 
         const reason = `${newStatus} Sale: ${sale.transactionId || `ID ${sale.id}`}`;
 
         adjustStock(idToAdjust, sale.quantity, reason);
         
         updateSaleStatusStmt.run(newStatus, saleId);
-    })();
+        
+        const updatedSale = db.prepare('SELECT * FROM sales WHERE id = ?').get(saleId) as Sale;
+        return updatedSale;
+    });
+    
+    return transaction();
 }
 
-export async function revertSaleItem(transactionId: string, sku: string) {
+export async function revertSaleItem(transactionId: string, sku: string): Promise<Sale> {
     const getSaleStmt = db.prepare(`
         SELECT s.*
         FROM sales s
@@ -992,34 +1007,39 @@ export async function revertSaleItem(transactionId: string, sku: string) {
     const sale = getSaleStmt.get({ transactionId, sku }) as Sale | undefined;
 
     if (sale) {
-        revertSale(sale.id, 'Return Selesai');
+        return revertSale(sale.id, 'Return Selesai');
     } else {
         throw new Error('Sale item not found in transaction');
     }
 }
 
 
-export async function revertSaleByTransaction(transactionId: string, newStatus: 'Cancelled' | 'Return Selesai' | 'Return') {
+export async function revertSaleByTransaction(transactionId: string, newStatus: 'Cancelled' | 'Return Selesai' | 'Return'): Promise<Sale[]> {
     const getSalesStmt = db.prepare("SELECT * FROM sales WHERE transactionId = ? AND status != 'Cancelled' AND status != 'Return Selesai'");
     const sales = getSalesStmt.all(transactionId) as Sale[];
 
     if (!sales || sales.length === 0) {
-        return;
+        return [];
     }
 
-    db.transaction(() => {
+    const transaction = db.transaction(() => {
+        const revertedSales: Sale[] = [];
         sales.forEach(sale => {
-            revertSale(sale.id, newStatus);
+            const reverted = revertSale(sale.id, newStatus);
+            revertedSales.push(reverted);
         });
-    })();
+        return revertedSales;
+    });
+
+    return transaction();
 }
 
 export async function cancelSaleTransaction(transactionId: string) {
-    await revertSaleByTransaction(transactionId, 'Cancelled');
+    return await revertSaleByTransaction(transactionId, 'Cancelled');
 }
 
 export async function returnSaleTransaction(transactionId: string) {
-    await revertSaleByTransaction(transactionId, 'Return Selesai');
+    return await revertSaleByTransaction(transactionId, 'Return Selesai');
 }
 
 function adjustStockByReason(identifier: string, reason: string) {
@@ -1120,13 +1140,14 @@ export async function getResellers(): Promise<Reseller[]> {
     return db.prepare('SELECT * FROM resellers ORDER BY name').all() as Reseller[];
 }
 
-export async function addReseller(name: string, phone?: string, address?: string) {
+export async function addReseller(name: string, phone?: string, address?: string): Promise<Reseller> {
     try {
-        db.prepare('INSERT INTO resellers (name, phone, address) VALUES (@name, @phone, @address)').run({
+        const result = db.prepare('INSERT INTO resellers (name, phone, address) VALUES (@name, @phone, @address)').run({
             name, 
             phone: phone || null, 
             address: address || null
         });
+        return db.prepare('SELECT * FROM resellers WHERE id = ?').get(result.lastInsertRowid) as Reseller;
     } catch(error) {
         if (error instanceof Error && error.message.includes('UNIQUE constraint failed')) {
             throw new Error('Reseller name already exists.');
@@ -1135,7 +1156,7 @@ export async function addReseller(name: string, phone?: string, address?: string
     }
 }
 
-export async function editReseller(id: number, data: Omit<Reseller, 'id'>) {
+export async function editReseller(id: number, data: Omit<Reseller, 'id'>): Promise<Reseller> {
      try {
         db.prepare('UPDATE resellers SET name = @name, phone = @phone, address = @address WHERE id = @id').run({
             id,
@@ -1143,6 +1164,7 @@ export async function editReseller(id: number, data: Omit<Reseller, 'id'>) {
             phone: data.phone || null,
             address: data.address || null
         });
+        return db.prepare('SELECT * FROM resellers WHERE id = ?').get(id) as Reseller;
     } catch(error) {
         if (error instanceof Error && error.message.includes('UNIQUE constraint failed')) {
             throw new Error('Reseller name already exists.');
@@ -1155,7 +1177,7 @@ export async function deleteReseller(id: number) {
     db.prepare('DELETE FROM resellers WHERE id = ?').run(id);
 }
 
-export async function addAccessory(accessory: Omit<Accessory, 'id' | 'history'>) {
+export async function addAccessory(accessory: Omit<Accessory, 'id' | 'history'>): Promise<string> {
     const addStmt = db.prepare(`
         INSERT INTO accessories (name, sku, category, stock, price, costPrice)
         VALUES (@name, @sku, @category, @stock, @price, @costPrice)
@@ -1165,7 +1187,7 @@ export async function addAccessory(accessory: Omit<Accessory, 'id' | 'history'>)
         VALUES (?, ?, ?, ?, ?)
     `);
 
-    db.transaction(() => {
+    const transaction = db.transaction(() => {
         const result = addStmt.run({
             name: accessory.name,
             sku: accessory.sku,
@@ -1178,7 +1200,10 @@ export async function addAccessory(accessory: Omit<Accessory, 'id' | 'history'>)
         if (accessory.stock > 0) {
             historyStmt.run(accessoryId, new Date().toISOString(), accessory.stock, 'Initial Stock', accessory.stock);
         }
-    })();
+        return accessoryId.toString();
+    });
+
+    return transaction();
 }
 
 export async function updateAccessory(accessoryId: string, data: Omit<Accessory, 'id'| 'history'>) {
@@ -1293,6 +1318,7 @@ async function updateShippingReceiptStatusByAwb(awb: string, status: string) {
 
 
     
+
 
 
 

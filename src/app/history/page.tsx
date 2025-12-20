@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
@@ -89,6 +90,8 @@ export default function HistoryPage() {
 
   const allHistoryForMonth = useMemo((): HistoryEntry[] => {
     if (selectedMonth === undefined || selectedYear === undefined) return [];
+    if (loading) return [];
+
     const historyList: HistoryEntry[] = [];
     const dateFilter = new Date(selectedYear, selectedMonth);
     const startDate = startOfMonth(dateFilter);
@@ -172,14 +175,14 @@ export default function HistoryPage() {
     });
 
     return historyList.sort((a, b) => b.date.getTime() - a.date.getTime());
-  }, [items, allSales, selectedMonth, selectedYear]);
+  }, [items, allSales, selectedMonth, selectedYear, loading]);
 
   const years = useMemo(() => {
-    const allYears = new Set(allHistoryForMonth.map(h => h.date.getFullYear()));
+    const allYears = new Set(allSales.map(s => parseISO(s.saleDate).getFullYear()));
     const currentYear = new Date().getFullYear();
     allYears.add(currentYear);
     return Array.from(allYears).sort((a, b) => b - a);
-  }, [allHistoryForMonth]);
+  }, [allSales]);
 
 
   const baseFilteredHistory = useMemo(() => {
@@ -579,3 +582,4 @@ export default function HistoryPage() {
     </AppLayout>
   );
 }
+
