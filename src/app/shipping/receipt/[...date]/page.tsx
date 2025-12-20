@@ -416,27 +416,6 @@ export default function ReceiptPage() {
                                                                 <DropdownMenuItem onClick={() => handleChangeStatus(item, 'Return')} className="text-destructive">{t.actions.markAsReturn}</DropdownMenuItem>
                                                             </>
                                                          )}
-                                                         <AlertDialog>
-                                                            <AlertDialogTrigger asChild>
-                                                                <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-destructive">
-                                                                    Hapus
-                                                                </DropdownMenuItem>
-                                                            </AlertDialogTrigger>
-                                                            <AlertDialogContent>
-                                                                <AlertDialogHeader>
-                                                                    <AlertDialogTitle>{t.deleteConfirmTitle}</AlertDialogTitle>
-                                                                    <AlertDialogDescription>
-                                                                        {t.deleteConfirmDesc.replace('{awb}', item.awb)}
-                                                                    </AlertDialogDescription>
-                                                                </AlertDialogHeader>
-                                                                <AlertDialogFooter>
-                                                                    <AlertDialogCancel>{translations[language].common.cancel}</AlertDialogCancel>
-                                                                    <AlertDialogAction onClick={() => handleDelete(item)} className="bg-destructive hover:bg-destructive/90">
-                                                                        {t.deleteConfirmAction}
-                                                                    </AlertDialogAction>
-                                                                </AlertDialogFooter>
-                                                            </AlertDialogContent>
-                                                        </AlertDialog>
                                                     </DropdownMenuContent>
                                                 </DropdownMenu>
                                             </TableCell>

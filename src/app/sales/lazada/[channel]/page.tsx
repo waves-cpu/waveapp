@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
@@ -278,7 +279,7 @@ export default function LazadaChannelPage() {
                       />
                   </div>
               </form>
-               <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2">
                 <div className="relative flex-grow sm:flex-grow-0">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
@@ -345,14 +346,14 @@ export default function LazadaChannelPage() {
                           <TableCell>
                             <Button variant="link" size="sm" className="h-auto p-0 text-xs" onClick={() => handleViewDetails(receipt)}>
                                 {isProcessed ? `${relatedSales.reduce((acc, s) => acc + s.quantity, 0)} produk` : 'Catat Produk'}
-                                {isProcessed && <Eye className="ml-2 h-3 w-3" />}
+                                <Eye className="ml-2 h-3 w-3" />
                             </Button>
                           </TableCell>
-                          <TableCell>
-                            <Badge variant={receipt.status === 'Dikirim' ? "default" : isProcessed ? "secondary" : "outline"}>
-                                {receipt.status}
-                            </Badge>
-                          </TableCell>
+                           <TableCell>
+                                <Badge variant={receipt.status === 'Dikirim' ? "default" : "outline"}>
+                                    {receipt.status}
+                                </Badge>
+                           </TableCell>
                            <TableCell className="text-center">
                               
                           </TableCell>

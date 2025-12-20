@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
@@ -53,7 +54,7 @@ import { RecordSaleForReceiptDialog } from '@/app/components/record-sale-for-rec
 export default function ShopeeChannelPage() {
   const { language } = useLanguage();
   const t = translations[language];
-  const { addShippingReceipt, deleteShippingReceipt, fetchShippingReceipts, allSales, updateShippingReceiptStatus, fetchShippingReceiptCountsByStatus, fetchShippingReceiptCountsByChannel, cancelSaleTransaction, recordSale } = useInventory();
+  const { addShippingReceipt, deleteShippingReceipt, fetchShippingReceipts, allSales, updateShippingReceiptStatus, fetchShippingReceiptCounts, fetchShippingReceiptCountsByChannel, cancelSaleTransaction, recordSale } = useInventory();
   const { toast } = useToast();
   const { playSuccessSound, playErrorSound } = useScanSounds();
   const router = useRouter();

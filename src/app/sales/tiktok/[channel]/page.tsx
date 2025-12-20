@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
@@ -278,7 +279,7 @@ export default function TiktokChannelPage() {
                       />
                   </div>
               </form>
-               <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2">
                 <div className="relative flex-grow sm:flex-grow-0">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
