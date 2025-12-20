@@ -178,7 +178,7 @@ export function DailySalesDetailDialog({ open, onOpenChange, sales, title, descr
                   </TableBody>
                    <TableFooter>
                       <TableRow>
-                          <TableCell colSpan={2} className="text-right font-bold">Total</TableCell>
+                          <TableCell colSpan={2} className="text-left font-bold">Total</TableCell>
                           <TableCell className="text-center font-bold">{totalQuantity}</TableCell>
                           <TableCell colSpan={2} className="text-right font-bold">{formatCurrency(totalRevenue)}</TableCell>
                       </TableRow>
