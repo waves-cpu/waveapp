@@ -912,17 +912,18 @@ export async function fetchSingleAccessory(accessoryId: string): Promise<Accesso
 export async function fetchAllSales(): Promise<Sale[]> {
      const salesQuery = db.prepare(`
         SELECT 
-            s.id, s.transactionId, s.paymentMethod, s.resellerName, s.productId, s.variantId, s.channel, s.quantity, s.priceAtSale, s.cogsAtSale, s.saleDate,
-            p.name as productName,
-            p.category as productCategory,
+            s.id, s.transactionId, s.paymentMethod, s.resellerName, s.productId, s.variantId, s.accessoryId, s.channel, s.quantity, s.priceAtSale, s.cogsAtSale, s.saleDate,
+            COALESCE(p.name, a.name) as productName,
+            COALESCE(p.category, a.category) as productCategory,
             p.imageUrl as parentImageUrl,
-            p.sku as parentSku,
+            COALESCE(p.sku, a.sku) as parentSku,
             v.name as variantName,
-            COALESCE(v.sku, p.sku) as sku,
+            COALESCE(v.sku, p.sku, a.sku) as sku,
             s.status
         FROM sales s
         LEFT JOIN products p ON s.productId = p.id
         LEFT JOIN variants v ON s.variantId = v.id
+        LEFT JOIN accessories a ON s.accessoryId = a.id
         ORDER BY s.saleDate DESC, s.id DESC
     `);
     
@@ -1060,6 +1061,37 @@ export async function cancelSaleTransaction(transactionId: string) {
 export async function returnSaleTransaction(transactionId: string) {
     return await revertSaleByTransaction(transactionId, 'Return Selesai');
 }
+
+export async function clearPosTransactions(date: Date) {
+    const dateString = formatDate(date, 'yyyy-MM-dd');
+    
+    const getSalesStmt = db.prepare("SELECT * FROM sales WHERE channel = 'pos' AND date(saleDate) = ?");
+    const sales = getSalesStmt.all(dateString) as Sale[];
+
+    if (!sales || sales.length === 0) {
+        return;
+    }
+
+    const deleteStmt = db.prepare("DELETE FROM sales WHERE id = ?");
+
+    const transaction = db.transaction(() => {
+        sales.forEach(sale => {
+            const reason = `Txn Cleared: ${sale.transactionId || `ID ${sale.id}`}`;
+            
+            if (sale.variantId) {
+                adjustStock(sale.variantId.toString(), sale.quantity, reason);
+            } else if (sale.productId) {
+                adjustStock(sale.productId.toString(), sale.quantity, reason);
+            } else if (sale.accessoryId) {
+                adjustAccessoryStock(sale.accessoryId.toString(), sale.quantity, reason);
+            }
+            deleteStmt.run(sale.id);
+        });
+    });
+
+    transaction();
+}
+
 
 function adjustStockByReason(identifier: string, reason: string) {
     // This is a placeholder for a more complex logic that might be needed.

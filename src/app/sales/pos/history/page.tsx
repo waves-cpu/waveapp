@@ -1,4 +1,3 @@
-
 'use client'
 
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
@@ -48,7 +47,7 @@ type GroupedSale = {
 }
 
 export default function PosHistoryPage() {
-    const { allSales, fetchItems, cancelSaleTransaction, loading } = useInventory();
+    const { allSales, fetchItems, cancelSaleTransaction, loading, clearPosTransactions } = useInventory();
     const { language } = useLanguage();
     const { toast } = useToast();
     const t = translations[language];
@@ -96,7 +95,7 @@ export default function PosHistoryPage() {
                     items: [],
                     totalAmount: 0,
                     totalItems: 0,
-                    isAccessoryUsage: false,
+                    isAccessoryUsage: false, // will be updated later
                 });
             }
 
@@ -109,7 +108,7 @@ export default function PosHistoryPage() {
 
         // Determine if it's an accessory usage transaction
         groups.forEach(group => {
-            group.isAccessoryUsage = group.items.every(item => !!item.accessoryId);
+            group.isAccessoryUsage = group.items.length > 0 && group.items.every(item => item.accessoryId);
         });
 
         return Array.from(groups.values()).sort((a,b) => new Date(b.saleDate).getTime() - new Date(a.saleDate).getTime());
@@ -132,6 +131,25 @@ export default function PosHistoryPage() {
             });
         }
     }, [cancelSaleTransaction, t.pos.transactionCancelled, toast, fetchAllData]);
+    
+    const handleClearHistory = async () => {
+        if (!date) return;
+        try {
+            await clearPosTransactions(date);
+            toast({
+                title: "Riwayat Dibersihkan",
+                description: `Semua transaksi POS untuk tanggal ${format(date, 'PPP')} telah dihapus dan stok telah dikembalikan.`,
+            });
+            await fetchAllData();
+        } catch (error) {
+            toast({
+                variant: 'destructive',
+                title: "Gagal Membersihkan Riwayat",
+                description: "Terjadi kesalahan saat membersihkan riwayat transaksi.",
+            });
+        }
+    }
+
 
     const handleViewDetails = (items: Sale[]) => {
         setSelectedSaleItems(items);
@@ -215,6 +233,28 @@ export default function PosHistoryPage() {
                             />
                             </PopoverContent>
                         </Popover>
+                         <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                                <Button variant="destructive" disabled={groupedSales.length === 0}>
+                                    <Trash2 className="mr-2 h-4 w-4" />
+                                    Bersihkan Riwayat
+                                </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                                <AlertDialogHeader>
+                                    <AlertDialogTitle>Anda yakin ingin membersihkan riwayat?</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                        Tindakan ini akan menghapus semua {groupedSales.length} transaksi POS untuk tanggal {date ? format(date, 'PPP') : ''} dan mengembalikan stok. Aksi ini tidak dapat diurungkan.
+                                    </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                    <AlertDialogCancel>Batal</AlertDialogCancel>
+                                    <AlertDialogAction onClick={handleClearHistory} className="bg-destructive hover:bg-destructive/90">
+                                        Ya, Bersihkan
+                                    </AlertDialogAction>
+                                </AlertDialogFooter>
+                            </AlertDialogContent>
+                        </AlertDialog>
                     </div>
                 </div>
 
@@ -243,8 +283,8 @@ export default function PosHistoryPage() {
                                             </TableCell>
                                             <TableCell onClick={() => handleViewDetails(group.items)}>
                                                 <div className="font-medium text-sm">
-                                                    {group.isAccessoryUsage ? 'Pemakaian Aksesoris' : group.items[0].productName}
-                                                    {!group.isAccessoryUsage && ` ${group.items[0].variantName || ''}`}
+                                                    {group.isAccessoryUsage ? 'Pemakaian Aksesoris' : (group.items[0]?.productName || 'N/A')}
+                                                    {!group.isAccessoryUsage && ` ${group.items[0]?.variantName || ''}`}
                                                 </div>
                                                 {group.items.length > 1 && (
                                                     <div className="text-xs text-muted-foreground">

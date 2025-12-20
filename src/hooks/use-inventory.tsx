@@ -44,6 +44,7 @@ import {
   returnSaleTransaction,
   fetchSingleItem,
   fetchSingleAccessory,
+  clearPosTransactions as clearPosTransactionsDb,
 } from '@/lib/inventory-service';
 
 
@@ -93,6 +94,8 @@ interface InventoryContextType {
   // Bulk Import History
   fetchImportHistory: () => Promise<BulkImportHistory[]>;
   deleteImportHistory: (id: number) => Promise<void>;
+  // POS
+  clearPosTransactions: (date: Date) => Promise<void>;
 }
 
 const InventoryContext = createContext<InventoryContextType | undefined>(undefined);
@@ -403,6 +406,10 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
       return await getPendingReceiptsBeforeDateDb(date);
   }
 
+  const clearPosTransactions = async (date: Date) => {
+    await clearPosTransactionsDb(date);
+  };
+
   return (
     <InventoryContext.Provider value={{ 
         items, 
@@ -447,6 +454,7 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
         getPendingReceiptsBeforeDate,
         fetchImportHistory: fetchBulkImportHistory,
         deleteImportHistory,
+        clearPosTransactions,
       }}>
       {children}
     </InventoryContext.Provider>
