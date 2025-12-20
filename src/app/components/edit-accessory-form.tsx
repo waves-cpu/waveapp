@@ -70,8 +70,8 @@ export function EditAccessoryForm({ existingItem }: EditAccessoryFormProps) {
         sku: existingItem.sku || '',
         unit: existingItem.unit || 'Pcs',
         quantityPerUnit: existingItem.quantityPerUnit ?? undefined,
-        price: existingItem.price ?? undefined,
-        stock: existingItem.stock ?? undefined,
+        price: existingItem.price ?? '',
+        stock: existingItem.stock ?? '',
     };
   }, [existingItem]);
 
