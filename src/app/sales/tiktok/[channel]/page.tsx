@@ -355,36 +355,7 @@ export default function TiktokChannelPage() {
                                 </Badge>
                            </TableCell>
                            <TableCell className="text-center">
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button variant="ghost" size="icon" className="h-8 w-8">
-                                    <MoreVertical className="h-4 w-4" />
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                  <AlertDialog>
-                                    <AlertDialogTrigger asChild>
-                                       <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-destructive">
-                                          Hapus
-                                      </DropdownMenuItem>
-                                    </AlertDialogTrigger>
-                                    <AlertDialogContent>
-                                      <AlertDialogHeader>
-                                        <AlertDialogTitle>Anda yakin?</AlertDialogTitle>
-                                        <AlertDialogDescription>
-                                          Tindakan ini akan menghapus resi dan semua data penjualan terkait. Stok akan dikembalikan. Aksi ini tidak dapat diurungkan.
-                                        </AlertDialogDescription>
-                                      </AlertDialogHeader>
-                                      <AlertDialogFooter>
-                                        <AlertDialogCancel>Batal</AlertDialogCancel>
-                                        <AlertDialogAction onClick={() => handleDeleteReceipt(receipt)}>
-                                          Ya, Hapus Resi
-                                        </AlertDialogAction>
-                                      </AlertDialogFooter>
-                                    </AlertDialogContent>
-                                  </AlertDialog>
-                                </DropdownMenuContent>
-                              </DropdownMenu>
+                              
                           </TableCell>
                         </TableRow>
                     )
