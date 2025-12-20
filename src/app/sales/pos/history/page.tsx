@@ -110,8 +110,7 @@ export default function PosHistoryPage() {
                 title: t.pos.transactionCancelled,
                 description: "Stok telah dikembalikan.",
             });
-            // Force a re-fetch of all data to update the UI
-            await fetchItems();
+            await fetchItems(); // Refetch all data to update UI
         } catch (error) {
             console.error("Error cancelling transaction:", error);
             toast({
@@ -233,10 +232,12 @@ export default function PosHistoryPage() {
                                                 {format(new Date(group.saleDate), 'HH:mm:ss')}
                                             </TableCell>
                                             <TableCell onClick={() => handleViewDetails(group.items)}>
-                                                <div className="font-medium text-sm">{group.items.length} jenis produk ({group.totalItems} item)</div>
-                                                <div className="text-xs text-muted-foreground max-w-xs truncate">
-                                                    {group.items.map(i => i.productName).join(', ')}
-                                                </div>
+                                                <div className="font-medium text-sm">{group.items[0].productName} {group.items[0].variantName || ''}</div>
+                                                {group.items.length > 1 && (
+                                                    <div className="text-xs text-muted-foreground">
+                                                        + {group.items.length - 1} produk lainnya
+                                                    </div>
+                                                )}
                                             </TableCell>
                                             <TableCell onClick={() => handleViewDetails(group.items)}>
                                                 <Badge variant="outline">{group.paymentMethod || 'N/A'}</Badge>
