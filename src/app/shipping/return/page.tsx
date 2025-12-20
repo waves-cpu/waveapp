@@ -226,7 +226,7 @@ export default function ReturnPage() {
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(25);
     const { toast } = useToast();
-    const { updateShippingReceiptStatus, fetchShippingReceipts, deleteShippingReceipt, revertSaleItem } = useInventory();
+    const { updateShippingReceiptStatus, fetchShippingReceipts, deleteShippingReceipt, returnSaleTransaction } = useInventory();
     const { language } = useLanguage();
     const t = translations[language].shipping.returnPage;
     const tCommon = translations[language].common;
@@ -343,11 +343,7 @@ export default function ReturnPage() {
     
     const handleProcessReturn = async (transactionId: string, returnedItems: ReturnedItem[]) => {
         try {
-            for (const item of returnedItems) {
-                for (let i = 0; i < item.quantity; i++) {
-                    await revertSaleItem(transactionId, item.sku);
-                }
-            }
+            await returnSaleTransaction(transactionId);
             
             if (selectedReceipt) {
                 const finalStatus = selectedReceipt.status === 'Dibatalkan' ? 'Selesai' : 'Return Selesai';

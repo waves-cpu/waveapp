@@ -971,14 +971,14 @@ export async function getSalesByDate(channel: string, date: Date, page: number, 
     return { sales: mappedSales, total };
 }
 
-export async function revertSale(saleId: string, newStatus: 'Cancelled' | 'Return' = 'Cancelled') {
+export async function revertSale(saleId: string, newStatus: 'Cancelled' | 'Return Selesai' | 'Return') {
     const getSaleStmt = db.prepare('SELECT * FROM sales WHERE id = ?');
     const updateSaleStatusStmt = db.prepare("UPDATE sales SET status = ? WHERE id = ?");
     
     db.transaction(() => {
         const sale = getSaleStmt.get(saleId) as Sale | undefined;
-        if (!sale || sale.status === 'Cancelled' || sale.status === 'Return') {
-            return;
+        if (!sale || ['Cancelled', 'Return Selesai'].includes(sale.status || '')) {
+            return; // Don't revert if already cancelled or return is complete
         }
 
         const idToAdjust = sale.variantId ? sale.variantId.toString() : (sale.productId ? sale.productId.toString() : '');
@@ -1008,15 +1008,15 @@ export async function revertSaleItem(transactionId: string, sku: string) {
     const sale = getSaleStmt.get({ transactionId, sku }) as Sale | undefined;
 
     if (sale) {
-        revertSale(sale.id, 'Return');
+        revertSale(sale.id, 'Return Selesai');
     } else {
         throw new Error('Sale item not found in transaction');
     }
 }
 
 
-export async function revertSaleByTransaction(transactionId: string, newStatus: 'Cancelled' | 'Return') {
-    const getSalesStmt = db.prepare("SELECT * FROM sales WHERE transactionId = ? AND status != 'Cancelled' AND status != 'Return'");
+export async function revertSaleByTransaction(transactionId: string, newStatus: 'Cancelled' | 'Return Selesai' | 'Return') {
+    const getSalesStmt = db.prepare("SELECT * FROM sales WHERE transactionId = ? AND status != 'Cancelled' AND status != 'Return Selesai'");
     const sales = getSalesStmt.all(transactionId) as Sale[];
 
     if (!sales || sales.length === 0) {
@@ -1035,7 +1035,7 @@ export async function cancelSaleTransaction(transactionId: string) {
 }
 
 export async function returnSaleTransaction(transactionId: string) {
-    await revertSaleByTransaction(transactionId, 'Return');
+    await revertSaleByTransaction(transactionId, 'Return Selesai');
 }
 
 function adjustStockByReason(identifier: string, reason: string) {
@@ -1309,4 +1309,5 @@ async function updateShippingReceiptStatusByAwb(awb: string, status: string) {
 
 
     
+
 
