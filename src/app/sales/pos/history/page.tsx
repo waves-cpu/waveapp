@@ -179,6 +179,7 @@ export default function PosHistoryPage() {
             sku: item.sku!,
             quantity: item.quantity,
             price: item.priceAtSale,
+            imageUrl: item.parentImageUrl,
             type: item.accessoryId ? 'accessory' : 'product',
             maxStock: 0, // Not relevant for reprint
         }));

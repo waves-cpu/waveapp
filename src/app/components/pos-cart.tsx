@@ -452,7 +452,7 @@ export function PosCart() {
                     }}
                     item={productForVariantSelection}
                     onSelect={handleVariantSelect}
-                    cart={cart as any}
+                    cart={cart}
                 />
             )}
         </div>
