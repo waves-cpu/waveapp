@@ -8,7 +8,7 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/componen
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
-import { X, Printer } from 'lucide-react';
+import { X, Printer, Save } from 'lucide-react';
 import { useLanguage } from '@/hooks/use-language';
 import { translations } from '@/types/language';
 import {
@@ -59,7 +59,7 @@ export function PosOrderSummary({ cart, onSaleComplete, clearCart, channel }: Po
         clearCart();
     }
 
-    const handleSale = async () => {
+    const handleSale = async (status: 'Completed' | 'Pending') => {
         setIsSubmitting(true);
         const saleData: ReceiptData = {
             items: cart,
@@ -73,7 +73,6 @@ export function PosOrderSummary({ cart, onSaleComplete, clearCart, channel }: Po
         };
         
         try {
-            const status = channel === 'reseller' ? 'Pending' : 'Completed';
             await onSaleComplete(paymentMethod, saleData, status);
             resetForm();
         } catch (error) {
@@ -165,34 +164,39 @@ export function PosOrderSummary({ cart, onSaleComplete, clearCart, channel }: Po
                         )}
                     </div>
                  )}
-                <div className="w-full grid grid-cols-2 gap-2">
-                    <AlertDialog>
-                         <AlertDialogTrigger asChild>
-                            <Button variant="outline" size="lg" disabled={cart.length === 0 || isSubmitting}>
-                                <X className="mr-2 h-4 w-4"/>
-                                {t.pos.cancel}
-                            </Button>
-                         </AlertDialogTrigger>
-                         <AlertDialogContent>
-                            <AlertDialogHeader>
-                                <AlertDialogTitle>Batalkan Transaksi?</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                    Tindakan ini akan mengosongkan keranjang. Anda tidak dapat mengurungkan tindakan ini.
-                                </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                                <AlertDialogCancel>Lanjut Transaksi</AlertDialogCancel>
-                                <AlertDialogAction onClick={resetForm} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                                    Ya, Batalkan
-                                </AlertDialogAction>
-                            </AlertDialogFooter>
-                         </AlertDialogContent>
-                    </AlertDialog>
-
-                    <Button size="lg" onClick={handleSale} disabled={cart.length === 0 || (paymentMethod === 'Cash' && change < 0 && !isAccessoryOnlyTx) || isSubmitting}>
+                <div className="w-full grid grid-cols-1 gap-2">
+                    <Button size="lg" onClick={() => handleSale('Completed')} disabled={cart.length === 0 || (paymentMethod === 'Cash' && change < 0 && !isAccessoryOnlyTx) || isSubmitting}>
                         <Printer className="mr-2 h-4 w-4" />
-                        {isSubmitting ? 'Memproses...' : (isAccessoryOnlyTx ? 'Cetak Voucher' : (channel === 'reseller' ? t.reseller.printInvoice : t.pos.completeSale))}
+                        {isSubmitting ? 'Memproses...' : (isAccessoryOnlyTx ? 'Cetak Voucher' : 'Proses Pembayaran')}
                     </Button>
+                    <div className="flex gap-2">
+                        <AlertDialog>
+                             <AlertDialogTrigger asChild>
+                                <Button variant="outline" size="lg" className="w-1/2" disabled={cart.length === 0 || isSubmitting}>
+                                    <X className="mr-2 h-4 w-4"/>
+                                    {t.pos.cancel}
+                                </Button>
+                             </AlertDialogTrigger>
+                             <AlertDialogContent>
+                                <AlertDialogHeader>
+                                    <AlertDialogTitle>Batalkan Transaksi?</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                        Tindakan ini akan mengosongkan keranjang. Anda tidak dapat mengurungkan tindakan ini.
+                                    </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                    <AlertDialogCancel>Lanjut Transaksi</AlertDialogCancel>
+                                    <AlertDialogAction onClick={resetForm} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                                        Ya, Batalkan
+                                    </AlertDialogAction>
+                                </AlertDialogFooter>
+                             </AlertDialogContent>
+                        </AlertDialog>
+                        <Button variant="secondary" size="lg" className="w-1/2" onClick={() => handleSale('Pending')} disabled={cart.length === 0 || isSubmitting}>
+                            <Save className="mr-2 h-4 w-4" />
+                            Simpan Transaksi
+                        </Button>
+                    </div>
                 </div>
             </CardFooter>
         </Card>

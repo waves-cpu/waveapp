@@ -96,6 +96,9 @@ interface InventoryContextType {
   deleteImportHistory: (id: number) => Promise<void>;
   // POS
   clearPosTransactions: (date: Date) => Promise<void>;
+  pendingTransaction: Sale[] | null;
+  loadPendingTransaction: (sales: Sale[]) => void;
+  clearPendingTransaction: () => void;
 }
 
 const InventoryContext = createContext<InventoryContextType | undefined>(undefined);
@@ -108,6 +111,15 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
   const [resellers, setResellers] = useState<Reseller[]>([]);
   const [allShippingReceipts, setAllShippingReceipts] = useState<ShippingReceipt[]>([]);
   const [loading, setLoading] = useState(true);
+  const [pendingTransaction, setPendingTransaction] = useState<Sale[] | null>(null);
+
+  const loadPendingTransaction = (sales: Sale[]) => {
+      setPendingTransaction(sales);
+  };
+  
+  const clearPendingTransaction = () => {
+      setPendingTransaction(null);
+  };
 
   const fetchAllData = useCallback(async () => {
     setLoading(true);
@@ -455,6 +467,9 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
         fetchImportHistory: fetchBulkImportHistory,
         deleteImportHistory,
         clearPosTransactions,
+        pendingTransaction,
+        loadPendingTransaction,
+        clearPendingTransaction,
       }}>
       {children}
     </InventoryContext.Provider>

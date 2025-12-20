@@ -3,7 +3,7 @@
 
 import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { useInventory } from '@/hooks/use-inventory';
-import type { InventoryItem, InventoryItemVariant, Accessory, SearchableItem } from '@/types';
+import type { InventoryItem, InventoryItemVariant, Accessory, SearchableItem, Sale } from '@/types';
 import { PosSearch } from './pos-search';
 import { PosOrderSummary } from './pos-order-summary';
 import { VariantSelectionDialog } from './variant-selection-dialog';
@@ -40,7 +40,7 @@ export type CartItem = {
 const LOCAL_STORAGE_KEY = 'posCart';
 
 export function PosCart() {
-    const { recordSale, items: inventoryItems, accessories, loading: inventoryLoading } = useInventory();
+    const { recordSale, items: inventoryItems, accessories, loading: inventoryLoading, pendingTransaction, clearPendingTransaction } = useInventory();
     const { language } = useLanguage();
     const { playSuccessSound, playErrorSound } = useScanSounds();
     const t = translations[language];
@@ -77,19 +77,40 @@ export function PosCart() {
     useEffect(() => {
         setIsClient(true);
         try {
-            const savedCart = localStorage.getItem(LOCAL_STORAGE_KEY);
-            if (savedCart) {
-                setCart(JSON.parse(savedCart));
+            if (pendingTransaction) {
+                 const loadedCart: CartItem[] = pendingTransaction.map(saleItem => ({
+                    id: saleItem.accessoryId?.toString() || saleItem.variantId?.toString() || saleItem.productId!.toString(),
+                    productId: saleItem.productId?.toString() || saleItem.accessoryId?.toString() || '',
+                    productName: saleItem.productName,
+                    variantName: saleItem.variantName,
+                    sku: saleItem.sku!,
+                    quantity: saleItem.quantity,
+                    price: saleItem.priceAtSale,
+                    imageUrl: saleItem.parentImageUrl,
+                    type: saleItem.accessoryId ? 'accessory' : 'product',
+                    maxStock: 999 // Placeholder, should be updated if possible
+                }));
+                setCart(loadedCart);
+                clearPendingTransaction();
+            } else {
+                const savedCart = localStorage.getItem(LOCAL_STORAGE_KEY);
+                if (savedCart) {
+                    setCart(JSON.parse(savedCart));
+                }
             }
         } catch (error) {
             console.error("Failed to load cart from localStorage", error);
         }
-    }, []);
+    }, [pendingTransaction, clearPendingTransaction]);
 
     useEffect(() => {
         if (isClient) {
             try {
-                localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(cart));
+                if (cart.length > 0) {
+                    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(cart));
+                } else {
+                    localStorage.removeItem(LOCAL_STORAGE_KEY);
+                }
             } catch (error) {
                 console.error("Failed to save cart to localStorage", error);
             }
@@ -256,10 +277,10 @@ export function PosCart() {
         localStorage.removeItem(LOCAL_STORAGE_KEY);
     };
 
-    const handleSaleComplete = async (paymentMethod: string, receiptData: ReceiptData) => {
+    const handleSaleComplete = async (paymentMethod: string, receiptData: ReceiptData, status: 'Completed' | 'Pending' = 'Completed') => {
         try {
             const isAccessoryOnly = cart.every(item => item.type === 'accessory');
-            const { discount, subtotal } = receiptData;
+            const { discount, subtotal, transactionId } = receiptData;
             const discountRatio = subtotal > 0 ? discount / subtotal : 0;
 
             const salePromises = cart.map(item => {
@@ -267,31 +288,40 @@ export function PosCart() {
 
                 return recordSale(item.sku, 'pos', item.quantity, {
                     saleDate: new Date(),
-                    transactionId: receiptData.transactionId,
+                    transactionId: transactionId,
                     paymentMethod,
                     priceAtSale: pricePerItemAfterDiscount,
+                    status: status,
                 });
             });
 
             await Promise.all(salePromises);
             
-            if (isAccessoryOnly) {
+            if (status === 'Completed') {
+                if (isAccessoryOnly) {
+                    toast({
+                        title: "Pemakaian Aksesoris Dicatat",
+                        description: "Voucher pengambilan barang sedang dicetak."
+                    });
+                    setVoucherToPrint({
+                        items: cart,
+                        transactionId: receiptData.transactionId,
+                        date: new Date(),
+                    });
+                } else {
+                    toast({
+                        title: "Penjualan Berhasil",
+                        description: "Transaksi telah berhasil dicatat."
+                    });
+                    setReceiptToPrint(receiptData);
+                }
+            } else { // Pending
                 toast({
-                    title: "Pemakaian Aksesoris Dicatat",
-                    description: "Voucher pengambilan barang sedang dicetak."
+                    title: "Transaksi Disimpan",
+                    description: "Transaksi telah disimpan dan dapat dilanjutkan nanti."
                 });
-                setVoucherToPrint({
-                    items: cart,
-                    transactionId: receiptData.transactionId,
-                    date: new Date(),
-                });
-            } else {
-                toast({
-                    title: "Penjualan Berhasil",
-                    description: "Transaksi telah berhasil dicatat."
-                });
-                setReceiptToPrint(receiptData);
             }
+
         } catch (error) {
             console.error("Failed to complete sale:", error);
             toast({

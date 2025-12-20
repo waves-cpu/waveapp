@@ -1,3 +1,4 @@
+
 'use client'
 
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
@@ -15,7 +16,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-import { Calendar as CalendarIcon, Trash2, Printer } from 'lucide-react';
+import { Calendar as CalendarIcon, Trash2, Printer, Clock } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -25,7 +26,6 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
@@ -34,6 +34,7 @@ import { DailySalesDetailDialog } from '@/app/components/daily-sales-detail-dial
 import { PosReceipt, type ReceiptData } from '@/app/components/pos-receipt';
 import { AccessoryUsageVoucher, type VoucherData } from '@/app/components/accessory-usage-voucher';
 import type { CartItem } from '@/app/components/pos-cart';
+import { useRouter } from 'next/navigation';
 
 
 type GroupedSale = {
@@ -44,13 +45,15 @@ type GroupedSale = {
     totalItems: number;
     paymentMethod?: string;
     isAccessoryUsage: boolean;
+    status?: string;
 }
 
 export default function PosHistoryPage() {
-    const { allSales, fetchItems, cancelSaleTransaction, loading, clearPosTransactions } = useInventory();
+    const { allSales, fetchItems, cancelSaleTransaction, loading, clearPosTransactions, loadPendingTransaction } = useInventory();
     const { language } = useLanguage();
     const { toast } = useToast();
     const t = translations[language];
+    const router = useRouter();
 
     const [date, setDate] = useState<Date | undefined>(undefined);
     const [selectedSaleItems, setSelectedSaleItems] = useState<Sale[]>([]);
@@ -92,6 +95,7 @@ export default function PosHistoryPage() {
                     transactionId: id,
                     saleDate: sale.saleDate,
                     paymentMethod: sale.paymentMethod,
+                    status: sale.status,
                     items: [],
                     totalAmount: 0,
                     totalItems: 0,
@@ -155,6 +159,15 @@ export default function PosHistoryPage() {
         setSelectedSaleItems(items);
         setIsDetailOpen(true);
     };
+
+    const handleRowClick = (group: GroupedSale) => {
+        if(group.status === 'Pending') {
+            loadPendingTransaction(group.items);
+            router.push('/sales/pos');
+        } else {
+            handleViewDetails(group.items);
+        }
+    }
     
     const triggerPrint = (group: GroupedSale) => {
         const cartItems: CartItem[] = group.items.map(item => ({
@@ -277,11 +290,14 @@ export default function PosHistoryPage() {
                                     </TableRow>
                                 ) : groupedSales.length > 0 ? (
                                     groupedSales.map(group => (
-                                        <TableRow key={group.transactionId}>
-                                            <TableCell className="font-medium text-sm" onClick={() => handleViewDetails(group.items)}>
-                                                {format(new Date(group.saleDate), 'HH:mm:ss')}
+                                        <TableRow key={group.transactionId} onClick={() => handleRowClick(group)} className={group.status === 'Pending' ? "cursor-pointer" : ""}>
+                                            <TableCell className="font-medium text-sm">
+                                                <div className="flex items-center gap-2">
+                                                    {group.status === 'Pending' && <Clock className="h-4 w-4 text-muted-foreground" />}
+                                                    {format(new Date(group.saleDate), 'HH:mm:ss')}
+                                                </div>
                                             </TableCell>
-                                            <TableCell onClick={() => handleViewDetails(group.items)}>
+                                            <TableCell>
                                                 <div className="font-medium text-sm">
                                                     {group.isAccessoryUsage ? 'Pemakaian Aksesoris' : (group.items[0]?.productName || 'N/A')}
                                                     {!group.isAccessoryUsage && ` ${group.items[0]?.variantName || ''}`}
@@ -292,37 +308,43 @@ export default function PosHistoryPage() {
                                                     </div>
                                                 )}
                                             </TableCell>
-                                            <TableCell onClick={() => handleViewDetails(group.items)}>
-                                                <Badge variant="outline">{group.isAccessoryUsage ? 'Pemakaian Internal' : group.paymentMethod || 'N/A'}</Badge>
+                                            <TableCell>
+                                                <Badge variant={group.status === 'Pending' ? "secondary" : "outline"}>
+                                                    {group.status === 'Pending' ? 'Ditahan' : (group.isAccessoryUsage ? 'Pemakaian Internal' : group.paymentMethod || 'N/A')}
+                                                </Badge>
                                             </TableCell>
-                                            <TableCell className="text-right font-semibold text-sm" onClick={() => handleViewDetails(group.items)}>
+                                            <TableCell className="text-right font-semibold text-sm">
                                                 {group.totalAmount.toLocaleString('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                                             </TableCell>
                                             <TableCell className="text-center">
-                                                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => triggerPrint(group)}>
-                                                    <Printer className="h-4 w-4" />
-                                                </Button>
-                                                <AlertDialog>
-                                                    <AlertDialogTrigger asChild>
-                                                        <Button variant="ghost" size="icon" className="text-destructive h-8 w-8">
-                                                            <Trash2 className="h-4 w-4" />
-                                                        </Button>
-                                                    </AlertDialogTrigger>
-                                                    <AlertDialogContent>
-                                                        <AlertDialogHeader>
-                                                            <AlertDialogTitle>Anda yakin ingin membatalkan transaksi ini?</AlertDialogTitle>
-                                                            <AlertDialogDescription>
-                                                                Tindakan ini akan mengembalikan stok untuk semua item dalam transaksi ini. Aksi ini tidak dapat diurungkan.
-                                                            </AlertDialogDescription>
-                                                        </AlertDialogHeader>
-                                                        <AlertDialogFooter>
-                                                            <AlertDialogCancel>Batal</AlertDialogCancel>
-                                                            <AlertDialogAction onClick={() => handleCancelTransaction(group.transactionId)}>
-                                                                Ya, Batalkan
-                                                            </AlertDialogAction>
-                                                        </AlertDialogFooter>
-                                                    </AlertDialogContent>
-                                                </AlertDialog>
+                                                {group.status !== 'Pending' && (
+                                                    <>
+                                                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => {e.stopPropagation(); triggerPrint(group)}}>
+                                                        <Printer className="h-4 w-4" />
+                                                    </Button>
+                                                    <AlertDialog>
+                                                        <AlertDialogTrigger asChild>
+                                                            <Button variant="ghost" size="icon" className="text-destructive h-8 w-8" onClick={(e) => e.stopPropagation()}>
+                                                                <Trash2 className="h-4 w-4" />
+                                                            </Button>
+                                                        </AlertDialogTrigger>
+                                                        <AlertDialogContent>
+                                                            <AlertDialogHeader>
+                                                                <AlertDialogTitle>Anda yakin ingin membatalkan transaksi ini?</AlertDialogTitle>
+                                                                <AlertDialogDescription>
+                                                                    Tindakan ini akan mengembalikan stok untuk semua item dalam transaksi ini. Aksi ini tidak dapat diurungkan.
+                                                                </AlertDialogDescription>
+                                                            </AlertDialogHeader>
+                                                            <AlertDialogFooter>
+                                                                <AlertDialogCancel>Batal</AlertDialogCancel>
+                                                                <AlertDialogAction onClick={() => handleCancelTransaction(group.transactionId)}>
+                                                                    Ya, Batalkan
+                                                                </AlertDialogAction>
+                                                            </AlertDialogFooter>
+                                                        </AlertDialogContent>
+                                                    </AlertDialog>
+                                                    </>
+                                                )}
                                             </TableCell>
                                         </TableRow>
                                     ))
