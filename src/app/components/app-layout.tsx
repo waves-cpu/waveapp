@@ -90,27 +90,28 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                       <SidebarMenuButton>
                           <ShoppingCart />
                           <span className="flex-grow font-semibold">{t.sales.title}</span>
+                          <ChevronDown className="transition-transform" />
                       </SidebarMenuButton>
                   </SidebarMenuItem>
                    <SidebarMenu className="ml-4 mt-2 border-l border-muted-foreground/20 pl-4 mb-4">
                         <SidebarMenuItem>
                            <Link href="/sales/shopee">
                                <SidebarMenuButton variant="ghost" size="sm" isActive={pathname.startsWith('/sales/shopee')}>
-                                   {t.sales.shopee}
+                                   Shopee
                                </SidebarMenuButton>
                            </Link>
                         </SidebarMenuItem>
                         <SidebarMenuItem>
                            <Link href="/sales/tiktok">
                                <SidebarMenuButton variant="ghost" size="sm" isActive={pathname.startsWith('/sales/tiktok')}>
-                                   {t.sales.tiktok}
+                                   Tiktok
                                </SidebarMenuButton>
                            </Link>
                         </SidebarMenuItem>
                         <SidebarMenuItem>
                            <Link href="/sales/lazada">
                                <SidebarMenuButton variant="ghost" size="sm" isActive={pathname.startsWith('/sales/lazada')}>
-                                   {t.sales.lazada}
+                                   Lazada
                                </SidebarMenuButton>
                            </Link>
                         </SidebarMenuItem>
@@ -136,6 +137,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                       <SidebarMenuButton>
                           <Warehouse />
                           <span className="flex-grow font-semibold">{t.dashboard.inventoryMenu}</span>
+                          <ChevronDown className="transition-transform" />
                       </SidebarMenuButton>
                   </SidebarMenuItem>
                   <SidebarMenu className="ml-4 mt-2 border-l border-muted-foreground/20 pl-4 mb-4">
@@ -159,7 +161,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                            <SidebarMenuButton variant="ghost" size="sm">
                                 <PackagePlus />
                                 <span className="flex-grow font-semibold">Manajemen Produk</span>
-                                <ChevronDown className="ml-auto transition-transform" />
+                                <ChevronDown className="transition-transform" />
                            </SidebarMenuButton>
                         </SidebarMenuItem>
                         <SidebarMenu className="ml-4 mt-2 border-l border-muted-foreground/20 pl-4 mb-2">
@@ -182,7 +184,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                            <SidebarMenuButton variant="ghost" size="sm">
                                 <Activity />
                                 <span className="flex-grow font-semibold">Aktivitas Stok</span>
-                                <ChevronDown className="ml-auto transition-transform" />
+                                <ChevronDown className="transition-transform" />
                            </SidebarMenuButton>
                         </SidebarMenuItem>
                         <SidebarMenu className="ml-4 mt-2 border-l border-muted-foreground/20 pl-4 mb-2">
@@ -203,6 +205,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                              <SidebarMenuItem>
                                 <Link href="/history">
                                     <SidebarMenuButton variant="ghost" size="sm" isActive={pathname === '/history'}>
+                                        <History />
                                         {t.stockHistory.title}
                                     </SidebarMenuButton>
                                 </Link>
@@ -222,6 +225,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                         <SidebarMenuButton>
                             <DollarSign />
                             <span className="flex-grow font-semibold">{t.finance.title}</span>
+                            <ChevronDown className="transition-transform" />
                         </SidebarMenuButton>
                   </SidebarMenuItem>
                    <SidebarMenu className="ml-4 mt-2 border-l border-muted-foreground/20 pl-4 mb-4">
@@ -247,6 +251,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                         <SidebarMenuButton>
                             <Truck />
                             <span className="flex-grow font-semibold">{t.shipping.title}</span>
+                            <ChevronDown className="transition-transform" />
                         </SidebarMenuButton>
                   </SidebarMenuItem>
                    <SidebarMenu className="ml-4 mt-2 border-l border-muted-foreground/20 pl-4 mb-4">
