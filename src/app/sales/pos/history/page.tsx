@@ -123,10 +123,9 @@ export default function PosHistoryPage() {
         try {
             await cancelSaleTransaction(transactionId);
             toast({
-                title: t.pos.transactionCancelled,
-                description: "Stok telah dikembalikan.",
+                title: "Transaksi Dihapus & Stok Dikembalikan",
+                description: "Transaksi telah berhasil dihapus dari riwayat.",
             });
-            await fetchAllData();
         } catch (error) {
             console.error("Error cancelling transaction:", error);
             toast({
@@ -135,7 +134,7 @@ export default function PosHistoryPage() {
                 description: "Terjadi kesalahan saat membatalkan transaksi.",
             });
         }
-    }, [cancelSaleTransaction, t.pos.transactionCancelled, toast, fetchAllData]);
+    }, [cancelSaleTransaction, toast]);
     
     const handleClearHistory = async () => {
         if (!date) return;
@@ -145,7 +144,6 @@ export default function PosHistoryPage() {
                 title: "Riwayat Dibersihkan",
                 description: `Semua transaksi POS untuk tanggal ${format(date, 'PPP')} telah dihapus dan stok telah dikembalikan.`,
             });
-            await fetchAllData();
         } catch (error) {
             toast({
                 variant: 'destructive',
@@ -319,7 +317,7 @@ export default function PosHistoryPage() {
                                                 {group.totalAmount.toLocaleString('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                                             </TableCell>
                                             <TableCell className="text-center">
-                                                {group.status !== 'Pending' && (
+                                                {group.status !== 'Pending' ? (
                                                     <>
                                                     <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => {e.stopPropagation(); triggerPrint(group)}}>
                                                         <Printer className="h-4 w-4" />
@@ -332,20 +330,24 @@ export default function PosHistoryPage() {
                                                         </AlertDialogTrigger>
                                                         <AlertDialogContent>
                                                             <AlertDialogHeader>
-                                                                <AlertDialogTitle>Anda yakin ingin membatalkan transaksi ini?</AlertDialogTitle>
+                                                                <AlertDialogTitle>Hapus Transaksi Ini?</AlertDialogTitle>
                                                                 <AlertDialogDescription>
-                                                                    Tindakan ini akan mengembalikan stok untuk semua item dalam transaksi ini. Aksi ini tidak dapat diurungkan.
+                                                                    Tindakan ini akan menghapus catatan transaksi dan mengembalikan stok. Aksi ini tidak dapat diurungkan.
                                                                 </AlertDialogDescription>
                                                             </AlertDialogHeader>
                                                             <AlertDialogFooter>
                                                                 <AlertDialogCancel>Batal</AlertDialogCancel>
-                                                                <AlertDialogAction onClick={() => handleCancelTransaction(group.transactionId)}>
-                                                                    Ya, Batalkan
+                                                                <AlertDialogAction onClick={() => handleCancelTransaction(group.transactionId)} className="bg-destructive hover:bg-destructive/90">
+                                                                    Ya, Hapus & Kembalikan Stok
                                                                 </AlertDialogAction>
                                                             </AlertDialogFooter>
                                                         </AlertDialogContent>
                                                     </AlertDialog>
                                                     </>
+                                                ) : (
+                                                    <Button variant="outline" size="sm" onClick={() => handleRowClick(group)}>
+                                                        Lanjutkan Transaksi
+                                                    </Button>
                                                 )}
                                             </TableCell>
                                         </TableRow>
