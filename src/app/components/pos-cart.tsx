@@ -79,19 +79,31 @@ export function PosCart() {
         setIsClient(true);
         try {
             if (pendingTransaction) {
-                 const loadedCart: CartItem[] = pendingTransaction.map(saleItem => ({
-                    id: saleItem.accessoryId?.toString() || saleItem.variantId?.toString() || saleItem.productId!.toString(),
-                    productId: saleItem.productId?.toString() || saleItem.accessoryId?.toString() || '',
-                    productName: saleItem.productName,
-                    variantName: saleItem.variantName,
-                    sku: saleItem.sku!,
-                    quantity: saleItem.quantity,
-                    price: saleItem.priceAtSale,
-                    imageUrl: saleItem.parentImageUrl,
-                    type: saleItem.accessoryId ? 'accessory' : 'product',
-                    maxStock: 999 // Placeholder, should be updated if possible
-                }));
-                setCart(loadedCart);
+                const aggregatedCart = new Map<string, CartItem>();
+                pendingTransaction.forEach(saleItem => {
+                    const id = saleItem.accessoryId?.toString() || saleItem.variantId?.toString() || saleItem.productId!.toString();
+                    const type = saleItem.accessoryId ? 'accessory' : 'product';
+                    const key = `${type}-${id}`;
+
+                    if (aggregatedCart.has(key)) {
+                        const existing = aggregatedCart.get(key)!;
+                        existing.quantity += saleItem.quantity;
+                    } else {
+                        aggregatedCart.set(key, {
+                            id,
+                            type,
+                            productId: saleItem.productId?.toString() || saleItem.accessoryId?.toString() || '',
+                            productName: saleItem.productName,
+                            variantName: saleItem.variantName,
+                            sku: saleItem.sku!,
+                            quantity: saleItem.quantity,
+                            price: saleItem.priceAtSale,
+                            imageUrl: saleItem.parentImageUrl,
+                            maxStock: 999 // Placeholder, should be updated if possible
+                        });
+                    }
+                });
+                setCart(Array.from(aggregatedCart.values()));
                 setPendingTransactionId(pendingTransaction[0]?.transactionId || null);
                 clearPendingTransaction();
             } else {
@@ -181,7 +193,7 @@ export function PosCart() {
         }
 
 
-        const existingCartItem = cart.find(ci => ci.id === itemToAdd.id);
+        const existingCartItem = cart.find(ci => ci.id === itemToAdd.id && ci.type === itemToAdd.type);
         const quantityInCart = existingCartItem?.quantity || 0;
         
         if (itemToAdd.maxStock === undefined || quantityInCart >= itemToAdd.maxStock) {
@@ -198,7 +210,7 @@ export function PosCart() {
         setCart(currentCart => {
             if (existingCartItem) {
                 return currentCart.map(cartItem =>
-                    cartItem.id === itemToAdd.id
+                    cartItem.id === itemToAdd.id && cartItem.type === itemToAdd.type
                         ? { ...cartItem, quantity: cartItem.quantity + 1 }
                         : cartItem
                 );
@@ -250,28 +262,28 @@ export function PosCart() {
         setProductForVariantSelection(null);
     };
 
-    const updateQuantity = (itemId: string, newQuantity: number) => {
+    const updateQuantity = (itemId: string, itemType: 'product' | 'accessory', newQuantity: number) => {
         setCart(currentCart => {
             if (newQuantity <= 0) {
-                return currentCart.filter(ci => ci.id !== itemId);
+                return currentCart.filter(ci => !(ci.id === itemId && ci.type === itemType));
             }
             
-            const item = currentCart.find(ci => ci.id === itemId);
+            const item = currentCart.find(ci => ci.id === itemId && ci.type === itemType);
             if (item && newQuantity > item.maxStock) {
                 toast({
                     variant: "destructive",
                     title: "Stok tidak mencukupi",
                     description: `Hanya tersedia ${item.maxStock} stok.`,
                 });
-                return currentCart.map(ci => ci.id === itemId ? { ...ci, quantity: item.maxStock } : ci);
+                return currentCart.map(ci => ci.id === itemId && ci.type === itemType ? { ...ci, quantity: item.maxStock } : ci);
             }
 
-            return currentCart.map(ci => ci.id === itemId ? { ...ci, quantity: newQuantity } : ci);
+            return currentCart.map(ci => ci.id === itemId && ci.type === itemType ? { ...ci, quantity: newQuantity } : ci);
         });
     };
     
-    const removeFromCart = (itemId: string) => {
-        setCart(currentCart => currentCart.filter(item => item.id !== itemId));
+    const removeFromCart = (itemId: string, itemType: 'product' | 'accessory') => {
+        setCart(currentCart => currentCart.filter(item => !(item.id === itemId && item.type === itemType)));
     };
 
     const clearCart = () => {
@@ -403,13 +415,13 @@ export function PosCart() {
                                             </TableCell>
                                             <TableCell className="text-center">
                                                 <div className="flex items-center justify-center">
-                                                    <Input type="number" value={item.quantity} onChange={(e) => updateQuantity(item.id, parseInt(e.target.value) || 0)} className="w-16 h-8 text-center text-sm focus-visible:ring-1" />
+                                                    <Input type="number" value={item.quantity} onChange={(e) => updateQuantity(item.id, item.type, parseInt(e.target.value) || 0)} className="w-16 h-8 text-center text-sm focus-visible:ring-1" />
                                                 </div>
                                             </TableCell>
                                             <TableCell className="text-left text-sm">{item.price.toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</TableCell>
                                             <TableCell className="text-left font-medium text-sm">{(item.price * item.quantity).toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</TableCell>
                                             <TableCell>
-                                                 <Button variant="ghost" size="icon" className="text-destructive h-8 w-8" onClick={() => removeFromCart(item.id)}>
+                                                 <Button variant="ghost" size="icon" className="text-destructive h-8 w-8" onClick={() => removeFromCart(item.id, item.type)}>
                                                     <Trash2 className="h-4 w-4" />
                                                  </Button>
                                             </TableCell>
