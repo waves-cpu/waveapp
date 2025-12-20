@@ -348,7 +348,6 @@ export default function StatementsPage() {
                                         <TableRow>
                                             <TableHead>{t.product}</TableHead>
                                             <TableHead>{t.sku}</TableHead>
-                                            <TableHead>{t.category}</TableHead>
                                             <TableHead className="text-right">{t.units}</TableHead>
                                             <TableHead className="text-right">{t.revenue}</TableHead>
                                             <TableHead className="text-right">{t.profit}</TableHead>
@@ -364,7 +363,6 @@ export default function StatementsPage() {
                                                     </div>
                                                 </TableCell>
                                                 <TableCell>{p.sku || '-'}</TableCell>
-                                                <TableCell>{p.category}</TableCell>
                                                 <TableCell className="text-right">{p.units.toLocaleString('id-ID')}</TableCell>
                                                 <TableCell className="text-right">{formatCurrency(p.revenue)}</TableCell>
                                                 <TableCell className="text-right">{formatCurrency(p.profit)}</TableCell>
@@ -450,3 +448,4 @@ export default function StatementsPage() {
         </AppLayout>
     );
 }
+
