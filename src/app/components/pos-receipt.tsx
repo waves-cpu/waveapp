@@ -9,8 +9,8 @@ import { format } from 'date-fns';
 import { useReceiptSettings, type ReceiptSettings } from '@/hooks/use-receipt-settings';
 import { cn } from '@/lib/utils';
 
-export interface ReceiptData {
-    items: CartItem[];
+export type ReceiptData = {
+    items: (CartItem & { productName: string, variantName?: string })[];
     subtotal: number;
     discount: number;
     total: number;
@@ -18,7 +18,8 @@ export interface ReceiptData {
     cashReceived: number;
     change: number;
     transactionId: string;
-}
+};
+
 
 interface PosReceiptProps {
     receipt: ReceiptData;
@@ -77,13 +78,13 @@ export const PosReceipt = React.forwardRef<HTMLDivElement, PosReceiptProps>((pro
 
             <section>
                 {receipt.items.map(item => {
-                    const isVariant = item.productName !== item.name;
+                    const isVariant = !!item.variantName;
                     return (
                         <div key={item.id} className="mb-1">
                             <p className="font-bold">{item.productName}</p>
                              <div className="flex justify-between items-center">
                                 <span>
-                                    {isVariant ? `${item.name} ` : ''}{item.quantity} x {formatCurrency(item.price)}
+                                    {isVariant ? `${item.variantName} ` : ''}{item.quantity} x {formatCurrency(item.price)}
                                 </span>
                                 <span className="text-right">{formatCurrency(item.quantity * item.price)}</span>
                             </div>
@@ -136,4 +137,3 @@ export const PosReceipt = React.forwardRef<HTMLDivElement, PosReceiptProps>((pro
 });
 
 PosReceipt.displayName = 'PosReceipt';
-

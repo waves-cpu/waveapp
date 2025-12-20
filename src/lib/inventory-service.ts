@@ -735,98 +735,90 @@ export async function performSale(
         priceAtSale?: number,
         status?: string
     }
-): Promise<Sale> {
+): Promise<{ newSale: Sale, updatedItem?: InventoryItem, updatedAccessory?: Accessory }> {
     const getProductStmt = db.prepare('SELECT * FROM products WHERE sku = ? AND hasVariants = 0');
     const getVariantStmt = db.prepare('SELECT * FROM variants WHERE sku = ?');
+    const getAccessoryStmt = db.prepare('SELECT * FROM accessories WHERE sku = ?');
     const getChannelPriceStmt = db.prepare('SELECT price FROM channel_prices WHERE (product_id = @productId OR variant_id = @variantId) AND channel = @channel');
     const getParentProductStmt = db.prepare('SELECT * FROM products WHERE id = ?');
     
     const ONLINE_MARKETPLACES = ['shopee', 'tiktok', 'lazada'];
     
+    let updatedItem: InventoryItem | undefined = undefined;
+    let updatedAccessory: Accessory | undefined = undefined;
+
     const { newSaleId } = db.transaction(() => {
         const saleDate = options?.saleDate || new Date();
         const saleDateString = saleDate.toISOString();
         const saleReason = `Sale (${channel})` + (options?.resellerName ? ` - ${options.resellerName}` : '');
 
-        let finalPriceAtSale;
+        let finalPriceAtSale = options?.priceAtSale ?? 0;
         let cogsAtSale;
         let saleStatus = options?.status || 'Completed';
         let parentProduct: any;
-        let productId: number | string;
+        let productId: number | string | null = null;
         let variantId: number | string | null = null;
+        let accessoryId: number | string | null = null;
 
         const variant = getVariantStmt.get(sku) as (InventoryItemVariant & { id: number, productId: number, costPrice?: number }) | undefined;
+        const product = getProductStmt.get(sku) as (InventoryItem & { id: number, costPrice?: number, sku: string }) | undefined;
+        const accessory = getAccessoryStmt.get(sku) as (Accessory & { id: number, costPrice?: number, sku: string }) | undefined;
         
         if (variant) {
-            if (variant.stock < quantity) {
-                throw new Error('Insufficient stock for variant.');
-            }
             parentProduct = getParentProductStmt.get(variant.productId);
             productId = parentProduct.id;
             variantId = variant.id;
-
-            if (options?.priceAtSale !== undefined) {
-                finalPriceAtSale = options.priceAtSale;
-            } else {
+            if (variant.stock < quantity) throw new Error('Insufficient stock for variant.');
+            if (finalPriceAtSale === 0) { // Only calculate if not provided
                  const isOnlineChannel = ONLINE_MARKETPLACES.includes(channel.toLowerCase());
                  let priceResult;
-                 
-                 // 1. Try specific channel (e.g., 'shopee')
                  priceResult = getChannelPriceStmt.get({ productId: null, variantId: variant.id, channel: channel.toLowerCase() }) as { price: number } | undefined;
-                 
-                 // 2. If online and no specific price, try 'online'
                  if (!priceResult && isOnlineChannel) {
                      priceResult = getChannelPriceStmt.get({ productId: null, variantId: variant.id, channel: 'online' }) as { price: number } | undefined;
                  }
-                 
-                 // 3. Fallback to general variant price
                  finalPriceAtSale = priceResult ? priceResult.price : variant.price;
             }
-
             cogsAtSale = variant.costPrice || 0;
             adjustStock(variant.id.toString(), -quantity, saleReason);
 
-        } else {
-            const product = getProductStmt.get(sku) as (InventoryItem & { id: number, costPrice?: number, sku: string }) | undefined;
-            if (product) {
-                parentProduct = product;
-                productId = product.id;
-                 if (product.stock! < quantity) {
-                    throw new Error('Insufficient stock for product.');
+        } else if (product) {
+            parentProduct = product;
+            productId = product.id;
+            if (product.stock! < quantity) throw new Error('Insufficient stock for product.');
+            if (finalPriceAtSale === 0) {
+                const isOnlineChannel = ONLINE_MARKETPLACES.includes(channel.toLowerCase());
+                let priceResult;
+                priceResult = getChannelPriceStmt.get({ productId: product.id, variantId: null, channel: channel.toLowerCase() }) as { price: number } | undefined;
+                if (!priceResult && isOnlineChannel) {
+                    priceResult = getChannelPriceStmt.get({ productId: product.id, variantId: null, channel: 'online' }) as { price: number } | undefined;
                 }
-                
-                if (options?.priceAtSale !== undefined) {
-                    finalPriceAtSale = options.priceAtSale;
-                } else {
-                    const isOnlineChannel = ONLINE_MARKETPLACES.includes(channel.toLowerCase());
-                    let priceResult;
-                    
-                    priceResult = getChannelPriceStmt.get({ productId: product.id, variantId: null, channel: channel.toLowerCase() }) as { price: number } | undefined;
-
-                    if (!priceResult && isOnlineChannel) {
-                        priceResult = getChannelPriceStmt.get({ productId: product.id, variantId: null, channel: 'online' }) as { price: number } | undefined;
-                    }
-
-                    finalPriceAtSale = priceResult ? priceResult.price : product.price!;
-                }
-
-                cogsAtSale = product.costPrice || 0;
-                
-                adjustStock(product.id.toString(), -quantity, saleReason);
-            } else {
-                throw new Error('Product or variant with specified SKU not found or has variants.');
+                finalPriceAtSale = priceResult ? priceResult.price : product.price!;
             }
+            cogsAtSale = product.costPrice || 0;
+            adjustStock(product.id.toString(), -quantity, saleReason);
+        
+        } else if (accessory) {
+            accessoryId = accessory.id;
+            parentProduct = { name: accessory.name, sku: accessory.sku, category: accessory.category };
+            if (accessory.stock! < quantity) throw new Error('Insufficient stock for accessory.');
+            cogsAtSale = accessory.costPrice || 0; // Use cost price for COGS
+            finalPriceAtSale = 0; // Accessories are tracked for usage, not sale price
+            adjustAccessoryStock(accessory.id.toString(), -quantity, saleReason);
+
+        } else {
+            throw new Error('SKU not found or product has variants.');
         }
         
         const saleResult = db.prepare(`
-            INSERT INTO sales (transactionId, paymentMethod, resellerName, productId, variantId, channel, quantity, priceAtSale, cogsAtSale, saleDate, status, parentSku, productCategory, parentImageUrl)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO sales (transactionId, paymentMethod, resellerName, productId, variantId, accessoryId, channel, quantity, priceAtSale, cogsAtSale, saleDate, status, parentSku, productCategory, parentImageUrl)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `).run(
-            options?.transactionId || `online-${Date.now()}`, 
+            options?.transactionId || `tx-${Date.now()}`, 
             options?.paymentMethod, 
             options?.resellerName, 
             productId, 
             variantId, 
+            accessoryId,
             channel, 
             quantity, 
             finalPriceAtSale, 
@@ -840,24 +832,33 @@ export async function performSale(
         return { newSaleId: saleResult.lastInsertRowid };
 
     })();
-
+    
+    // After transaction, fetch the updated data
     const newSale = db.prepare(`
         SELECT 
-            s.id, s.transactionId, s.paymentMethod, s.resellerName, s.productId, s.variantId, s.channel, s.quantity, s.priceAtSale, s.cogsAtSale, s.saleDate,
-            p.name as productName,
-            p.category as productCategory,
+            s.id, s.transactionId, s.paymentMethod, s.resellerName, s.productId, s.variantId, s.accessoryId, s.channel, s.quantity, s.priceAtSale, s.cogsAtSale, s.saleDate,
+            COALESCE(p.name, a.name) as productName,
+            COALESCE(p.category, a.category) as productCategory,
             p.imageUrl as parentImageUrl,
-            p.sku as parentSku,
+            COALESCE(p.sku, a.sku) as parentSku,
             v.name as variantName,
-            COALESCE(v.sku, p.sku) as sku,
+            COALESCE(v.sku, p.sku, a.sku) as sku,
             s.status
         FROM sales s
-        JOIN products p ON s.productId = p.id
+        LEFT JOIN products p ON s.productId = p.id
         LEFT JOIN variants v ON s.variantId = v.id
+        LEFT JOIN accessories a ON s.accessoryId = a.id
         WHERE s.id = ?
     `).get(newSaleId) as Sale;
+
+    if (newSale.productId) {
+        updatedItem = await fetchSingleItem(newSale.productId.toString());
+    }
+    if (newSale.accessoryId) {
+        updatedAccessory = await fetchSingleAccessory(newSale.accessoryId.toString());
+    }
     
-    return newSale;
+    return { newSale, updatedItem, updatedAccessory };
 }
 
 
@@ -894,6 +895,19 @@ export async function fetchSingleItem(itemId: string): Promise<InventoryItem> {
     product.id = product.id.toString();
     return product as InventoryItem;
 }
+
+export async function fetchSingleAccessory(accessoryId: string): Promise<Accessory> {
+    const accessory = db.prepare("SELECT * FROM accessories WHERE id = ?").get(accessoryId) as any;
+    if (!accessory) {
+        throw new Error('Accessory not found');
+    }
+
+    const history = db.prepare('SELECT * FROM accessory_history WHERE accessoryId = ? ORDER BY date DESC').all(accessoryId) as any[];
+    accessory.history = history.map(h => ({ ...h, id: h.id.toString() }));
+    accessory.id = accessory.id.toString();
+    return accessory as Accessory;
+}
+
 
 export async function fetchAllSales(): Promise<Sale[]> {
      const salesQuery = db.prepare(`

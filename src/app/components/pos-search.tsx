@@ -4,7 +4,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Search, ScanLine, X } from 'lucide-react';
+import { Search, ScanLine, X, Tags } from 'lucide-react';
 import { useLanguage } from '@/hooks/use-language';
 import { translations } from '@/types/language';
 import {
@@ -14,13 +14,13 @@ import {
 } from "@/components/ui/popover";
 import { ScrollArea } from '@/components/ui/scroll-area';
 import Image from 'next/image';
-import type { InventoryItem } from '@/types';
+import type { SearchableItem } from '@/types';
 
 interface PosSearchProps {
-  onProductSelect: (item: InventoryItem) => void;
+  onProductSelect: (item: SearchableItem) => void;
   searchTerm: string;
   setSearchTerm: (term: string) => void;
-  suggestions: InventoryItem[];
+  suggestions: SearchableItem[];
 }
 
 export function PosSearch({ onProductSelect, searchTerm, setSearchTerm, suggestions }: PosSearchProps) {
@@ -40,10 +40,10 @@ export function PosSearch({ onProductSelect, searchTerm, setSearchTerm, suggesti
     };
     
     useEffect(() => {
-        setIsPopoverOpen(searchTerm.length >= 3 && suggestions.length > 0);
+        setIsPopoverOpen(searchTerm.length >= 2 && suggestions.length > 0);
     }, [searchTerm, suggestions]);
 
-    const handleSelectSuggestion = (item: InventoryItem) => {
+    const handleSelectSuggestion = (item: SearchableItem) => {
         onProductSelect(item);
         setSearchTerm('');
         setIsPopoverOpen(false);
@@ -83,19 +83,25 @@ export function PosSearch({ onProductSelect, searchTerm, setSearchTerm, suggesti
                     <div className="flex flex-col gap-1 p-2">
                     {suggestions.map(item => (
                         <button
-                            key={item.id}
+                            key={`${item.itemType}-${item.id}`}
                             type="button"
                             onClick={() => handleSelectSuggestion(item)}
                             className="flex items-center gap-3 p-2 rounded-md hover:bg-accent text-left w-full"
                         >
-                             <Image 
-                                src={item.imageUrl || 'https://placehold.co/40x40.png'} 
-                                alt={item.name} 
-                                width={32} 
-                                height={32} 
-                                className="rounded-md"
-                                data-ai-hint="product image"
-                            />
+                             {item.itemType === 'product' ? (
+                                <Image 
+                                    src={(item as any).imageUrl || 'https://placehold.co/40x40.png'} 
+                                    alt={item.name} 
+                                    width={32} 
+                                    height={32} 
+                                    className="rounded-md"
+                                    data-ai-hint="product image"
+                                />
+                             ) : (
+                                 <div className="flex h-8 w-8 items-center justify-center rounded-md bg-muted/50 shrink-0">
+                                     <Tags className="h-4 w-4 text-muted-foreground" />
+                                 </div>
+                             )}
                             <div>
                                 <p className="font-medium text-sm">{item.name}</p>
                                 <p className="text-xs text-muted-foreground">{item.sku}</p>

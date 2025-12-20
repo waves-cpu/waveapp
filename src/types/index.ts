@@ -92,6 +92,9 @@ export interface InventoryItem {
   channelPrices?: ChannelPrice[];
 }
 
+export type SearchableItem = (InventoryItem | Accessory) & { itemType: 'product' | 'accessory' };
+
+
 export interface Sale {
   id: string;
   transactionId?: string;

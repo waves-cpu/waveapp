@@ -3,7 +3,7 @@
 
 import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { useInventory } from '@/hooks/use-inventory';
-import type { InventoryItem, InventoryItemVariant } from '@/types';
+import type { InventoryItem, InventoryItemVariant, Accessory, SearchableItem } from '@/types';
 import { PosSearch } from './pos-search';
 import { PosOrderSummary } from './pos-order-summary';
 import { VariantSelectionDialog } from './variant-selection-dialog';
@@ -14,24 +14,31 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import Image from 'next/image';
-import { ShoppingCart, Trash2 } from 'lucide-react';
+import { ShoppingCart, Trash2, Tags } from 'lucide-react';
 import { useLanguage } from '@/hooks/use-language';
 import { translations } from '@/types/language';
 import { useScanSounds } from '@/hooks/use-scan-sounds';
 import { PosReceipt, type ReceiptData } from './pos-receipt';
 import { useDebounce } from '@/hooks/use-debounce';
 
-export interface CartItem extends InventoryItemVariant {
-    productId: string;
+export type CartItem = {
+    id: string; // variantId or accessoryId or productId
+    productId: string; // parent product ID
     productName: string;
+    variantName?: string;
+    sku: string;
     quantity: number;
-    parentImageUrl?: string;
-}
+    price: number;
+    imageUrl?: string;
+    type: 'product' | 'accessory';
+    maxStock: number;
+};
+
 
 const LOCAL_STORAGE_KEY = 'posCart';
 
 export function PosCart() {
-    const { getProductBySku, recordSale, items: inventoryItems, loading: inventoryLoading } = useInventory();
+    const { recordSale, items: inventoryItems, accessories, loading: inventoryLoading } = useInventory();
     const { language } = useLanguage();
     const { playSuccessSound, playErrorSound } = useScanSounds();
     const t = translations[language];
@@ -40,25 +47,28 @@ export function PosCart() {
     const [productForVariantSelection, setProductForVariantSelection] = useState<InventoryItem | null>(null);
     const [isClient, setIsClient] = useState(false);
     const [receiptToPrint, setReceiptToPrint] = useState<ReceiptData | null>(null);
-    const receiptRef = useRef<HTMLDivElement>(null);
     const [searchTerm, setSearchTerm] = useState('');
     const debouncedSearchTerm = useDebounce(searchTerm, 300);
 
-    const searchSuggestions = useMemo(() => {
-        if (debouncedSearchTerm.length < 3) return [];
+    const searchSuggestions = useMemo((): SearchableItem[] => {
+        if (debouncedSearchTerm.length < 2) return [];
         const lowercasedTerm = debouncedSearchTerm.toLowerCase();
         
-        // Prioritize SKU match
-        const exactSkuMatch = inventoryItems.find(item => item.sku?.toLowerCase() === lowercasedTerm);
-        if (exactSkuMatch) return [exactSkuMatch];
-        const variantSkuMatch = inventoryItems.find(item => item.variants?.some(v => v.sku?.toLowerCase() === lowercasedTerm));
-        if(variantSkuMatch) return [variantSkuMatch];
-        
-        // Then search by name
-        return inventoryItems.filter(item => 
-            item.name.toLowerCase().includes(lowercasedTerm)
+        const products: SearchableItem[] = inventoryItems
+            .filter(item => !item.isArchived)
+            .map(item => ({...item, itemType: 'product'}));
+            
+        const allAccessories: SearchableItem[] = accessories
+            .map(item => ({...item, itemType: 'accessory'}));
+
+        const allSearchableItems = [...products, ...allAccessories];
+
+        return allSearchableItems.filter(item => 
+            item.name.toLowerCase().includes(lowercasedTerm) ||
+            (item.sku && item.sku.toLowerCase().includes(lowercasedTerm)) ||
+            ('variants' in item && item.variants?.some(v => v.sku?.toLowerCase().includes(lowercasedTerm)))
         ).slice(0, 10);
-    }, [debouncedSearchTerm, inventoryItems]);
+    }, [debouncedSearchTerm, inventoryItems, accessories]);
 
 
     useEffect(() => {
@@ -95,27 +105,63 @@ export function PosCart() {
         }
     }, [receiptToPrint]);
 
-    const getPriceForChannel = (item: InventoryItem | InventoryItemVariant, channel: string): number => {
-        const channelPrice = item.channelPrices?.find(p => p.channel === channel)?.price;
-        return channelPrice ?? item.price!;
+    const getPriceForChannel = (item: InventoryItem | InventoryItemVariant | Accessory, channel: string): number => {
+        if ('channelPrices' in item) {
+             const channelPrice = item.channelPrices?.find(p => p.channel === channel)?.price;
+             return channelPrice ?? item.price!;
+        }
+        return item.price ?? 0;
     };
 
-    const addToCart = useCallback((item: InventoryItem, variant?: InventoryItemVariant) => {
-        const itemToAddRaw = variant || item;
-        const price = getPriceForChannel(itemToAddRaw, 'pos');
-        
-        const itemToAdd = variant ? 
-            { ...variant, productId: item.id, productName: item.name, parentImageUrl: item.imageUrl, price: price } : 
-            { ...item, id: item.id, productId: item.id, productName: item.name, price: price, stock: item.stock!, parentImageUrl: item.imageUrl };
+    const addToCart = useCallback((item: InventoryItem | Accessory, variant?: InventoryItemVariant) => {
+        let itemToAdd: CartItem;
+
+        if (item.hasOwnProperty('itemType') && (item as any).itemType === 'accessory') {
+            const accessory = item as Accessory;
+            if (!accessory.sku) {
+                toast({ variant: "destructive", title: "SKU Missing", description: `Accessory '${accessory.name}' cannot be added without a SKU.`});
+                playErrorSound();
+                return;
+            }
+            itemToAdd = {
+                id: accessory.id,
+                productId: accessory.id,
+                productName: accessory.name,
+                sku: accessory.sku!,
+                price: 0, // Accessories are tracked for usage, not for sale price
+                quantity: 1,
+                imageUrl: '',
+                type: 'accessory',
+                maxStock: accessory.stock,
+            };
+        } else { // It's a product
+            const product = item as InventoryItem;
+            const itemToAddRaw = variant || product;
+            const price = getPriceForChannel(itemToAddRaw, 'pos');
+            
+            itemToAdd = {
+                id: itemToAddRaw.id,
+                productId: product.id,
+                productName: product.name,
+                variantName: variant?.name,
+                sku: itemToAddRaw.sku!,
+                quantity: 1,
+                price: price,
+                imageUrl: product.imageUrl,
+                type: 'product',
+                maxStock: itemToAddRaw.stock!,
+            }
+        }
+
 
         const existingCartItem = cart.find(ci => ci.id === itemToAdd.id);
         const quantityInCart = existingCartItem?.quantity || 0;
         
-        if (itemToAdd.stock === undefined || quantityInCart >= itemToAdd.stock) {
+        if (itemToAdd.maxStock === undefined || quantityInCart >= itemToAdd.maxStock) {
              toast({
                 variant: "destructive",
                 title: "Stok tidak mencukupi",
-                description: `Anda tidak dapat menambahkan ${itemToAdd.name} lagi.`,
+                description: `Anda tidak dapat menambahkan ${itemToAdd.productName} ${itemToAdd.variantName || ''} lagi.`,
             });
             playErrorSound();
             return;
@@ -130,35 +176,40 @@ export function PosCart() {
                         : cartItem
                 );
             }
-            return [...currentCart, { ...itemToAdd, quantity: 1 }];
+            return [...currentCart, itemToAdd];
         });
     }, [cart, toast, playSuccessSound, playErrorSound]);
 
-    const handleProductSelect = useCallback(async (product: InventoryItem) => {
+    const handleProductSelect = useCallback(async (item: SearchableItem) => {
         try {
-            if (product.variants && product.variants.length > 1) {
-                setProductForVariantSelection(product);
-            } else if (product.variants && product.variants.length === 1) {
-                 if (product.variants[0].stock <= 0) {
-                     toast({ variant: "destructive", title: "Stok Habis", description: `Stok untuk ${product.name} - ${product.variants[0].name} sudah habis.` });
-                     playErrorSound();
-                     return;
-                 }
-                addToCart(product, product.variants[0]);
-            } else {
-                 if (product.stock !== undefined && product.stock <= 0) {
-                     toast({ variant: "destructive", title: "Stok Habis", description: `Stok untuk ${product.name} sudah habis.` });
-                     playErrorSound();
-                     return;
-                 }
-                addToCart(product);
+            if (item.itemType === 'accessory') {
+                addToCart(item as Accessory);
+            } else { // product
+                const product = item as InventoryItem;
+                if (product.variants && product.variants.length > 1) {
+                    setProductForVariantSelection(product);
+                } else if (product.variants && product.variants.length === 1) {
+                    if (product.variants[0].stock <= 0) {
+                        toast({ variant: "destructive", title: "Stok Habis", description: `Stok untuk ${product.name} - ${product.variants[0].name} sudah habis.` });
+                        playErrorSound();
+                        return;
+                    }
+                    addToCart(product, product.variants[0]);
+                } else {
+                    if (product.stock !== undefined && product.stock <= 0) {
+                        toast({ variant: "destructive", title: "Stok Habis", description: `Stok untuk ${product.name} sudah habis.` });
+                        playErrorSound();
+                        return;
+                    }
+                    addToCart(product);
+                }
             }
         } catch (error) {
-            console.error("Error adding product to cart:", error);
+            console.error("Error adding item to cart:", error);
             toast({
                 variant: "destructive",
                 title: "Error",
-                description: "Gagal menambahkan produk ke keranjang.",
+                description: "Gagal menambahkan item ke keranjang.",
             });
             playErrorSound();
         }
@@ -179,13 +230,13 @@ export function PosCart() {
             }
             
             const item = currentCart.find(ci => ci.id === itemId);
-            if (item && newQuantity > item.stock) {
+            if (item && newQuantity > item.maxStock) {
                 toast({
                     variant: "destructive",
                     title: "Stok tidak mencukupi",
-                    description: `Hanya tersedia ${item.stock} stok.`,
+                    description: `Hanya tersedia ${item.maxStock} stok.`,
                 });
-                return currentCart.map(ci => ci.id === itemId ? { ...ci, quantity: item.stock } : ci);
+                return currentCart.map(ci => ci.id === itemId ? { ...ci, quantity: item.maxStock } : ci);
             }
 
             return currentCart.map(ci => ci.id === itemId ? { ...ci, quantity: newQuantity } : ci);
@@ -211,7 +262,7 @@ export function PosCart() {
                 const itemDiscount = itemSubtotal * discountRatio;
                 const pricePerItemAfterDiscount = item.price - (item.price * discountRatio);
 
-                return recordSale(item.sku!, 'pos', item.quantity, {
+                return recordSale(item.sku, 'pos', item.quantity, {
                     saleDate: new Date(),
                     transactionId: receiptData.transactionId,
                     paymentMethod,
@@ -277,10 +328,16 @@ export function PosCart() {
                                         <TableRow key={item.id}>
                                             <TableCell>
                                                 <div className="flex items-center gap-3">
-                                                    <Image src={item.parentImageUrl || 'https://placehold.co/40x40.png'} alt={item.productName} width={32} height={32} className="rounded-md" data-ai-hint="product image" />
+                                                     {item.type === 'product' ? (
+                                                        <Image src={item.imageUrl || 'https://placehold.co/40x40.png'} alt={item.productName} width={32} height={32} className="rounded-md" data-ai-hint="product image" />
+                                                     ) : (
+                                                         <div className="flex h-8 w-8 items-center justify-center rounded-md bg-muted/50">
+                                                            <Tags className="h-4 w-4 text-muted-foreground" />
+                                                         </div>
+                                                     )}
                                                     <div>
                                                         <p className="font-medium text-sm truncate max-w-[250px]">{item.productName}</p>
-                                                        <p className="text-xs text-muted-foreground">{item.name}</p>
+                                                        <p className="text-xs text-muted-foreground">{item.variantName || 'Aksesoris'}</p>
                                                     </div>
                                                 </div>
                                             </TableCell>
@@ -322,12 +379,12 @@ export function PosCart() {
                     }}
                     item={productForVariantSelection}
                     onSelect={handleVariantSelect}
-                    cart={cart}
+                    cart={cart as any}
                 />
             )}
         </div>
          <div className="print-only">
-            {receiptToPrint && <PosReceipt ref={receiptRef} receipt={receiptToPrint} />}
+            {receiptToPrint && <PosReceipt ref={null} receipt={receiptToPrint} />}
         </div>
         </>
     );
