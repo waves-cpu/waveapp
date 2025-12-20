@@ -1,3 +1,4 @@
+
 'use client'
 
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
@@ -126,7 +127,7 @@ export default function PosHistoryPage() {
     
     const triggerPrint = (group: GroupedSale) => {
         const cartItems: CartItem[] = group.items.map(item => ({
-            id: item.variantId?.toString() || item.productId!.toString(),
+            id: item.accessoryId?.toString() || item.variantId?.toString() || item.productId!.toString(),
             productId: item.productId!,
             productName: item.productName,
             variantName: item.variantName,
@@ -162,9 +163,12 @@ export default function PosHistoryPage() {
 
     useEffect(() => {
         if (receiptToPrint || voucherToPrint) {
-            window.print();
-            setReceiptToPrint(null);
-            setVoucherToPrint(null);
+            const timer = setTimeout(() => {
+                window.print();
+                setReceiptToPrint(null);
+                setVoucherToPrint(null);
+            }, 100);
+            return () => clearTimeout(timer);
         }
     }, [receiptToPrint, voucherToPrint]);
 
@@ -292,9 +296,12 @@ export default function PosHistoryPage() {
             />
         </AppLayout>
         <div className="print-only">
-            {receiptToPrint && <PosReceipt receipt={receiptToPrint} />}
-            {voucherToPrint && <AccessoryUsageVoucher voucher={voucherToPrint} />}
+            {receiptToPrint && <PosReceipt ref={null} receipt={receiptToPrint} />}
+        </div>
+        <div className="print-only-a4">
+             {voucherToPrint && <AccessoryUsageVoucher ref={null} voucher={voucherToPrint} />}
         </div>
         </>
     );
 }
+
