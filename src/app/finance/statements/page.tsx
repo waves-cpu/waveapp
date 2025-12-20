@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useMemo, useEffect } from 'react';
@@ -111,11 +112,12 @@ export default function StatementsPage() {
         returnedSales,
         bestsellers,
     } = useMemo(() => {
+        if (!date?.from) return { grossRevenue: 0, grossProfit: 0, unitsSold: 0, cancelledSales: { count: 0, value: 0 }, returnedSales: { count: 0, value: 0 }, bestsellers: [] };
+        
         const salesInDateRange = allSales.filter(sale => {
-            if (!date?.from) return true;
             const saleDate = parseISO(sale.saleDate);
             const toDate = date.to || date.from;
-            return isWithinInterval(saleDate, { start: startOfDay(date.from), end: endOfDay(toDate) });
+            return isWithinInterval(saleDate, { start: startOfDay(date.from!), end: endOfDay(toDate) });
         });
         
         const filteredSales = salesInDateRange.filter(sale => {
@@ -136,24 +138,28 @@ export default function StatementsPage() {
             if (!saleKey) return;
             
             const salePrice = sale.priceAtSale * sale.quantity;
+            const cogs = (sale.cogsAtSale ?? 0) * sale.quantity;
+            const saleProfit = salePrice - cogs;
 
             if (sale.status === 'Cancelled' || sale.status === 'Dibatalkan') {
                 cancelled.count++;
                 cancelled.value += salePrice;
-                return;
+                return; // Do not include in main calculations
             }
             if (sale.status === 'Return' || sale.status === 'Return Selesai') {
                 returned.count++;
                 returned.value += salePrice;
-                return;
+                // Subtract from revenue and profit
+                revenue -= salePrice;
+                profit -= saleProfit;
+                // No change in units sold, as it was sold and then returned. If you want to track net units, you would subtract here.
+                return; 
             }
 
             // Only count 'Completed' or 'Dikirim' or 'Selesai' for revenue and units
             if (['Completed', 'Dikirim', 'Selesai'].includes(sale.status || '')) {
                 revenue += salePrice;
                 units += sale.quantity;
-                const cogs = (sale.cogsAtSale ?? 0) * sale.quantity;
-                const saleProfit = salePrice - cogs;
                 profit += saleProfit;
 
                 if (!productAggregation.has(saleKey)) {
