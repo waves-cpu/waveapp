@@ -53,7 +53,7 @@ import { RecordSaleForReceiptDialog } from '@/app/components/record-sale-for-rec
 export default function LazadaChannelPage() {
   const { language } = useLanguage();
   const t = translations[language];
-  const { addShippingReceipt, deleteShippingReceipt, fetchShippingReceipts, allSales, updateShippingReceiptStatus, cancelSaleTransaction } = useInventory();
+  const { addShippingReceipt, deleteShippingReceipt, fetchShippingReceipts, allSales, updateShippingReceiptStatus, cancelSaleTransaction, recordSale } = useInventory();
   const { toast } = useToast();
   const { playSuccessSound, playErrorSound } = useScanSounds();
   const router = useRouter();
@@ -143,6 +143,38 @@ export default function LazadaChannelPage() {
     e.preventDefault();
     if (!awb || isSubmitting || !selectedDate) return;
 
+    const trimmedAwb = awb.trim();
+    const existingSales = salesByReceipt.get(trimmedAwb);
+
+    if (existingSales && existingSales.length > 0) {
+        setIsSubmitting(true);
+        try {
+            const salePromises = existingSales.map(sale =>
+                recordSale(sale.sku!, salesChannel, sale.quantity, {
+                    transactionId: sale.transactionId,
+                    priceAtSale: sale.priceAtSale,
+                    status: 'Dikirim'
+                })
+            );
+            await Promise.all(salePromises);
+            await updateShippingReceiptStatus(existingSales[0].id, 'Dikirim');
+            
+            playSuccessSound();
+            toast({
+                title: 'Penjualan Selesai Otomatis',
+                description: `Penjualan untuk resi ${trimmedAwb} telah diselesaikan.`,
+            });
+            setAwb('');
+            await loadReceipts();
+        } catch (error) {
+            playErrorSound();
+            toast({ variant: 'destructive', title: 'Gagal Memproses Penjualan', description: 'Stok mungkin tidak mencukupi.' });
+        } finally {
+            setIsSubmitting(false);
+        }
+        return;
+    }
+    
     setIsSubmitting(true);
     
      const newReceipt: Omit<ShippingReceipt, 'id'> = {
@@ -160,6 +192,10 @@ export default function LazadaChannelPage() {
         setAwb('');
         setReceiptForSale(added);
         setIsSaleDialogOpen(true);
+        toast({
+            title: 'Resi Baru Ditambahkan',
+            description: 'Silakan tambahkan produk untuk resi ini.',
+        });
     } catch (error) {
         playErrorSound();
         let title = 'Input Gagal';
@@ -177,18 +213,16 @@ export default function LazadaChannelPage() {
   
   const handleDeleteReceipt = async (receipt: ShippingReceipt) => {
     try {
-        // First, cancel the associated sales transaction to return stock
         if (receipt.transactionId) {
             await cancelSaleTransaction(receipt.transactionId);
         }
-        // Then, delete the receipt itself
         await deleteShippingReceipt(receipt.id);
         
         toast({
             title: 'Resi Dihapus & Stok Dikembalikan',
             description: `Resi ${receipt.awb} telah dihapus dan stok telah dikembalikan.`,
         });
-        loadReceipts(); // Refresh the list
+        loadReceipts(); 
     } catch (error) {
         console.error("Error during receipt deletion:", error);
         toast({ variant: 'destructive', title: 'Gagal Menghapus', description: 'Terjadi kesalahan saat menghapus resi dan mengembalikan stok.' });
@@ -397,3 +431,4 @@ export default function LazadaChannelPage() {
     </AppLayout>
   );
 }
+

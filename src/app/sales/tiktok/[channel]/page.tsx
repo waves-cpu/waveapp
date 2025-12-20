@@ -53,7 +53,7 @@ import { RecordSaleForReceiptDialog } from '@/app/components/record-sale-for-rec
 export default function TiktokChannelPage() {
   const { language } = useLanguage();
   const t = translations[language];
-  const { addShippingReceipt, deleteShippingReceipt, fetchShippingReceipts, allSales, updateShippingReceiptStatus, cancelSaleTransaction } = useInventory();
+  const { addShippingReceipt, deleteShippingReceipt, fetchShippingReceipts, allSales, updateShippingReceiptStatus, cancelSaleTransaction, recordSale } = useInventory();
   const { toast } = useToast();
   const { playSuccessSound, playErrorSound } = useScanSounds();
   const router = useRouter();
@@ -142,7 +142,39 @@ export default function TiktokChannelPage() {
   const handleAwbSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!awb || isSubmitting || !selectedDate) return;
+    
+    const trimmedAwb = awb.trim();
+    const existingSales = salesByReceipt.get(trimmedAwb);
 
+    if (existingSales && existingSales.length > 0) {
+        setIsSubmitting(true);
+        try {
+            const salePromises = existingSales.map(sale =>
+                recordSale(sale.sku!, salesChannel, sale.quantity, {
+                    transactionId: sale.transactionId,
+                    priceAtSale: sale.priceAtSale,
+                    status: 'Dikirim'
+                })
+            );
+            await Promise.all(salePromises);
+            await updateShippingReceiptStatus(existingSales[0].id, 'Dikirim');
+            
+            playSuccessSound();
+            toast({
+                title: 'Penjualan Selesai Otomatis',
+                description: `Penjualan untuk resi ${trimmedAwb} telah diselesaikan.`,
+            });
+            setAwb('');
+            await loadReceipts();
+        } catch (error) {
+            playErrorSound();
+            toast({ variant: 'destructive', title: 'Gagal Memproses Penjualan', description: 'Stok mungkin tidak mencukupi.' });
+        } finally {
+            setIsSubmitting(false);
+        }
+        return;
+    }
+    
     setIsSubmitting(true);
     
      const newReceipt: Omit<ShippingReceipt, 'id'> = {
@@ -160,6 +192,10 @@ export default function TiktokChannelPage() {
         setAwb('');
         setReceiptForSale(added);
         setIsSaleDialogOpen(true);
+        toast({
+            title: 'Resi Baru Ditambahkan',
+            description: 'Silakan tambahkan produk untuk resi ini.',
+        });
     } catch (error) {
         playErrorSound();
         let title = 'Input Gagal';
@@ -177,18 +213,16 @@ export default function TiktokChannelPage() {
   
   const handleDeleteReceipt = async (receipt: ShippingReceipt) => {
     try {
-        // First, cancel the associated sales transaction to return stock
         if (receipt.transactionId) {
             await cancelSaleTransaction(receipt.transactionId);
         }
-        // Then, delete the receipt itself
         await deleteShippingReceipt(receipt.id);
         
         toast({
             title: 'Resi Dihapus & Stok Dikembalikan',
             description: `Resi ${receipt.awb} telah dihapus dan stok telah dikembalikan.`,
         });
-        loadReceipts(); // Refresh the list
+        loadReceipts(); 
     } catch (error) {
         console.error("Error during receipt deletion:", error);
         toast({ variant: 'destructive', title: 'Gagal Menghapus', description: 'Terjadi kesalahan saat menghapus resi dan mengembalikan stok.' });
@@ -312,7 +346,7 @@ export default function TiktokChannelPage() {
                           <TableCell>
                             <Button variant="link" size="sm" className="h-auto p-0 text-xs" onClick={() => handleViewDetails(receipt)}>
                                 {isProcessed ? `${relatedSales.reduce((acc, s) => acc + s.quantity, 0)} produk` : 'Catat Produk'}
-                                {isProcessed && <Eye className="ml-2 h-3 w-3" />}
+                                <Eye className="ml-2 h-3 w-3" />
                             </Button>
                           </TableCell>
                            <TableCell>
@@ -398,3 +432,4 @@ export default function TiktokChannelPage() {
     </AppLayout>
   );
 }
+
