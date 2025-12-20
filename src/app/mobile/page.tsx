@@ -13,6 +13,7 @@ import { useScanSounds } from '@/hooks/use-scan-sounds';
 import type { ShippingReceipt } from '@/types';
 import { format, parseISO } from 'date-fns';
 import { QrScanner } from '@yudiel/react-qr-scanner';
+import { Badge } from '@/components/ui/badge';
 
 export default function MobileScanShipmentPage() {
     const { updateShippingReceiptStatus, findShippingReceiptByAwb } = useInventory();
@@ -158,8 +159,11 @@ export default function MobileScanShipmentPage() {
                 </form>
 
                 <Card className="flex-grow">
-                    <CardHeader>
+                    <CardHeader className="flex flex-row items-center justify-between">
                         <CardTitle className="text-base">Hasil Pemindaian</CardTitle>
+                        {recentlyProcessed.length > 0 && (
+                            <Badge variant="secondary">{recentlyProcessed.length}</Badge>
+                        )}
                     </CardHeader>
                     <CardContent>
                         {recentlyProcessed.length === 0 ? (
