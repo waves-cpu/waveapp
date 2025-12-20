@@ -1179,8 +1179,8 @@ export async function deleteReseller(id: number) {
 
 export async function addAccessory(accessory: Omit<Accessory, 'id' | 'history'>): Promise<string> {
     const addStmt = db.prepare(`
-        INSERT INTO accessories (name, sku, category, stock, price, costPrice)
-        VALUES (@name, @sku, @category, @stock, @price, @costPrice)
+        INSERT INTO accessories (name, sku, category, stock, price, costPrice, unit, quantityPerUnit)
+        VALUES (@name, @sku, @category, @stock, @price, @costPrice, @unit, @quantityPerUnit)
     `);
     const historyStmt = db.prepare(`
         INSERT INTO accessory_history (accessoryId, date, change, reason, newStockLevel)
@@ -1195,6 +1195,8 @@ export async function addAccessory(accessory: Omit<Accessory, 'id' | 'history'>)
             stock: accessory.stock,
             price: accessory.price,
             costPrice: accessory.costPrice ?? null,
+            unit: accessory.unit,
+            quantityPerUnit: accessory.quantityPerUnit ?? null
         });
         const accessoryId = result.lastInsertRowid;
         if (accessory.stock > 0) {
@@ -1208,7 +1210,7 @@ export async function addAccessory(accessory: Omit<Accessory, 'id' | 'history'>)
 
 export async function updateAccessory(accessoryId: string, data: Omit<Accessory, 'id'| 'history'>) {
     const updateStmt = db.prepare(`
-        UPDATE accessories SET name = @name, sku = @sku, category = @category, stock = @stock, price = @price, costPrice = @costPrice
+        UPDATE accessories SET name = @name, sku = @sku, category = @category, stock = @stock, price = @price, costPrice = @costPrice, unit = @unit, quantityPerUnit = @quantityPerUnit
         WHERE id = @id
     `);
     const historyStmt = db.prepare(`
@@ -1229,6 +1231,8 @@ export async function updateAccessory(accessoryId: string, data: Omit<Accessory,
              stock: data.stock,
              price: data.price,
              costPrice: data.costPrice ?? null,
+             unit: data.unit,
+             quantityPerUnit: data.quantityPerUnit ?? null
         });
 
         if (stockChange !== 0) {
@@ -1270,55 +1274,3 @@ async function updateShippingReceiptStatusByAwb(awb: string, status: string) {
     stmt.run(status, awb);
 }
     
-
-    
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    
-
-
-
-

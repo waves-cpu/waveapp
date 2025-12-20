@@ -156,11 +156,19 @@ const runMigrations = () => {
     }
 
     const accessoryColumns = db.pragma('table_info(accessories)');
-    if (accessoryColumns && !accessoryColumns.some((col: any) => col.name === 'costPrice')) {
-        db.exec('ALTER TABLE accessories ADD COLUMN costPrice REAL');
-    }
-    if (accessoryColumns && !accessoryColumns.some((col: any) => col.name === 'category')) {
-        db.exec('ALTER TABLE accessories ADD COLUMN category TEXT');
+    if (accessoryColumns) {
+        if (!accessoryColumns.some((col: any) => col.name === 'costPrice')) {
+            db.exec('ALTER TABLE accessories ADD COLUMN costPrice REAL');
+        }
+        if (!accessoryColumns.some((col: any) => col.name === 'category')) {
+            db.exec('ALTER TABLE accessories ADD COLUMN category TEXT');
+        }
+         if (!accessoryColumns.some((col: any) => col.name === 'unit')) {
+            db.exec('ALTER TABLE accessories ADD COLUMN unit TEXT');
+        }
+        if (!accessoryColumns.some((col: any) => col.name === 'quantityPerUnit')) {
+            db.exec('ALTER TABLE accessories ADD COLUMN quantityPerUnit INTEGER');
+        }
     }
     
     const salesColumnsForBackfill = db.pragma('table_info(sales)');
@@ -225,6 +233,8 @@ const createSchema = () => {
         name TEXT NOT NULL,
         sku TEXT,
         category TEXT,
+        unit TEXT NOT NULL,
+        quantityPerUnit INTEGER,
         stock INTEGER NOT NULL,
         price REAL,
         costPrice REAL

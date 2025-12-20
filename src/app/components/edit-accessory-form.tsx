@@ -28,16 +28,26 @@ import { translations } from '@/types/language';
 import { Card, CardContent } from '@/components/ui/card';
 import { useRouter } from 'next/navigation';
 import { useState, useMemo } from 'react';
-import type { Accessory } from '@/types';
+import type { Accessory, AccessoryUnit } from '@/types';
 import { accessoryCategories } from '@/types';
 
 const formSchema = z.object({
   id: z.string(),
-  name: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
-  category: z.string().min(1, { message: 'Category is required.' }),
+  name: z.string().min(2, { message: 'Nama harus diisi minimal 2 karakter.' }),
+  category: z.string().min(1, { message: 'Kategori harus diisi.' }),
   sku: z.string().optional(),
-  price: z.coerce.number().min(0, "Price must be non-negative."),
-  stock: z.coerce.number().int().min(0, "Stock must be a non-negative integer."),
+  unit: z.enum(['Box', 'Pcs', 'Pack'], { required_error: "Satuan harus dipilih."}),
+  quantityPerUnit: z.coerce.number().int().optional(),
+  price: z.coerce.number().min(0, "Harga harus non-negatif."),
+  stock: z.coerce.number().int().min(0, "Stok harus berupa angka non-negatif."),
+}).refine(data => {
+    if (data.unit === 'Box' || data.unit === 'Pack') {
+        return data.quantityPerUnit !== undefined && data.quantityPerUnit > 0;
+    }
+    return true;
+}, {
+    message: "Jumlah per unit harus diisi jika satuan adalah Box atau Pack.",
+    path: ["quantityPerUnit"],
 });
 
 interface EditAccessoryFormProps {
@@ -58,6 +68,8 @@ export function EditAccessoryForm({ existingItem }: EditAccessoryFormProps) {
         name: existingItem.name,
         category: existingItem.category,
         sku: existingItem.sku || '',
+        unit: existingItem.unit || 'Pcs',
+        quantityPerUnit: existingItem.quantityPerUnit,
         price: existingItem.price ?? '',
         stock: existingItem.stock ?? '',
     };
@@ -67,6 +79,9 @@ export function EditAccessoryForm({ existingItem }: EditAccessoryFormProps) {
     resolver: zodResolver(formSchema),
     defaultValues: defaultValues,
   });
+  
+  const selectedUnit = form.watch('unit') as AccessoryUnit;
+
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsSubmitting(true);
@@ -94,43 +109,86 @@ export function EditAccessoryForm({ existingItem }: EditAccessoryFormProps) {
         <CardContent className="pt-6">
             <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                <FormField
-                    control={form.control}
-                    name="name"
-                    render={({ field }) => (
-                        <FormItem>
-                        <FormLabel>{t.addItemDialog.itemName}</FormLabel>
-                        <FormControl>
-                            <Input placeholder="e.g. Label Woven" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                        </FormItem>
-                    )}
-                />
-                 <FormField
-                    control={form.control}
-                    name="category"
-                    render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>{t.addItemDialog.category}</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <FormField
+                        control={form.control}
+                        name="name"
+                        render={({ field }) => (
+                            <FormItem>
+                            <FormLabel>Nama Barang</FormLabel>
                             <FormControl>
-                                <SelectTrigger>
-                                <SelectValue placeholder={t.addItemDialog.categoryPlaceholder} />
-                                </SelectTrigger>
+                                <Input placeholder="e.g. Label Woven Hitam" {...field} />
                             </FormControl>
-                            <SelectContent>
-                                {accessoryCategories.map((category) => (
-                                <SelectItem key={category} value={category}>
-                                    {category}
-                                </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                        <FormMessage />
-                    </FormItem>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                    <FormField
+                        control={form.control}
+                        name="category"
+                        render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Kategori</FormLabel>
+                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                <FormControl>
+                                    <SelectTrigger>
+                                    <SelectValue placeholder="Pilih Kategori" />
+                                    </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                    {accessoryCategories.map((category) => (
+                                    <SelectItem key={category} value={category}>
+                                        {category}
+                                    </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                            <FormMessage />
+                        </FormItem>
+                        )}
+                    />
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <FormField
+                        control={form.control}
+                        name="unit"
+                        render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Satuan</FormLabel>
+                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                <FormControl>
+                                    <SelectTrigger>
+                                    <SelectValue placeholder="Pilih Satuan" />
+                                    </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                    {(['Pcs', 'Box', 'Pack'] as AccessoryUnit[]).map((unit) => (
+                                    <SelectItem key={unit} value={unit}>
+                                        {unit}
+                                    </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                            <FormMessage />
+                        </FormItem>
+                        )}
+                    />
+                    {(selectedUnit === 'Box' || selectedUnit === 'Pack') && (
+                        <FormField
+                            control={form.control}
+                            name="quantityPerUnit"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Jumlah per {selectedUnit}</FormLabel>
+                                    <FormControl>
+                                        <Input type="number" placeholder={`e.g., 100`} {...field} value={field.value ?? ''}/>
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
                     )}
-                />
+                </div>
                 <FormField
                   control={form.control}
                   name="sku"
@@ -138,7 +196,7 @@ export function EditAccessoryForm({ existingItem }: EditAccessoryFormProps) {
                     <FormItem>
                       <FormLabel>SKU</FormLabel>
                       <FormControl>
-                        <Input placeholder="e.g., LBL-WVN" {...field} />
+                        <Input placeholder="e.g., LBL-WVN-01" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -151,9 +209,9 @@ export function EditAccessoryForm({ existingItem }: EditAccessoryFormProps) {
                     name="price"
                     render={({ field }) => (
                         <FormItem>
-                        <FormLabel>{t.addItemDialog.price}</FormLabel>
+                        <FormLabel>Harga (per {selectedUnit})</FormLabel>
                         <FormControl>
-                            <Input type="number" placeholder={t.addItemDialog.pricePlaceholder} {...field} value={field.value ?? ''} />
+                            <Input type="number" placeholder="50000" {...field} value={field.value ?? ''} />
                         </FormControl>
                         <FormMessage />
                         </FormItem>
@@ -164,9 +222,9 @@ export function EditAccessoryForm({ existingItem }: EditAccessoryFormProps) {
                     name="stock"
                     render={({ field }) => (
                         <FormItem>
-                        <FormLabel>{t.addItemDialog.initialStock}</FormLabel>
+                        <FormLabel>Stok (dalam {selectedUnit})</FormLabel>
                         <FormControl>
-                            <Input type="number" placeholder={t.addItemDialog.initialStockPlaceholder} {...field} value={field.value ?? ''} />
+                            <Input type="number" placeholder="100" {...field} value={field.value ?? ''} />
                         </FormControl>
                         <FormMessage />
                         </FormItem>

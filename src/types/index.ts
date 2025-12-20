@@ -41,11 +41,15 @@ export interface AdjustmentHistory {
   newStockLevel: number;
 }
 
+export type AccessoryUnit = 'Box' | 'Pcs' | 'Pack';
+
 export interface Accessory {
     id: string;
     name: string;
     sku?: string;
     category?: string;
+    unit: AccessoryUnit;
+    quantityPerUnit?: number;
     stock: number;
     price?: number;
     costPrice?: number;
