@@ -24,19 +24,24 @@ import {
 } from "@/components/ui/alert-dialog";
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { type ReceiptData } from './pos-receipt';
+import { useInventory } from '@/hooks/use-inventory';
+import { useToast } from '@/hooks/use-toast';
 
 interface PosOrderSummaryProps {
   cart: CartItem[];
-  onSaleComplete: (paymentMethod: string, receiptData: ReceiptData, status?: string) => Promise<void>;
+  onSaleComplete: (paymentMethod: string, receiptData: ReceiptData, status?: 'Completed' | 'Pending') => Promise<void>;
   clearCart: () => void;
   channel: 'pos' | 'reseller';
+  pendingTransactionId: string | null;
 }
 
 type PaymentMethod = 'Cash' | 'Qris' | 'Transfer' | 'Debit';
 
-export function PosOrderSummary({ cart, onSaleComplete, clearCart, channel }: PosOrderSummaryProps) {
+export function PosOrderSummary({ cart, onSaleComplete, clearCart, channel, pendingTransactionId }: PosOrderSummaryProps) {
     const { language } = useLanguage();
     const t = translations[language];
+    const { cancelSaleTransaction } = useInventory();
+    const { toast } = useToast();
     const [discount, setDiscount] = useState(0);
     const [cashReceived, setCashReceived] = useState(0);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -47,6 +52,13 @@ export function PosOrderSummary({ cart, onSaleComplete, clearCart, channel }: Po
     useEffect(() => {
         setPaymentMethod(channel === 'reseller' ? 'Transfer' : 'Cash');
     }, [channel]);
+
+    useEffect(() => {
+        if (cart.length === 0) {
+            setDiscount(0);
+            setCashReceived(0);
+        }
+    }, [cart]);
 
     const subtotal = useMemo(() => cart.reduce((acc, item) => acc + item.price * item.quantity, 0), [cart]);
     const total = useMemo(() => subtotal - discount, [subtotal, discount]);
@@ -82,6 +94,25 @@ export function PosOrderSummary({ cart, onSaleComplete, clearCart, channel }: Po
         }
     };
     
+    const handleCancel = async () => {
+        if (pendingTransactionId) {
+            try {
+                await cancelSaleTransaction(pendingTransactionId);
+                toast({
+                    title: "Transaksi Tertunda Dibatalkan",
+                    description: "Transaksi yang ditahan telah dihapus dan stok telah dikembalikan."
+                });
+            } catch (error) {
+                 toast({
+                    variant: 'destructive',
+                    title: "Gagal Membatalkan",
+                    description: "Gagal membatalkan transaksi yang ditahan."
+                });
+            }
+        }
+        resetForm();
+    }
+
 
     return (
         <Card className="flex flex-col h-full sticky top-4 no-print">
@@ -181,12 +212,12 @@ export function PosOrderSummary({ cart, onSaleComplete, clearCart, channel }: Po
                                 <AlertDialogHeader>
                                     <AlertDialogTitle>Batalkan Transaksi?</AlertDialogTitle>
                                     <AlertDialogDescription>
-                                        Tindakan ini akan mengosongkan keranjang. Anda tidak dapat mengurungkan tindakan ini.
+                                        Tindakan ini akan mengosongkan keranjang. Jika ini adalah transaksi yang ditahan, transaksi tersebut akan dihapus dari riwayat.
                                     </AlertDialogDescription>
                                 </AlertDialogHeader>
                                 <AlertDialogFooter>
                                     <AlertDialogCancel>Lanjut Transaksi</AlertDialogCancel>
-                                    <AlertDialogAction onClick={resetForm} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                                    <AlertDialogAction onClick={handleCancel} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
                                         Ya, Batalkan
                                     </AlertDialogAction>
                                 </AlertDialogFooter>

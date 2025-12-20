@@ -40,7 +40,7 @@ export type CartItem = {
 const LOCAL_STORAGE_KEY = 'posCart';
 
 export function PosCart() {
-    const { recordSale, items: inventoryItems, accessories, loading: inventoryLoading, pendingTransaction, clearPendingTransaction, cancelSaleTransaction } = useInventory();
+    const { recordSale, items: inventoryItems, accessories, loading: inventoryLoading, pendingTransaction, clearPendingTransaction, cancelSaleTransaction, fetchItems } = useInventory();
     const { language } = useLanguage();
     const { playSuccessSound, playErrorSound } = useScanSounds();
     const t = translations[language];
@@ -340,6 +340,10 @@ export function PosCart() {
                 description: "Terjadi kesalahan saat memproses transaksi.",
             });
             throw error; // Re-throw to prevent form reset in summary component
+        } finally {
+            if (status === 'Completed' || status === 'Pending') {
+                 await fetchItems();
+            }
         }
     };
 
@@ -423,6 +427,7 @@ export function PosCart() {
                     onSaleComplete={handleSaleComplete}
                     clearCart={clearCart}
                     channel="pos"
+                    pendingTransactionId={pendingTransactionId}
                 />
             </div>
              {productForVariantSelection && (
