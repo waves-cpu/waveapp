@@ -133,7 +133,7 @@ export function EditAccessoryForm({ existingItem }: EditAccessoryFormProps) {
                         render={({ field }) => (
                         <FormItem>
                             <FormLabel>Kategori</FormLabel>
-                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value}>
                                 <FormControl>
                                     <SelectTrigger>
                                     <SelectValue placeholder="Pilih Kategori" />
@@ -200,7 +200,7 @@ export function EditAccessoryForm({ existingItem }: EditAccessoryFormProps) {
                     <FormItem>
                       <FormLabel>SKU</FormLabel>
                       <FormControl>
-                        <Input placeholder="e.g., LBL-WVN-01" {...field} />
+                        <Input placeholder="e.g., LBL-WVN-01" {...field} value={field.value ?? ''} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
