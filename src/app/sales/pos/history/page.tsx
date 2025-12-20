@@ -1,3 +1,4 @@
+
 'use client'
 
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
@@ -109,6 +110,8 @@ export default function PosHistoryPage() {
                 title: t.pos.transactionCancelled,
                 description: "Stok telah dikembalikan.",
             });
+            // Force a re-fetch of all data to update the UI
+            await fetchItems();
         } catch (error) {
             console.error("Error cancelling transaction:", error);
             toast({
@@ -117,7 +120,7 @@ export default function PosHistoryPage() {
                 description: "Terjadi kesalahan saat membatalkan transaksi.",
             });
         }
-    }, [cancelSaleTransaction, t.pos.transactionCancelled, toast]);
+    }, [cancelSaleTransaction, t.pos.transactionCancelled, toast, fetchItems]);
 
     const handleViewDetails = (items: Sale[]) => {
         setSelectedSaleItems(items);
@@ -127,7 +130,7 @@ export default function PosHistoryPage() {
     const triggerPrint = (group: GroupedSale) => {
         const cartItems: CartItem[] = group.items.map(item => ({
             id: item.accessoryId?.toString() || item.variantId?.toString() || item.productId!.toString(),
-            productId: item.productId! || item.accessoryId!.toString(),
+            productId: item.productId?.toString() || item.accessoryId!.toString(),
             productName: item.productName,
             variantName: item.variantName,
             sku: item.sku!,
