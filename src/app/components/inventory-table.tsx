@@ -617,3 +617,4 @@ export function InventoryTable({ onUpdateStock, isAccessoryTable = false }: Inve
 }
 
 
+
