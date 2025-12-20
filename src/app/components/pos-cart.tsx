@@ -385,7 +385,7 @@ export function PosCart() {
                                             </TableCell>
                                         </TableRow>
                                     ) : cart.map(item => (
-                                        <TableRow key={item.id}>
+                                        <TableRow key={`${item.type}-${item.id}`}>
                                             <TableCell>
                                                 <div className="flex items-center gap-3">
                                                      {item.type === 'product' ? (
@@ -446,6 +446,8 @@ export function PosCart() {
         </div>
          <div className="print-only">
             {receiptToPrint && <PosReceipt ref={null} receipt={receiptToPrint} />}
+        </div>
+         <div className="print-only-a4">
             {voucherToPrint && <AccessoryUsageVoucher ref={null} voucher={voucherToPrint} />}
         </div>
         </>
