@@ -6,8 +6,6 @@ import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
 import { useInventory } from '@/hooks/use-inventory';
 import { useToast } from '@/hooks/use-toast';
-import { AppLayout } from '@/app/components/app-layout';
-import { SidebarTrigger } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -20,7 +18,6 @@ import {
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
@@ -33,13 +30,19 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from '@/components/ui/sheet';
 import { UploadCloud, Download, PackageCheck, AlertTriangle, FileText, Trash2, History, Eye, Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useLanguage } from '@/hooks/use-language';
 import { translations } from '@/types/language';
 import { format } from 'date-fns';
 import type { BulkImportHistory } from '@/types';
-import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 
 type ProductRow = {
@@ -59,10 +62,14 @@ interface DetailDialogData {
     items: { sku: string; name: string }[];
 }
 
-export default function BulkAddProductsPage() {
+interface BulkAddSheetProps {
+    open: boolean;
+    onOpenChange: (open: boolean) => void;
+}
+
+export function BulkAddSheet({ open, onOpenChange }: BulkAddSheetProps) {
   const { bulkAddProducts, fetchImportHistory, deleteImportHistory } = useInventory();
   const { toast } = useToast();
-  const router = useRouter();
   const [data, setData] = useState<ProductRow[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [fileName, setFileName] = useState('');
@@ -86,8 +93,10 @@ export default function BulkAddProductsPage() {
   }, [fetchImportHistory, toast]);
 
   useEffect(() => {
-    loadHistory();
-  }, [loadHistory]);
+    if (open) {
+        loadHistory();
+    }
+  }, [open, loadHistory]);
 
   const handleFileUpload = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -112,7 +121,7 @@ export default function BulkAddProductsPage() {
             price: row.price != null ? Number(row.price) : 0,
             stock: row.stock != null ? Number(row.stock) : 0,
             cost_price: row.cost_price != null ? Number(row.cost_price) : 0,
-        })).filter(row => row.parent_sku); // Ensure parent_sku is present
+        })).filter(row => row.parent_sku);
 
         setData(cleanedData as ProductRow[]);
       };
@@ -191,12 +200,10 @@ export default function BulkAddProductsPage() {
     setFileName('');
 
     try {
-      // Create a plain JSON object to avoid any issues with proxies or complex objects
       const plainData = JSON.parse(JSON.stringify(data));
       const finalResult = await bulkAddProducts(plainData, fileName);
       historyId = finalResult.id;
       
-      // Replace the temporary entry with the final result from the database
       await loadHistory();
       
       toast({
@@ -217,7 +224,6 @@ export default function BulkAddProductsPage() {
         title: TBulk.importFailed,
         description: `${TBulk.importFailedDesc}: ${errorMessage}`,
       });
-       // If there was an error, we should get the latest state which might include a failed entry.
        await loadHistory();
     } finally {
       setIsSubmitting(false);
@@ -250,15 +256,16 @@ export default function BulkAddProductsPage() {
 
 
   return (
-    <AppLayout>
-      <main className="flex-1 p-4 md:p-10">
-        <div className="flex items-center gap-4 mb-6">
-          <SidebarTrigger className="md:hidden" />
-          <h1 className="text-lg font-bold">{t.dashboard.bulk}</h1>
-        </div>
-
-        <Card>
-          <CardContent className="space-y-6 pt-6">
+    <>
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent className="sm:max-w-2xl w-full flex flex-col">
+        <SheetHeader>
+          <SheetTitle>{t.dashboard.bulk}</SheetTitle>
+          <SheetDescription>
+            Gunakan fitur ini untuk menambah atau memperbarui produk dalam jumlah besar dengan mengunggah file Excel.
+          </SheetDescription>
+        </SheetHeader>
+        <div className="space-y-6 pt-6 flex-1 flex flex-col">
             <div className="grid md:grid-cols-3 gap-6">
               <div className="flex flex-col items-center justify-center p-6 border-2 border-dashed rounded-lg text-center">
                 <Download className="h-10 w-10 text-muted-foreground mb-2" />
@@ -289,8 +296,8 @@ export default function BulkAddProductsPage() {
               </div>
             </div>
 
-            <div className="space-y-4">
-                <Card>
+            <div className="space-y-4 flex-1 flex flex-col">
+                <Card className="flex-1 flex flex-col">
                 <ScrollArea className="h-96">
                     <Table>
                     <TableHeader className="sticky top-0 bg-card">
@@ -346,30 +353,26 @@ export default function BulkAddProductsPage() {
                 </ScrollArea>
                 </Card>
             </div>
-            </CardContent>
-        </Card>
+        </div>
+      </SheetContent>
+    </Sheet>
         
-        <Dialog open={!!detailDialogData} onOpenChange={() => setDetailDialogData(null)}>
-            <DialogContent>
-                <DialogHeader>
-                    <DialogTitle>{detailDialogData?.title}</DialogTitle>
-                </DialogHeader>
-                 <ScrollArea className="max-h-80 border rounded-md p-4">
-                    <ul className="list-disc list-inside">
-                        {detailDialogData?.items.map((item, index) => (
-                            <li key={index} className="text-sm">
-                                {item.name ? `${item.name} (SKU: ${item.sku})` : item.sku}
-                            </li>
-                        ))}
-                    </ul>
-                </ScrollArea>
-            </DialogContent>
-        </Dialog>
-
-        </main>
-    </AppLayout>
+    <Dialog open={!!detailDialogData} onOpenChange={() => setDetailDialogData(null)}>
+        <DialogContent>
+            <DialogHeader>
+                <DialogTitle>{detailDialogData?.title}</DialogTitle>
+            </DialogHeader>
+             <ScrollArea className="max-h-80 border rounded-md p-4">
+                <ul className="list-disc list-inside">
+                    {detailDialogData?.items.map((item, index) => (
+                        <li key={index} className="text-sm">
+                            {item.name ? `${item.name} (SKU: ${item.sku})` : item.sku}
+                        </li>
+                    ))}
+                </ul>
+            </ScrollArea>
+        </DialogContent>
+    </Dialog>
+    </>
     );
 }
-
-
-    

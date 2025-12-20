@@ -4,6 +4,7 @@
 import React, { useState } from 'react';
 import {
   PlusCircle,
+  FileUp,
 } from 'lucide-react';
 import { InventoryTable } from './inventory-table';
 import { UpdateStockDialog } from './update-stock-dialog';
@@ -12,6 +13,7 @@ import { useLanguage } from '@/hooks/use-language';
 import { translations } from '@/types/language';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import Link from 'next/link';
+import { BulkAddSheet } from './bulk-add-sheet';
 
 function DashboardContent() {
   const { language } = useLanguage();
@@ -19,6 +21,7 @@ function DashboardContent() {
 
   const [isUpdateStockOpen, setUpdateStockOpen] = useState(false);
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
+  const [isBulkAddOpen, setBulkAddOpen] = useState(false);
 
   const handleUpdateStock = (itemId: string) => {
     setSelectedItemId(itemId);
@@ -36,6 +39,10 @@ function DashboardContent() {
                 </h1>
             </div>
             <div className="flex items-center gap-2">
+                <Button variant="outline" size="sm" onClick={() => setBulkAddOpen(true)}>
+                    <FileUp className="mr-2 h-4 w-4" />
+                    {t.dashboard.bulk}
+                </Button>
                 <Button asChild size="sm">
                     <Link href="/add-product">
                         <PlusCircle className="mr-2 h-4 w-4" />
@@ -55,6 +62,10 @@ function DashboardContent() {
         open={isUpdateStockOpen}
         onOpenChange={setUpdateStockOpen}
         itemId={selectedItemId}
+      />
+      <BulkAddSheet
+        open={isBulkAddOpen}
+        onOpenChange={setBulkAddOpen}
       />
     </>
   );

@@ -179,14 +179,6 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                                 </Link>
                               </SidebarMenuItem>
                               <SidebarMenuItem>
-                                <Link href="/bulk-add-products">
-                                    <SidebarMenuButton variant="ghost" size="sm" isActive={isActive('/bulk-add-products')}>
-                                        <FilePlus2/>
-                                        {t.dashboard.bulk}
-                                    </SidebarMenuButton>
-                                </Link>
-                              </SidebarMenuItem>
-                              <SidebarMenuItem>
                                   <Link href="/stock-in">
                                       <SidebarMenuButton variant="ghost" size="sm" isActive={isActive('/stock-in')}>
                                           <PackagePlus/>
