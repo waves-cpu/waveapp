@@ -84,9 +84,9 @@ export function PosCart() {
                     const id = saleItem.accessoryId?.toString() || saleItem.variantId?.toString() || saleItem.productId!.toString();
                     const type = saleItem.accessoryId ? 'accessory' : 'product';
                     const key = `${type}-${id}`;
-
-                    if (aggregatedCart.has(key)) {
-                        const existing = aggregatedCart.get(key)!;
+                    
+                    const existing = aggregatedCart.get(key);
+                    if (existing) {
                         existing.quantity += saleItem.quantity;
                     } else {
                         aggregatedCart.set(key, {
