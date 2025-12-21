@@ -39,6 +39,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { categories as allCategories } from '@/types';
+import { Pagination } from '@/components/ui/pagination';
 
 const itemPriceSchema = z.object({
     id: z.string(),
@@ -65,6 +66,8 @@ export function PriceSettingsForm() {
   const TPrice = t.finance.priceSettingsPage;
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(20);
 
   const flattenedItems = useMemo(() => {
     return items
@@ -100,6 +103,7 @@ export function PriceSettingsForm() {
   }, [items]);
   
   const filteredItems = useMemo(() => {
+    setCurrentPage(1);
     return flattenedItems
       .filter((item) =>
         categoryFilter ? item.category === categoryFilter : true
@@ -113,6 +117,13 @@ export function PriceSettingsForm() {
         );
       });
   }, [flattenedItems, categoryFilter, searchTerm]);
+  
+  const totalPages = Math.ceil(filteredItems.length / itemsPerPage);
+
+  const paginatedItems = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    return filteredItems.slice(startIndex, startIndex + itemsPerPage);
+  }, [filteredItems, currentPage, itemsPerPage]);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -125,7 +136,7 @@ export function PriceSettingsForm() {
   });
 
   useEffect(() => {
-    const mappedItems = filteredItems.map(item => ({
+    const mappedItems = paginatedItems.map(item => ({
         id: item.id,
         type: item.type,
         costPrice: item.costPrice ?? undefined,
@@ -137,7 +148,7 @@ export function PriceSettingsForm() {
         ]
     }));
     replace(mappedItems);
-  }, [filteredItems, replace]);
+  }, [paginatedItems, replace]);
 
 
   if (loading) {
@@ -146,15 +157,22 @@ export function PriceSettingsForm() {
 
   const onSubmit = async (data: z.infer<typeof formSchema>) => {
     setIsSubmitting(true);
-    const dirtyFields = form.formState.dirtyFields.items;
-    
-    if (!dirtyFields) {
+    // When submitting, we need to map the form data back to include the correct IDs.
+    // The `fields` from useFieldArray is paginated, so we use `paginatedItems` to get the real IDs.
+    const updates = data.items.map((formItem, index) => ({
+        ...formItem,
+        id: paginatedItems[index].id,
+        type: paginatedItems[index].type,
+    })).filter((_, index) => {
+        // Only include fields that are actually dirty to avoid unnecessary updates
+        return form.formState.dirtyFields.items?.[index];
+    });
+
+    if (updates.length === 0) {
         toast({ title: TPrice.noChanges });
         setIsSubmitting(false);
         return;
     }
-
-    const updates = data.items.filter((_, index) => dirtyFields[index]);
 
     try {
         await updatePrices(updates);
@@ -222,7 +240,7 @@ export function PriceSettingsForm() {
                     </TableHeader>
                     <TableBody>
                          {fields.map((field, index) => {
-                            const originalItem = filteredItems[index];
+                            const originalItem = paginatedItems[index];
                             if (!originalItem) return null;
 
                              return (
@@ -286,6 +304,13 @@ export function PriceSettingsForm() {
                         })}
                     </TableBody>
                 </Table>
+            </div>
+             <div className="flex items-center justify-end p-4">
+                 <Pagination
+                    totalPages={totalPages}
+                    currentPage={currentPage}
+                    onPageChange={setCurrentPage}
+                />
             </div>
         </form>
     </Form>
