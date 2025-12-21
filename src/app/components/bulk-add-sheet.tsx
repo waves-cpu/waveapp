@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useCallback, useEffect } from 'react';
@@ -184,7 +185,6 @@ export function BulkAddSheet({ open, onOpenChange }: BulkAddSheetProps) {
     }
 
     setIsSubmitting(true);
-    let historyId: number | undefined;
 
     const tempEntry = {
         id: Date.now(), // temporary key
@@ -200,20 +200,19 @@ export function BulkAddSheet({ open, onOpenChange }: BulkAddSheetProps) {
     setFileName('');
 
     try {
-      const plainData = JSON.parse(JSON.stringify(data));
-      const finalResult = await bulkAddProducts(plainData, fileName);
-      historyId = finalResult.id;
+      const result = await bulkAddProducts(data, fileName);
       
       await loadHistory();
       
       toast({
         title: TBulk.importSuccess,
-        description: `${finalResult.addedCount} ${TBulk.importSuccessDesc}`,
+        description: `${result.addedProducts.length} ${TBulk.importSuccessDesc}`,
       });
-      if (finalResult.skippedCount && finalResult.skippedCount > 0) {
+      if (result.skippedProducts && result.skippedProducts.length > 0) {
+          const skippedProductNames = result.skippedProducts.map(p => `${p.name} (SKU: ${p.sku})`).join(', ');
           toast({
               title: TBulk.skippedTitle,
-              description: TBulk.skippedDesc.replace('{count}', finalResult.skippedCount.toString())
+              description: TBulk.skippedDesc.replace('{count}', result.skippedProducts.length.toString()),
           });
       }
     } catch (error) {

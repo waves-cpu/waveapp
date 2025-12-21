@@ -3,7 +3,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
-import type { InventoryItem, AdjustmentHistory, InventoryItemVariant, Sale, Reseller, Accessory, ShippingReceipt, BulkImportHistory, User } from '@/types';
+import type { InventoryItem, AdjustmentHistory, InventoryItemVariant, Sale, Reseller, Accessory, ShippingReceipt, BulkImportHistory, User, ReturnedItem } from '@/types';
 import { categories as allCategories } from '@/types';
 import {
   fetchInventoryData,
@@ -16,10 +16,10 @@ import {
   performSale,
   getSalesByDate,
   revertSale,
-  findProductBySku,
   fetchAllSales,
   revertSaleByTransaction,
   revertSaleItem,
+  findProductBySku,
   getResellers,
   addReseller as addResellerDb,
   editReseller as editResellerDb,
@@ -53,7 +53,7 @@ import {
 interface InventoryContextType {
   items: InventoryItem[];
   addItem: (item: any) => Promise<void>;
-  bulkAddProducts: (products: any[], fileName: string) => Promise<BulkImportHistory>;
+  bulkAddProducts: (products: any[], fileName: string) => Promise<{ addedProducts: {sku: string, name: string}[], skippedProducts: {sku: string, name: string}[] }>;
   bulkUpdateProducts: (products: any[]) => Promise<{ updatedCount: number; notFoundSkus: string[] }>;
   updateItem: (itemId: string, itemData: any) => Promise<void>;
   updateStock: (itemId: string, change: number, reason: string) => Promise<void>;
@@ -179,7 +179,7 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
     setItems(prev => [...prev, newItem]);
   };
   
-  const bulkAddProducts = async (products: any[], fileName: string): Promise<BulkImportHistory> => {
+  const bulkAddProducts = async (products: any[], fileName: string): Promise<{ addedProducts: {sku: string, name: string}[], skippedProducts: {sku: string, name: string}[] }> => {
     const historyEntry = await addBulkImportHistory({
         fileName,
         date: new Date().toISOString(),
@@ -200,7 +200,7 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
         
         await fetchAllData();
 
-        return { ...historyEntry, ...finalData, id: historyEntry.id };
+        return result;
         
     } catch (error) {
          const finalData = {
@@ -505,3 +505,4 @@ export const useInventory = () => {
   }
   return context;
 };
+
