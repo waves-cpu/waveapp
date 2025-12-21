@@ -29,10 +29,12 @@ import { useLanguage } from '@/hooks/use-language';
 import { translations } from '@/types/language';
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
-import { Store, ShoppingBag, Save, Loader2, PlusCircle, Settings, Edit } from 'lucide-react';
+import { Store, ShoppingBag, Save, Loader2, PlusCircle, Settings, Edit, Info } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { ProductSelectionDialog } from './product-selection-dialog';
 import { Card, CardContent } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 const itemPriceSchema = z.object({
     id: z.string(),
@@ -78,6 +80,7 @@ export function PriceSettingsForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isProductSelectionOpen, setProductSelectionOpen] = useState(false);
   const [selectedItems, setSelectedItems] = useState<SelectedItem[]>([]);
+  const [rowSelection, setRowSelection] = useState<Record<string, boolean>>({});
 
   const flattenedItemsById = useMemo(() => {
     const map = new Map<string, SelectedItem>();
@@ -144,28 +147,46 @@ export function PriceSettingsForm() {
         ]
     }));
     replace(formItems);
+    setRowSelection({});
   };
   
   const applyMasterPrice = (field: keyof FormValues, targetField: string, channel?: string) => {
     const masterValue = form.getValues(field);
     if (masterValue !== undefined && masterValue >= 0) {
-      fields.forEach((_, index) => {
+      const selectedIndices = Object.keys(rowSelection).filter(key => rowSelection[key]).map(Number);
+      const indicesToUpdate = selectedIndices.length > 0 ? selectedIndices : fields.map((_, index) => index);
+      
+      indicesToUpdate.forEach(index => {
         if (channel) {
             const channelIndex = fields[index].channelPrices?.findIndex(p => p.channel === channel);
-            if(channelIndex !== -1) {
-                update(index, {
-                    ...fields[index],
-                    channelPrices: fields[index].channelPrices?.map((cp, cIdx) => cIdx === channelIndex ? {...cp, price: masterValue} : cp)
-                });
+            if(channelIndex !== -1 && fields[index].channelPrices) {
+                const newChannelPrices = [...fields[index].channelPrices!];
+                newChannelPrices[channelIndex] = {...newChannelPrices[channelIndex], price: masterValue};
+                update(index, { ...fields[index], channelPrices: newChannelPrices });
             }
         } else {
-            update(index, { ...fields[index], [targetField]: masterValue });
+             if (targetField === 'costPrice' || targetField === 'price') {
+                 update(index, { ...fields[index], [targetField]: masterValue });
+            }
         }
       });
+      toast({ title: "Harga Diterapkan", description: `Harga telah diterapkan ke ${indicesToUpdate.length} produk.` });
       form.trigger(); // Manually trigger validation display
     }
   };
 
+  const handleSelectAll = (checked: boolean) => {
+    const newSelection: Record<string, boolean> = {};
+    if (checked) {
+        fields.forEach((_, index) => {
+            newSelection[index] = true;
+        });
+    }
+    setRowSelection(newSelection);
+  };
+  
+  const isAllSelected = fields.length > 0 && Object.keys(rowSelection).length === fields.length && Object.values(rowSelection).every(Boolean);
+  const isSomeSelected = Object.values(rowSelection).some(Boolean) && !isAllSelected;
 
   const onSubmit = async (data: FormValues) => {
     setIsSubmitting(true);
@@ -213,7 +234,7 @@ export function PriceSettingsForm() {
                         <Edit className="mr-2 h-4 w-4" />
                         Ubah Pilihan Produk ({selectedItems.length})
                     </Button>
-                     <Button type="submit" disabled={isSubmitting}>
+                     <Button type="submit" disabled={isSubmitting || !form.formState.isDirty}>
                         {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
                         {TPrice.saveButton}
                     </Button>
@@ -222,27 +243,17 @@ export function PriceSettingsForm() {
                 <Card>
                     <CardContent className="p-4 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
                         {(['masterCostPrice', 'masterPrice', 'masterPosPrice', 'masterResellerPrice', 'masterOnlinePrice'] as const).map(field => {
-                            const priceType = field.replace('master', '').toLowerCase();
+                            const priceType = field.replace('master', '').replace('Price','').toLowerCase();
                             let targetField: string, channel: string | undefined;
-                            
-                            if(priceType.includes('price')) targetField = 'price';
-                            else if(priceType.includes('costprice')) targetField = 'costPrice';
+
+                            if (priceType === 'cost') targetField = 'costPrice';
+                            else if (priceType === '') targetField = 'price';
                             else {
                                 targetField = 'channelPrices';
                                 channel = priceType;
                             }
                             
-                            if(priceType === 'pos') channel = 'pos';
-                            if(priceType === 'reseller') channel = 'reseller';
-                            if(priceType === 'online') channel = 'online';
-
-                            const labelMap = {
-                                costprice: TPrice.costPrice,
-                                price: TPrice.sellingPrice,
-                                posprice: TPrice.posPrice,
-                                resellerprice: TPrice.resellerPrice,
-                                onlineprice: TPrice.onlinePrice,
-                            };
+                            const labelMap = { cost: TPrice.costPrice, '': TPrice.sellingPrice, pos: TPrice.posPrice, reseller: TPrice.resellerPrice, online: TPrice.onlinePrice };
                             
                             return (
                                 <FormField
@@ -251,7 +262,7 @@ export function PriceSettingsForm() {
                                     name={field}
                                     render={({ field: formField }) => (
                                         <FormItem className="space-y-1">
-                                            <FormLabel className="text-xs">{labelMap[priceType.replace('price','')]}</FormLabel>
+                                            <FormLabel className="text-xs">{labelMap[priceType]}</FormLabel>
                                             <div className="flex items-center gap-2">
                                                 <FormControl>
                                                     <Input type="number" placeholder="0" {...formField} value={formField.value ?? ''} className="h-8 text-xs"/>
@@ -266,12 +277,25 @@ export function PriceSettingsForm() {
                             );
                         })}
                     </CardContent>
+                    <Alert className="mx-4 mb-4">
+                        <Info className="h-4 w-4" />
+                        <AlertDescription className="text-xs">
+                          Gunakan fitur di atas untuk menerapkan harga secara massal. Jika Anda mencentang beberapa produk di bawah, harga hanya akan diterapkan pada produk yang dicentang. Jika tidak ada yang dicentang, harga akan diterapkan ke semua produk.
+                        </AlertDescription>
+                    </Alert>
                 </Card>
 
                 <div className="border rounded-lg shadow-sm overflow-hidden">
                     <Table>
                         <TableHeader className="sticky top-0 bg-card">
                             <TableRow>
+                                <TableHead className="w-12 px-4">
+                                     <Checkbox
+                                        checked={isAllSelected ? true : (isSomeSelected ? 'indeterminate' : false)}
+                                        onCheckedChange={handleSelectAll}
+                                        aria-label="Select all"
+                                     />
+                                </TableHead>
                                 <TableHead className="w-[30%]">{t.inventoryTable.name}</TableHead>
                                 <TableHead className="w-[14%]">{TPrice.costPrice}</TableHead>
                                 <TableHead className="w-[14%]">{TPrice.sellingPrice}</TableHead>
@@ -286,7 +310,20 @@ export function PriceSettingsForm() {
                                 if (!originalItem) return null;
 
                                  return (
-                                    <TableRow key={field.id} className={cn(originalItem.parentName ? "bg-background" : "bg-muted/30")}>
+                                    <TableRow 
+                                        key={field.id} 
+                                        className={cn(originalItem.parentName ? "bg-background" : "bg-muted/30")}
+                                        data-state={rowSelection[index] ? 'selected' : ''}
+                                    >
+                                        <TableCell className="px-4">
+                                            <Checkbox
+                                                checked={rowSelection[index] || false}
+                                                onCheckedChange={(checked) => {
+                                                    setRowSelection(prev => ({...prev, [index]: !!checked}))
+                                                }}
+                                                aria-label={`Select ${originalItem.name}`}
+                                            />
+                                        </TableCell>
                                          <TableCell>
                                             <div className="flex items-center gap-3">
                                                 {originalItem.imageUrl ? (
