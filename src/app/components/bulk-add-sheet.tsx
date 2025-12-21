@@ -298,7 +298,7 @@ export function BulkAddSheet({ open, onOpenChange }: BulkAddSheetProps) {
             <div className="space-y-4 flex-1 flex flex-col">
                 <h3 className="text-sm font-medium text-muted-foreground">{TBulk.importHistory}</h3>
                 <Card className="flex-1 flex flex-col">
-                <ScrollArea className="h-full">
+                <ScrollArea className="h-96">
                     <Table>
                     <TableHeader className="sticky top-0 bg-card">
                         <TableRow>
