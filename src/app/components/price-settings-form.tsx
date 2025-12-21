@@ -189,6 +189,10 @@ export function PriceSettingsForm() {
   const isSomeSelected = Object.values(rowSelection).some(Boolean) && !isAllSelected;
 
   const onSubmit = async (data: FormValues) => {
+    if (!form.formState.isDirty) {
+        toast({ title: TPrice.noChanges, variant: 'destructive' });
+        return;
+    }
     setIsSubmitting(true);
     const updates = data.items.map((formItem, index) => ({
         ...formItem,
@@ -205,7 +209,10 @@ export function PriceSettingsForm() {
     try {
         await updatePrices(updates);
         toast({ title: TPrice.successTitle, description: TPrice.successDesc });
-        form.reset(data, { keepValues: true }); 
+        // Reset the form state to clear selections and table
+        setSelectedItems([]);
+        replace([]);
+        form.reset({}, { keepValues: false });
     } catch (error) {
         toast({ variant: 'destructive', title: TPrice.errorTitle, description: TPrice.errorDesc });
     } finally {
@@ -222,7 +229,7 @@ export function PriceSettingsForm() {
                     <Settings className="h-16 w-16 text-muted-foreground" />
                     <h3 className="mt-4 text-lg font-semibold">{TPrice.title}</h3>
                     <p className="mt-2 text-sm text-muted-foreground">{TPrice.description}</p>
-                    <Button onClick={() => setProductSelectionOpen(true)} className="mt-6">
+                    <Button type="button" onClick={() => setProductSelectionOpen(true)} className="mt-6">
                         <PlusCircle className="mr-2 h-4 w-4" />
                         Pilih Produk untuk Diedit
                     </Button>
@@ -400,5 +407,7 @@ export function PriceSettingsForm() {
     </>
   );
 }
+
+    
 
     
