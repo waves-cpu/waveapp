@@ -25,6 +25,13 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { categories as allCategories } from '@/types';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 type ProductRow = {
   parent_sku: string;
@@ -43,8 +50,13 @@ interface BulkEditSheetProps {
     onOpenChange: (open: boolean) => void;
 }
 
+interface DetailDialogData {
+    title: string;
+    items: string[];
+}
+
 export function BulkEditSheet({ open, onOpenChange }: BulkEditSheetProps) {
-  const { items, bulkUpdateProducts } = useInventory();
+  const { items, bulkUpdateProducts, fetchItems } = useInventory();
   const { toast } = useToast();
   const [data, setData] = useState<Partial<ProductRow>[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -52,6 +64,7 @@ export function BulkEditSheet({ open, onOpenChange }: BulkEditSheetProps) {
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
   const { language } = useLanguage();
   const t = translations[language];
+  const [detailDialogData, setDetailDialogData] = useState<DetailDialogData | null>(null);
 
   useEffect(() => {
     if (!open) {
@@ -151,18 +164,14 @@ export function BulkEditSheet({ open, onOpenChange }: BulkEditSheetProps) {
 
     setIsSubmitting(true);
     try {
-      const { updatedCount, notFoundCount } = await bulkUpdateProducts(data);
+      const { updatedCount, notFoundSkus } = await bulkUpdateProducts(data);
       
       toast({
-        title: 'Update Berhasil',
-        description: `${updatedCount} produk/varian berhasil diperbarui.`,
+        title: 'Update Selesai',
+        description: `${updatedCount} baris produk/varian berhasil diperbarui.`,
       });
-      if (notFoundCount > 0) {
-          toast({
-              variant: 'destructive',
-              title: 'Beberapa SKU Tidak Ditemukan',
-              description: `${notFoundCount} SKU di file Excel tidak cocok dengan produk manapun di database.`
-          });
+      if (notFoundSkus.length > 0) {
+          setDetailDialogData({title: `SKU Tidak Ditemukan (${notFoundSkus.length})`, items: notFoundSkus});
       }
       onOpenChange(false);
     } catch (error) {
@@ -175,69 +184,89 @@ export function BulkEditSheet({ open, onOpenChange }: BulkEditSheetProps) {
       });
     } finally {
       setIsSubmitting(false);
+      await fetchItems();
     }
   };
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="sm:max-w-xl w-full flex flex-col">
-        <SheetHeader>
-          <SheetTitle>Edit Produk Massal</SheetTitle>
-          <SheetDescription>
-            Unduh template berdasarkan kategori, ubah data di Excel, lalu unggah kembali untuk memperbarui beberapa produk sekaligus.
-          </SheetDescription>
-        </SheetHeader>
-        <div className="space-y-6 pt-6 flex-1 flex flex-col">
-            <div className="grid md:grid-cols-1 gap-6">
-              <div className="flex flex-col items-center justify-center p-6 border-2 border-dashed rounded-lg text-center">
-                <Download className="h-10 w-10 text-muted-foreground mb-2" />
-                <h3 className="font-semibold">Langkah 1: Unduh Template</h3>
-                <div className="flex items-center gap-2 mt-4">
-                     <Select onValueChange={(value) => setCategoryFilter(value === 'all' ? null : value)}>
-                        <SelectTrigger className="w-[180px]">
-                            <SelectValue placeholder="Pilih Kategori" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="all">Semua Kategori</SelectItem>
-                            {allCategories.map((category) => (
-                                <SelectItem key={category} value={category}>
-                                {category}
-                                </SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-                    <Button onClick={handleDownloadTemplate} variant="outline">
-                        Unduh
-                    </Button>
+    <>
+        <Sheet open={open} onOpenChange={onOpenChange}>
+        <SheetContent className="sm:max-w-xl w-full flex flex-col">
+            <SheetHeader>
+            <SheetTitle>Edit Produk Massal</SheetTitle>
+            <SheetDescription>
+                Unduh template berdasarkan kategori, ubah data di Excel, lalu unggah kembali untuk memperbarui beberapa produk sekaligus.
+            </SheetDescription>
+            </SheetHeader>
+            <div className="space-y-6 pt-6 flex-1 flex flex-col">
+                <div className="grid md:grid-cols-1 gap-6">
+                <div className="flex flex-col items-center justify-center p-6 border-2 border-dashed rounded-lg text-center">
+                    <Download className="h-10 w-10 text-muted-foreground mb-2" />
+                    <h3 className="font-semibold">Langkah 1: Unduh Template</h3>
+                    <div className="flex items-center gap-2 mt-4">
+                        <Select onValueChange={(value) => setCategoryFilter(value === 'all' ? null : value)}>
+                            <SelectTrigger className="w-[180px]">
+                                <SelectValue placeholder="Pilih Kategori" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">Semua Kategori</SelectItem>
+                                {allCategories.map((category) => (
+                                    <SelectItem key={category} value={category}>
+                                    {category}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                        <Button onClick={handleDownloadTemplate} variant="outline">
+                            Unduh
+                        </Button>
+                    </div>
                 </div>
-              </div>
 
-              <div className="flex flex-col items-center justify-center p-6 border-2 border-dashed rounded-lg text-center">
-                 <UploadCloud className="h-10 w-10 text-muted-foreground mb-2" />
-                <h3 className="font-semibold">Langkah 2: Unggah File Excel</h3>
-                <Button asChild variant="outline" className="mt-4">
-                    <label htmlFor="edit-file-upload">
-                        Pilih File
-                        <input id="edit-file-upload" type="file" className="sr-only" onChange={handleFileUpload} accept=".xlsx, .xls, .csv" />
-                    </label>
-                </Button>
-                 {fileName && <p className="text-xs text-muted-foreground mt-2 flex items-center gap-1"><FileText className="h-3 w-3" />{fileName}</p>}
-              </div>
-              
-              <div className="flex flex-col items-center justify-center p-6 border-2 border-dashed rounded-lg text-center bg-primary/5">
-                <h3 className="font-semibold">Langkah 3: Terapkan Perubahan</h3>
-                 <Button onClick={handleImport} disabled={data.length === 0 || isSubmitting} className="mt-4">
-                    {isSubmitting ? 'Memperbarui...' : `Impor & Perbarui ${data.length} Baris`}
-                </Button>
-                 {data.length > 0 && (
-                    <p className="text-xs text-muted-foreground mt-2">
-                        Pastikan SKU induk dan SKU varian tidak diubah dari template.
-                    </p>
-                 )}
-              </div>
+                <div className="flex flex-col items-center justify-center p-6 border-2 border-dashed rounded-lg text-center">
+                    <UploadCloud className="h-10 w-10 text-muted-foreground mb-2" />
+                    <h3 className="font-semibold">Langkah 2: Unggah File Excel</h3>
+                    <Button asChild variant="outline" className="mt-4">
+                        <label htmlFor="edit-file-upload">
+                            Pilih File
+                            <input id="edit-file-upload" type="file" className="sr-only" onChange={handleFileUpload} accept=".xlsx, .xls, .csv" />
+                        </label>
+                    </Button>
+                    {fileName && <p className="text-xs text-muted-foreground mt-2 flex items-center gap-1"><FileText className="h-3 w-3" />{fileName}</p>}
+                </div>
+                
+                <div className="flex flex-col items-center justify-center p-6 border-2 border-dashed rounded-lg text-center bg-primary/5">
+                    <h3 className="font-semibold">Langkah 3: Terapkan Perubahan</h3>
+                    <Button onClick={handleImport} disabled={data.length === 0 || isSubmitting} className="mt-4">
+                        {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Impor & Perbarui'}
+                    </Button>
+                    {isSubmitting && <p className="text-xs text-muted-foreground mt-2">Memperbarui {data.length} baris...</p>}
+                    {data.length > 0 && !isSubmitting &&(
+                        <p className="text-xs text-muted-foreground mt-2">
+                            Pastikan SKU induk dan SKU varian tidak diubah dari template.
+                        </p>
+                    )}
+                </div>
+                </div>
             </div>
-        </div>
-      </SheetContent>
-    </Sheet>
+        </SheetContent>
+        </Sheet>
+        <Dialog open={!!detailDialogData} onOpenChange={() => setDetailDialogData(null)}>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>{detailDialogData?.title}</DialogTitle>
+                </DialogHeader>
+                <ScrollArea className="max-h-80 border rounded-md p-4">
+                    <ul className="list-disc list-inside">
+                        {detailDialogData?.items.map((item, index) => (
+                            <li key={index} className="text-sm">
+                                {item}
+                            </li>
+                        ))}
+                    </ul>
+                </ScrollArea>
+            </DialogContent>
+        </Dialog>
+    </>
   );
 }

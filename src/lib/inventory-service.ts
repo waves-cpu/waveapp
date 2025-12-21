@@ -1,9 +1,11 @@
 
+
 'use server';
 
 import { db as dbProxy } from './db';
 const db = dbProxy;
-import type { InventoryItem, AdjustmentHistory, InventoryItemVariant, Sale, Reseller, ChannelPrice, Accessory, ShippingReceipt, BulkImportHistory, User } from '@/types';
+import type { InventoryItem, AdjustmentHistory, InventoryItemVariant, Sale, Reseller, ChannelPrice, Accessory, ShippingReceipt, BulkImportHistory, User, ReturnedItem } from '@/types';
+import { categories as allCategories } from '@/types';
 import { format as formatDate, parseISO, startOfDay, endOfDay } from 'date-fns';
 
 // User functions
@@ -445,7 +447,7 @@ export async function addProduct(itemData: any): Promise<string> {
     return transaction();
 }
 
-export async function bulkAddProducts(data: any[]): Promise<{ addedProducts: {sku: string, name: string}[], skippedProducts: {sku: string, name: string}[] }> {
+export async function bulkAddProducts(data: any[], fileName: string): Promise<BulkImportHistory> {
     const getProductStmt = db.prepare('SELECT id, name FROM products WHERE sku = ?');
     const addProductStmt = db.prepare('INSERT INTO products (name, category, sku, imageUrl, hasVariants) VALUES (@name, @category, @sku, @imageUrl, @hasVariants)');
     const addVariantStmt = db.prepare('INSERT INTO variants (productId, name, sku, price, stock, costPrice) VALUES (@productId, @name, @sku, @price, @stock, @costPrice)');
@@ -534,52 +536,58 @@ export async function bulkAddProducts(data: any[]): Promise<{ addedProducts: {sk
     return { addedProducts, skippedProducts };
 }
 
-export async function bulkUpdateProducts(data: any[]): Promise<{ updatedCount: number, notFoundCount: number }> {
+export async function bulkUpdateProducts(data: any[]): Promise<{ updatedCount: number; notFoundSkus: string[] }> {
     const getProductStmt = db.prepare('SELECT id FROM products WHERE sku = ?');
     const getVariantStmt = db.prepare('SELECT id FROM variants WHERE sku = ?');
-    const updateProductStmt = db.prepare('UPDATE products SET name=@name, category=@category, imageUrl=@imageUrl, price=@price, stock=@stock, costPrice=@costPrice WHERE sku = @sku');
-    const updateVariantStmt = db.prepare('UPDATE variants SET name=@name, price=@price, stock=@stock, costPrice=@costPrice WHERE sku = @sku');
+    const updateProductStmt = db.prepare('UPDATE products SET name=@name, category=@category, imageUrl=@imageUrl, price=@price, stock=@stock, costPrice=@costPrice WHERE sku = @parent_sku');
+    const updateVariantStmt = db.prepare('UPDATE variants SET name=@name, price=@price, stock=@stock, costPrice=@costPrice WHERE sku = @variant_sku');
     
     let updatedCount = 0;
-    let notFoundCount = 0;
+    const notFoundSkus: string[] = [];
 
     db.transaction(() => {
         data.forEach(row => {
-            if (row.variant_sku) { // It's a variant
-                const variant = getVariantStmt.get(row.variant_sku) as { id: number } | undefined;
+            let found = false;
+            // Check if it's a variant update
+            if (row.variant_sku) {
+                const variant = getVariantStmt.get(row.variant_sku);
                 if (variant) {
                     updateVariantStmt.run({
-                        sku: row.variant_sku,
+                        variant_sku: row.variant_sku,
                         name: row.variant_name,
                         price: row.price,
                         stock: row.stock,
-                        costPrice: row.cost_price
+                        costPrice: row.cost_price,
                     });
                     updatedCount++;
-                } else {
-                    notFoundCount++;
+                    found = true;
                 }
-            } else if (row.parent_sku) { // It's a simple product
-                const product = getProductStmt.get(row.parent_sku) as { id: number } | undefined;
+            } 
+            // If not a variant or variant not found by SKU, check if it's a simple product update by parent_sku
+            else if (row.parent_sku && !row.variant_sku) {
+                const product = getProductStmt.get(row.parent_sku);
                 if (product) {
-                    updateProductStmt.run({
-                        sku: row.parent_sku,
+                     updateProductStmt.run({
+                        parent_sku: row.parent_sku,
                         name: row.product_name,
                         category: row.category,
                         imageUrl: row.image_url,
                         price: row.price,
                         stock: row.stock,
-                        costPrice: row.cost_price
+                        costPrice: row.cost_price,
                     });
                     updatedCount++;
-                } else {
-                    notFoundCount++;
+                    found = true;
                 }
+            }
+
+            if (!found) {
+                notFoundSkus.push(row.variant_sku || row.parent_sku);
             }
         });
     })();
 
-    return { updatedCount, notFoundCount };
+    return { updatedCount, notFoundSkus };
 }
 
 
@@ -1404,6 +1412,3 @@ async function updateShippingReceiptStatusByAwb(awb: string, status: string) {
     stmt.run(status, awb);
 }
     
-
-
-
