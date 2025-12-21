@@ -405,7 +405,7 @@ export function InventoryTable({ onUpdateStock, isAccessoryTable = false }: Inve
                                         />
                                         <div>
                                             <button onClick={() => handleBulkEdit(item)} className="text-left flex items-center gap-2">
-                                                <div className="font-medium text-primary text-sm hover:underline">{item.name}</div>
+                                                <div className="font-medium text-primary text-sm hover:underline truncate max-w-xs">{item.name}</div>
                                                 <Edit className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
                                             </button>
                                             <div className="text-xs text-muted-foreground">SKU: {item.sku}</div>
@@ -469,7 +469,7 @@ export function InventoryTable({ onUpdateStock, isAccessoryTable = false }: Inve
                                                 <Store className="h-5 w-5 text-gray-400" />
                                             </div>
                                             <div>
-                                                <div className="font-medium text-sm">{variant.name}</div>
+                                                <div className="font-medium text-sm truncate max-w-xs">{variant.name}</div>
                                                 <div className="text-xs text-muted-foreground">SKU: {variant.sku}</div>
                                             </div>
                                         </div>
@@ -505,7 +505,7 @@ export function InventoryTable({ onUpdateStock, isAccessoryTable = false }: Inve
                                         />
                                     )}
                                     <div>
-                                        <div className="font-medium text-sm">{item.name}</div>
+                                        <div className="font-medium text-sm truncate max-w-xs">{item.name}</div>
                                         <div className="text-xs text-muted-foreground">SKU: {item.sku}</div>
                                     </div>
                                 </div>
@@ -615,6 +615,7 @@ export function InventoryTable({ onUpdateStock, isAccessoryTable = false }: Inve
     </>
   );
 }
+
 
 
 
