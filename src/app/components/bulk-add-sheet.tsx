@@ -243,7 +243,7 @@ export function BulkAddSheet({ open, onOpenChange }: BulkAddSheetProps) {
   const getStatusComponent = (status: string) => {
     switch (status) {
         case 'Berhasil':
-            return <Badge className="bg-green-600 hover:bg-green-700">{status}</Badge>;
+            return <Badge className="bg-green-100 text-green-800 border-green-200 hover:bg-green-100">{status}</Badge>;
         case 'Gagal':
             return <Badge variant="destructive">{status}</Badge>;
         case 'Memproses...':
@@ -265,19 +265,19 @@ export function BulkAddSheet({ open, onOpenChange }: BulkAddSheetProps) {
           </SheetDescription>
         </SheetHeader>
         <div className="space-y-6 pt-6 flex-1 flex flex-col">
-            <div className="grid md:grid-cols-3 gap-6">
-              <div className="flex flex-col items-center justify-center p-6 border-2 border-dashed rounded-lg text-center">
-                <Download className="h-10 w-10 text-muted-foreground mb-2" />
-                <h3 className="font-semibold">{TBulk.step1}</h3>
-                <Button onClick={handleDownloadTemplate} variant="outline" className="mt-4">
+            <div className="grid md:grid-cols-3 gap-4">
+              <div className="flex flex-col items-center justify-center p-4 border-2 border-dashed rounded-lg text-center">
+                <Download className="h-8 w-8 text-muted-foreground mb-2" />
+                <h3 className="font-semibold text-sm">{TBulk.step1}</h3>
+                <Button onClick={handleDownloadTemplate} variant="outline" size="sm" className="mt-2">
                   {TBulk.downloadTemplate}
                 </Button>
               </div>
 
-              <div className="flex flex-col items-center justify-center p-6 border-2 border-dashed rounded-lg text-center">
-                 <UploadCloud className="h-10 w-10 text-muted-foreground mb-2" />
-                <h3 className="font-semibold">{TBulk.step2}</h3>
-                <Button asChild variant="outline" className="mt-4">
+              <div className="flex flex-col items-center justify-center p-4 border-2 border-dashed rounded-lg text-center">
+                 <UploadCloud className="h-8 w-8 text-muted-foreground mb-2" />
+                <h3 className="font-semibold text-sm">{TBulk.step2}</h3>
+                <Button asChild variant="outline" size="sm" className="mt-2">
                     <label htmlFor="file-upload">
                         {TBulk.chooseFile}
                         <input id="file-upload" type="file" className="sr-only" onChange={handleFileUpload} accept=".xlsx, .xls, .csv" />
@@ -286,18 +286,19 @@ export function BulkAddSheet({ open, onOpenChange }: BulkAddSheetProps) {
                  {fileName && <p className="text-xs text-muted-foreground mt-2 flex items-center gap-1"><FileText className="h-3 w-3" />{fileName}</p>}
               </div>
               
-              <div className="flex flex-col items-center justify-center p-6 border-2 border-dashed rounded-lg text-center">
-                 <PackageCheck className="h-10 w-10 text-muted-foreground mb-2" />
-                <h3 className="font-semibold">{TBulk.step3}</h3>
-                 <Button onClick={handleImport} disabled={data.length === 0 || isSubmitting} className="mt-4">
-                    {isSubmitting ? TBulk.importing : `${TBulk.import} ${data.length} ${TBulk.rows}`}
+              <div className="flex flex-col items-center justify-center p-4 border-2 border-dashed rounded-lg text-center">
+                 <PackageCheck className="h-8 w-8 text-muted-foreground mb-2" />
+                <h3 className="font-semibold text-sm">{TBulk.step3}</h3>
+                 <Button onClick={handleImport} disabled={data.length === 0 || isSubmitting} size="sm" className="mt-2">
+                    {isSubmitting ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />{TBulk.importing}</> : `${TBulk.import} ${data.length} ${TBulk.rows}`}
                 </Button>
               </div>
             </div>
 
             <div className="space-y-4 flex-1 flex flex-col">
+                <h3 className="text-sm font-medium text-muted-foreground">{TBulk.importHistory}</h3>
                 <Card className="flex-1 flex flex-col">
-                <ScrollArea className="h-96">
+                <ScrollArea className="h-full">
                     <Table>
                     <TableHeader className="sticky top-0 bg-card">
                         <TableRow>
@@ -313,7 +314,7 @@ export function BulkAddSheet({ open, onOpenChange }: BulkAddSheetProps) {
                         importHistory.map((result) => (
                             <TableRow key={result.id}>
                             <TableCell className="text-xs font-medium">
-                                <div>{result.fileName}</div>
+                                <div className="truncate max-w-xs">{result.fileName}</div>
                                 <div className="text-muted-foreground">{format(new Date(result.date), 'dd MMM yyyy, HH:mm')}</div>
                             </TableCell>
                             <TableCell className="text-center text-xs">
@@ -361,11 +362,11 @@ export function BulkAddSheet({ open, onOpenChange }: BulkAddSheetProps) {
             <DialogHeader>
                 <DialogTitle>{detailDialogData?.title}</DialogTitle>
             </DialogHeader>
-             <ScrollArea className="max-h-80 border rounded-md p-4">
-                <ul className="list-disc list-inside">
+             <ScrollArea className="max-h-80 border rounded-md">
+                <ul className="list-disc list-inside p-4">
                     {detailDialogData?.items.map((item, index) => (
                         <li key={index} className="text-sm">
-                            {item.name ? `${item.name} (SKU: ${item.sku})` : item.sku}
+                           {item.name ? <span className="font-medium">{item.name}</span> : ''} (SKU: <span className="font-mono bg-muted px-1 rounded-sm">{item.sku}</span>)
                         </li>
                     ))}
                 </ul>
