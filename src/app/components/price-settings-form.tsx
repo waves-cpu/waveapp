@@ -22,24 +22,17 @@ import {
   FormField,
   FormItem,
   FormMessage,
+  FormLabel,
 } from '@/components/ui/form';
-import type { InventoryItem, InventoryItemVariant } from '@/types';
+import type { InventoryItem } from '@/types';
 import { useLanguage } from '@/hooks/use-language';
 import { translations } from '@/types/language';
 import Image from 'next/image';
-import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
-import { Store, ShoppingBag, Save, Search, Loader2 } from 'lucide-react';
+import { Store, ShoppingBag, Save, Loader2, PlusCircle, Settings, Edit } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
-import { categories as allCategories } from '@/types';
-import { Pagination } from '@/components/ui/pagination';
+import { ProductSelectionDialog } from './product-selection-dialog';
+import { Card, CardContent } from '@/components/ui/card';
 
 const itemPriceSchema = z.object({
     id: z.string(),
@@ -54,89 +47,92 @@ const itemPriceSchema = z.object({
 
 const formSchema = z.object({
     items: z.array(itemPriceSchema),
+    masterCostPrice: z.coerce.number().optional(),
+    masterPrice: z.coerce.number().optional(),
+    masterPosPrice: z.coerce.number().optional(),
+    masterResellerPrice: z.coerce.number().optional(),
+    masterOnlinePrice: z.coerce.number().optional(),
 });
 
+type FormValues = z.infer<typeof formSchema>;
+
+interface SelectedItem {
+    id: string;
+    name: string;
+    parentName: string | null;
+    sku?: string;
+    type: 'product' | 'variant';
+    category: string;
+    imageUrl?: string;
+    costPrice?: number;
+    price?: number;
+    channelPrices?: { channel: string; price?: number }[];
+}
 
 export function PriceSettingsForm() {
-  const { items, accessories, loading, updatePrices } = useInventory();
-  const [searchTerm, setSearchTerm] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
+  const { items, categories, loading, updatePrices } = useInventory();
   const { language } = useLanguage();
   const t = translations[language];
   const TPrice = t.finance.priceSettingsPage;
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(20);
+  const [isProductSelectionOpen, setProductSelectionOpen] = useState(false);
+  const [selectedItems, setSelectedItems] = useState<SelectedItem[]>([]);
 
-  const flattenedItems = useMemo(() => {
-    return items
-        .filter(item => !item.isArchived)
-        .flatMap(item => {
+  const flattenedItemsById = useMemo(() => {
+    const map = new Map<string, SelectedItem>();
+    items.filter(i => !i.isArchived).forEach(item => {
         if (item.variants && item.variants.length > 0) {
-            return item.variants.map(variant => ({
-                id: variant.id,
-                name: variant.name,
-                parentName: item.name,
-                sku: variant.sku,
-                type: 'variant' as const,
+            item.variants.forEach(variant => {
+                map.set(variant.id, {
+                    id: variant.id,
+                    name: variant.name,
+                    parentName: item.name,
+                    sku: variant.sku,
+                    type: 'variant',
+                    category: item.category,
+                    imageUrl: item.imageUrl,
+                    costPrice: variant.costPrice,
+                    price: variant.price,
+                    channelPrices: variant.channelPrices || [],
+                });
+            });
+        } else {
+             map.set(item.id, {
+                id: item.id,
+                name: item.name,
+                parentName: null,
+                sku: item.sku,
+                type: 'product',
                 category: item.category,
                 imageUrl: item.imageUrl,
-                costPrice: variant.costPrice,
-                price: variant.price,
-                channelPrices: variant.channelPrices || [],
-            }));
+                costPrice: item.costPrice,
+                price: item.price,
+                channelPrices: item.channelPrices || [],
+            });
         }
-        return {
-            id: item.id,
-            name: item.name,
-            parentName: null,
-            sku: item.sku,
-            type: 'product' as const,
-            category: item.category,
-            imageUrl: item.imageUrl,
-            costPrice: item.costPrice,
-            price: item.price,
-            channelPrices: item.channelPrices || [],
-        };
     });
+    return map;
   }, [items]);
   
-  const filteredItems = useMemo(() => {
-    setCurrentPage(1);
-    return flattenedItems
-      .filter((item) =>
-        categoryFilter ? item.category === categoryFilter : true
-      )
-      .filter((item) => {
-        const lowerSearchTerm = searchTerm.toLowerCase();
-        return (
-          item.name.toLowerCase().includes(lowerSearchTerm) ||
-          (item.sku && item.sku.toLowerCase().includes(lowerSearchTerm)) ||
-          (item.parentName && item.parentName.toLowerCase().includes(lowerSearchTerm))
-        );
-      });
-  }, [flattenedItems, categoryFilter, searchTerm]);
-  
-  const totalPages = Math.ceil(filteredItems.length / itemsPerPage);
-
-  const paginatedItems = useMemo(() => {
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    return filteredItems.slice(startIndex, startIndex + itemsPerPage);
-  }, [filteredItems, currentPage, itemsPerPage]);
-
-  const form = useForm<z.infer<typeof formSchema>>({
+  const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
-    defaultValues: { items: [] },
+    defaultValues: { items: [], masterCostPrice: undefined, masterPrice: undefined },
   });
   
-  const { fields, replace } = useFieldArray({
+  const { fields, replace, update } = useFieldArray({
     control: form.control,
     name: "items",
   });
 
-  useEffect(() => {
-    const mappedItems = paginatedItems.map(item => ({
+  const handleProductsSelected = (selectedIds: string[]) => {
+    const newlySelected = selectedIds
+        .map(id => flattenedItemsById.get(id))
+        .filter((item): item is SelectedItem => !!item);
+    
+    setSelectedItems(newlySelected);
+
+    const formItems = newlySelected.map(item => ({
         id: item.id,
         type: item.type,
         costPrice: item.costPrice ?? undefined,
@@ -144,175 +140,228 @@ export function PriceSettingsForm() {
         channelPrices: [
             { channel: 'pos', price: item.channelPrices?.find(p => p.channel === 'pos')?.price ?? undefined },
             { channel: 'reseller', price: item.channelPrices?.find(p => p.channel === 'reseller')?.price ?? undefined },
-            { channel: 'online', price: item.channelPrices?.find(p => p.channel === 'shopee')?.price ?? undefined },
+            { channel: 'online', price: item.channelPrices?.find(p => ['shopee','tiktok','lazada'].includes(p.channel))?.price ?? undefined },
         ]
     }));
-    replace(mappedItems);
-  }, [paginatedItems, replace]);
+    replace(formItems);
+  };
+  
+  const applyMasterPrice = (field: keyof FormValues, targetField: string, channel?: string) => {
+    const masterValue = form.getValues(field);
+    if (masterValue !== undefined && masterValue >= 0) {
+      fields.forEach((_, index) => {
+        if (channel) {
+            const channelIndex = fields[index].channelPrices?.findIndex(p => p.channel === channel);
+            if(channelIndex !== -1) {
+                update(index, {
+                    ...fields[index],
+                    channelPrices: fields[index].channelPrices?.map((cp, cIdx) => cIdx === channelIndex ? {...cp, price: masterValue} : cp)
+                });
+            }
+        } else {
+            update(index, { ...fields[index], [targetField]: masterValue });
+        }
+      });
+      form.trigger(); // Manually trigger validation display
+    }
+  };
 
 
-  if (loading) {
-    return <Skeleton className="h-96 w-full" />
-  }
-
-  const onSubmit = async (data: z.infer<typeof formSchema>) => {
+  const onSubmit = async (data: FormValues) => {
     setIsSubmitting(true);
-    // When submitting, we need to map the form data back to include the correct IDs.
-    // The `fields` from useFieldArray is paginated, so we use `paginatedItems` to get the real IDs.
     const updates = data.items.map((formItem, index) => ({
         ...formItem,
-        id: paginatedItems[index].id,
-        type: paginatedItems[index].type,
-    })).filter((_, index) => {
-        // Only include fields that are actually dirty to avoid unnecessary updates
-        return form.formState.dirtyFields.items?.[index];
-    });
+        id: selectedItems[index].id,
+        type: selectedItems[index].type,
+    }));
 
     if (updates.length === 0) {
-        toast({ title: TPrice.noChanges });
+        toast({ title: TPrice.noChanges, description: "Pilih produk terlebih dahulu." });
         setIsSubmitting(false);
         return;
     }
 
     try {
         await updatePrices(updates);
-        toast({
-            title: TPrice.successTitle,
-            description: TPrice.successDesc,
-        });
-        form.reset(data, { keepValues: true }); // Resets dirty state
+        toast({ title: TPrice.successTitle, description: TPrice.successDesc });
+        form.reset(data, { keepValues: true }); 
     } catch (error) {
-        toast({
-            variant: 'destructive',
-            title: TPrice.errorTitle,
-            description: TPrice.errorDesc,
-        });
+        toast({ variant: 'destructive', title: TPrice.errorTitle, description: TPrice.errorDesc });
     } finally {
         setIsSubmitting(false);
     }
-};
+  };
 
   return (
+    <>
     <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)}>
-            <div className="flex flex-col md:flex-row gap-4 justify-between items-center mb-4">
-                <div className="flex flex-col md:flex-row gap-4 w-full md:w-auto flex-1">
-                    <div className="relative w-full md:w-auto md:flex-grow">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                        <Input
-                        placeholder={t.inventoryTable.searchPlaceholder}
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="pl-10 w-full md:w-96"
-                        />
-                    </div>
-                    <Select onValueChange={(value) => setCategoryFilter(value === 'all' ? null : value)} defaultValue="all">
-                        <SelectTrigger className="w-full md:w-[200px]">
-                        <SelectValue placeholder={t.inventoryTable.selectCategoryPlaceholder} />
-                        </SelectTrigger>
-                        <SelectContent>
-                        <SelectItem value="all">{t.inventoryTable.allCategories}</SelectItem>
-                        {allCategories.map((category) => (
-                            <SelectItem key={category} value={category}>
-                            {category}
-                            </SelectItem>
-                        ))}
-                        </SelectContent>
-                    </Select>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            {selectedItems.length === 0 ? (
+                 <div className="flex flex-col items-center justify-center h-96 border-2 border-dashed rounded-lg text-center">
+                    <Settings className="h-16 w-16 text-muted-foreground" />
+                    <h3 className="mt-4 text-lg font-semibold">{TPrice.title}</h3>
+                    <p className="mt-2 text-sm text-muted-foreground">{TPrice.description}</p>
+                    <Button onClick={() => setProductSelectionOpen(true)} className="mt-6">
+                        <PlusCircle className="mr-2 h-4 w-4" />
+                        Pilih Produk untuk Diedit
+                    </Button>
                 </div>
-                 <Button type="submit" disabled={!form.formState.isDirty || isSubmitting}>
-                    {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-                    {TPrice.saveButton}
-                </Button>
-            </div>
-            
-            <div className="border rounded-lg shadow-sm overflow-hidden">
-                <Table>
-                    <TableHeader className="sticky top-0 bg-card">
-                        <TableRow>
-                            <TableHead className="w-[30%]">{t.inventoryTable.name}</TableHead>
-                            <TableHead className="w-[12%]">{TPrice.costPrice}</TableHead>
-                            <TableHead className="w-[12%]">{TPrice.sellingPrice}</TableHead>
-                            <TableHead className="w-[12%]">{TPrice.posPrice}</TableHead>
-                            <TableHead className="w-[12%]">{TPrice.resellerPrice}</TableHead>
-                            <TableHead className="w-[12%]">{TPrice.onlinePrice}</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                         {fields.map((field, index) => {
-                            const originalItem = paginatedItems[index];
-                            if (!originalItem) return null;
+            ) : (
+                <>
+                <div className="flex justify-between items-center">
+                    <Button type="button" variant="outline" onClick={() => setProductSelectionOpen(true)}>
+                        <Edit className="mr-2 h-4 w-4" />
+                        Ubah Pilihan Produk ({selectedItems.length})
+                    </Button>
+                     <Button type="submit" disabled={isSubmitting}>
+                        {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                        {TPrice.saveButton}
+                    </Button>
+                </div>
 
-                             return (
-                                <TableRow key={field.id} className={cn(originalItem.parentName ? "bg-background" : "bg-muted/30")}>
-                                     <TableCell>
-                                        <div className="flex items-center gap-3">
-                                            {originalItem.imageUrl ? (
-                                                <Image 
-                                                    src={originalItem.imageUrl} 
-                                                    alt={originalItem.name} 
-                                                    width={32} 
-                                                    height={32} 
-                                                    className="rounded-sm shrink-0" 
-                                                    data-ai-hint="product image"
-                                                />
-                                            ) : (
-                                                <div className="flex h-8 w-8 items-center justify-center rounded-sm shrink-0 bg-muted/50">
-                                                    <ShoppingBag className="h-4 w-4 text-muted-foreground" />
-                                                </div>
-                                            )}
-                                            <div>
-                                                <p className="font-medium text-sm max-w-[250px] truncate">{originalItem.parentName ? originalItem.parentName : originalItem.name}</p>
-                                                <p className="text-xs text-muted-foreground">
-                                                    {originalItem.parentName ? originalItem.name : `SKU: ${originalItem.sku || 'N/A'}`}
-                                                </p>
+                <Card>
+                    <CardContent className="p-4 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                        {(['masterCostPrice', 'masterPrice', 'masterPosPrice', 'masterResellerPrice', 'masterOnlinePrice'] as const).map(field => {
+                            const priceType = field.replace('master', '').toLowerCase();
+                            let targetField: string, channel: string | undefined;
+                            
+                            if(priceType.includes('price')) targetField = 'price';
+                            else if(priceType.includes('costprice')) targetField = 'costPrice';
+                            else {
+                                targetField = 'channelPrices';
+                                channel = priceType;
+                            }
+                            
+                            if(priceType === 'pos') channel = 'pos';
+                            if(priceType === 'reseller') channel = 'reseller';
+                            if(priceType === 'online') channel = 'online';
+
+                            const labelMap = {
+                                costprice: TPrice.costPrice,
+                                price: TPrice.sellingPrice,
+                                posprice: TPrice.posPrice,
+                                resellerprice: TPrice.resellerPrice,
+                                onlineprice: TPrice.onlinePrice,
+                            };
+                            
+                            return (
+                                <FormField
+                                    key={field}
+                                    control={form.control}
+                                    name={field}
+                                    render={({ field: formField }) => (
+                                        <FormItem className="space-y-1">
+                                            <FormLabel className="text-xs">{labelMap[priceType.replace('price','')]}</FormLabel>
+                                            <div className="flex items-center gap-2">
+                                                <FormControl>
+                                                    <Input type="number" placeholder="0" {...formField} value={formField.value ?? ''} className="h-8 text-xs"/>
+                                                </FormControl>
+                                                <Button type="button" size="sm" variant="outline" className="h-8" onClick={() => applyMasterPrice(field, targetField, channel)}>
+                                                    Terapkan
+                                                </Button>
                                             </div>
-                                        </div>
-                                    </TableCell>
-                                    {(['costPrice', 'price'] as const).map(priceType => (
-                                        <TableCell key={priceType}>
-                                            <FormField
-                                                control={form.control}
-                                                name={`items.${index}.${priceType}`}
-                                                render={({ field: formField }) => (
-                                                    <FormItem>
-                                                        <FormControl>
-                                                            <Input type="number" placeholder="0" {...formField} value={formField.value ?? ''} className="h-8 text-xs"/>
-                                                        </FormControl>
-                                                    </FormItem>
-                                                )}
-                                            />
-                                        </TableCell>
-                                    ))}
-                                    {(['pos', 'reseller', 'online'] as const).map((channel, cIndex) => (
-                                         <TableCell key={channel}>
-                                            <FormField
-                                                control={form.control}
-                                                name={`items.${index}.channelPrices.${cIndex}.price`}
-                                                render={({ field: formField }) => (
-                                                    <FormItem>
-                                                        <FormControl>
-                                                            <Input type="number" placeholder="0" {...formField} value={formField.value ?? ''} className="h-8 text-xs"/>
-                                                        </FormControl>
-                                                    </FormItem>
-                                                )}
-                                            />
-                                        </TableCell>
-                                    ))}
-                                </TableRow>
+                                        </FormItem>
+                                    )}
+                                />
                             );
                         })}
-                    </TableBody>
-                </Table>
-            </div>
-             <div className="flex items-center justify-end p-4">
-                 <Pagination
-                    totalPages={totalPages}
-                    currentPage={currentPage}
-                    onPageChange={setCurrentPage}
-                />
-            </div>
+                    </CardContent>
+                </Card>
+
+                <div className="border rounded-lg shadow-sm overflow-hidden">
+                    <Table>
+                        <TableHeader className="sticky top-0 bg-card">
+                            <TableRow>
+                                <TableHead className="w-[30%]">{t.inventoryTable.name}</TableHead>
+                                <TableHead className="w-[14%]">{TPrice.costPrice}</TableHead>
+                                <TableHead className="w-[14%]">{TPrice.sellingPrice}</TableHead>
+                                <TableHead className="w-[14%]">{TPrice.posPrice}</TableHead>
+                                <TableHead className="w-[14%]">{TPrice.resellerPrice}</TableHead>
+                                <TableHead className="w-[14%]">{TPrice.onlinePrice}</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                             {fields.map((field, index) => {
+                                const originalItem = selectedItems[index];
+                                if (!originalItem) return null;
+
+                                 return (
+                                    <TableRow key={field.id} className={cn(originalItem.parentName ? "bg-background" : "bg-muted/30")}>
+                                         <TableCell>
+                                            <div className="flex items-center gap-3">
+                                                {originalItem.imageUrl ? (
+                                                    <Image 
+                                                        src={originalItem.imageUrl} 
+                                                        alt={originalItem.name} 
+                                                        width={32} 
+                                                        height={32} 
+                                                        className="rounded-sm shrink-0"
+                                                        data-ai-hint="product image"
+                                                    />
+                                                ) : (
+                                                    <div className="flex h-8 w-8 items-center justify-center rounded-sm shrink-0 bg-muted/50">
+                                                        <ShoppingBag className="h-4 w-4 text-muted-foreground" />
+                                                    </div>
+                                                )}
+                                                <div>
+                                                    <p className="font-medium text-sm max-w-[250px] truncate">{originalItem.parentName ? originalItem.parentName : originalItem.name}</p>
+                                                    <p className="text-xs text-muted-foreground">
+                                                        {originalItem.parentName ? originalItem.name : `SKU: ${originalItem.sku || 'N/A'}`}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </TableCell>
+                                        {(['costPrice', 'price'] as const).map(priceType => (
+                                            <TableCell key={priceType}>
+                                                <FormField
+                                                    control={form.control}
+                                                    name={`items.${index}.${priceType}`}
+                                                    render={({ field: formField }) => (
+                                                        <FormItem>
+                                                            <FormControl>
+                                                                <Input type="number" placeholder="0" {...formField} value={formField.value ?? ''} className="h-8 text-xs"/>
+                                                            </FormControl>
+                                                        </FormItem>
+                                                    )}
+                                                />
+                                            </TableCell>
+                                        ))}
+                                        {(['pos', 'reseller', 'online'] as const).map((channel, cIndex) => (
+                                             <TableCell key={channel}>
+                                                <FormField
+                                                    control={form.control}
+                                                    name={`items.${index}.channelPrices.${cIndex}.price`}
+                                                    render={({ field: formField }) => (
+                                                        <FormItem>
+                                                            <FormControl>
+                                                                <Input type="number" placeholder="0" {...formField} value={formField.value ?? ''} className="h-8 text-xs"/>
+                                                            </FormControl>
+                                                        </FormItem>
+                                                    )}
+                                                />
+                                            </TableCell>
+                                        ))}
+                                    </TableRow>
+                                );
+                            })}
+                        </TableBody>
+                    </Table>
+                </div>
+                </>
+            )}
         </form>
     </Form>
+    <ProductSelectionDialog
+        open={isProductSelectionOpen}
+        onOpenChange={setProductSelectionOpen}
+        onSelect={handleProductsSelected}
+        availableItems={items}
+        categories={categories}
+        title="Pilih Produk"
+        description="Pilih produk yang harganya ingin Anda atur."
+    />
+    </>
   );
 }
+
+    
