@@ -12,16 +12,19 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { subDays, parseISO, isAfter } from 'date-fns';
-import { Flame, TrendingUp, Anchor, Activity, DollarSign, Package, Eye, Search } from 'lucide-react';
+import { Flame, TrendingUp, Anchor, Activity, DollarSign, Package, Eye, Search, Edit } from 'lucide-react';
 import Image from 'next/image';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { categories as allCategories } from '@/types';
+import { categories as allCategories, type InventoryItem } from '@/types';
 import { Input } from '@/components/ui/input';
 import { Pagination } from '@/components/ui/pagination';
+import { VariantDisplayDialog } from '@/app/components/variant-display-dialog';
+import { BulkEditVariantsDialog } from '@/app/components/bulk-edit-variants-dialog';
+
 
 type ProductPerformance = {
     id: string;
@@ -46,7 +49,7 @@ const BEST_SELLER_THRESHOLD = 50;
 const DISPLAY_LIMIT = 20;
 const DIALOG_ITEMS_PER_PAGE = 50;
 
-function PerformanceTable({ title, products, icon, onViewAll }: { title: string; products: ProductPerformance[]; icon: React.ReactNode; onViewAll: () => void; }) {
+function PerformanceTable({ title, products, icon, onViewAll, onProductClick }: { title: string; products: ProductPerformance[]; icon: React.ReactNode; onViewAll: () => void; onProductClick: (item: ProductPerformance) => void; }) {
     const totalAssetValue = useMemo(() => products.reduce((sum, p) => sum + p.totalAssetValue, 0), [products]);
 
     return (
@@ -78,12 +81,13 @@ function PerformanceTable({ title, products, icon, onViewAll }: { title: string;
                         {products.length > 0 ? products.slice(0, DISPLAY_LIMIT).map(p => (
                             <TableRow key={p.id}>
                                 <TableCell>
-                                    <div className="flex items-center gap-3">
+                                     <div className="flex items-center gap-3 group cursor-pointer" onClick={() => onProductClick(p)}>
                                         <Image src={p.imageUrl || 'https://placehold.co/40x40.png'} alt={p.name} width={32} height={32} className="rounded-sm" data-ai-hint="product image"/>
                                         <div>
-                                            <p className="font-medium text-sm">{p.name}</p>
+                                            <p className="font-medium text-sm hover:underline">{p.name}</p>
                                             <p className="text-xs text-muted-foreground">SKU: {p.sku || 'N/A'}</p>
                                         </div>
+                                         <Edit className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
                                     </div>
                                 </TableCell>
                                 <TableCell className="text-center">{p.totalStock.toLocaleString('id-ID')}</TableCell>
@@ -113,11 +117,13 @@ function ViewAllDialog({
   onOpenChange,
   title,
   products,
+  onProductClick,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
   title: string
-  products: ProductPerformance[]
+  products: ProductPerformance[],
+  onProductClick: (item: ProductPerformance) => void;
 }) {
     const [searchTerm, setSearchTerm] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
@@ -174,12 +180,13 @@ function ViewAllDialog({
                             {paginatedProducts.map(p => (
                                 <TableRow key={p.id}>
                                     <TableCell>
-                                        <div className="flex items-center gap-3">
+                                        <div className="flex items-center gap-3 group cursor-pointer" onClick={() => onProductClick(p)}>
                                             <Image src={p.imageUrl || 'https://placehold.co/40x40.png'} alt={p.name} width={32} height={32} className="rounded-sm" data-ai-hint="product image"/>
                                             <div>
-                                                <p className="font-medium text-sm">{p.name}</p>
+                                                <p className="font-medium text-sm hover:underline">{p.name}</p>
                                                 <p className="text-xs text-muted-foreground">SKU: {p.sku || 'N/A'}</p>
                                             </div>
+                                             <Edit className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
                                         </div>
                                     </TableCell>
                                     <TableCell className="text-center">{p.totalStock.toLocaleString('id-ID')}</TableCell>
@@ -212,6 +219,11 @@ export default function AssetReportPage() {
 
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [dialogContent, setDialogContent] = useState<{title: string, products: ProductPerformance[]}>({ title: '', products: [] });
+    
+    const [selectedItemForVariant, setSelectedItemForVariant] = useState<InventoryItem | null>(null);
+    const [isVariantDialogOpen, setIsVariantDialogOpen] = useState(false);
+    const [isBulkEditDialogOpen, setBulkEditDialogOpen] = useState(false);
+
 
     const productPerformanceData = useMemo(() => {
         if (loading) return null;
@@ -269,6 +281,14 @@ export default function AssetReportPage() {
         setDialogContent({ title, products });
         setIsDialogOpen(true);
     };
+
+    const handleProductClick = useCallback((perfItem: ProductPerformance) => {
+        const fullItem = items.find(i => i.id === perfItem.id);
+        if (fullItem && fullItem.variants && fullItem.variants.length > 0) {
+            setSelectedItemForVariant(fullItem);
+            setIsVariantDialogOpen(true);
+        }
+    }, [items]);
 
 
     if (loading || !productPerformanceData) {
@@ -330,18 +350,21 @@ export default function AssetReportPage() {
                         products={bestSellers} 
                         icon={<Flame className="h-6 w-6 text-red-500"/>} 
                         onViewAll={() => openDialog(bestSellerTitle, bestSellers)}
+                        onProductClick={handleProductClick}
                     />
                     <PerformanceTable 
                         title={normalMoversTitle} 
                         products={normalMovers} 
                         icon={<TrendingUp className="h-6 w-6 text-green-500"/>}
                         onViewAll={() => openDialog(normalMoversTitle, normalMovers)}
+                        onProductClick={handleProductClick}
                     />
                     <PerformanceTable 
                         title={slowMoversTitle} 
                         products={slowMovers}
                         icon={<Anchor className="h-6 w-6 text-blue-500"/>}
                         onViewAll={() => openDialog(slowMoversTitle, slowMovers)}
+                        onProductClick={handleProductClick}
                     />
                 </div>
             </main>
@@ -350,7 +373,31 @@ export default function AssetReportPage() {
                 onOpenChange={setIsDialogOpen}
                 title={dialogContent.title}
                 products={dialogContent.products}
+                onProductClick={(perfItem) => {
+                    setIsDialogOpen(false);
+                    // A slight delay to allow the first dialog to close before opening the next
+                    setTimeout(() => handleProductClick(perfItem), 150);
+                }}
             />
+            {selectedItemForVariant && (
+                <VariantDisplayDialog
+                    open={isVariantDialogOpen}
+                    onOpenChange={setIsVariantDialogOpen}
+                    item={selectedItemForVariant}
+                    onEditStock={() => {
+                        setIsVariantDialogOpen(false);
+                        setBulkEditDialogOpen(true);
+                    }}
+                />
+            )}
+             {selectedItemForVariant && (
+                <BulkEditVariantsDialog 
+                    open={isBulkEditDialogOpen}
+                    onOpenChange={setBulkEditDialogOpen}
+                    item={selectedItemForVariant}
+                />
+            )}
         </AppLayout>
     );
 }
+
