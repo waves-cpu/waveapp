@@ -13,6 +13,7 @@ import Script from 'next/script';
 export const metadata: Metadata = {
   title: 'Waveblast',
   description: 'Smart Inventory Management',
+  manifest: '/manifest.json'
 };
 
 export default function RootLayout({
