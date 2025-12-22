@@ -138,6 +138,13 @@ function ViewAllDialog({
     const [searchTerm, setSearchTerm] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
 
+    useEffect(() => {
+        if (!open) {
+            setSearchTerm('');
+            setCurrentPage(1);
+        }
+    }, [open]);
+
     const filteredProducts = useMemo(() => {
         setCurrentPage(1);
         if (!searchTerm) {
@@ -423,6 +430,7 @@ export default function AssetReportPage() {
                         setIsVariantDialogOpen(false);
                         setBulkEditDialogOpen(true);
                     }}
+                    showEditButton={false}
                 />
             )}
             {selectedPerfItem && (
@@ -435,5 +443,3 @@ export default function AssetReportPage() {
         </AppLayout>
     );
 }
-
-

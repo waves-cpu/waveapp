@@ -46,6 +46,7 @@ interface VariantDisplayDialogProps {
       variants: VariantPerformance[];
   };
   onEditStock: () => void;
+  showEditButton?: boolean;
 }
 
 const formatCurrency = (amount: number | undefined) => {
@@ -58,7 +59,7 @@ const formatCurrency = (amount: number | undefined) => {
 };
 
 
-export function VariantDisplayDialog({ open, onOpenChange, item, onEditStock }: VariantDisplayDialogProps) {
+export function VariantDisplayDialog({ open, onOpenChange, item, onEditStock, showEditButton = true }: VariantDisplayDialogProps) {
 
   const hasPerformanceData = item.variants.some(v => v.unitsSold !== undefined || v.assetValue !== undefined);
 
@@ -106,14 +107,15 @@ export function VariantDisplayDialog({ open, onOpenChange, item, onEditStock }: 
                 </TableBody>
             </Table>
         </ScrollArea>
-        <DialogFooter>
-            <Button variant="outline" onClick={onEditStock}>
-                <Edit className="mr-2 h-4 w-4" />
-                Atur Stok Varian
-            </Button>
-        </DialogFooter>
+        {showEditButton && (
+            <DialogFooter>
+                <Button variant="outline" onClick={onEditStock}>
+                    <Edit className="mr-2 h-4 w-4" />
+                    Atur Stok Varian
+                </Button>
+            </DialogFooter>
+        )}
       </DialogContent>
     </Dialog>
   );
 }
-
