@@ -19,12 +19,21 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { categories as allCategories, type InventoryItem } from '@/types';
+import { categories as allCategories, type InventoryItem, type InventoryItemVariant } from '@/types';
 import { Input } from '@/components/ui/input';
 import { Pagination } from '@/components/ui/pagination';
 import { VariantDisplayDialog } from '@/app/components/variant-display-dialog';
 import { BulkEditVariantsDialog } from '@/app/components/bulk-edit-variants-dialog';
 
+
+type VariantPerformance = {
+    id: string;
+    name: string;
+    sku?: string;
+    stock: number;
+    assetValue: number;
+    unitsSold: number;
+}
 
 type ProductPerformance = {
     id: string;
@@ -35,6 +44,7 @@ type ProductPerformance = {
     totalStock: number;
     totalAssetValue: number;
     unitsSold: number;
+    variants: VariantPerformance[];
 };
 
 const formatCurrency = (amount: number) => {
@@ -220,10 +230,9 @@ export default function AssetReportPage() {
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [dialogContent, setDialogContent] = useState<{title: string, products: ProductPerformance[]}>({ title: '', products: [] });
     
-    const [selectedItemForVariant, setSelectedItemForVariant] = useState<InventoryItem | null>(null);
+    const [selectedPerfItem, setSelectedPerfItem] = useState<ProductPerformance | null>(null);
     const [isVariantDialogOpen, setIsVariantDialogOpen] = useState(false);
     const [isBulkEditDialogOpen, setBulkEditDialogOpen] = useState(false);
-
 
     const productPerformanceData = useMemo(() => {
         if (loading) return null;
@@ -241,20 +250,35 @@ export default function AssetReportPage() {
         const allProducts: ProductPerformance[] = items
             .filter(item => !item.isArchived && (!categoryFilter || item.category === categoryFilter))
             .map(item => {
-                let totalStock = 0;
-                let totalAssetValue = 0;
-                let unitsSold = 0;
+                let performanceVariants: VariantPerformance[] = [];
                 
                 if (item.variants && item.variants.length > 0) {
-                    totalStock = item.variants.reduce((sum, v) => sum + v.stock, 0);
-                    totalAssetValue = item.variants.reduce((sum, v) => sum + v.stock * (v.costPrice || 0), 0);
-                    unitsSold = item.variants.reduce((sum, v) => sum + (v.sku ? salesBySku.get(v.sku) || 0 : 0), 0);
-                } else {
-                    totalStock = item.stock || 0;
-                    totalAssetValue = (item.stock || 0) * (item.costPrice || 0);
-                    unitsSold = item.sku ? salesBySku.get(item.sku) || 0 : 0;
+                    performanceVariants = item.variants.map(v => {
+                        const unitsSold = v.sku ? salesBySku.get(v.sku) || 0 : 0;
+                        const assetValue = v.stock * (v.costPrice || 0);
+                        return {
+                            id: v.id,
+                            name: v.name,
+                            sku: v.sku,
+                            stock: v.stock,
+                            assetValue: assetValue,
+                            unitsSold: unitsSold,
+                        };
+                    });
                 }
                 
+                const totalStock = performanceVariants.length > 0
+                    ? performanceVariants.reduce((sum, v) => sum + v.stock, 0)
+                    : (item.stock || 0);
+                
+                const totalAssetValue = performanceVariants.length > 0
+                    ? performanceVariants.reduce((sum, v) => sum + v.assetValue, 0)
+                    : (item.stock || 0) * (item.costPrice || 0);
+                
+                const unitsSold = performanceVariants.length > 0
+                    ? performanceVariants.reduce((sum, v) => sum + v.unitsSold, 0)
+                    : (item.sku ? salesBySku.get(item.sku) || 0 : 0);
+
                 return {
                     id: item.id,
                     name: item.name,
@@ -264,6 +288,7 @@ export default function AssetReportPage() {
                     totalStock,
                     totalAssetValue,
                     unitsSold,
+                    variants: performanceVariants,
                 };
             });
 
@@ -281,14 +306,17 @@ export default function AssetReportPage() {
         setDialogContent({ title, products });
         setIsDialogOpen(true);
     };
-
+    
     const handleProductClick = useCallback((perfItem: ProductPerformance) => {
-        const fullItem = items.find(i => i.id === perfItem.id);
-        if (fullItem && fullItem.variants && fullItem.variants.length > 0) {
-            setSelectedItemForVariant(fullItem);
+        if (perfItem.variants && perfItem.variants.length > 0) {
+            setSelectedPerfItem(perfItem);
             setIsVariantDialogOpen(true);
         }
-    }, [items]);
+    }, []);
+
+    const getFullInventoryItem = (id: string): InventoryItem | undefined => {
+        return items.find(i => i.id === id);
+    }
 
 
     if (loading || !productPerformanceData) {
@@ -379,25 +407,33 @@ export default function AssetReportPage() {
                     setTimeout(() => handleProductClick(perfItem), 150);
                 }}
             />
-            {selectedItemForVariant && (
+            {selectedPerfItem && (
                 <VariantDisplayDialog
                     open={isVariantDialogOpen}
                     onOpenChange={setIsVariantDialogOpen}
-                    item={selectedItemForVariant}
+                    item={{
+                        id: selectedPerfItem.id,
+                        name: selectedPerfItem.name,
+                        imageUrl: selectedPerfItem.imageUrl,
+                        sku: selectedPerfItem.sku,
+                        category: selectedPerfItem.category,
+                        variants: selectedPerfItem.variants,
+                    }}
                     onEditStock={() => {
                         setIsVariantDialogOpen(false);
                         setBulkEditDialogOpen(true);
                     }}
                 />
             )}
-             {selectedItemForVariant && (
+            {selectedPerfItem && (
                 <BulkEditVariantsDialog 
                     open={isBulkEditDialogOpen}
                     onOpenChange={setBulkEditDialogOpen}
-                    item={selectedItemForVariant}
+                    item={getFullInventoryItem(selectedPerfItem.id)!}
                 />
             )}
         </AppLayout>
     );
 }
+
 

@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import {
@@ -18,23 +19,52 @@ import {
   TableHead
 } from '@/components/ui/table';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import type { InventoryItem } from '@/types';
+import type { InventoryItem, InventoryItemVariant } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Edit } from 'lucide-react';
 import Image from 'next/image';
 
+interface VariantPerformance {
+    id: string;
+    name: string;
+    sku?: string;
+    stock: number;
+    assetValue?: number;
+    unitsSold?: number;
+}
+
+
 interface VariantDisplayDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  item: InventoryItem;
+  item: {
+      id: string;
+      name: string;
+      imageUrl?: string;
+      sku?: string;
+      category: string;
+      variants: VariantPerformance[];
+  };
   onEditStock: () => void;
 }
 
+const formatCurrency = (amount: number | undefined) => {
+    if (amount === undefined) return '-';
+    return new Intl.NumberFormat('id-ID', {
+        style: 'currency',
+        currency: 'IDR',
+        minimumFractionDigits: 0,
+    }).format(amount);
+};
+
+
 export function VariantDisplayDialog({ open, onOpenChange, item, onEditStock }: VariantDisplayDialogProps) {
+
+  const hasPerformanceData = item.variants.some(v => v.unitsSold !== undefined || v.assetValue !== undefined);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <div className="flex items-center gap-4">
               <Image 
@@ -56,7 +86,9 @@ export function VariantDisplayDialog({ open, onOpenChange, item, onEditStock }: 
                 <TableHeader>
                     <TableRow>
                         <TableHead>Varian</TableHead>
-                        <TableHead className="text-right">Stok</TableHead>
+                        <TableHead className="text-center">Stok</TableHead>
+                        {hasPerformanceData && <TableHead className="text-center">Terjual</TableHead>}
+                        {hasPerformanceData && <TableHead className="text-right">Nilai Aset</TableHead>}
                     </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -66,7 +98,9 @@ export function VariantDisplayDialog({ open, onOpenChange, item, onEditStock }: 
                                 <div className="font-medium text-sm">{variant.name}</div>
                                 <div className="text-xs text-muted-foreground">SKU: {variant.sku}</div>
                             </TableCell>
-                            <TableCell className="text-right font-medium">{variant.stock}</TableCell>
+                            <TableCell className="text-center font-medium">{variant.stock}</TableCell>
+                            {hasPerformanceData && <TableCell className="text-center font-semibold">{variant.unitsSold}</TableCell>}
+                            {hasPerformanceData && <TableCell className="text-right">{formatCurrency(variant.assetValue)}</TableCell>}
                         </TableRow>
                     ))}
                 </TableBody>
@@ -82,3 +116,4 @@ export function VariantDisplayDialog({ open, onOpenChange, item, onEditStock }: 
     </Dialog>
   );
 }
+
