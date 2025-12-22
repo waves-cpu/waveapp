@@ -2,7 +2,7 @@
 
 'use client';
 
-import React, { useMemo, useState, useCallback } from 'react';
+import React, { useMemo, useState, useCallback, useEffect } from 'react';
 import { AppLayout } from '@/app/components/app-layout';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { useInventory } from '@/hooks/use-inventory';
@@ -443,3 +443,4 @@ export default function AssetReportPage() {
         </AppLayout>
     );
 }
+
