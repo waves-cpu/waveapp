@@ -97,7 +97,6 @@ function PerformanceTable({ title, products, icon, onViewAll, onProductClick }: 
                                             <p className="font-medium text-sm hover:underline">{p.name}</p>
                                             <p className="text-xs text-muted-foreground">SKU: {p.sku || 'N/A'}</p>
                                         </div>
-                                         <Edit className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
                                     </div>
                                 </TableCell>
                                 <TableCell className="text-center">{p.totalStock.toLocaleString('id-ID')}</TableCell>
@@ -203,7 +202,6 @@ function ViewAllDialog({
                                                 <p className="font-medium text-sm hover:underline">{p.name}</p>
                                                 <p className="text-xs text-muted-foreground">SKU: {p.sku || 'N/A'}</p>
                                             </div>
-                                             <Edit className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
                                         </div>
                                     </TableCell>
                                     <TableCell className="text-center">{p.totalStock.toLocaleString('id-ID')}</TableCell>
@@ -443,4 +441,3 @@ export default function AssetReportPage() {
         </AppLayout>
     );
 }
-
