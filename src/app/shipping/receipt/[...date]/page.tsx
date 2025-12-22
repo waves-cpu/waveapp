@@ -237,7 +237,7 @@ export default function ReceiptPage() {
 
     const totalPages = Math.ceil(filteredReceipts.length / itemsPerPage);
     const isAllSelected = paginatedReceipts.length > 0 && paginatedReceipts.filter(r => r.status === 'Perlu Diproses').length > 0 && paginatedReceipts.filter(r => r.status === 'Perlu Diproses').every(r => selectedIds.has(r.id));
-    const finalStatuses = ['Selesai', 'Return', 'Dibatalkan'];
+    const finalStatuses = ['Selesai', 'Return', 'Dibatalkan', 'Return Selesai'];
 
     return (
         <AppLayout>
@@ -415,6 +415,29 @@ export default function ReceiptPage() {
                                                                 <DropdownMenuItem onClick={() => handleChangeStatus(item, 'Selesai')}>{t.actions.markAsDone}</DropdownMenuItem>
                                                                 <DropdownMenuItem onClick={() => handleChangeStatus(item, 'Return')} className="text-destructive">{t.actions.markAsReturn}</DropdownMenuItem>
                                                             </>
+                                                         )}
+                                                         {item.status === 'Dibatalkan' && (
+                                                              <AlertDialog>
+                                                                <AlertDialogTrigger asChild>
+                                                                    <DropdownMenuItem onSelect={e => e.preventDefault()} className="text-destructive">
+                                                                        <Trash2 className="mr-2 h-4 w-4" /> Hapus
+                                                                    </DropdownMenuItem>
+                                                                </AlertDialogTrigger>
+                                                                <AlertDialogContent>
+                                                                    <AlertDialogHeader>
+                                                                        <AlertDialogTitle>{t.deleteConfirmTitle}</AlertDialogTitle>
+                                                                        <AlertDialogDescription>
+                                                                            {t.deleteConfirmDesc.replace('{awb}', item.awb)}
+                                                                        </AlertDialogDescription>
+                                                                    </AlertDialogHeader>
+                                                                    <AlertDialogFooter>
+                                                                        <AlertDialogCancel>Batal</AlertDialogCancel>
+                                                                        <AlertDialogAction onClick={() => handleDelete(item)} className="bg-destructive hover:bg-destructive/90">
+                                                                            {t.deleteConfirmAction}
+                                                                        </AlertDialogAction>
+                                                                    </AlertDialogFooter>
+                                                                </AlertDialogContent>
+                                                            </AlertDialog>
                                                          )}
                                                     </DropdownMenuContent>
                                                 </DropdownMenu>
