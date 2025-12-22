@@ -12,7 +12,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { subDays, parseISO, isAfter } from 'date-fns';
-import { Flame, TrendingUp, Anchor, Activity, DollarSign, Package, Eye } from 'lucide-react';
+import { Flame, TrendingUp, Anchor, Activity, DollarSign, Package, Eye, Search } from 'lucide-react';
 import Image from 'next/image';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -20,6 +20,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { categories as allCategories } from '@/types';
+import { Input } from '@/components/ui/input';
 
 type ProductPerformance = {
     id: string;
@@ -116,6 +117,19 @@ function ViewAllDialog({
   title: string
   products: ProductPerformance[]
 }) {
+    const [searchTerm, setSearchTerm] = useState('');
+
+    const filteredProducts = useMemo(() => {
+        if (!searchTerm) {
+            return products;
+        }
+        const lowercasedTerm = searchTerm.toLowerCase();
+        return products.filter(p => 
+            p.name.toLowerCase().includes(lowercasedTerm) ||
+            (p.sku && p.sku.toLowerCase().includes(lowercasedTerm))
+        );
+    }, [products, searchTerm]);
+
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="max-w-4xl h-[80vh] flex flex-col">
@@ -125,6 +139,17 @@ function ViewAllDialog({
                         Menampilkan semua {products.length} produk dalam kategori ini.
                     </DialogDescription>
                 </DialogHeader>
+
+                 <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                        placeholder="Cari produk atau SKU..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="pl-10"
+                    />
+                </div>
+
                 <ScrollArea className="flex-grow border rounded-md">
                      <Table>
                         <TableHeader className="sticky top-0 bg-background">
@@ -136,7 +161,7 @@ function ViewAllDialog({
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {products.map(p => (
+                            {filteredProducts.map(p => (
                                 <TableRow key={p.id}>
                                     <TableCell>
                                         <div className="flex items-center gap-3">
