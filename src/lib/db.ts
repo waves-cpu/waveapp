@@ -13,29 +13,11 @@ const dbPath = path.join(dbDir, 'waves.db');
 let db: Database.Database;
 
 function initializeDatabase() {
-  // Do not delete the database file on every initialization
-  // if (fs.existsSync(dbPath)) {
-  //     fs.unlinkSync(dbPath);
-  // }
-
-  try {
-      db = new Database(dbPath);
-      db.pragma('journal_mode = WAL');
-      createSchema(); // Ensure schema exists on initial load
-      runMigrations();
-      seedData();
-  } catch (error) {
-      if (db && db.open) {
-        db.close();
-      }
-      if (fs.existsSync(dbPath)) {
-          fs.unlinkSync(dbPath);
-      }
-      // Recreate and re-initialize
-      db = new Database(dbPath);
-      db.pragma('journal_mode = WAL');
-      createSchema(); // This is critical for recovery
-  }
+    db = new Database(dbPath);
+    db.pragma('journal_mode = WAL');
+    createSchema();
+    runMigrations();
+    seedData();
 }
 
 
@@ -355,28 +337,7 @@ function getDb() {
 
 
 function executeQuery<T>(query: (db: Database.Database) => T): T {
-  try {
     return query(getDb());
-  } catch (e: any) {
-    if (e.code === 'SQLITE_CORRUPT' || e.message.includes('malformed') || e.message.includes('disk I/O error') || e.message.includes('not open')) {
-      if (db && db.open) {
-        db.close();
-      }
-      if (fs.existsSync(dbPath)) {
-        try {
-            fs.unlinkSync(dbPath);
-        } catch (unlinkError) {
-            throw new Error('Database is locked or inaccessible. Could not recover.');
-        }
-      }
-      initializeDatabase();
-      
-      // Retry the query one more time
-      return query(getDb());
-    } else {
-      throw e;
-    }
-  }
 }
 
 const dbProxy = {
