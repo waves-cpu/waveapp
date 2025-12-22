@@ -233,17 +233,11 @@ export function InventoryTable({ onUpdateStock, isAccessoryTable = false }: Inve
   const t = translations[language];
   const TArchived = t.archived;
   const [isBulkEditDialogOpen, setBulkEditDialogOpen] = useState(false);
-  const [isVariantDisplayOpen, setVariantDisplayOpen] = useState(false);
   const [selectedBulkEditItem, setSelectedBulkEditItem] = useState<InventoryItem | null>(null);
   const router = useRouter();
 
   const inventorySource = isAccessoryTable ? accessories : items;
 
-  const handleOpenVariantDialog = (item: InventoryItem) => {
-    setSelectedBulkEditItem(item);
-    setVariantDisplayOpen(true);
-  };
-  
   const handleArchive = async (itemId: string) => {
     try {
         await archiveProduct(itemId, true);
@@ -406,10 +400,7 @@ export function InventoryTable({ onUpdateStock, isAccessoryTable = false }: Inve
                                             data-ai-hint="product image"
                                         />
                                         <div>
-                                            <button onClick={() => handleOpenVariantDialog(item)} className="text-left flex items-center gap-2">
-                                                <div className="font-medium text-primary text-sm hover:underline truncate max-w-xs">{item.name}</div>
-                                                <Edit className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
-                                            </button>
+                                            <div className="font-medium text-primary text-sm hover:underline truncate max-w-xs">{item.name}</div>
                                             <div className="text-xs text-muted-foreground truncate">SKU: {item.sku}</div>
                                         </div>
                                     </div>
@@ -612,14 +603,6 @@ export function InventoryTable({ onUpdateStock, isAccessoryTable = false }: Inve
             open={isBulkEditDialogOpen}
             onOpenChange={setBulkEditDialogOpen}
             item={selectedBulkEditItem}
-        />
-    )}
-    {selectedBulkEditItem && (
-        <VariantDisplayDialog
-            open={isVariantDisplayOpen}
-            onOpenChange={setVariantDisplayOpen}
-            item={selectedBulkEditItem}
-            onEditStock={() => { setVariantDisplayOpen(false); setBulkEditDialogOpen(true); }}
         />
     )}
     </>
