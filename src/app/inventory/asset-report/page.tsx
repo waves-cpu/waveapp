@@ -17,10 +17,11 @@ import Image from 'next/image';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { categories as allCategories } from '@/types';
 import { Input } from '@/components/ui/input';
+import { Pagination } from '@/components/ui/pagination';
 
 type ProductPerformance = {
     id: string;
@@ -43,6 +44,7 @@ const formatCurrency = (amount: number) => {
 
 const BEST_SELLER_THRESHOLD = 50;
 const DISPLAY_LIMIT = 20;
+const DIALOG_ITEMS_PER_PAGE = 50;
 
 function PerformanceTable({ title, products, icon, onViewAll }: { title: string; products: ProductPerformance[]; icon: React.ReactNode; onViewAll: () => void; }) {
     const totalAssetValue = useMemo(() => products.reduce((sum, p) => sum + p.totalAssetValue, 0), [products]);
@@ -118,8 +120,10 @@ function ViewAllDialog({
   products: ProductPerformance[]
 }) {
     const [searchTerm, setSearchTerm] = useState('');
+    const [currentPage, setCurrentPage] = useState(1);
 
     const filteredProducts = useMemo(() => {
+        setCurrentPage(1);
         if (!searchTerm) {
             return products;
         }
@@ -129,6 +133,12 @@ function ViewAllDialog({
             (p.sku && p.sku.toLowerCase().includes(lowercasedTerm))
         );
     }, [products, searchTerm]);
+
+    const totalPages = Math.ceil(filteredProducts.length / DIALOG_ITEMS_PER_PAGE);
+    const paginatedProducts = useMemo(() => {
+        const startIndex = (currentPage - 1) * DIALOG_ITEMS_PER_PAGE;
+        return filteredProducts.slice(startIndex, startIndex + DIALOG_ITEMS_PER_PAGE);
+    }, [filteredProducts, currentPage]);
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
@@ -161,7 +171,7 @@ function ViewAllDialog({
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {filteredProducts.map(p => (
+                            {paginatedProducts.map(p => (
                                 <TableRow key={p.id}>
                                     <TableCell>
                                         <div className="flex items-center gap-3">
@@ -180,6 +190,13 @@ function ViewAllDialog({
                         </TableBody>
                     </Table>
                 </ScrollArea>
+                 <DialogFooter className="pt-4">
+                    <Pagination
+                        totalPages={totalPages}
+                        currentPage={currentPage}
+                        onPageChange={setCurrentPage}
+                    />
+                 </DialogFooter>
             </DialogContent>
         </Dialog>
     );

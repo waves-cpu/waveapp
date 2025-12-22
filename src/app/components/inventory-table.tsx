@@ -69,6 +69,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { UpdateStockDialogAccessories } from './update-stock-dialog-accessories';
 import { Checkbox } from '@/components/ui/checkbox';
+import { VariantDisplayDialog } from './variant-display-dialog';
 
 interface InventoryTableProps {
   onUpdateStock: (itemId: string) => void;
@@ -232,14 +233,15 @@ export function InventoryTable({ onUpdateStock, isAccessoryTable = false }: Inve
   const t = translations[language];
   const TArchived = t.archived;
   const [isBulkEditDialogOpen, setBulkEditDialogOpen] = useState(false);
+  const [isVariantDisplayOpen, setVariantDisplayOpen] = useState(false);
   const [selectedBulkEditItem, setSelectedBulkEditItem] = useState<InventoryItem | null>(null);
   const router = useRouter();
 
   const inventorySource = isAccessoryTable ? accessories : items;
 
-  const handleBulkEdit = (item: InventoryItem) => {
+  const handleOpenVariantDialog = (item: InventoryItem) => {
     setSelectedBulkEditItem(item);
-    setBulkEditDialogOpen(true);
+    setVariantDisplayOpen(true);
   };
   
   const handleArchive = async (itemId: string) => {
@@ -404,17 +406,17 @@ export function InventoryTable({ onUpdateStock, isAccessoryTable = false }: Inve
                                             data-ai-hint="product image"
                                         />
                                         <div>
-                                            <button onClick={() => handleBulkEdit(item)} className="text-left flex items-center gap-2">
+                                            <button onClick={() => handleOpenVariantDialog(item)} className="text-left flex items-center gap-2">
                                                 <div className="font-medium text-primary text-sm hover:underline truncate max-w-xs">{item.name}</div>
                                                 <Edit className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
                                             </button>
-                                            <div className="text-xs text-muted-foreground">SKU: {item.sku}</div>
+                                            <div className="text-xs text-muted-foreground truncate">SKU: {item.sku}</div>
                                         </div>
                                     </div>
                                 </TableCell>
                                 <TableCell>{priceDisplay}</TableCell>
                                 <TableCell>
-                                    <StockBar stock={totalStock} onUpdateClick={() => handleBulkEdit(item)} item={item} />
+                                    <StockBar stock={totalStock} onUpdateClick={() => {setSelectedBulkEditItem(item); setBulkEditDialogOpen(true);}} item={item} />
                                 </TableCell>
                                 <TableCell className="text-center">
                                     <DropdownMenu>
@@ -470,7 +472,7 @@ export function InventoryTable({ onUpdateStock, isAccessoryTable = false }: Inve
                                             </div>
                                             <div>
                                                 <div className="font-medium text-sm truncate max-w-xs">{variant.name}</div>
-                                                <div className="text-xs text-muted-foreground">SKU: {variant.sku}</div>
+                                                <div className="text-xs text-muted-foreground truncate">SKU: {variant.sku}</div>
                                             </div>
                                         </div>
                                     </TableCell>
@@ -506,7 +508,7 @@ export function InventoryTable({ onUpdateStock, isAccessoryTable = false }: Inve
                                     )}
                                     <div>
                                         <div className="font-medium text-sm truncate max-w-xs">{item.name}</div>
-                                        <div className="text-xs text-muted-foreground">SKU: {item.sku}</div>
+                                        <div className="text-xs text-muted-foreground truncate">SKU: {item.sku}</div>
                                     </div>
                                 </div>
                             </TableCell>
@@ -612,10 +614,14 @@ export function InventoryTable({ onUpdateStock, isAccessoryTable = false }: Inve
             item={selectedBulkEditItem}
         />
     )}
+    {selectedBulkEditItem && (
+        <VariantDisplayDialog
+            open={isVariantDisplayOpen}
+            onOpenChange={setVariantDisplayOpen}
+            item={selectedBulkEditItem}
+            onEditStock={() => { setVariantDisplayOpen(false); setBulkEditDialogOpen(true); }}
+        />
+    )}
     </>
   );
 }
-
-
-
-
