@@ -35,7 +35,7 @@ import {
   addShippingReceipt as addShippingReceiptDb,
   deleteShippingReceipt as deleteShippingReceiptDb,
   updateShippingReceiptsStatus as updateShippingReceiptsDbStatus,
-  updateShippingReceiptStatus,
+  updateShippingReceiptStatus as updateShippingReceiptStatusDb,
   fetchShippingReceiptCounts,
   getReceiptCountByStatus as getReceiptCountByStatusDb,
   addBulkImportHistory,
@@ -433,6 +433,11 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
     setAllShippingReceipts(prev => prev.map(r => ids.includes(r.id) ? {...r, status} : r));
   };
 
+  const updateShippingReceiptStatus = async (id: number, status: string) => {
+    await updateShippingReceiptStatusDb(id, status);
+    setAllShippingReceipts(prev => prev.map(r => r.id === id ? { ...r, status } : r));
+  };
+
   const deleteImportHistory = async (id: number) => {
     await deleteBulkImportHistoryDb(id);
   }
@@ -513,3 +518,4 @@ export const useInventory = () => {
   }
   return context;
 };
+
