@@ -12,7 +12,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { subDays, parseISO, isAfter } from 'date-fns';
-import { Flame, TrendingUp, Anchor, Activity, DollarSign, Package, Eye, Search, ChevronDown } from 'lucide-react';
+import { Flame, TrendingUp, Anchor, Activity, DollarSign, Package, Eye, Search, ChevronDown, Edit } from 'lucide-react';
 import Image from 'next/image';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -60,7 +60,7 @@ const BEST_SELLER_THRESHOLD = 50;
 const DISPLAY_LIMIT = 20;
 const DIALOG_ITEMS_PER_PAGE = 50;
 
-function PerformanceTable({ title, products, icon, onViewAll, onProductClick }: { title: string; products: ProductPerformance[]; icon: React.ReactNode; onViewAll: () => void; onProductClick: (item: ProductPerformance) => void; }) {
+function PerformanceTable({ title, products, icon, onViewAll }: { title: string; products: ProductPerformance[]; icon: React.ReactNode; onViewAll: () => void; }) {
     const totalAssetValue = useMemo(() => products.reduce((sum, p) => sum + p.totalAssetValue, 0), [products]);
     const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
 
@@ -109,11 +109,13 @@ function PerformanceTable({ title, products, icon, onViewAll, onProductClick }: 
                                     className={cn(p.variants.length > 0 && "cursor-pointer", "border-b-0")}
                                 >
                                     <TableCell>
-                                        <div className="flex items-center gap-3 group">
-                                            {p.variants.length > 0 && (
-                                                <ChevronDown className={cn("h-4 w-4 transition-transform", expandedRows.has(p.id) && "rotate-180")} />
-                                            )}
-                                            <Image src={p.imageUrl || 'https://placehold.co/40x40.png'} alt={p.name} width={32} height={32} className="rounded-sm ml-auto" data-ai-hint="product image"/>
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-4 shrink-0">
+                                                {p.variants.length > 0 && (
+                                                    <ChevronDown className={cn("h-4 w-4 transition-transform", expandedRows.has(p.id) && "rotate-180")} />
+                                                )}
+                                            </div>
+                                            <Image src={p.imageUrl || 'https://placehold.co/40x40.png'} alt={p.name} width={32} height={32} className="rounded-sm" data-ai-hint="product image"/>
                                             <div>
                                                 <p className="font-medium text-sm">{p.name}</p>
                                                 <p className="text-xs text-muted-foreground">SKU: {p.sku || 'N/A'}</p>
@@ -248,11 +250,13 @@ function ViewAllDialog({
                                         className={cn(p.variants.length > 0 && "cursor-pointer", "border-b-0")}
                                     >
                                         <TableCell>
-                                            <div className="flex items-center gap-3 group">
-                                                {p.variants.length > 0 && (
-                                                    <ChevronDown className={cn("h-4 w-4 transition-transform", expandedRows.has(p.id) && "rotate-180")} />
-                                                )}
-                                                <Image src={p.imageUrl || 'https://placehold.co/40x40.png'} alt={p.name} width={32} height={32} className="rounded-sm ml-auto" data-ai-hint="product image"/>
+                                            <div className="flex items-center gap-3">
+                                                 <div className="w-4 shrink-0">
+                                                    {p.variants.length > 0 && (
+                                                        <ChevronDown className={cn("h-4 w-4 transition-transform", expandedRows.has(p.id) && "rotate-180")} />
+                                                    )}
+                                                </div>
+                                                <Image src={p.imageUrl || 'https://placehold.co/40x40.png'} alt={p.name} width={32} height={32} className="rounded-sm" data-ai-hint="product image"/>
                                                 <div>
                                                     <p className="font-medium text-sm">{p.name}</p>
                                                     <p className="text-xs text-muted-foreground">SKU: {p.sku || 'N/A'}</p>
@@ -380,15 +384,6 @@ export default function AssetReportPage() {
         setDialogContent({ title, products });
         setIsDialogOpen(true);
     };
-    
-    const handleProductClick = useCallback((perfItem: ProductPerformance) => {
-        // This function is now handled by the inline accordion expand/collapse
-    }, []);
-
-    const getFullInventoryItem = (id: string): InventoryItem | undefined => {
-        return items.find(i => i.id === id);
-    }
-
 
     if (loading || !productPerformanceData) {
         return (
@@ -449,21 +444,18 @@ export default function AssetReportPage() {
                         products={bestSellers} 
                         icon={<Flame className="h-6 w-6 text-red-500"/>} 
                         onViewAll={() => openDialog(bestSellerTitle, bestSellers)}
-                        onProductClick={handleProductClick}
                     />
                     <PerformanceTable 
                         title={normalMoversTitle} 
                         products={normalMovers} 
                         icon={<TrendingUp className="h-6 w-6 text-green-500"/>}
                         onViewAll={() => openDialog(normalMoversTitle, normalMovers)}
-                        onProductClick={handleProductClick}
                     />
                     <PerformanceTable 
                         title={slowMoversTitle} 
                         products={slowMovers}
                         icon={<Anchor className="h-6 w-6 text-blue-500"/>}
                         onViewAll={() => openDialog(slowMoversTitle, slowMovers)}
-                        onProductClick={handleProductClick}
                     />
                 </div>
             </main>
@@ -473,13 +465,6 @@ export default function AssetReportPage() {
                 title={dialogContent.title}
                 products={dialogContent.products}
             />
-            {selectedPerfItem && (
-                <BulkEditVariantsDialog 
-                    open={isBulkEditDialogOpen}
-                    onOpenChange={setBulkEditDialogOpen}
-                    item={getFullInventoryItem(selectedPerfItem.id)!}
-                />
-            )}
         </AppLayout>
     );
 }
