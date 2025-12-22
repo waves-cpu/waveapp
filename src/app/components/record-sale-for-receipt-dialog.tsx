@@ -24,7 +24,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Trash2, ShoppingBag, Search } from 'lucide-react';
 import { useInventory } from '@/hooks/use-inventory';
-import type { InventoryItem, InventoryItemVariant, ShippingReceipt } from '@/types';
+import type { InventoryItem, InventoryItemVariant, ShippingReceipt, Sale } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { useScanSounds } from '@/hooks/use-scan-sounds';
 import { VariantSelectionDialog } from './variant-selection-dialog';
@@ -42,6 +42,7 @@ interface CartItem {
     quantity: number;
     price: number;
     imageUrl?: string;
+    maxStock: number;
 }
 
 
@@ -49,7 +50,7 @@ interface RecordSaleForReceiptDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSaleComplete: () => void;
-  receipt: ShippingReceipt | null;
+  receipt: Omit<ShippingReceipt, 'id'> | null;
 }
 
 export function RecordSaleForReceiptDialog({
@@ -58,7 +59,7 @@ export function RecordSaleForReceiptDialog({
   onSaleComplete,
   receipt,
 }: RecordSaleForReceiptDialogProps) {
-  const { items: inventoryItems, recordSale } = useInventory();
+  const { items: inventoryItems, recordSale, recordSaleWithReceipt } = useInventory();
   const [cart, setCart] = useState<CartItem[]>([]);
   const { toast } = useToast();
   const { playSuccessSound, playErrorSound } = useScanSounds();
@@ -71,9 +72,10 @@ export function RecordSaleForReceiptDialog({
     if (debouncedSearchTerm.length < 2) return [];
     const lowercasedTerm = debouncedSearchTerm.toLowerCase();
     return inventoryItems.filter(item => 
-        item.name.toLowerCase().includes(lowercasedTerm) ||
+        !item.isArchived &&
+        (item.name.toLowerCase().includes(lowercasedTerm) ||
         (item.sku && item.sku.toLowerCase().includes(lowercasedTerm)) ||
-        (item.variants && item.variants.some(v => v.sku?.toLowerCase().includes(lowercasedTerm)))
+        (item.variants && item.variants.some(v => v.sku?.toLowerCase().includes(lowercasedTerm))))
     ).slice(0, 10);
 }, [debouncedSearchTerm, inventoryItems]);
 
@@ -89,7 +91,10 @@ export function RecordSaleForReceiptDialog({
   const addToCart = useCallback((item: InventoryItem, variant?: InventoryItemVariant) => {
     const itemToAddRaw = variant || item;
     
-    if ((itemToAddRaw.stock ?? 0) <= 0) {
+    const quantityInCart = cart.find(ci => ci.sku === itemToAddRaw.sku)?.quantity || 0;
+    const availableStock = (itemToAddRaw.stock ?? 0) - quantityInCart;
+
+    if (availableStock <= 0) {
         toast({
             variant: "destructive",
             title: "Stok Habis",
@@ -110,7 +115,8 @@ export function RecordSaleForReceiptDialog({
         sku: variant?.sku || item.sku || '',
         quantity: 1,
         price: price,
-        imageUrl: item.imageUrl
+        imageUrl: item.imageUrl,
+        maxStock: itemToAddRaw.stock || 0
     };
 
     if (!itemToAdd.sku) {
@@ -130,7 +136,7 @@ export function RecordSaleForReceiptDialog({
       return [...currentCart, itemToAdd];
     });
     setSearchTerm('');
-  }, [toast, playErrorSound, playSuccessSound]);
+  }, [cart, toast, playErrorSound, playSuccessSound]);
 
   const handleProductSelect = useCallback((product: InventoryItem) => {
     if (product.variants && product.variants.length > 1) {
@@ -152,11 +158,29 @@ export function RecordSaleForReceiptDialog({
 
 
   const updateQuantity = (sku: string, newQuantity: number) => {
-    setCart(currentCart =>
-      currentCart.map(item =>
-        item.sku === sku ? { ...item, quantity: Math.max(0, newQuantity) } : item
-      ).filter(item => item.quantity > 0)
-    );
+    setCart(currentCart => {
+      const item = currentCart.find(ci => ci.sku === sku);
+      if (!item) return currentCart;
+
+      const maxStock = item.maxStock;
+      const finalQuantity = Math.max(0, Math.min(newQuantity, maxStock));
+
+      if (newQuantity > maxStock) {
+        toast({
+            variant: "destructive",
+            title: "Stok Tidak Cukup",
+            description: `Hanya tersedia ${maxStock} stok untuk produk ini.`,
+        });
+      }
+
+      if (finalQuantity === 0) {
+        return currentCart.filter(ci => ci.sku !== sku);
+      }
+
+      return currentCart.map(ci =>
+        ci.sku === sku ? { ...ci, quantity: finalQuantity } : ci
+      );
+    });
   };
 
   const removeFromCart = (sku: string) => {
@@ -166,15 +190,20 @@ export function RecordSaleForReceiptDialog({
   const handleFinalizeSale = async () => {
     if (!receipt || cart.length === 0) return;
     setIsSubmitting(true);
+    
+    const salesData: Omit<Sale, 'id'>[] = cart.map(item => ({
+        transactionId: receipt.transactionId,
+        productId: item.productId,
+        variantId: item.variantId,
+        channel: receipt.salesChannel!,
+        quantity: item.quantity,
+        priceAtSale: item.price,
+        saleDate: receipt.date,
+        status: 'Dikirim',
+    }));
+    
     try {
-      const salePromises = cart.map(item =>
-        recordSale(item.sku, receipt.salesChannel || 'Unknown', item.quantity, {
-            transactionId: receipt.transactionId || receipt.awb,
-            priceAtSale: item.price,
-            status: 'Dikirim' // Set status to "Dikirim" on sale record
-        })
-      );
-      await Promise.all(salePromises);
+      await recordSaleWithReceipt(receipt, salesData);
       
       toast({
         title: 'Penjualan Dicatat',

@@ -923,6 +923,40 @@ export async function performSale(
     return { newSale, updatedItem, updatedAccessory };
 }
 
+export async function recordSaleWithReceipt(receiptData: Omit<ShippingReceipt, 'id'>, salesData: Omit<Sale, 'id'>[]): Promise<void> {
+    const transaction = db.transaction(() => {
+        // 1. Check if receipt with same AWB already exists
+        const existingReceipt = db.prepare('SELECT id FROM shipping_receipts WHERE awb = ?').get(receiptData.awb);
+        if (existingReceipt) {
+            throw new Error(`DUPLICATE_AWB::${receiptData.awb}`);
+        }
+
+        // 2. Insert the shipping receipt
+        addShippingReceipt(receiptData);
+
+        // 3. Process each sale item
+        salesData.forEach(sale => {
+            const options = {
+                saleDate: parseISO(sale.saleDate as string),
+                transactionId: sale.transactionId,
+                priceAtSale: sale.priceAtSale,
+                status: sale.status,
+            };
+
+            const item = db.prepare('SELECT sku FROM products WHERE id = ?').get(sale.productId) as { sku: string } | undefined
+                || db.prepare('SELECT sku FROM variants WHERE id = ?').get(sale.variantId) as { sku: string } | undefined;
+            
+            if(!item?.sku) {
+                throw new Error(`SKU not found for product/variant ID during sale recording.`);
+            }
+
+            performSale(item.sku, sale.channel, sale.quantity, options);
+        });
+    });
+
+    transaction();
+}
+
 
 export async function fetchSingleItem(itemId: string): Promise<InventoryItem> {
     const product = db.prepare("SELECT * FROM products WHERE id = ?").get(itemId) as any;

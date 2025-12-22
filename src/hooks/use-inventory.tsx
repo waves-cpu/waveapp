@@ -47,6 +47,7 @@ import {
   fetchSingleItem,
   fetchSingleAccessory,
   clearPosTransactions as clearPosTransactionsDb,
+  recordSaleWithReceipt as recordSaleWithReceiptDb,
 } from '@/lib/inventory-service';
 
 
@@ -64,6 +65,7 @@ interface InventoryContextType {
   fetchItems: () => Promise<void>;
   loading: boolean;
   recordSale: (sku: string, channel: string, quantity: number, options?: { saleDate?: Date; transactionId?: string; paymentMethod?: string; resellerName?: string; priceAtSale?: number; status?: string; }) => Promise<{ newSale: Sale, updatedItem?: InventoryItem, updatedAccessory?: Accessory }>;
+  recordSaleWithReceipt: (receiptData: Omit<ShippingReceipt, 'id'>, salesData: Omit<Sale, 'id'>[]) => Promise<void>;
   fetchSales: (channel: string, date: Date, page: number, limit: number) => Promise<{sales: Sale[], total: number}>;
   cancelSale: (saleId: string) => Promise<void>;
   cancelSaleTransaction: (transactionId: string) => Promise<void>;
@@ -306,6 +308,11 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
 
     return { newSale, updatedItem, updatedAccessory };
   };
+  
+  const recordSaleWithReceipt = async (receiptData: Omit<ShippingReceipt, 'id'>, salesData: Omit<Sale, 'id'>[]) => {
+      await recordSaleWithReceiptDb(receiptData, salesData);
+      await fetchAllData();
+  };
 
 
   const fetchSales = async (channel: string, date: Date, page: number, limit: number): Promise<{ sales: Sale[], total: number }> => {
@@ -457,6 +464,7 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
         fetchItems: fetchAllData,
         loading,
         recordSale,
+        recordSaleWithReceipt,
         fetchSales,
         cancelSale: revertSale,
         cancelSaleTransaction,
@@ -505,4 +513,3 @@ export const useInventory = () => {
   }
   return context;
 };
-

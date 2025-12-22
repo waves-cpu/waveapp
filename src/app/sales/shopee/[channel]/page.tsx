@@ -53,7 +53,7 @@ import { RecordSaleForReceiptDialog } from '@/app/components/record-sale-for-rec
 export default function ShopeeChannelPage() {
   const { language } = useLanguage();
   const t = translations[language];
-  const { addShippingReceipt, deleteShippingReceipt, fetchShippingReceipts, allSales, updateShippingReceiptStatus, fetchShippingReceiptCounts, fetchShippingReceiptCountsByChannel, cancelSaleTransaction, recordSale } = useInventory();
+  const { deleteShippingReceipt, fetchShippingReceipts, allSales, updateShippingReceiptStatus, cancelSaleTransaction } = useInventory();
   const { toast } = useToast();
   const { playSuccessSound, playErrorSound } = useScanSounds();
   const router = useRouter();
@@ -75,7 +75,7 @@ export default function ShopeeChannelPage() {
   const [detailItems, setDetailItems] = useState<Sale[]>([]);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   
-  const [receiptForSale, setReceiptForSale] = useState<ShippingReceipt | null>(null);
+  const [receiptForSale, setReceiptForSale] = useState<Omit<ShippingReceipt, 'id'> | null>(null);
   const [isSaleDialogOpen, setIsSaleDialogOpen] = useState(false);
 
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
@@ -142,72 +142,40 @@ export default function ShopeeChannelPage() {
 
   const handleAwbSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!awb || isSubmitting || !selectedDate) return;
-
     const trimmedAwb = awb.trim();
-    const existingSales = salesByReceipt.get(trimmedAwb);
+    if (!trimmedAwb || isSubmitting || !selectedDate) return;
 
-    if (existingSales && existingSales.length > 0) {
-        setIsSubmitting(true);
-        try {
-            const salePromises = existingSales.map(sale =>
-                recordSale(sale.sku!, salesChannel, sale.quantity, {
-                    transactionId: sale.transactionId,
-                    priceAtSale: sale.priceAtSale,
-                    status: 'Dikirim'
-                })
-            );
-            await Promise.all(salePromises);
-            await updateShippingReceiptStatus(existingSales[0].id, 'Dikirim');
-            
-            playSuccessSound();
-            toast({
-                title: 'Penjualan Selesai Otomatis',
-                description: `Penjualan untuk resi ${trimmedAwb} telah diselesaikan.`,
-            });
-            setAwb('');
-            await loadReceipts();
-        } catch (error) {
-            playErrorSound();
-            toast({ variant: 'destructive', title: 'Gagal Memproses Penjualan', description: 'Stok mungkin tidak mencukupi.' });
-        } finally {
-            setIsSubmitting(false);
-        }
+    // Check if receipt already exists in the fetched list for today
+    const existingReceipt = receipts.find(r => r.awb.toLowerCase() === trimmedAwb.toLowerCase());
+    if (existingReceipt) {
+        playErrorSound();
+        toast({
+            variant: "destructive",
+            title: "Resi Duplikat",
+            description: `Resi ini sudah discan pada ${format(parseISO(existingReceipt.date), 'dd MMM yyyy, HH:mm')}`
+        });
+        setAwb('');
         return;
     }
-    
+
     setIsSubmitting(true);
     
-     const newReceipt: Omit<ShippingReceipt, 'id'> = {
-        awb: awb.trim(),
+    const newReceipt: Omit<ShippingReceipt, 'id'> = {
+        awb: trimmedAwb,
         salesChannel: salesChannel,
         channel: shippingChannel,
         date: format(selectedDate, "yyyy-MM-dd'T'HH:mm:ss"),
-        status: 'Perlu Diproses',
-        transactionId: awb.trim()
+        status: 'Perlu Diproses', // This status will only be finalized upon saving the sale
+        transactionId: trimmedAwb
     };
+    
+    setReceiptForSale(newReceipt);
+    setIsSaleDialogOpen(true);
+    setAwb(''); // Clear input after opening dialog
+    setIsSubmitting(false); // Allow new scans while dialog is open
+    playSuccessSound();
+};
 
-    try {
-        const added = await addShippingReceipt(newReceipt);
-        playSuccessSound();
-        setAwb('');
-        setReceiptForSale(added);
-        setIsSaleDialogOpen(true);
-    } catch (error) {
-        playErrorSound();
-        let title = 'Input Gagal';
-        let errorMessage = 'Gagal menyimpan resi.';
-        if (error instanceof Error && error.message.startsWith('DUPLICATE_AWB_DATE::')) {
-            const dateStr = error.message.split('::')[1];
-            title = 'Resi Duplikat';
-            errorMessage = `Resi ini sudah discan pada ${format(parseISO(dateStr), 'dd MMM yyyy, HH:mm')}`;
-        }
-        toast({ variant: 'destructive', title: title, description: errorMessage });
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-  
   const handleDeleteReceipt = async (receipt: ShippingReceipt) => {
     try {
         if (receipt.transactionId) {
@@ -219,7 +187,7 @@ export default function ShopeeChannelPage() {
             title: 'Resi Dihapus & Stok Dikembalikan',
             description: `Resi ${receipt.awb} telah dihapus dan stok telah dikembalikan.`,
         });
-        loadReceipts(); 
+        await loadReceipts(); 
     } catch (error) {
         console.error("Error during receipt deletion:", error);
         toast({ variant: 'destructive', title: 'Gagal Menghapus', description: 'Terjadi kesalahan saat menghapus resi dan mengembalikan stok.' });
@@ -233,8 +201,10 @@ export default function ShopeeChannelPage() {
         setDetailItems(items);
         setIsDetailOpen(true);
     } else {
-        setReceiptForSale(receipt);
-        setIsSaleDialogOpen(true);
+        toast({
+            title: 'Tidak Ada Detail',
+            description: 'Tidak ada produk yang tercatat untuk resi ini.'
+        });
     }
   }
   
@@ -342,7 +312,7 @@ export default function ShopeeChannelPage() {
                           <TableCell className="font-medium">{receipt.awb}</TableCell>
                           <TableCell>
                             <Button variant="link" size="sm" className="h-auto p-0 text-xs" onClick={() => handleViewDetails(receipt)}>
-                                {isProcessed ? `${relatedSales.reduce((acc, s) => acc + s.quantity, 0)} produk` : 'Catat Produk'}
+                                {isProcessed ? `${relatedSales.reduce((acc, s) => acc + s.quantity, 0)} produk` : 'N/A'}
                                 <Eye className="ml-2 h-3 w-3" />
                             </Button>
                           </TableCell>
