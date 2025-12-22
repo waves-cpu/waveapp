@@ -103,40 +103,41 @@ function PerformanceTable({ title, products, icon, onViewAll, onProductClick }: 
                     </TableHeader>
                     <TableBody>
                         {products.length > 0 ? products.slice(0, DISPLAY_LIMIT).map(p => (
-                            <React.Fragment key={p.id}>
-                            <TableRow 
-                                onClick={() => p.variants.length > 0 && toggleRow(p.id)} 
-                                className={cn(p.variants.length > 0 && "cursor-pointer")}
-                            >
-                                <TableCell>
-                                     <div className="flex items-center gap-3 group">
-                                        {p.variants.length > 0 && (
-                                            <ChevronDown className={cn("h-4 w-4 transition-transform", expandedRows.has(p.id) && "rotate-180")} />
-                                        )}
-                                        <Image src={p.imageUrl || 'https://placehold.co/40x40.png'} alt={p.name} width={32} height={32} className="rounded-sm ml-auto" data-ai-hint="product image"/>
-                                        <div>
-                                            <p className="font-medium text-sm">{p.name}</p>
-                                            <p className="text-xs text-muted-foreground">SKU: {p.sku || 'N/A'}</p>
-                                        </div>
-                                    </div>
-                                </TableCell>
-                                <TableCell className="text-center">{p.totalStock.toLocaleString('id-ID')}</TableCell>
-                                <TableCell className="text-center font-semibold">{p.unitsSold.toLocaleString('id-ID')}</TableCell>
-                                <TableCell className="text-right">{formatCurrency(p.totalAssetValue)}</TableCell>
-                            </TableRow>
-                             {expandedRows.has(p.id) && p.variants.map(v => (
-                                <TableRow key={v.id} className="bg-muted/50 hover:bg-muted/80">
-                                    <TableCell className="pl-16">
-                                        <div>
-                                            <p className="font-medium text-sm">{v.name}</p>
-                                            <p className="text-xs text-muted-foreground">SKU: {v.sku || 'N/A'}</p>
+                           <React.Fragment key={p.id}>
+                                <TableRow 
+                                    onClick={() => p.variants.length > 0 && toggleRow(p.id)} 
+                                    className={cn(p.variants.length > 0 && "cursor-pointer", "border-b-0")}
+                                >
+                                    <TableCell>
+                                        <div className="flex items-center gap-3 group">
+                                            {p.variants.length > 0 && (
+                                                <ChevronDown className={cn("h-4 w-4 transition-transform", expandedRows.has(p.id) && "rotate-180")} />
+                                            )}
+                                            <Image src={p.imageUrl || 'https://placehold.co/40x40.png'} alt={p.name} width={32} height={32} className="rounded-sm ml-auto" data-ai-hint="product image"/>
+                                            <div>
+                                                <p className="font-medium text-sm">{p.name}</p>
+                                                <p className="text-xs text-muted-foreground">SKU: {p.sku || 'N/A'}</p>
+                                            </div>
                                         </div>
                                     </TableCell>
-                                    <TableCell className="text-center">{v.stock.toLocaleString('id-ID')}</TableCell>
-                                    <TableCell className="text-center font-semibold">{v.unitsSold.toLocaleString('id-ID')}</TableCell>
-                                    <TableCell className="text-right">{formatCurrency(v.assetValue)}</TableCell>
+                                    <TableCell className="text-center">{p.totalStock.toLocaleString('id-ID')}</TableCell>
+                                    <TableCell className="text-center font-semibold">{p.unitsSold.toLocaleString('id-ID')}</TableCell>
+                                    <TableCell className="text-right">{formatCurrency(p.totalAssetValue)}</TableCell>
                                 </TableRow>
-                            ))}
+                                {expandedRows.has(p.id) && p.variants.map(v => (
+                                    <TableRow key={v.id} className="bg-muted/30 hover:bg-muted/50 border-b-0">
+                                        <TableCell className="pl-16 py-2">
+                                            <div>
+                                                <p className="font-medium text-sm">{v.name}</p>
+                                                <p className="text-xs text-muted-foreground">SKU: {v.sku || 'N/A'}</p>
+                                            </div>
+                                        </TableCell>
+                                        <TableCell className="text-center py-2">{v.stock.toLocaleString('id-ID')}</TableCell>
+                                        <TableCell className="text-center font-semibold py-2">{v.unitsSold.toLocaleString('id-ID')}</TableCell>
+                                        <TableCell className="text-right py-2">{formatCurrency(v.assetValue)}</TableCell>
+                                    </TableRow>
+                                ))}
+                                 <TableRow className="border-b"><TableCell colSpan={4} className="p-0"></TableCell></TableRow>
                             </React.Fragment>
                         )) : (
                             <TableRow>
@@ -242,39 +243,40 @@ function ViewAllDialog({
                         <TableBody>
                             {paginatedProducts.map(p => (
                                 <React.Fragment key={p.id}>
-                                <TableRow 
-                                    onClick={() => p.variants.length > 0 && toggleRow(p.id)} 
-                                    className={cn(p.variants.length > 0 && "cursor-pointer")}
-                                >
-                                    <TableCell>
-                                        <div className="flex items-center gap-3 group">
-                                            {p.variants.length > 0 && (
-                                                <ChevronDown className={cn("h-4 w-4 transition-transform", expandedRows.has(p.id) && "rotate-180")} />
-                                            )}
-                                            <Image src={p.imageUrl || 'https://placehold.co/40x40.png'} alt={p.name} width={32} height={32} className="rounded-sm ml-auto" data-ai-hint="product image"/>
-                                            <div>
-                                                <p className="font-medium text-sm">{p.name}</p>
-                                                <p className="text-xs text-muted-foreground">SKU: {p.sku || 'N/A'}</p>
-                                            </div>
-                                        </div>
-                                    </TableCell>
-                                    <TableCell className="text-center">{p.totalStock.toLocaleString('id-ID')}</TableCell>
-                                    <TableCell className="text-center font-semibold">{p.unitsSold.toLocaleString('id-ID')}</TableCell>
-                                    <TableCell className="text-right">{formatCurrency(p.totalAssetValue)}</TableCell>
-                                </TableRow>
-                                {expandedRows.has(p.id) && p.variants.map(v => (
-                                    <TableRow key={v.id} className="bg-muted/50 hover:bg-muted/80">
-                                        <TableCell className="pl-16">
-                                            <div>
-                                                <p className="font-medium text-sm">{v.name}</p>
-                                                <p className="text-xs text-muted-foreground">SKU: {v.sku || 'N/A'}</p>
+                                    <TableRow 
+                                        onClick={() => p.variants.length > 0 && toggleRow(p.id)} 
+                                        className={cn(p.variants.length > 0 && "cursor-pointer", "border-b-0")}
+                                    >
+                                        <TableCell>
+                                            <div className="flex items-center gap-3 group">
+                                                {p.variants.length > 0 && (
+                                                    <ChevronDown className={cn("h-4 w-4 transition-transform", expandedRows.has(p.id) && "rotate-180")} />
+                                                )}
+                                                <Image src={p.imageUrl || 'https://placehold.co/40x40.png'} alt={p.name} width={32} height={32} className="rounded-sm ml-auto" data-ai-hint="product image"/>
+                                                <div>
+                                                    <p className="font-medium text-sm">{p.name}</p>
+                                                    <p className="text-xs text-muted-foreground">SKU: {p.sku || 'N/A'}</p>
+                                                </div>
                                             </div>
                                         </TableCell>
-                                        <TableCell className="text-center">{v.stock.toLocaleString('id-ID')}</TableCell>
-                                        <TableCell className="text-center font-semibold">{v.unitsSold.toLocaleString('id-ID')}</TableCell>
-                                        <TableCell className="text-right">{formatCurrency(v.assetValue)}</TableCell>
+                                        <TableCell className="text-center">{p.totalStock.toLocaleString('id-ID')}</TableCell>
+                                        <TableCell className="text-center font-semibold">{p.unitsSold.toLocaleString('id-ID')}</TableCell>
+                                        <TableCell className="text-right">{formatCurrency(p.totalAssetValue)}</TableCell>
                                     </TableRow>
-                                ))}
+                                    {expandedRows.has(p.id) && p.variants.map(v => (
+                                        <TableRow key={v.id} className="bg-muted/30 hover:bg-muted/50 border-b-0">
+                                            <TableCell className="pl-16 py-2">
+                                                <div>
+                                                    <p className="font-medium text-sm">{v.name}</p>
+                                                    <p className="text-xs text-muted-foreground">SKU: {v.sku || 'N/A'}</p>
+                                                </div>
+                                            </TableCell>
+                                            <TableCell className="text-center py-2">{v.stock.toLocaleString('id-ID')}</TableCell>
+                                            <TableCell className="text-center font-semibold py-2">{v.unitsSold.toLocaleString('id-ID')}</TableCell>
+                                            <TableCell className="text-right py-2">{formatCurrency(v.assetValue)}</TableCell>
+                                        </TableRow>
+                                    ))}
+                                     <TableRow className="border-b"><TableCell colSpan={4} className="p-0"></TableCell></TableRow>
                                 </React.Fragment>
                             ))}
                         </TableBody>
@@ -304,7 +306,6 @@ export default function AssetReportPage() {
     const [dialogContent, setDialogContent] = useState<{title: string, products: ProductPerformance[]}>({ title: '', products: [] });
     
     const [selectedPerfItem, setSelectedPerfItem] = useState<ProductPerformance | null>(null);
-    const [isVariantDialogOpen, setIsVariantDialogOpen] = useState(false);
     const [isBulkEditDialogOpen, setBulkEditDialogOpen] = useState(false);
 
     const productPerformanceData = useMemo(() => {
@@ -472,25 +473,6 @@ export default function AssetReportPage() {
                 title={dialogContent.title}
                 products={dialogContent.products}
             />
-            {selectedPerfItem && (
-                <VariantDisplayDialog
-                    open={isVariantDialogOpen}
-                    onOpenChange={setIsVariantDialogOpen}
-                    item={{
-                        id: selectedPerfItem.id,
-                        name: selectedPerfItem.name,
-                        imageUrl: selectedPerfItem.imageUrl,
-                        sku: selectedPerfItem.sku,
-                        category: selectedPerfItem.category,
-                        variants: selectedPerfItem.variants,
-                    }}
-                    onEditStock={() => {
-                        setIsVariantDialogOpen(false);
-                        setBulkEditDialogOpen(true);
-                    }}
-                    showEditButton={false}
-                />
-            )}
             {selectedPerfItem && (
                 <BulkEditVariantsDialog 
                     open={isBulkEditDialogOpen}
