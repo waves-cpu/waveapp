@@ -12,7 +12,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { subDays, parseISO, isAfter } from 'date-fns';
-import { Flame, TrendingUp, Anchor, Activity, DollarSign, Package, Eye, Search, Edit } from 'lucide-react';
+import { Flame, TrendingUp, Anchor, Activity, DollarSign, Package, Eye, Search, ChevronDown } from 'lucide-react';
 import Image from 'next/image';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -24,6 +24,7 @@ import { Input } from '@/components/ui/input';
 import { Pagination } from '@/components/ui/pagination';
 import { VariantDisplayDialog } from '@/app/components/variant-display-dialog';
 import { BulkEditVariantsDialog } from '@/app/components/bulk-edit-variants-dialog';
+import { cn } from '@/lib/utils';
 
 
 type VariantPerformance = {
@@ -61,6 +62,19 @@ const DIALOG_ITEMS_PER_PAGE = 50;
 
 function PerformanceTable({ title, products, icon, onViewAll, onProductClick }: { title: string; products: ProductPerformance[]; icon: React.ReactNode; onViewAll: () => void; onProductClick: (item: ProductPerformance) => void; }) {
     const totalAssetValue = useMemo(() => products.reduce((sum, p) => sum + p.totalAssetValue, 0), [products]);
+    const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
+
+    const toggleRow = (id: string) => {
+        setExpandedRows(prev => {
+            const newSet = new Set(prev);
+            if (newSet.has(id)) {
+                newSet.delete(id);
+            } else {
+                newSet.add(id);
+            }
+            return newSet;
+        });
+    };
 
     return (
         <Card>
@@ -89,12 +103,19 @@ function PerformanceTable({ title, products, icon, onViewAll, onProductClick }: 
                     </TableHeader>
                     <TableBody>
                         {products.length > 0 ? products.slice(0, DISPLAY_LIMIT).map(p => (
-                            <TableRow key={p.id}>
+                            <React.Fragment key={p.id}>
+                            <TableRow 
+                                onClick={() => p.variants.length > 0 && toggleRow(p.id)} 
+                                className={cn(p.variants.length > 0 && "cursor-pointer")}
+                            >
                                 <TableCell>
-                                     <div className="flex items-center gap-3 group cursor-pointer" onClick={() => onProductClick(p)}>
-                                        <Image src={p.imageUrl || 'https://placehold.co/40x40.png'} alt={p.name} width={32} height={32} className="rounded-sm" data-ai-hint="product image"/>
+                                     <div className="flex items-center gap-3 group">
+                                        {p.variants.length > 0 && (
+                                            <ChevronDown className={cn("h-4 w-4 transition-transform", expandedRows.has(p.id) && "rotate-180")} />
+                                        )}
+                                        <Image src={p.imageUrl || 'https://placehold.co/40x40.png'} alt={p.name} width={32} height={32} className="rounded-sm ml-auto" data-ai-hint="product image"/>
                                         <div>
-                                            <p className="font-medium text-sm hover:underline">{p.name}</p>
+                                            <p className="font-medium text-sm">{p.name}</p>
                                             <p className="text-xs text-muted-foreground">SKU: {p.sku || 'N/A'}</p>
                                         </div>
                                     </div>
@@ -103,6 +124,20 @@ function PerformanceTable({ title, products, icon, onViewAll, onProductClick }: 
                                 <TableCell className="text-center font-semibold">{p.unitsSold.toLocaleString('id-ID')}</TableCell>
                                 <TableCell className="text-right">{formatCurrency(p.totalAssetValue)}</TableCell>
                             </TableRow>
+                             {expandedRows.has(p.id) && p.variants.map(v => (
+                                <TableRow key={v.id} className="bg-muted/50 hover:bg-muted/80">
+                                    <TableCell className="pl-16">
+                                        <div>
+                                            <p className="font-medium text-sm">{v.name}</p>
+                                            <p className="text-xs text-muted-foreground">SKU: {v.sku || 'N/A'}</p>
+                                        </div>
+                                    </TableCell>
+                                    <TableCell className="text-center">{v.stock.toLocaleString('id-ID')}</TableCell>
+                                    <TableCell className="text-center font-semibold">{v.unitsSold.toLocaleString('id-ID')}</TableCell>
+                                    <TableCell className="text-right">{formatCurrency(v.assetValue)}</TableCell>
+                                </TableRow>
+                            ))}
+                            </React.Fragment>
                         )) : (
                             <TableRow>
                                 <TableCell colSpan={4} className="h-24 text-center">Tidak ada produk dalam kategori ini.</TableCell>
@@ -126,23 +161,35 @@ function ViewAllDialog({
   onOpenChange,
   title,
   products,
-  onProductClick,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
   title: string
   products: ProductPerformance[],
-  onProductClick: (item: ProductPerformance) => void;
 }) {
     const [searchTerm, setSearchTerm] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
+    const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
 
     useEffect(() => {
         if (!open) {
             setSearchTerm('');
             setCurrentPage(1);
+            setExpandedRows(new Set());
         }
     }, [open]);
+    
+    const toggleRow = (id: string) => {
+        setExpandedRows(prev => {
+            const newSet = new Set(prev);
+            if (newSet.has(id)) {
+                newSet.delete(id);
+            } else {
+                newSet.add(id);
+            }
+            return newSet;
+        });
+    };
 
     const filteredProducts = useMemo(() => {
         setCurrentPage(1);
@@ -194,12 +241,19 @@ function ViewAllDialog({
                         </TableHeader>
                         <TableBody>
                             {paginatedProducts.map(p => (
-                                <TableRow key={p.id}>
+                                <React.Fragment key={p.id}>
+                                <TableRow 
+                                    onClick={() => p.variants.length > 0 && toggleRow(p.id)} 
+                                    className={cn(p.variants.length > 0 && "cursor-pointer")}
+                                >
                                     <TableCell>
-                                        <div className="flex items-center gap-3 group cursor-pointer" onClick={() => onProductClick(p)}>
-                                            <Image src={p.imageUrl || 'https://placehold.co/40x40.png'} alt={p.name} width={32} height={32} className="rounded-sm" data-ai-hint="product image"/>
+                                        <div className="flex items-center gap-3 group">
+                                            {p.variants.length > 0 && (
+                                                <ChevronDown className={cn("h-4 w-4 transition-transform", expandedRows.has(p.id) && "rotate-180")} />
+                                            )}
+                                            <Image src={p.imageUrl || 'https://placehold.co/40x40.png'} alt={p.name} width={32} height={32} className="rounded-sm ml-auto" data-ai-hint="product image"/>
                                             <div>
-                                                <p className="font-medium text-sm hover:underline">{p.name}</p>
+                                                <p className="font-medium text-sm">{p.name}</p>
                                                 <p className="text-xs text-muted-foreground">SKU: {p.sku || 'N/A'}</p>
                                             </div>
                                         </div>
@@ -208,6 +262,20 @@ function ViewAllDialog({
                                     <TableCell className="text-center font-semibold">{p.unitsSold.toLocaleString('id-ID')}</TableCell>
                                     <TableCell className="text-right">{formatCurrency(p.totalAssetValue)}</TableCell>
                                 </TableRow>
+                                {expandedRows.has(p.id) && p.variants.map(v => (
+                                    <TableRow key={v.id} className="bg-muted/50 hover:bg-muted/80">
+                                        <TableCell className="pl-16">
+                                            <div>
+                                                <p className="font-medium text-sm">{v.name}</p>
+                                                <p className="text-xs text-muted-foreground">SKU: {v.sku || 'N/A'}</p>
+                                            </div>
+                                        </TableCell>
+                                        <TableCell className="text-center">{v.stock.toLocaleString('id-ID')}</TableCell>
+                                        <TableCell className="text-center font-semibold">{v.unitsSold.toLocaleString('id-ID')}</TableCell>
+                                        <TableCell className="text-right">{formatCurrency(v.assetValue)}</TableCell>
+                                    </TableRow>
+                                ))}
+                                </React.Fragment>
                             ))}
                         </TableBody>
                     </Table>
@@ -313,10 +381,7 @@ export default function AssetReportPage() {
     };
     
     const handleProductClick = useCallback((perfItem: ProductPerformance) => {
-        if (perfItem.variants && perfItem.variants.length > 0) {
-            setSelectedPerfItem(perfItem);
-            setIsVariantDialogOpen(true);
-        }
+        // This function is now handled by the inline accordion expand/collapse
     }, []);
 
     const getFullInventoryItem = (id: string): InventoryItem | undefined => {
@@ -406,11 +471,6 @@ export default function AssetReportPage() {
                 onOpenChange={setIsDialogOpen}
                 title={dialogContent.title}
                 products={dialogContent.products}
-                onProductClick={(perfItem) => {
-                    setIsDialogOpen(false);
-                    // A slight delay to allow the first dialog to close before opening the next
-                    setTimeout(() => handleProductClick(perfItem), 150);
-                }}
             />
             {selectedPerfItem && (
                 <VariantDisplayDialog
