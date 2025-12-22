@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
@@ -87,6 +88,17 @@ export function RecordSaleForReceiptDialog({
 
   const addToCart = useCallback((item: InventoryItem, variant?: InventoryItemVariant) => {
     const itemToAddRaw = variant || item;
+    
+    if ((itemToAddRaw.stock ?? 0) <= 0) {
+        toast({
+            variant: "destructive",
+            title: "Stok Habis",
+            description: `Stok untuk ${item.name} ${itemToAddRaw.name ? `- ${itemToAddRaw.name}` : ''} sudah habis.`
+        });
+        playErrorSound();
+        return;
+    }
+    
     const onlinePriceResult = itemToAddRaw.channelPrices?.find(p => ['shopee', 'tiktok', 'lazada'].includes(p.channel));
     const price = onlinePriceResult?.price ?? itemToAddRaw.price!;
 

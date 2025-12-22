@@ -162,6 +162,11 @@ export function PosCart() {
                 playErrorSound();
                 return;
             }
+             if (accessory.stock <= 0) {
+                toast({ variant: 'destructive', title: 'Stok Habis', description: `Stok untuk ${accessory.name} sudah habis.` });
+                playErrorSound();
+                return;
+            }
             itemToAdd = {
                 id: accessory.id,
                 productId: accessory.id,
@@ -176,6 +181,11 @@ export function PosCart() {
         } else { // It's a product
             const product = item as InventoryItem;
             const itemToAddRaw = variant || product;
+            if ((itemToAddRaw.stock ?? 0) <= 0) {
+                toast({ variant: 'destructive', title: 'Stok Habis', description: `Stok untuk ${product.name} ${itemToAddRaw.name ? `- ${itemToAddRaw.name}` : ''} sudah habis.` });
+                playErrorSound();
+                return;
+            }
             const price = getPriceForChannel(itemToAddRaw, 'pos');
             
             itemToAdd = {
@@ -228,18 +238,8 @@ export function PosCart() {
                 if (product.variants && product.variants.length > 1) {
                     setProductForVariantSelection(product);
                 } else if (product.variants && product.variants.length === 1) {
-                    if (product.variants[0].stock <= 0) {
-                        toast({ variant: "destructive", title: "Stok Habis", description: `Stok untuk ${product.name} - ${product.variants[0].name} sudah habis.` });
-                        playErrorSound();
-                        return;
-                    }
                     addToCart(product, product.variants[0]);
                 } else {
-                    if (product.stock !== undefined && product.stock <= 0) {
-                        toast({ variant: "destructive", title: "Stok Habis", description: `Stok untuk ${product.name} sudah habis.` });
-                        playErrorSound();
-                        return;
-                    }
                     addToCart(product);
                 }
             }
@@ -475,5 +475,3 @@ export function PosCart() {
         </>
     );
 }
-
-    

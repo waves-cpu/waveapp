@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
@@ -194,10 +193,6 @@ export default function ShopeeChannelPage() {
         setAwb('');
         setReceiptForSale(added);
         setIsSaleDialogOpen(true);
-        toast({
-            title: 'Resi Baru Ditambahkan',
-            description: 'Silakan tambahkan produk untuk resi ini.',
-        });
     } catch (error) {
         playErrorSound();
         let title = 'Input Gagal';
@@ -405,4 +400,3 @@ export default function ShopeeChannelPage() {
     </AppLayout>
   );
 }
-
