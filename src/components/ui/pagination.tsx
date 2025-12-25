@@ -142,9 +142,9 @@ const Pagination = ({ totalPages, currentPage, onPageChange, className, scrollCo
 
     const handleScrollToTop = () => {
         if (scrollContainerRef?.current) {
-            scrollContainerRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+            scrollContainerRef.current.scrollTo({ top: 0, behavior: 'instant' });
         } else if (typeof window !== 'undefined') {
-            window.scrollTo({ top: 0, behavior: 'smooth' });
+            window.scrollTo({ top: 0, behavior: 'instant' });
         }
     };
     
