@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useMemo, useEffect, useRef } from 'react';
@@ -58,7 +59,7 @@ export function ProductSelectionDialog({
 
   useEffect(() => {
       if(open) {
-        setSelectedIds(initialSelectedIds);
+        setSelectedIds(new Set(initialSelectedIds));
         setSearchTerm('');
         setCategoryFilter(null);
         setCurrentPage(1);
@@ -171,7 +172,7 @@ export function ProductSelectionDialog({
                 </SelectContent>
             </Select>
         </div>
-        <div className="flex-grow overflow-hidden border rounded-md">
+        <div className="flex-grow flex flex-col overflow-hidden border rounded-md">
            <ScrollArea className="h-full" viewportRef={scrollViewportRef}>
             <Table>
                 <TableHeader className="sticky top-0 bg-card z-10">
@@ -287,13 +288,33 @@ export function ProductSelectionDialog({
             </Table>
             </ScrollArea>
         </div>
-        <div className="flex-grow-0 pt-4 flex flex-col-reverse sm:flex-row sm:justify-between sm:items-center gap-4">
-            <Pagination
-                totalPages={totalPages}
-                currentPage={currentPage}
-                onPageChange={setCurrentPage}
-                scrollContainerRef={scrollViewportRef}
-            />
+        <div className="flex-grow-0 pt-4 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+            <div className="flex items-center justify-start gap-2">
+                 <Pagination
+                    totalPages={totalPages}
+                    currentPage={currentPage}
+                    onPageChange={setCurrentPage}
+                    scrollContainerRef={scrollViewportRef}
+                />
+                 <Select
+                    value={`${itemsPerPage}`}
+                    onValueChange={(value) => {
+                        setItemsPerPage(Number(value))
+                        setCurrentPage(1)
+                    }}
+                    >
+                    <SelectTrigger className="h-8 w-[150px]">
+                        <SelectValue placeholder={itemsPerPage} />
+                    </SelectTrigger>
+                    <SelectContent side="top">
+                        {[10, 20, 50].map((pageSize) => (
+                        <SelectItem key={pageSize} value={`${pageSize}`}>
+                            {`${pageSize} / ${t.productSelectionDialog.page}`}
+                        </SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
+            </div>
             <div className="flex gap-2 justify-end">
                 <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>{t.common.cancel}</Button>
                 <Button type="button" onClick={handleSave}>{t.productSelectionDialog.addItems.replace('{count}', selectedIds.size.toString())}</Button>

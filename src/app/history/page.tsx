@@ -550,7 +550,10 @@ export default function HistoryPage() {
                 </Table>
             </CardContent>
           {paginatedHistory.length > 0 && (
-            <div className="flex items-center justify-end p-4 border-t">
+            <div className="flex items-center justify-between p-4 border-t">
+                 <div className="text-xs text-muted-foreground">
+                    Menampilkan {Math.min(itemsPerPage, filteredHistory.length)} dari {filteredHistory.length} entri.
+                 </div>
                 <div className="flex items-center gap-4">
                     <Pagination
                         totalPages={totalPages}
