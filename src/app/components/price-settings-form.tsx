@@ -222,6 +222,10 @@ export function PriceSettingsForm() {
 
   const selectedItemIds = useMemo(() => new Set(selectedItems.map(item => item.id)), [selectedItems]);
 
+  const availableItemsForSelection = useMemo(() => {
+    return items.filter(item => !item.isArchived);
+  }, [items]);
+
   return (
     <>
     <Form {...form}>
@@ -401,7 +405,7 @@ export function PriceSettingsForm() {
         open={isProductSelectionOpen}
         onOpenChange={setProductSelectionOpen}
         onSelect={handleProductsSelected}
-        availableItems={items}
+        availableItems={availableItemsForSelection}
         categories={categories}
         initialSelectedIds={selectedItemIds}
         title="Pilih Produk"
