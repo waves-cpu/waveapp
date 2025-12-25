@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -44,6 +44,7 @@ export function ProductSelectionDialog({ open, onOpenChange, onSelect, available
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(ITEMS_PER_PAGE);
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
 
   const filteredItems = useMemo(() => {
     return availableItems
@@ -162,7 +163,7 @@ export function ProductSelectionDialog({ open, onOpenChange, onSelect, available
             </Select>
         </div>
         <div className="flex-grow overflow-hidden border rounded-md">
-           <ScrollArea className="h-full">
+           <ScrollArea className="h-full" ref={scrollAreaRef}>
             <Table>
                 <TableHeader className="sticky top-0 bg-card z-10">
                 <TableRow>
@@ -281,6 +282,7 @@ export function ProductSelectionDialog({ open, onOpenChange, onSelect, available
                         totalPages={totalPages}
                         currentPage={currentPage}
                         onPageChange={setCurrentPage}
+                        scrollContainerRef={scrollAreaRef}
                     />
                     <Select
                         value={`${itemsPerPage}`}
