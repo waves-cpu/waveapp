@@ -35,6 +35,7 @@ import { ProductSelectionDialog } from './product-selection-dialog';
 import { Card, CardContent } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const itemPriceSchema = z.object({
     id: z.string(),
@@ -81,6 +82,7 @@ export function PriceSettingsForm() {
   const [isProductSelectionOpen, setProductSelectionOpen] = useState(false);
   const [selectedItems, setSelectedItems] = useState<SelectedItem[]>([]);
   const [rowSelection, setRowSelection] = useState<Record<string, boolean>>({});
+  const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
 
   const flattenedItemsById = useMemo(() => {
     const map = new Map<string, SelectedItem>();
@@ -223,8 +225,11 @@ export function PriceSettingsForm() {
   const selectedItemIds = useMemo(() => new Set(selectedItems.map(item => item.id)), [selectedItems]);
 
   const availableItemsForSelection = useMemo(() => {
-    return items.filter(item => !item.isArchived);
-  }, [items]);
+    return items.filter(item => 
+        !item.isArchived &&
+        (!categoryFilter || item.category === categoryFilter)
+    );
+  }, [items, categoryFilter]);
 
   return (
     <>
@@ -235,10 +240,24 @@ export function PriceSettingsForm() {
                     <Settings className="h-16 w-16 text-muted-foreground" />
                     <h3 className="mt-4 text-lg font-semibold">{TPrice.title}</h3>
                     <p className="mt-2 text-sm text-muted-foreground">{TPrice.description}</p>
-                    <Button type="button" onClick={() => setProductSelectionOpen(true)} className="mt-6">
-                        <PlusCircle className="mr-2 h-4 w-4" />
-                        Pilih Produk untuk Diedit
-                    </Button>
+                    <div className="flex items-center gap-2 mt-6">
+                        <Select onValueChange={setCategoryFilter}>
+                            <SelectTrigger className="w-[220px]">
+                                <SelectValue placeholder="Pilih Kategori (Wajib)" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {categories.map((category) => (
+                                    <SelectItem key={category} value={category}>
+                                        {category}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                        <Button type="button" onClick={() => setProductSelectionOpen(true)} disabled={!categoryFilter}>
+                            <PlusCircle className="mr-2 h-4 w-4" />
+                            Pilih Produk untuk Diedit
+                        </Button>
+                    </div>
                 </div>
             ) : (
                 <>
