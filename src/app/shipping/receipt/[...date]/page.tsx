@@ -167,35 +167,38 @@ export default function ReceiptPage() {
 
     const handleDelete = async (receiptToDelete: ShippingReceipt) => {
         if (!receiptToDelete) return;
+        const { toast: toastRef } = toast({ title: t.deleteInProgress, description: `Menghapus resi ${receiptToDelete.awb}...` });
         try {
             if (receiptToDelete.transactionId) {
                 await cancelSaleTransaction(receiptToDelete.transactionId);
             }
             await deleteShippingReceipt(receiptToDelete.id);
-            toast({ title: t.deleteSuccess, description: 'Resi dihapus dan stok telah dikembalikan.' });
+            toastRef.update({ id: toastRef.id, title: t.deleteSuccess, description: 'Resi dihapus dan stok telah dikembalikan.' });
         } catch (error) {
-            toast({ variant: 'destructive', title: t.deleteError, description: 'Gagal menghapus resi dan mengembalikan stok.' });
+            toastRef.update({ id: toastRef.id, title: t.deleteError, description: 'Gagal menghapus resi dan mengembalikan stok.', variant: 'destructive' });
         }
     };
     
     const handleChangeStatus = async (receipt: ShippingReceipt, newStatus: string) => {
+        const { toast: toastRef } = toast({ title: t.statusUpdateInProgress, description: `Mengubah status resi...` });
         try {
             await updateShippingReceiptStatus(receipt.id, newStatus);
-            toast({ title: t.statusUpdateSuccess, description: t.statusUpdateSuccessDesc.replace('{status}', newStatus) });
+            toastRef.update({ id: toastRef.id, title: t.statusUpdateSuccess, description: t.statusUpdateSuccessDesc.replace('{status}', newStatus) });
         } catch (error) {
-            toast({ variant: 'destructive', title: t.statusUpdateError, description: t.statusUpdateErrorDesc });
+            toastRef.update({ id: toastRef.id, title: t.statusUpdateError, description: t.statusUpdateErrorDesc, variant: 'destructive' });
         }
     };
 
     const handleProcessShipment = async () => {
         if (selectedIds.size === 0) return;
         setIsProcessing(true);
+        const { toast: toastRef } = toast({ title: t.bulkProcessInProgress, description: `Memproses ${selectedIds.size} resi...` });
         try {
             await updateShippingReceiptsStatus(Array.from(selectedIds), 'Dikirim');
-            toast({ title: t.bulkProcessSuccess, description: t.bulkProcessSuccessDesc.replace('{count}', selectedIds.size.toString()) });
+            toastRef.update({ id: toastRef.id, title: t.bulkProcessSuccess, description: t.bulkProcessSuccessDesc.replace('{count}', selectedIds.size.toString()) });
             setSelectedIds(new Set());
         } catch (error) {
-            toast({ variant: 'destructive', title: t.bulkProcessError, description: t.bulkProcessErrorDesc });
+            toastRef.update({ id: toastRef.id, title: t.bulkProcessError, description: t.bulkProcessErrorDesc, variant: 'destructive' });
         } finally {
             setIsProcessing(false);
         }
@@ -416,7 +419,7 @@ export default function ReceiptPage() {
                                                                 <DropdownMenuItem onClick={() => handleChangeStatus(item, 'Return')} className="text-destructive">{t.actions.markAsReturn}</DropdownMenuItem>
                                                             </>
                                                          )}
-                                                         {item.status === 'Dibatalkan' && (
+                                                         {['Dibatalkan', 'Return'].includes(item.status) && (
                                                               <AlertDialog>
                                                                 <AlertDialogTrigger asChild>
                                                                     <DropdownMenuItem onSelect={e => e.preventDefault()} className="text-destructive">
@@ -483,7 +486,7 @@ function useReceiptPageLogic() {
         updateShippingReceiptsStatus,
         getPendingReceiptsBeforeDate
     } = useInventory();
-    const { toast } = useToast();
+    const { toast: showToast } = useToast();
     const { language } = useLanguage();
     const t = translations[language].shipping.receiptPage;
     const router = useRouter();
@@ -492,7 +495,7 @@ function useReceiptPageLogic() {
     return {
         allShippingReceipts,
         loading: inventoryLoading,
-        toast,
+        toast: showToast,
         language,
         t,
         router,
