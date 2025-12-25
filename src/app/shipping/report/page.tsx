@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { FileDown, Truck, PackageCheck, Undo2, Ban, History } from 'lucide-react';
+import { FileDown, Truck, PackageCheck, Undo2, Ban, History, Loader2 } from 'lucide-react';
 import { useInventory } from '@/hooks/use-inventory';
 import type { ShippingReceipt } from '@/types';
 import { format, parseISO, startOfMonth, endOfMonth, eachDayOfInterval } from 'date-fns';
@@ -64,6 +64,7 @@ export default function ReceiptReportPage() {
     
     const [selectedMonth, setSelectedMonth] = useState<number | undefined>(undefined);
     const [selectedYear, setSelectedYear] = useState<number | undefined>(undefined);
+    const [isDownloading, setIsDownloading] = useState(false);
 
     useEffect(() => {
         const currentDate = new Date();
@@ -136,38 +137,55 @@ export default function ReceiptReportPage() {
     }, [fetchReportData]);
 
     const downloadExcel = useCallback(() => {
-        toast({ title: 'Memulai unduhan', description: 'Laporan Excel sedang disiapkan...' });
-        if (selectedMonth === undefined || selectedYear === undefined) return;
-        const dataToExport = reportData.map(item => ({
-            'Tanggal': item.date,
-            'Perlu Diproses': item['Perlu Diproses'],
-            'Dikirim': item.Dikirim,
-            'Selesai': item.Selesai,
-            'Return Selesai': item['Return Selesai'],
-            'Dibatalkan': item.Dibatalkan,
-            'Return': item.Return,
-            'Total': item.Total
-        }));
+        setIsDownloading(true);
+        const { id, update } = toast({ title: 'Memulai unduhan', description: 'Laporan Excel sedang disiapkan...' });
 
-        const totalsRow = {
-            'Tanggal': 'TOTAL',
-            'Perlu Diproses': totalCounts['Perlu Diproses'] || 0,
-            'Dikirim': totalCounts.Dikirim || 0,
-            'Selesai': totalCounts.Selesai || 0,
-            'Return Selesai': totalCounts['Return Selesai'] || 0,
-            'Dibatalkan': totalCounts.Dibatalkan || 0,
-            'Return': totalCounts.Return || 0,
-            'Total': totalCounts.Total || 0,
-        };
-        
-        dataToExport.push(totalsRow);
+        if (selectedMonth === undefined || selectedYear === undefined) {
+            update({ id, title: 'Gagal', description: 'Bulan atau tahun tidak valid.', variant: 'destructive' });
+            setIsDownloading(false);
+            return;
+        }
 
-        const worksheet = XLSX.utils.json_to_sheet(dataToExport);
-        const workbook = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(workbook, worksheet, 'Laporan Resi');
-        
-        const monthName = format(new Date(selectedYear, selectedMonth), 'MMMM-yyyy', { locale: localeId });
-        XLSX.writeFile(workbook, `Laporan_Resi_${monthName}.xlsx`);
+        setTimeout(() => {
+            const dataToExport = reportData.map(item => ({
+                'Tanggal': item.date,
+                'Perlu Diproses': item['Perlu Diproses'],
+                'Dikirim': item.Dikirim,
+                'Selesai': item.Selesai,
+                'Return Selesai': item['Return Selesai'],
+                'Dibatalkan': item.Dibatalkan,
+                'Return': item.Return,
+                'Total': item.Total
+            }));
+
+            const totalsRow = {
+                'Tanggal': 'TOTAL',
+                'Perlu Diproses': totalCounts['Perlu Diproses'] || 0,
+                'Dikirim': totalCounts.Dikirim || 0,
+                'Selesai': totalCounts.Selesai || 0,
+                'Return Selesai': totalCounts['Return Selesai'] || 0,
+                'Dibatalkan': totalCounts.Dibatalkan || 0,
+                'Return': totalCounts.Return || 0,
+                'Total': totalCounts.Total || 0,
+            };
+            
+            dataToExport.push(totalsRow);
+
+            const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, 'Laporan Resi');
+            
+            const monthName = format(new Date(selectedYear, selectedMonth), 'MMMM-yyyy', { locale: localeId });
+            const fileName = `Laporan_Resi_${monthName}.xlsx`;
+            XLSX.writeFile(workbook, fileName);
+
+            update({
+                id,
+                title: 'Unduhan Siap',
+                description: `File '${fileName}' telah diunduh. Periksa folder unduhan browser Anda.`
+            });
+            setIsDownloading(false);
+        }, 500); // Small delay to allow UI to update
     }, [reportData, totalCounts, selectedMonth, selectedYear, toast]);
 
     return (
@@ -209,9 +227,9 @@ export default function ReceiptReportPage() {
                             </SelectContent>
                         </Select>
                         )}
-                        <Button onClick={downloadExcel} variant="outline" size="sm">
-                            <FileDown className="mr-2 h-4 w-4" />
-                            Download Laporan
+                        <Button onClick={downloadExcel} variant="outline" size="sm" disabled={isDownloading}>
+                            {isDownloading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileDown className="mr-2 h-4 w-4" />}
+                            {isDownloading ? 'Mengekspor...' : 'Download Laporan'}
                         </Button>
                     </div>
                 </div>

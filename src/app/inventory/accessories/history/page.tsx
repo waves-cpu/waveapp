@@ -161,32 +161,41 @@ export default function AccessoryHistoryPage() {
     setDatePickerOpen(false);
   };
 
-  const downloadExcel = async () => {
-    toast({ title: 'Memulai unduhan', description: 'Laporan Excel sedang disiapkan...' });
+  const downloadExcel = () => {
     setIsExporting(true);
-    await new Promise(resolve => setTimeout(resolve, 500)); // Simulate processing
-    const headers = ['Tanggal', 'Nama Produk', 'Varian', 'SKU', 'Kategori', 'Alasan', 'Perubahan', 'Stok Akhir'];
-    const data = filteredHistory.map(entry => {
-        return [
-            format(entry.date, 'yyyy-MM-dd HH:mm:ss'),
-            entry.itemName || '',
-            entry.variantName || '',
-            entry.variantSku || '',
-            entry.itemCategory || '',
-            entry.reason,
-            entry.change,
-            entry.newStockLevel ?? 'N/A'
-        ];
-    });
+    const { id, update } = toast({ title: 'Memulai unduhan', description: 'Laporan Excel sedang disiapkan...' });
 
-    const worksheet = XLSX.utils.aoa_to_sheet([headers, ...data]);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Riwayat Stok Aksesoris');
+    setTimeout(() => {
+        const headers = ['Tanggal', 'Nama Produk', 'Varian', 'SKU', 'Kategori', 'Alasan', 'Perubahan', 'Stok Akhir'];
+        const data = filteredHistory.map(entry => {
+            return [
+                format(entry.date, 'yyyy-MM-dd HH:mm:ss'),
+                entry.itemName || '',
+                entry.variantName || '',
+                entry.variantSku || '',
+                entry.itemCategory || '',
+                entry.reason,
+                entry.change,
+                entry.newStockLevel ?? 'N/A'
+            ];
+        });
 
-    const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
-    const blob = new Blob([excelBuffer], { type: 'application/octet-stream' });
-    saveAs(blob, 'riwayat_stok_aksesoris.xlsx');
-    setIsExporting(false);
+        const worksheet = XLSX.utils.aoa_to_sheet([headers, ...data]);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, 'Riwayat Stok Aksesoris');
+
+        const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+        const fileName = 'riwayat_stok_aksesoris.xlsx';
+        const blob = new Blob([excelBuffer], { type: 'application/octet-stream' });
+        saveAs(blob, fileName);
+        
+        update({
+            id,
+            title: "Unduhan Siap",
+            description: `File '${fileName}' telah diunduh. Periksa folder unduhan browser Anda.`
+        });
+        setIsExporting(false);
+    }, 500);
   };
 
   return (

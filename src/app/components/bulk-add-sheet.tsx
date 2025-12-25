@@ -73,6 +73,7 @@ export function BulkAddSheet({ open, onOpenChange }: BulkAddSheetProps) {
   const { toast } = useToast();
   const [data, setData] = useState<ProductRow[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
   const [fileName, setFileName] = useState('');
   const [importHistory, setImportHistory] = useState<BulkImportHistory[]>([]);
   const [detailDialogData, setDetailDialogData] = useState<DetailDialogData | null>(null);
@@ -131,54 +132,60 @@ export function BulkAddSheet({ open, onOpenChange }: BulkAddSheetProps) {
   }, []);
 
   const handleDownloadTemplate = () => {
-    const { toast: toastRef } = toast({ title: 'Memulai unduhan', description: 'Template produk sedang disiapkan...' });
-    const templateData: Partial<ProductRow>[] = [
-      {
-        parent_sku: 'TSHIRT-COOL-PARENT',
-        product_name: 'Cool T-Shirt',
-        category: 'T-Shirt Oversize',
-        image_url: 'https://example.com/image.png',
-        variant_sku: 'TSHIRT-COOL-L',
-        variant_name: 'Large',
-        price: 150000,
-        stock: 50,
-        cost_price: 75000,
-      },
-      {
-        parent_sku: 'TSHIRT-COOL-PARENT',
-        product_name: '',
-        category: '',
-        image_url: '',
-        variant_sku: 'TSHIRT-COOL-M',
-        variant_name: 'Medium',
-        price: 150000,
-        stock: 100,
-        cost_price: 75000,
-      },
-       {
-        parent_sku: 'HAT-SIMPLE',
-        product_name: 'Simple Hat',
-        category: 'Caps',
-        image_url: 'https://example.com/hat.png',
-        variant_sku: '',
-        variant_name: '',
-        price: 80000,
-        stock: 200,
-        cost_price: 40000,
-      },
-    ];
-    const worksheet = XLSX.utils.json_to_sheet(templateData);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Products');
-    const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
-    const blob = new Blob([excelBuffer], { type: 'application/octet-stream' });
-    const fileName = 'template_produk_massal.xlsx';
-    saveAs(blob, fileName);
-    toastRef.update({
-        id: toastRef.id,
-        title: "Unduhan Siap",
-        description: `File '${fileName}' telah diunduh. Periksa folder unduhan browser Anda.`
-    });
+    setIsDownloading(true);
+    const { id, update } = toast({ title: 'Memulai unduhan', description: 'Template produk sedang disiapkan...' });
+
+    setTimeout(() => {
+      const templateData: Partial<ProductRow>[] = [
+        {
+          parent_sku: 'TSHIRT-COOL-PARENT',
+          product_name: 'Cool T-Shirt',
+          category: 'T-Shirt Oversize',
+          image_url: 'https://example.com/image.png',
+          variant_sku: 'TSHIRT-COOL-L',
+          variant_name: 'Large',
+          price: 150000,
+          stock: 50,
+          cost_price: 75000,
+        },
+        {
+          parent_sku: 'TSHIRT-COOL-PARENT',
+          product_name: '',
+          category: '',
+          image_url: '',
+          variant_sku: 'TSHIRT-COOL-M',
+          variant_name: 'Medium',
+          price: 150000,
+          stock: 100,
+          cost_price: 75000,
+        },
+        {
+          parent_sku: 'HAT-SIMPLE',
+          product_name: 'Simple Hat',
+          category: 'Caps',
+          image_url: 'https://example.com/hat.png',
+          variant_sku: '',
+          variant_name: '',
+          price: 80000,
+          stock: 200,
+          cost_price: 40000,
+        },
+      ];
+      const worksheet = XLSX.utils.json_to_sheet(templateData);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Products');
+      const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+      const blob = new Blob([excelBuffer], { type: 'application/octet-stream' });
+      const fileName = 'template_produk_massal.xlsx';
+      saveAs(blob, fileName);
+      
+      update({
+          id,
+          title: "Unduhan Siap",
+          description: `File '${fileName}' telah diunduh. Periksa folder unduhan browser Anda.`
+      });
+      setIsDownloading(false);
+    }, 500);
   };
 
   const handleImport = async () => {
@@ -276,8 +283,8 @@ export function BulkAddSheet({ open, onOpenChange }: BulkAddSheetProps) {
               <div className="flex flex-col items-center justify-center p-4 border-2 border-dashed rounded-lg text-center">
                 <Download className="h-8 w-8 text-muted-foreground mb-2" />
                 <h3 className="font-semibold text-sm">{TBulk.step1}</h3>
-                <Button onClick={handleDownloadTemplate} variant="outline" size="sm" className="mt-2">
-                  {TBulk.downloadTemplate}
+                <Button onClick={handleDownloadTemplate} variant="outline" size="sm" className="mt-2" disabled={isDownloading}>
+                  {isDownloading ? <Loader2 className="h-4 w-4 animate-spin" /> : TBulk.downloadTemplate}
                 </Button>
               </div>
 

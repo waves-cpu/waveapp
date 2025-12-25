@@ -216,6 +216,7 @@ export default function ReturnPage() {
     
     const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
     const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+    const [isDownloading, setIsDownloading] = useState(false);
 
     const years = useMemo(() => {
         const currentYear = new Date().getFullYear();
@@ -326,20 +327,33 @@ export default function ReturnPage() {
     };
     
     const downloadExcel = useCallback(() => {
-        const dataToExport = filteredReturns.map(item => ({
-            'No. Resi': item.awb,
-            'Tanggal': format(parseISO(item.date), 'dd MMM yyyy HH:mm'),
-            'Kanal': item.channel,
-            'Status': item.status
-        }));
-        
-        const worksheet = XLSX.utils.json_to_sheet(dataToExport);
-        const workbook = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(workbook, worksheet, 'Data Return');
+        setIsDownloading(true);
+        const { id, update } = toast({ title: 'Memulai unduhan', description: 'Laporan Excel sedang disiapkan...' });
 
-        const monthName = format(new Date(selectedYear, selectedMonth), 'MMMM-yyyy', { locale: localeId });
-        XLSX.writeFile(workbook, `Laporan_Return_${monthName}.xlsx`);
-    }, [filteredReturns, selectedMonth, selectedYear]);
+        setTimeout(() => {
+            const dataToExport = filteredReturns.map(item => ({
+                'No. Resi': item.awb,
+                'Tanggal': format(parseISO(item.date), 'dd MMM yyyy HH:mm'),
+                'Kanal': item.channel,
+                'Status': item.status
+            }));
+            
+            const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, 'Data Return');
+
+            const monthName = format(new Date(selectedYear, selectedMonth), 'MMMM-yyyy', { locale: localeId });
+            const fileName = `Laporan_Return_${monthName}.xlsx`;
+            XLSX.writeFile(workbook, fileName);
+
+            update({
+                id,
+                title: "Unduhan Siap",
+                description: `File '${fileName}' telah diunduh. Periksa folder unduhan browser Anda.`
+            });
+            setIsDownloading(false);
+        }, 500);
+    }, [filteredReturns, selectedMonth, selectedYear, toast]);
 
     return (
         <AppLayout>
@@ -385,9 +399,9 @@ export default function ReturnPage() {
                                 ))}
                             </SelectContent>
                         </Select>
-                        <Button onClick={downloadExcel} variant="outline" size="sm">
-                            <FileDown className="mr-2 h-4 w-4" />
-                            Download Laporan
+                        <Button onClick={downloadExcel} variant="outline" size="sm" disabled={isDownloading}>
+                            {isDownloading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileDown className="mr-2 h-4 w-4" />}
+                            {isDownloading ? 'Mengekspor...' : 'Download Laporan'}
                         </Button>
                     </div>
                 </div>
@@ -534,4 +548,5 @@ export default function ReturnPage() {
 }
 
     
+
 

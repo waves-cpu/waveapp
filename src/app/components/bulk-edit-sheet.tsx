@@ -61,6 +61,7 @@ export function BulkEditSheet({ open, onOpenChange }: BulkEditSheetProps) {
   const { toast } = useToast();
   const [data, setData] = useState<Partial<ProductRow>[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
   const [fileName, setFileName] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
   const { language } = useLanguage();
@@ -107,57 +108,64 @@ export function BulkEditSheet({ open, onOpenChange }: BulkEditSheetProps) {
   }, []);
 
   const handleDownloadTemplate = () => {
-    const { toast: toastRef } = toast({ title: 'Memulai unduhan', description: 'Template produk sedang disiapkan...' });
-    const filteredItems = categoryFilter ? items.filter(item => item.category === categoryFilter) : items;
+    setIsDownloading(true);
+    const { id, update } = toast({ title: 'Memulai unduhan', description: 'Template produk sedang disiapkan...' });
 
-    const exportData: ProductRow[] = [];
-    filteredItems.forEach(item => {
-        if (item.variants && item.variants.length > 0) {
-            item.variants.forEach((variant, index) => {
-                exportData.push({
-                    parent_sku: item.sku || '',
-                    product_name: index === 0 ? item.name : '',
-                    category: index === 0 ? item.category : '',
-                    image_url: index === 0 ? item.imageUrl || '' : '',
-                    variant_sku: variant.sku || '',
-                    variant_name: variant.name,
-                    price: variant.price,
-                    stock: variant.stock,
-                    cost_price: variant.costPrice || 0
-                });
-            });
-        } else {
-             exportData.push({
-                parent_sku: item.sku || '',
-                product_name: item.name,
-                category: item.category,
-                image_url: item.imageUrl || '',
-                variant_sku: '',
-                variant_name: '',
-                price: item.price || 0,
-                stock: item.stock || 0,
-                cost_price: item.costPrice || 0
-            });
-        }
-    });
+    setTimeout(() => {
+      const filteredItems = categoryFilter ? items.filter(item => item.category === categoryFilter) : items;
 
-    if (exportData.length === 0) {
-        toast({ variant: 'destructive', title: 'Tidak ada data', description: 'Tidak ada produk untuk diekspor pada kategori ini.' });
-        return;
-    }
+      const exportData: ProductRow[] = [];
+      filteredItems.forEach(item => {
+          if (item.variants && item.variants.length > 0) {
+              item.variants.forEach((variant, index) => {
+                  exportData.push({
+                      parent_sku: item.sku || '',
+                      product_name: index === 0 ? item.name : '',
+                      category: index === 0 ? item.category : '',
+                      image_url: index === 0 ? item.imageUrl || '' : '',
+                      variant_sku: variant.sku || '',
+                      variant_name: variant.name,
+                      price: variant.price,
+                      stock: variant.stock,
+                      cost_price: variant.costPrice || 0
+                  });
+              });
+          } else {
+              exportData.push({
+                  parent_sku: item.sku || '',
+                  product_name: item.name,
+                  category: item.category,
+                  image_url: item.imageUrl || '',
+                  variant_sku: '',
+                  variant_name: '',
+                  price: item.price || 0,
+                  stock: item.stock || 0,
+                  cost_price: item.costPrice || 0
+              });
+          }
+      });
 
-    const worksheet = XLSX.utils.json_to_sheet(exportData);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Products');
-    const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
-    const blob = new Blob([excelBuffer], { type: 'application/octet-stream' });
-    const fileName = `edit_produk_${categoryFilter || 'semua'}.xlsx`;
-    saveAs(blob, fileName);
-    toastRef.update({
-        id: toastRef.id,
-        title: "Unduhan Siap",
-        description: `File '${fileName}' telah diunduh. Periksa folder unduhan browser Anda.`
-    });
+      if (exportData.length === 0) {
+          toast({ variant: 'destructive', title: 'Tidak ada data', description: 'Tidak ada produk untuk diekspor pada kategori ini.' });
+          setIsDownloading(false);
+          return;
+      }
+
+      const worksheet = XLSX.utils.json_to_sheet(exportData);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Products');
+      const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+      const blob = new Blob([excelBuffer], { type: 'application/octet-stream' });
+      const fileName = `edit_produk_${categoryFilter || 'semua'}.xlsx`;
+      saveAs(blob, fileName);
+      
+      update({
+          id,
+          title: "Unduhan Siap",
+          description: `File '${fileName}' telah diunduh. Periksa folder unduhan browser Anda.`
+      });
+      setIsDownloading(false);
+    }, 500);
   };
 
   const handleImport = async () => {
@@ -225,8 +233,8 @@ export function BulkEditSheet({ open, onOpenChange }: BulkEditSheetProps) {
                                 ))}
                             </SelectContent>
                         </Select>
-                        <Button onClick={handleDownloadTemplate} variant="outline">
-                            Unduh
+                        <Button onClick={handleDownloadTemplate} variant="outline" disabled={isDownloading}>
+                            {isDownloading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Unduh'}
                         </Button>
                     </div>
                 </div>

@@ -291,57 +291,59 @@ export default function HistoryPage() {
       return '#';
   }
 
-  const downloadExcel = async () => {
-    const { toast: toastRef } = toast({ title: 'Memulai unduhan', description: 'Laporan Excel sedang disiapkan...' });
+  const downloadExcel = () => {
     setIsExporting(true);
-    await new Promise(resolve => setTimeout(resolve, 500)); // Simulate processing time
-
-    const headers = ['Tanggal', 'Nama Produk', 'Varian', 'SKU', 'Kategori', 'Alasan', 'Perubahan', 'Stok Akhir'];
+    const { id, update } = toast({ title: 'Memulai unduhan', description: 'Laporan Excel sedang disiapkan...' });
     
-    const data: (string | number)[][] = [];
+    setTimeout(() => {
+        const headers = ['Tanggal', 'Nama Produk', 'Varian', 'SKU', 'Kategori', 'Alasan', 'Perubahan', 'Stok Akhir'];
+        
+        const data: (string | number)[][] = [];
 
-    filteredHistory.forEach(entry => {
-        if(entry.type === 'sales') {
-            entry.sales.forEach(sale => {
+        filteredHistory.forEach(entry => {
+            if(entry.type === 'sales') {
+                entry.sales.forEach(sale => {
+                    data.push([
+                        format(parseISO(sale.saleDate), 'yyyy-MM-dd HH:mm:ss'),
+                        sale.productName,
+                        sale.variantName || '',
+                        sale.sku || sale.parentSku || '',
+                        sale.productCategory || '',
+                        `Penjualan ${sale.channel}`,
+                        -sale.quantity,
+                        'N/A' // Cannot determine final stock level accurately here
+                    ]);
+                });
+            } else { // 'adjustment'
                 data.push([
-                    format(parseISO(sale.saleDate), 'yyyy-MM-dd HH:mm:ss'),
-                    sale.productName,
-                    sale.variantName || '',
-                    sale.sku || sale.parentSku || '',
-                    sale.productCategory || '',
-                    `Penjualan ${sale.channel}`,
-                    -sale.quantity,
-                    'N/A' // Cannot determine final stock level accurately here
+                    format(entry.date, 'yyyy-MM-dd HH:mm:ss'),
+                    entry.itemName || '',
+                    entry.variantName || '',
+                    entry.variantSku || '',
+                    entry.itemCategory || '',
+                    entry.reason,
+                    entry.change,
+                    entry.newStockLevel ?? 'N/A'
                 ]);
-            });
-        } else { // 'adjustment'
-            data.push([
-                format(entry.date, 'yyyy-MM-dd HH:mm:ss'),
-                entry.itemName || '',
-                entry.variantName || '',
-                entry.variantSku || '',
-                entry.itemCategory || '',
-                entry.reason,
-                entry.change,
-                entry.newStockLevel ?? 'N/A'
-            ]);
-        }
-    });
+            }
+        });
 
-    const worksheet = XLSX.utils.aoa_to_sheet([headers, ...data]);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Riwayat Stok');
+        const worksheet = XLSX.utils.aoa_to_sheet([headers, ...data]);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, 'Riwayat Stok');
 
-    const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
-    const fileName = 'riwayat_stok.xlsx';
-    const blob = new Blob([excelBuffer], { type: 'application/octet-stream' });
-    saveAs(blob, fileName);
-    setIsExporting(false);
-    toastRef.update({
-        id: toastRef.id,
-        title: "Unduhan Siap",
-        description: `File '${fileName}' telah diunduh. Periksa folder unduhan browser Anda.`
-    });
+        const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+        const fileName = 'riwayat_stok.xlsx';
+        const blob = new Blob([excelBuffer], { type: 'application/octet-stream' });
+        saveAs(blob, fileName);
+        
+        update({
+            id,
+            title: "Unduhan Siap",
+            description: `File '${fileName}' telah diunduh. Periksa folder unduhan browser Anda.`
+        });
+        setIsExporting(false);
+    }, 500);
   };
 
   return (
@@ -586,4 +588,5 @@ export default function HistoryPage() {
     </AppLayout>
   );
 }
+
 

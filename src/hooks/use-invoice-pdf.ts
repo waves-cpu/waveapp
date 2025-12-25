@@ -52,14 +52,14 @@ export function useInvoicePDF() {
       return;
     }
 
-    const { toast: toastRef } = toast({ title: 'Memulai unduhan', description: 'Invoice PDF sedang disiapkan...' });
+    const { id, update } = toast({ title: 'Memulai unduhan', description: 'Invoice PDF sedang disiapkan...' });
 
     try {
       await loadScript();
     } catch (error: any) {
        console.error(error.message);
-       toastRef.update({
-           id: toastRef.id,
+       update({
+           id,
            title: 'Gagal Mencetak',
            description: 'Gagal memuat pustaka cetak. Silakan coba lagi.',
            variant: 'destructive'
@@ -83,8 +83,8 @@ export function useInvoicePDF() {
     };
 
     window.html2pdf().from(element).set(options).save().then(() => {
-        toastRef.update({
-            id: toastRef.id,
+        update({
+            id,
             title: "Unduhan Siap",
             description: `File '${fileName}' telah diunduh. Periksa folder unduhan browser Anda.`
         });
