@@ -44,7 +44,7 @@ export function ProductSelectionDialog({ open, onOpenChange, onSelect, available
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(ITEMS_PER_PAGE);
-  const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const scrollViewportRef = useRef<HTMLDivElement>(null);
 
   const filteredItems = useMemo(() => {
     return availableItems
@@ -162,8 +162,8 @@ export function ProductSelectionDialog({ open, onOpenChange, onSelect, available
                 </SelectContent>
             </Select>
         </div>
-        <div className="flex-grow overflow-hidden border rounded-md">
-           <ScrollArea className="h-full" ref={scrollAreaRef}>
+        <div className="flex-grow overflow-hidden border rounded-md flex flex-col">
+           <ScrollArea className="h-full" viewportRef={scrollViewportRef}>
             <Table>
                 <TableHeader className="sticky top-0 bg-card z-10">
                 <TableRow>
@@ -276,35 +276,35 @@ export function ProductSelectionDialog({ open, onOpenChange, onSelect, available
                 )}
                 </TableBody>
             </Table>
-            <div className="flex items-center justify-end p-4 border-t">
-                    <div className="flex items-center gap-4">
-                    <Pagination
-                        totalPages={totalPages}
-                        currentPage={currentPage}
-                        onPageChange={setCurrentPage}
-                        scrollContainerRef={scrollAreaRef}
-                    />
-                    <Select
-                        value={`${itemsPerPage}`}
-                        onValueChange={(value) => {
-                            setItemsPerPage(Number(value))
-                            setCurrentPage(1)
-                        }}
-                        >
-                        <SelectTrigger className="h-8 w-[200px]">
-                            <SelectValue placeholder={itemsPerPage} />
-                        </SelectTrigger>
-                        <SelectContent side="top">
-                            {[10, 20, 50].map((pageSize) => (
-                            <SelectItem key={pageSize} value={`${pageSize}`}>
-                                {`${pageSize} / ${t.productSelectionDialog.page}`}
-                            </SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-                </div>
-            </div>
             </ScrollArea>
+             <div className="flex items-center justify-end p-4 border-t">
+                <div className="flex items-center gap-4">
+                <Pagination
+                    totalPages={totalPages}
+                    currentPage={currentPage}
+                    onPageChange={setCurrentPage}
+                    scrollContainerRef={scrollViewportRef}
+                />
+                <Select
+                    value={`${itemsPerPage}`}
+                    onValueChange={(value) => {
+                        setItemsPerPage(Number(value))
+                        setCurrentPage(1)
+                    }}
+                    >
+                    <SelectTrigger className="h-8 w-[200px]">
+                        <SelectValue placeholder={itemsPerPage} />
+                    </SelectTrigger>
+                    <SelectContent side="top">
+                        {[10, 20, 50].map((pageSize) => (
+                        <SelectItem key={pageSize} value={`${pageSize}`}>
+                            {`${pageSize} / ${t.productSelectionDialog.page}`}
+                        </SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
+            </div>
+            </div>
         </div>
         <DialogFooter className="pt-4">
           <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>{t.common.cancel}</Button>
@@ -315,3 +315,4 @@ export function ProductSelectionDialog({ open, onOpenChange, onSelect, available
   );
 }
  
+    
