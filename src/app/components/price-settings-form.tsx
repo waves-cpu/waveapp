@@ -101,7 +101,6 @@ export function PriceSettingsForm() {
     );
   }, [items, categoryFilter]);
   
-  // This is the crucial fix: create a flattened map ONLY from the filtered items.
   const flattenedFilteredItemsById = useMemo(() => {
     const map = new Map<string, SelectedItem>();
     availableItemsForSelection.forEach(item => {
@@ -139,7 +138,6 @@ export function PriceSettingsForm() {
   }, [availableItemsForSelection]);
 
   const handleProductsSelected = (selectedIds: string[]) => {
-    // CRITICAL FIX: Look up from the filtered map, not the global one.
     const newlySelected = selectedIds
         .map(id => flattenedFilteredItemsById.get(id))
         .filter((item): item is SelectedItem => !!item);
@@ -311,12 +309,6 @@ export function PriceSettingsForm() {
                             );
                         })}
                     </CardContent>
-                    <Alert className="mx-4 mb-4">
-                        <Info className="h-4 w-4" />
-                        <AlertDescription className="text-xs">
-                          Gunakan fitur di atas untuk menerapkan harga secara massal. Jika Anda mencentang beberapa produk di bawah, harga hanya akan diterapkan pada produk yang dicentang. Jika tidak ada yang dicentang, harga akan diterapkan ke semua produk.
-                        </AlertDescription>
-                    </Alert>
                 </Card>
 
                 <div className="border rounded-lg shadow-sm overflow-hidden">
@@ -435,5 +427,3 @@ export function PriceSettingsForm() {
     </>
   );
 }
-
-    
