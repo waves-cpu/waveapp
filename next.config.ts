@@ -36,6 +36,9 @@ const nextConfig: NextConfig = {
       }
     ],
   },
+  experimental: {
+    serverExternalPackages: ['better-sqlite3'],
+  },
 };
 
 export default withPWA(nextConfig);
