@@ -69,7 +69,6 @@ export function ProductSelectionDialog({
 
   const filteredItems = useMemo(() => {
     return availableItems
-      .filter((item) => !item.isArchived)
       .filter((item) =>
         categoryFilter ? item.category === categoryFilter : true
       )
