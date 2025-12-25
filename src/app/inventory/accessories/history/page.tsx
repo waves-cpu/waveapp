@@ -39,6 +39,7 @@ import { AppLayout } from '@/app/components/app-layout';
 import { Pagination } from '@/components/ui/pagination';
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
+import { useToast } from '@/hooks/use-toast';
 
 type HistoryEntry = {
     type: 'adjustment';
@@ -58,6 +59,7 @@ export default function AccessoryHistoryPage() {
   const { accessories, loading } = useInventory();
   const { language } = useLanguage();
   const t = translations[language];
+  const { toast } = useToast();
   
   const [searchTerm, setSearchTerm] = useState('');
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
@@ -160,6 +162,7 @@ export default function AccessoryHistoryPage() {
   };
 
   const downloadExcel = async () => {
+    toast({ title: 'Memulai unduhan', description: 'Laporan Excel sedang disiapkan...' });
     setIsExporting(true);
     await new Promise(resolve => setTimeout(resolve, 500)); // Simulate processing
     const headers = ['Tanggal', 'Nama Produk', 'Varian', 'SKU', 'Kategori', 'Alasan', 'Perubahan', 'Stok Akhir'];
@@ -366,4 +369,3 @@ export default function AccessoryHistoryPage() {
     </AppLayout>
   );
 }
-

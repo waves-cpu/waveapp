@@ -3,6 +3,7 @@
 
 import { useCallback } from 'react';
 import type { InvoiceData } from '@/app/components/reseller-invoice';
+import { useToast } from './use-toast';
 
 declare global {
   interface Window {
@@ -44,17 +45,20 @@ const loadScript = (): Promise<void> => {
 
 
 export function useInvoicePDF() {
+  const { toast } = useToast();
+
   const generatePDF = useCallback(async (invoiceData: InvoiceData) => {
     if (typeof window === 'undefined') {
       return;
     }
 
+    toast({ title: 'Memulai unduhan', description: 'Invoice PDF sedang disiapkan...' });
+
     try {
       await loadScript();
     } catch (error: any) {
        console.error(error.message);
-       // Optionally, show a toast to the user
-       // toast({ variant: 'destructive', title: 'Print Error', description: 'Could not load printing library. Please try again.' });
+       toast({ variant: 'destructive', title: 'Gagal Mencetak', description: 'Gagal memuat pustaka cetak. Silakan coba lagi.' });
        return;
     }
 
@@ -73,7 +77,7 @@ export function useInvoicePDF() {
     };
 
     window.html2pdf().from(element).set(options).save();
-  }, []);
+  }, [toast]);
 
   return { generatePDF };
 }

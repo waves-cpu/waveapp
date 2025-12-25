@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useCallback, useEffect } from 'react';
@@ -106,6 +107,7 @@ export function BulkEditSheet({ open, onOpenChange }: BulkEditSheetProps) {
   }, []);
 
   const handleDownloadTemplate = () => {
+    toast({ title: 'Memulai unduhan', description: 'Template produk sedang disiapkan untuk diunduh...' });
     const filteredItems = categoryFilter ? items.filter(item => item.category === categoryFilter) : items;
 
     const exportData: ProductRow[] = [];

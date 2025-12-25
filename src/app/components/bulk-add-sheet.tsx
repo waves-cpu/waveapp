@@ -131,6 +131,7 @@ export function BulkAddSheet({ open, onOpenChange }: BulkAddSheetProps) {
   }, []);
 
   const handleDownloadTemplate = () => {
+    toast({ title: 'Memulai unduhan', description: 'Template produk sedang disiapkan untuk diunduh...' });
     const templateData: Partial<ProductRow>[] = [
       {
         parent_sku: 'TSHIRT-COOL-PARENT',

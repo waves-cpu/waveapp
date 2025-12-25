@@ -27,6 +27,7 @@ import {
   ChartLegendContent,
 } from "@/components/ui/chart"
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts"
+import { useToast } from '@/hooks/use-toast';
 
 
 type DailyCount = {
@@ -58,6 +59,7 @@ export default function ReceiptReportPage() {
     const [loading, setLoading] = useState(true);
     const { fetchShippingReceipts } = useInventory();
     const { language } = useLanguage();
+    const { toast } = useToast();
     const t = translations[language].shipping.reportPage;
     
     const [selectedMonth, setSelectedMonth] = useState<number | undefined>(undefined);
@@ -134,6 +136,7 @@ export default function ReceiptReportPage() {
     }, [fetchReportData]);
 
     const downloadExcel = useCallback(() => {
+        toast({ title: 'Memulai unduhan', description: 'Laporan Excel sedang disiapkan...' });
         if (selectedMonth === undefined || selectedYear === undefined) return;
         const dataToExport = reportData.map(item => ({
             'Tanggal': item.date,
@@ -165,7 +168,7 @@ export default function ReceiptReportPage() {
         
         const monthName = format(new Date(selectedYear, selectedMonth), 'MMMM-yyyy', { locale: localeId });
         XLSX.writeFile(workbook, `Laporan_Resi_${monthName}.xlsx`);
-    }, [reportData, totalCounts, selectedMonth, selectedYear]);
+    }, [reportData, totalCounts, selectedMonth, selectedYear, toast]);
 
     return (
         <AppLayout>

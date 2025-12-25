@@ -39,6 +39,7 @@ import Link from 'next/link';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
+import { useToast } from '@/hooks/use-toast';
 
 type AdjustmentEntry = {
     type: 'adjustment';
@@ -69,6 +70,7 @@ export default function HistoryPage() {
   const { items, categories, allSales, loading } = useInventory();
   const { language } = useLanguage();
   const t = translations[language];
+  const { toast } = useToast();
   
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
@@ -295,6 +297,7 @@ export default function HistoryPage() {
   }
 
   const downloadExcel = async () => {
+    toast({ title: 'Memulai unduhan', description: 'Laporan Excel sedang disiapkan...' });
     setIsExporting(true);
     await new Promise(resolve => setTimeout(resolve, 500)); // Simulate processing time
 
@@ -582,4 +585,3 @@ export default function HistoryPage() {
     </AppLayout>
   );
 }
-
