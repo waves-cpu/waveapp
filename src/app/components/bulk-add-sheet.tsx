@@ -131,7 +131,7 @@ export function BulkAddSheet({ open, onOpenChange }: BulkAddSheetProps) {
   }, []);
 
   const handleDownloadTemplate = () => {
-    toast({ title: 'Memulai unduhan', description: 'Template produk sedang disiapkan untuk diunduh...' });
+    const { toast: toastRef } = toast({ title: 'Memulai unduhan', description: 'Template produk sedang disiapkan...' });
     const templateData: Partial<ProductRow>[] = [
       {
         parent_sku: 'TSHIRT-COOL-PARENT',
@@ -172,7 +172,13 @@ export function BulkAddSheet({ open, onOpenChange }: BulkAddSheetProps) {
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Products');
     const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
     const blob = new Blob([excelBuffer], { type: 'application/octet-stream' });
-    saveAs(blob, 'template_produk_massal.xlsx');
+    const fileName = 'template_produk_massal.xlsx';
+    saveAs(blob, fileName);
+    toastRef.update({
+        id: toastRef.id,
+        title: "Unduhan Siap",
+        description: `File '${fileName}' telah diunduh. Periksa folder unduhan browser Anda.`
+    });
   };
 
   const handleImport = async () => {

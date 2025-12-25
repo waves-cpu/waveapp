@@ -52,13 +52,18 @@ export function useInvoicePDF() {
       return;
     }
 
-    toast({ title: 'Memulai unduhan', description: 'Invoice PDF sedang disiapkan...' });
+    const { toast: toastRef } = toast({ title: 'Memulai unduhan', description: 'Invoice PDF sedang disiapkan...' });
 
     try {
       await loadScript();
     } catch (error: any) {
        console.error(error.message);
-       toast({ variant: 'destructive', title: 'Gagal Mencetak', description: 'Gagal memuat pustaka cetak. Silakan coba lagi.' });
+       toastRef.update({
+           id: toastRef.id,
+           title: 'Gagal Mencetak',
+           description: 'Gagal memuat pustaka cetak. Silakan coba lagi.',
+           variant: 'destructive'
+       });
        return;
     }
 
@@ -68,15 +73,22 @@ export function useInvoicePDF() {
         return;
     }
 
+    const fileName = `invoice-${invoiceData.transactionId.slice(-8)}.pdf`;
     const options = {
       margin:       [0.5, 0.5, 0.5, 0.5],
-      filename:     `invoice-${invoiceData.transactionId.slice(-8)}.pdf`,
+      filename:     fileName,
       image:        { type: 'jpeg', quality: 0.98 },
       html2canvas:  { scale: 2, useCORS: true, logging: true, letterRendering: true },
       jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' }
     };
 
-    window.html2pdf().from(element).set(options).save();
+    window.html2pdf().from(element).set(options).save().then(() => {
+        toastRef.update({
+            id: toastRef.id,
+            title: "Unduhan Siap",
+            description: `File '${fileName}' telah diunduh. Periksa folder unduhan browser Anda.`
+        });
+    });
   }, [toast]);
 
   return { generatePDF };

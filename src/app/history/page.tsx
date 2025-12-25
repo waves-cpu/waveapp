@@ -227,16 +227,15 @@ export default function HistoryPage() {
     if (adjustmentTypeFilter === 'all') {
       return baseFilteredHistory;
     }
-  
     const filtered: HistoryEntry[] = baseFilteredHistory.filter(entry => {
-      if (adjustmentTypeFilter === 'in') {
-        return entry.type === 'adjustment' && entry.change > 0;
-      } else if (adjustmentTypeFilter === 'out') {
-        return (entry.type === 'adjustment' && entry.change < 0) || entry.type === 'sales';
-      }
-      return false;
+        if (adjustmentTypeFilter === 'in') {
+            return entry.type === 'adjustment' && entry.change > 0;
+        } else if (adjustmentTypeFilter === 'out') {
+            return (entry.type === 'adjustment' && entry.change < 0) || entry.type === 'sales';
+        }
+        return false;
     });
-
+    
     setCurrentPage(1);
     return filtered;
 
@@ -293,7 +292,7 @@ export default function HistoryPage() {
   }
 
   const downloadExcel = async () => {
-    toast({ title: 'Memulai unduhan', description: 'Laporan Excel sedang disiapkan...' });
+    const { toast: toastRef } = toast({ title: 'Memulai unduhan', description: 'Laporan Excel sedang disiapkan...' });
     setIsExporting(true);
     await new Promise(resolve => setTimeout(resolve, 500)); // Simulate processing time
 
@@ -334,9 +333,15 @@ export default function HistoryPage() {
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Riwayat Stok');
 
     const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+    const fileName = 'riwayat_stok.xlsx';
     const blob = new Blob([excelBuffer], { type: 'application/octet-stream' });
-    saveAs(blob, 'riwayat_stok.xlsx');
+    saveAs(blob, fileName);
     setIsExporting(false);
+    toastRef.update({
+        id: toastRef.id,
+        title: "Unduhan Siap",
+        description: `File '${fileName}' telah diunduh. Periksa folder unduhan browser Anda.`
+    });
   };
 
   return (

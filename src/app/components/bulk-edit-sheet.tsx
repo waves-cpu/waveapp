@@ -107,7 +107,7 @@ export function BulkEditSheet({ open, onOpenChange }: BulkEditSheetProps) {
   }, []);
 
   const handleDownloadTemplate = () => {
-    toast({ title: 'Memulai unduhan', description: 'Template produk sedang disiapkan untuk diunduh...' });
+    const { toast: toastRef } = toast({ title: 'Memulai unduhan', description: 'Template produk sedang disiapkan...' });
     const filteredItems = categoryFilter ? items.filter(item => item.category === categoryFilter) : items;
 
     const exportData: ProductRow[] = [];
@@ -151,7 +151,13 @@ export function BulkEditSheet({ open, onOpenChange }: BulkEditSheetProps) {
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Products');
     const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
     const blob = new Blob([excelBuffer], { type: 'application/octet-stream' });
-    saveAs(blob, `edit_produk_${categoryFilter || 'semua'}.xlsx`);
+    const fileName = `edit_produk_${categoryFilter || 'semua'}.xlsx`;
+    saveAs(blob, fileName);
+    toastRef.update({
+        id: toastRef.id,
+        title: "Unduhan Siap",
+        description: `File '${fileName}' telah diunduh. Periksa folder unduhan browser Anda.`
+    });
   };
 
   const handleImport = async () => {
