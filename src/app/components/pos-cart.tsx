@@ -53,6 +53,7 @@ export function PosCart() {
     const [searchTerm, setSearchTerm] = useState('');
     const debouncedSearchTerm = useDebounce(searchTerm, 300);
     const [pendingTransactionId, setPendingTransactionId] = useState<string | null>(null);
+    const searchInputRef = useRef<HTMLInputElement>(null);
 
     const searchSuggestions = useMemo((): SearchableItem[] => {
         if (debouncedSearchTerm.length < 2) return [];
@@ -143,6 +144,15 @@ export function PosCart() {
             return () => clearTimeout(timer);
         }
     }, [receiptToPrint, voucherToPrint]);
+    
+    // Effect to refocus the search input after cart updates or dialog closes
+    useEffect(() => {
+        // Only focus if the variant selection dialog is not open
+        if (!productForVariantSelection) {
+            searchInputRef.current?.focus();
+        }
+    }, [cart.length, productForVariantSelection]);
+
 
     const getPriceForChannel = (item: InventoryItem | InventoryItemVariant | Accessory, channel: string): number => {
         if ('channelPrices' in item) {
@@ -379,6 +389,7 @@ export function PosCart() {
                     searchTerm={searchTerm}
                     setSearchTerm={setSearchTerm}
                     suggestions={searchSuggestions}
+                    ref={searchInputRef}
                 />
                 <Card className="flex-grow flex flex-col">
                     <CardHeader>

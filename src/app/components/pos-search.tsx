@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, forwardRef } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Search, ScanLine, X, Tags } from 'lucide-react';
@@ -23,10 +23,10 @@ interface PosSearchProps {
   suggestions: SearchableItem[];
 }
 
-export function PosSearch({ onProductSelect, searchTerm, setSearchTerm, suggestions }: PosSearchProps) {
+export const PosSearch = forwardRef<HTMLInputElement, PosSearchProps>(
+    ({ onProductSelect, searchTerm, setSearchTerm, suggestions }, ref) => {
     const { language } = useLanguage();
     const t = translations[language];
-    const inputRef = useRef<HTMLInputElement>(null);
     const [isPopoverOpen, setIsPopoverOpen] = useState(false);
 
     const handleSubmit = (e: React.FormEvent) => {
@@ -47,7 +47,9 @@ export function PosSearch({ onProductSelect, searchTerm, setSearchTerm, suggesti
         onProductSelect(item);
         setSearchTerm('');
         setIsPopoverOpen(false);
-        inputRef.current?.focus();
+        if (ref && 'current' in ref) {
+            ref.current?.focus();
+        }
     }
 
     return (
@@ -57,7 +59,7 @@ export function PosSearch({ onProductSelect, searchTerm, setSearchTerm, suggesti
                 <div className="relative flex-grow">
                     <ScanLine className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                     <Input
-                        ref={inputRef}
+                        ref={ref}
                         type="text"
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
@@ -114,4 +116,6 @@ export function PosSearch({ onProductSelect, searchTerm, setSearchTerm, suggesti
            </Popover>
         </form>
     );
-}
+});
+
+PosSearch.displayName = 'PosSearch';
