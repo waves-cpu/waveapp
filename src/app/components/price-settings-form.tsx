@@ -84,9 +84,27 @@ export function PriceSettingsForm() {
   const [rowSelection, setRowSelection] = useState<Record<string, boolean>>({});
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
 
-  const flattenedItemsById = useMemo(() => {
+  const form = useForm<FormValues>({
+    resolver: zodResolver(formSchema),
+    defaultValues: { items: [], masterCostPrice: undefined, masterPrice: undefined },
+  });
+  
+  const { fields, replace, update } = useFieldArray({
+    control: form.control,
+    name: "items",
+  });
+  
+  const availableItemsForSelection = useMemo(() => {
+    if (!categoryFilter) return [];
+    return items.filter(item => 
+        !item.isArchived && item.category === categoryFilter
+    );
+  }, [items, categoryFilter]);
+  
+  // This is the crucial fix: create a flattened map ONLY from the filtered items.
+  const flattenedFilteredItemsById = useMemo(() => {
     const map = new Map<string, SelectedItem>();
-    items.filter(i => !i.isArchived).forEach(item => {
+    availableItemsForSelection.forEach(item => {
         if (item.variants && item.variants.length > 0) {
             item.variants.forEach(variant => {
                 map.set(variant.id, {
@@ -118,21 +136,12 @@ export function PriceSettingsForm() {
         }
     });
     return map;
-  }, [items]);
-  
-  const form = useForm<FormValues>({
-    resolver: zodResolver(formSchema),
-    defaultValues: { items: [], masterCostPrice: undefined, masterPrice: undefined },
-  });
-  
-  const { fields, replace, update } = useFieldArray({
-    control: form.control,
-    name: "items",
-  });
+  }, [availableItemsForSelection]);
 
   const handleProductsSelected = (selectedIds: string[]) => {
+    // CRITICAL FIX: Look up from the filtered map, not the global one.
     const newlySelected = selectedIds
-        .map(id => flattenedItemsById.get(id))
+        .map(id => flattenedFilteredItemsById.get(id))
         .filter((item): item is SelectedItem => !!item);
     
     setSelectedItems(newlySelected);
@@ -224,13 +233,6 @@ export function PriceSettingsForm() {
 
   const selectedItemIds = useMemo(() => new Set(selectedItems.map(item => item.id)), [selectedItems]);
 
-  const availableItemsForSelection = useMemo(() => {
-    return items.filter(item => 
-        !item.isArchived &&
-        (!categoryFilter || item.category === categoryFilter)
-    );
-  }, [items, categoryFilter]);
-
   return (
     <>
     <Form {...form}>
@@ -241,7 +243,7 @@ export function PriceSettingsForm() {
                     <h3 className="mt-4 text-lg font-semibold">{TPrice.title}</h3>
                     <p className="mt-2 text-sm text-muted-foreground">{TPrice.description}</p>
                     <div className="flex items-center gap-2 mt-6">
-                        <Select onValueChange={setCategoryFilter}>
+                        <Select onValueChange={setCategoryFilter} value={categoryFilter || ''}>
                             <SelectTrigger className="w-[220px]">
                                 <SelectValue placeholder="Pilih Kategori (Wajib)" />
                             </SelectTrigger>
@@ -433,3 +435,5 @@ export function PriceSettingsForm() {
     </>
   );
 }
+
+    
