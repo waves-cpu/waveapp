@@ -76,7 +76,7 @@ export default function HistoryPage() {
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
   const [selectedMonth, setSelectedMonth] = useState<number | undefined>(undefined);
   const [selectedYear, setSelectedYear] = useState<number | undefined>(undefined);
-  const [adjustmentTypeFilter, setAdjustmentTypeFilter] = useState<'all' | 'out'>('all');
+  const [adjustmentTypeFilter, setAdjustmentTypeFilter] = useState<'all' | 'in' | 'out'>('all');
   const [selectedSales, setSelectedSales] = useState<Sale[]>([]);
   const [isSalesDetailOpen, setSalesDetailOpen] = useState(false);
   const [itemsPerPage, setItemsPerPage] = useState(20);
@@ -224,22 +224,18 @@ export default function HistoryPage() {
   }, [baseFilteredHistory]);
   
   const filteredHistory = useMemo((): HistoryEntry[] => {
-    let filtered: HistoryEntry[] = baseFilteredHistory;
-
-    if (adjustmentTypeFilter !== 'all') {
-      filtered = baseFilteredHistory.filter(entry => {
-          if (entry.type === 'adjustment') {
-              const change = entry.change;
-              if (adjustmentTypeFilter === 'in') return change > 0;
-              if (adjustmentTypeFilter === 'out') return change < 0;
-          }
-          if (entry.type === 'sales') {
-              if (adjustmentTypeFilter === 'out') return true;
-              return false;
-          }
-          return false;
-      });
+    if (adjustmentTypeFilter === 'all') {
+      return baseFilteredHistory;
     }
+  
+    const filtered: HistoryEntry[] = baseFilteredHistory.filter(entry => {
+      if (adjustmentTypeFilter === 'in') {
+        return entry.type === 'adjustment' && entry.change > 0;
+      } else if (adjustmentTypeFilter === 'out') {
+        return (entry.type === 'adjustment' && entry.change < 0) || entry.type === 'sales';
+      }
+      return false;
+    });
 
     setCurrentPage(1);
     return filtered;
@@ -585,3 +581,4 @@ export default function HistoryPage() {
     </AppLayout>
   );
 }
+
