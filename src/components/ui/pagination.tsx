@@ -1,3 +1,4 @@
+
 "use client"
 
 import * as React from "react"
@@ -129,14 +130,28 @@ type CustomPaginationProps = {
     currentPage: number;
     onPageChange: (page: number) => void;
     className?: string;
+    scrollContainerRef?: React.RefObject<HTMLElement>;
 }
 
-const Pagination = ({ totalPages, currentPage, onPageChange, className }: CustomPaginationProps) => {
+const Pagination = ({ totalPages, currentPage, onPageChange, className, scrollContainerRef }: CustomPaginationProps) => {
     const [inputValue, setInputValue] = React.useState(currentPage.toString());
 
     React.useEffect(() => {
         setInputValue(currentPage.toString());
     }, [currentPage]);
+
+    const handleScrollToTop = () => {
+        if (scrollContainerRef?.current) {
+            scrollContainerRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+        } else if (typeof window !== 'undefined') {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+    };
+    
+    const handlePageChange = (page: number) => {
+        onPageChange(page);
+        handleScrollToTop();
+    };
     
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setInputValue(e.target.value);
@@ -145,7 +160,7 @@ const Pagination = ({ totalPages, currentPage, onPageChange, className }: Custom
     const handleInputBlur = () => {
         const pageNumber = parseInt(inputValue, 10);
         if (!isNaN(pageNumber) && pageNumber >= 1 && pageNumber <= totalPages) {
-            onPageChange(pageNumber);
+            handlePageChange(pageNumber);
         } else {
            // Reset to current page if input is invalid
            setInputValue(currentPage.toString());
@@ -161,13 +176,13 @@ const Pagination = ({ totalPages, currentPage, onPageChange, className }: Custom
 
     const onNext = () => {
         if (currentPage < totalPages) {
-            onPageChange(currentPage + 1);
+            handlePageChange(currentPage + 1);
         }
     };
 
     const onPrevious = () => {
         if (currentPage > 1) {
-            onPageChange(currentPage - 1);
+            handlePageChange(currentPage - 1);
         }
     };
 
