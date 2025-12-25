@@ -29,22 +29,42 @@ interface ProductSelectionDialogProps {
   onSelect: (selectedIds: string[]) => void;
   availableItems: InventoryItem[];
   categories: string[];
+  initialSelectedIds?: Set<string>;
   title: string;
   description: string;
 }
 
 const ITEMS_PER_PAGE = 10;
 
-export function ProductSelectionDialog({ open, onOpenChange, onSelect, availableItems, categories, title, description }: ProductSelectionDialogProps) {
+export function ProductSelectionDialog({ 
+    open, 
+    onOpenChange, 
+    onSelect, 
+    availableItems, 
+    categories, 
+    initialSelectedIds = new Set(),
+    title, 
+    description 
+}: ProductSelectionDialogProps) {
   const { language } = useLanguage();
   const t = translations[language];
   
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(initialSelectedIds);
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(ITEMS_PER_PAGE);
   const scrollViewportRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+      if(open) {
+        setSelectedIds(initialSelectedIds);
+        setSearchTerm('');
+        setCategoryFilter(null);
+        setCurrentPage(1);
+        setItemsPerPage(ITEMS_PER_PAGE);
+      }
+  }, [open, initialSelectedIds])
 
   const filteredItems = useMemo(() => {
     return availableItems
@@ -66,20 +86,9 @@ export function ProductSelectionDialog({ open, onOpenChange, onSelect, available
     const paginated = filteredItems.slice(startIndex, startIndex + itemsPerPage);
     const selectableIds = paginated.flatMap(item => 
         item.variants && item.variants.length > 0 ? item.variants.map(v => v.id) : (item.stock !== undefined ? [item.id] : [])
-    );
+    ).filter(id => id); // Filter out potential undefined IDs
     return { paginatedItems: paginated, selectableItemIdsOnPage: selectableIds };
   }, [filteredItems, currentPage, itemsPerPage]);
-
-
-  useEffect(() => {
-      if(open) {
-        setSelectedIds(new Set());
-        setSearchTerm('');
-        setCategoryFilter(null);
-        setCurrentPage(1);
-        setItemsPerPage(ITEMS_PER_PAGE);
-      }
-  }, [open])
 
   const handleSelectAllOnPage = (checked: boolean | 'indeterminate') => {
     const newSelectedIds = new Set(selectedIds);
@@ -96,9 +105,9 @@ export function ProductSelectionDialog({ open, onOpenChange, onSelect, available
     const idsToToggle = item.variants ? item.variants.map(v => v.id) : [item.id];
     
     if (checked) {
-      idsToToggle.forEach(id => newSelectedIds.add(id));
+      idsToToggle.forEach(id => id && newSelectedIds.add(id));
     } else {
-      idsToToggle.forEach(id => newSelectedIds.delete(id));
+      idsToToggle.forEach(id => id && newSelectedIds.delete(id));
     }
     setSelectedIds(newSelectedIds);
   };
@@ -136,7 +145,7 @@ export function ProductSelectionDialog({ open, onOpenChange, onSelect, available
             <div className="relative w-full md:w-auto flex-grow">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
-                placeholder={t.inventoryTable.searchPlaceholder}
+                placeholder={t.productSelectionDialog.searchPlaceholder}
                 value={searchTerm}
                 onChange={(e) => {
                     setSearchTerm(e.target.value);
@@ -148,7 +157,7 @@ export function ProductSelectionDialog({ open, onOpenChange, onSelect, available
             <Select onValueChange={(value) => {
                 setCategoryFilter(value === 'all' ? null : value);
                 setCurrentPage(1);
-            }} defaultValue="all">
+            }} value={categoryFilter || 'all'}>
                 <SelectTrigger className="w-full md:w-[200px]">
                 <SelectValue placeholder={t.inventoryTable.selectCategoryPlaceholder} />
                 </SelectTrigger>
@@ -278,41 +287,19 @@ export function ProductSelectionDialog({ open, onOpenChange, onSelect, available
             </Table>
             </ScrollArea>
         </div>
-        <DialogFooter className="pt-4 flex-col-reverse sm:flex-row sm:justify-between sm:items-center">
-            <div className="flex items-center gap-4 mt-4 sm:mt-0">
-                <Pagination
-                    totalPages={totalPages}
-                    currentPage={currentPage}
-                    onPageChange={setCurrentPage}
-                    scrollContainerRef={scrollViewportRef}
-                />
-                <Select
-                    value={`${itemsPerPage}`}
-                    onValueChange={(value) => {
-                        setItemsPerPage(Number(value))
-                        setCurrentPage(1)
-                    }}
-                    >
-                    <SelectTrigger className="h-8 w-[200px]">
-                        <SelectValue placeholder={itemsPerPage} />
-                    </SelectTrigger>
-                    <SelectContent side="top">
-                        {[10, 20, 50].map((pageSize) => (
-                        <SelectItem key={pageSize} value={`${pageSize}`}>
-                            {`${pageSize} / ${t.productSelectionDialog.page}`}
-                        </SelectItem>
-                        ))}
-                    </SelectContent>
-                </Select>
-            </div>
+        <div className="flex-grow-0 pt-4 flex flex-col-reverse sm:flex-row sm:justify-between sm:items-center gap-4">
+            <Pagination
+                totalPages={totalPages}
+                currentPage={currentPage}
+                onPageChange={setCurrentPage}
+                scrollContainerRef={scrollViewportRef}
+            />
             <div className="flex gap-2 justify-end">
                 <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>{t.common.cancel}</Button>
                 <Button type="button" onClick={handleSave}>{t.productSelectionDialog.addItems.replace('{count}', selectedIds.size.toString())}</Button>
             </div>
-        </DialogFooter>
+        </div>
       </DialogContent>
     </Dialog>
   );
 }
- 
-    

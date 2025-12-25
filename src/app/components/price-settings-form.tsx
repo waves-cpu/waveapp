@@ -220,6 +220,8 @@ export function PriceSettingsForm() {
     }
   };
 
+  const selectedItemIds = useMemo(() => new Set(selectedItems.map(item => item.id)), [selectedItems]);
+
   return (
     <>
     <Form {...form}>
@@ -269,7 +271,7 @@ export function PriceSettingsForm() {
                                     name={field}
                                     render={({ field: formField }) => (
                                         <FormItem className="space-y-1">
-                                            <FormLabel className="text-xs">{labelMap[priceType]}</FormLabel>
+                                            <FormLabel className="text-xs">{labelMap[priceType as keyof typeof labelMap]}</FormLabel>
                                             <div className="flex items-center gap-2">
                                                 <FormControl>
                                                     <Input type="number" placeholder="0" {...formField} value={formField.value ?? ''} className="h-8 text-xs"/>
@@ -401,13 +403,10 @@ export function PriceSettingsForm() {
         onSelect={handleProductsSelected}
         availableItems={items}
         categories={categories}
+        initialSelectedIds={selectedItemIds}
         title="Pilih Produk"
         description="Pilih produk yang harganya ingin Anda atur."
     />
     </>
   );
 }
-
-    
-
-    
