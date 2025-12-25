@@ -162,7 +162,7 @@ export function ProductSelectionDialog({ open, onOpenChange, onSelect, available
                 </SelectContent>
             </Select>
         </div>
-        <div className="flex-grow overflow-hidden border rounded-md flex flex-col">
+        <div className="flex-grow overflow-hidden border rounded-md">
            <ScrollArea className="h-full" viewportRef={scrollViewportRef}>
             <Table>
                 <TableHeader className="sticky top-0 bg-card z-10">
@@ -277,8 +277,9 @@ export function ProductSelectionDialog({ open, onOpenChange, onSelect, available
                 </TableBody>
             </Table>
             </ScrollArea>
-             <div className="flex items-center justify-end p-4 border-t">
-                <div className="flex items-center gap-4">
+        </div>
+        <DialogFooter className="pt-4 flex-col-reverse sm:flex-row sm:justify-between sm:items-center">
+            <div className="flex items-center gap-4 mt-4 sm:mt-0">
                 <Pagination
                     totalPages={totalPages}
                     currentPage={currentPage}
@@ -304,11 +305,10 @@ export function ProductSelectionDialog({ open, onOpenChange, onSelect, available
                     </SelectContent>
                 </Select>
             </div>
+            <div className="flex gap-2 justify-end">
+                <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>{t.common.cancel}</Button>
+                <Button type="button" onClick={handleSave}>{t.productSelectionDialog.addItems.replace('{count}', selectedIds.size.toString())}</Button>
             </div>
-        </div>
-        <DialogFooter className="pt-4">
-          <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>{t.common.cancel}</Button>
-          <Button type="button" onClick={handleSave}>{t.productSelectionDialog.addItems.replace('{count}', selectedIds.size.toString())}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
