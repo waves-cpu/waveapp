@@ -250,7 +250,7 @@ const PriceDisplay = ({ item, discountGroups }: { item: InventoryItem | Inventor
                  <TooltipProvider>
                     <Tooltip>
                         <TooltipTrigger asChild>
-                             <span className="underline decoration-dashed cursor-pointer pb-1.5">
+                             <span className="underline decoration-dashed cursor-pointer pb-5">
                                 {item.price != null ? formatCurrency(item.price) : '-'}
                             </span>
                         </TooltipTrigger>
@@ -258,7 +258,7 @@ const PriceDisplay = ({ item, discountGroups }: { item: InventoryItem | Inventor
                             <div className="space-y-2">
                                 {activeDiscounts.map((discount, index) => {
                                     const status = getStatus(discount.startDate, discount.endDate);
-                                    const title = discount.channel === 'online' ? 'Diskon Online' : discount.groupName;
+                                    const title = discount.channel === 'online' ? 'Promo Online' : discount.groupName;
                                     return (
                                         <div key={index} className="p-3 border-b last:border-b-0">
                                             <div className="flex justify-between items-start mb-2">
@@ -675,5 +675,6 @@ export function InventoryTable({ onUpdateStock, isAccessoryTable = false }: Inve
     </>
   );
 }
+
 
 
