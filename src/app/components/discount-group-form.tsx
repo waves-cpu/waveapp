@@ -27,18 +27,19 @@ import { useLanguage } from '@/hooks/use-language';
 import { translations } from '@/types/language';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { PlusCircle, Trash2, CalendarIcon } from 'lucide-react';
+import { CalendarIcon, Percent, Tag } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
-import type { InventoryItem, DiscountGroup, DiscountedProduct } from '@/types';
+import type { DiscountGroup, DiscountedProduct } from '@/types';
 import { categories } from '@/types';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
-import { format } from 'date-fns';
-import { addDays } from 'date-fns';
-import { DateRange } from "react-day-picker";
+import { format, addDays } from 'date-fns';
 import Image from 'next/image';
+import { Pagination } from '@/components/ui/pagination';
+
+const ITEMS_PER_PAGE = 10;
 
 const discountedProductSchema = z.object({
   productId: z.number(),
@@ -74,6 +75,10 @@ export function DiscountGroupForm({ existingGroup }: DiscountGroupFormProps) {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const isEditMode = !!existingGroup;
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const [bulkDiscountType, setBulkDiscountType] = useState<'fixed' | 'percent'>('fixed');
+  const [bulkDiscountValue, setBulkDiscountValue] = useState<number | ''>('');
   
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -99,32 +104,38 @@ export function DiscountGroupForm({ existingGroup }: DiscountGroupFormProps) {
   const selectedCategory = form.watch('category');
 
   useEffect(() => {
+    setCurrentPage(1); // Reset page when category changes
+  }, [selectedCategory]);
+
+  useEffect(() => {
       if(selectedCategory) {
           const productsInCategory = items.filter(item => item.category === selectedCategory && !item.isArchived);
           const discountedProducts: DiscountedProduct[] = [];
           
           productsInCategory.forEach(product => {
+              const baseProductInfo = {
+                  productId: Number(product.id),
+                  productName: product.name,
+                  sku: product.sku,
+                  imageUrl: product.imageUrl,
+              };
+
               if (product.variants && product.variants.length > 0) {
                   product.variants.forEach(variant => {
                       const existingDiscount = existingGroup?.products.find(p => p.variantId === Number(variant.id));
                       discountedProducts.push({
-                          productId: Number(product.id),
+                          ...baseProductInfo,
                           variantId: Number(variant.id),
-                          productName: product.name,
                           variantName: variant.name,
                           sku: variant.sku,
-                          imageUrl: product.imageUrl,
                           originalPrice: variant.price,
                           discountedPrice: existingDiscount?.discountedPrice ?? variant.price,
                       });
                   });
               } else {
-                  const existingDiscount = existingGroup?.products.find(p => p.productId === Number(product.id));
+                  const existingDiscount = existingGroup?.products.find(p => p.productId === Number(product.id) && !p.variantId);
                   discountedProducts.push({
-                      productId: Number(product.id),
-                      productName: product.name,
-                      sku: product.sku,
-                      imageUrl: product.imageUrl,
+                      ...baseProductInfo,
                       originalPrice: product.price || 0,
                       discountedPrice: existingDiscount?.discountedPrice ?? (product.price || 0),
                   });
@@ -135,6 +146,36 @@ export function DiscountGroupForm({ existingGroup }: DiscountGroupFormProps) {
           replace([]);
       }
   }, [selectedCategory, items, replace, existingGroup]);
+  
+  const totalPages = Math.ceil(fields.length / ITEMS_PER_PAGE);
+
+  const paginatedFields = useMemo(() => {
+    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+    const endIndex = startIndex + ITEMS_PER_PAGE;
+    return fields.slice(startIndex, endIndex).map((field, index) => ({
+      ...field,
+      originalIndex: startIndex + index, // Keep track of the original index in the `fields` array
+    }));
+  }, [fields, currentPage]);
+
+
+  const handleApplyBulkDiscount = () => {
+    if (bulkDiscountValue === '') return;
+
+    paginatedFields.forEach(field => {
+        const originalPrice = field.originalPrice;
+        let newPrice = 0;
+
+        if (bulkDiscountType === 'fixed') {
+            newPrice = bulkDiscountValue as number;
+        } else { // percentage
+            newPrice = originalPrice - (originalPrice * (bulkDiscountValue as number) / 100);
+        }
+
+        form.setValue(`products.${field.originalIndex}.discountedPrice`, Math.max(0, newPrice));
+    });
+    toast({ title: "Harga Massal Diterapkan", description: `Harga diskon untuk produk di halaman ini telah diatur.` });
+  };
   
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
@@ -266,6 +307,33 @@ export function DiscountGroupForm({ existingGroup }: DiscountGroupFormProps) {
                 <div>
                      <h3 className="text-lg font-medium mb-2">Atur Harga Diskon</h3>
                      <p className="text-sm text-muted-foreground mb-4">Masukkan harga diskon untuk produk di bawah. Harga asli ditampilkan sebagai referensi.</p>
+
+                    <Card className="mb-4">
+                        <CardContent className="p-4 flex flex-col md:flex-row items-center gap-4">
+                            <Label className="md:w-1/4">Atur Harga Massal</Label>
+                            <div className="flex-grow grid grid-cols-1 md:grid-cols-3 gap-2">
+                                <Select value={bulkDiscountType} onValueChange={(v) => setBulkDiscountType(v as any)}>
+                                    <SelectTrigger>
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="fixed">Harga Tetap (Rp)</SelectItem>
+                                        <SelectItem value="percent">Potongan (%)</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                                <Input 
+                                    type="number" 
+                                    placeholder="Masukkan nilai" 
+                                    value={bulkDiscountValue}
+                                    onChange={(e) => setBulkDiscountValue(e.target.value === '' ? '' : Number(e.target.value))}
+                                />
+                                <Button type="button" onClick={handleApplyBulkDiscount} disabled={bulkDiscountValue === '' || fields.length === 0}>
+                                    Terapkan ke Halaman
+                                </Button>
+                            </div>
+                        </CardContent>
+                    </Card>
+
                      <div className="border rounded-md">
                         <Table>
                             <TableHeader>
@@ -276,7 +344,7 @@ export function DiscountGroupForm({ existingGroup }: DiscountGroupFormProps) {
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {fields.map((field, index) => (
+                                {paginatedFields.length > 0 ? paginatedFields.map((field) => (
                                     <TableRow key={field.id}>
                                         <TableCell>
                                              <div className="flex items-center gap-4">
@@ -301,7 +369,7 @@ export function DiscountGroupForm({ existingGroup }: DiscountGroupFormProps) {
                                         <TableCell>
                                              <FormField
                                                 control={form.control}
-                                                name={`products.${index}.discountedPrice`}
+                                                name={`products.${field.originalIndex}.discountedPrice`}
                                                 render={({ field }) => (
                                                     <FormItem>
                                                         <FormControl>
@@ -313,11 +381,24 @@ export function DiscountGroupForm({ existingGroup }: DiscountGroupFormProps) {
                                                 />
                                         </TableCell>
                                     </TableRow>
-                                ))}
+                                )) : (
+                                    <TableRow>
+                                        <TableCell colSpan={3} className="text-center h-24">Pilih kategori untuk menampilkan produk.</TableCell>
+                                    </TableRow>
+                                )}
                             </TableBody>
                         </Table>
                      </div>
                       <FormMessage className="mt-2">{form.formState.errors.products?.message}</FormMessage>
+
+                      {totalPages > 1 && (
+                        <Pagination 
+                            totalPages={totalPages}
+                            currentPage={currentPage}
+                            onPageChange={setCurrentPage}
+                            className="mt-4"
+                        />
+                      )}
                 </div>
             )}
           </CardContent>
@@ -332,4 +413,3 @@ export function DiscountGroupForm({ existingGroup }: DiscountGroupFormProps) {
     </Card>
   );
 }
-
