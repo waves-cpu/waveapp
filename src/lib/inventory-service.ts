@@ -1233,12 +1233,11 @@ export async function updatePrices(updates: { id: string, type: 'product' | 'var
         INSERT INTO history (productId, variantId, change, reason, newStockLevel, date)
         VALUES (@productId, @variantId, @change, @reason, @newStockLevel, @date)
     `);
-    const insertChannelPriceStmt = db.prepare(`
+    const upsertChannelPriceStmt = db.prepare(`
         INSERT INTO channel_prices (product_id, variant_id, channel, price)
         VALUES (@productId, @variantId, @channel, @price)
+        ON CONFLICT(product_id, variant_id, channel) DO UPDATE SET price = excluded.price
     `);
-    const deleteChannelPricesByProduct = db.prepare('DELETE FROM channel_prices WHERE product_id = ?');
-    const deleteChannelPricesByVariant = db.prepare('DELETE FROM channel_prices WHERE variant_id = ?');
     
     const getProductStmt = db.prepare('SELECT * FROM products WHERE id = ?');
     const getVariantStmt = db.prepare('SELECT * FROM variants WHERE id = ?');
@@ -1275,22 +1274,15 @@ export async function updatePrices(updates: { id: string, type: 'product' | 'var
                 });
             }
 
-            const { id, type } = update;
-            if (type === 'product') {
-                deleteChannelPricesByProduct.run(id);
-            } else {
-                deleteChannelPricesByVariant.run(id);
-            }
-            
             update.channelPrices?.forEach(channelPrice => {
-                const priceIsValid = channelPrice.price !== undefined && channelPrice.price !== null && channelPrice.price >= 0;
-                
+                const priceIsValid = typeof channelPrice.price === 'number' && channelPrice.price >= 0;
+
                 if (channelPrice.channel === 'online') {
                     if (priceIsValid) {
                         ['shopee', 'tiktok', 'lazada'].forEach(onlineChannel => {
-                            insertChannelPriceStmt.run({
-                                productId: type === 'product' ? id : null,
-                                variantId: type === 'variant' ? id : null,
+                            upsertChannelPriceStmt.run({
+                                productId: update.type === 'product' ? update.id : null,
+                                variantId: update.type === 'variant' ? update.id : null,
                                 channel: onlineChannel,
                                 price: channelPrice.price
                             });
@@ -1298,9 +1290,9 @@ export async function updatePrices(updates: { id: string, type: 'product' | 'var
                     }
                 } else {
                      if (priceIsValid) {
-                        insertChannelPriceStmt.run({
-                            productId: type === 'product' ? id : null,
-                            variantId: type === 'variant' ? id : null,
+                        upsertChannelPriceStmt.run({
+                            productId: update.type === 'product' ? update.id : null,
+                            variantId: update.type === 'variant' ? update.id : null,
                             channel: channelPrice.channel,
                             price: channelPrice.price
                         });
