@@ -92,21 +92,22 @@ export function PriceSettingsForm() {
     control: form.control,
     name: "items",
   });
-  
+
   const availableItemsForSelection = useMemo(() => {
     if (!categoryFilter) return [];
-    return items.filter(item => 
-        !item.isArchived && item.category === categoryFilter
-    );
+    return items.filter(item => !item.isArchived && item.category === categoryFilter);
   }, [items, categoryFilter]);
+  
   
   const handleProductsSelected = (selectedIds: string[]) => {
     const newlySelected: SelectedItem[] = [];
-    const availableItemsMap = new Map<string, InventoryItem>();
-    availableItemsForSelection.forEach(item => availableItemsMap.set(item.id, item));
+
+    const itemsForCategory = items.filter(item => 
+        !item.isArchived && item.category === categoryFilter
+    );
 
     selectedIds.forEach(id => {
-        for (const parentItem of availableItemsForSelection) {
+        for (const parentItem of itemsForCategory) {
             if (parentItem.variants && parentItem.variants.length > 0) {
                 const variant = parentItem.variants.find(v => v.id === id);
                 if (variant) {
@@ -122,7 +123,7 @@ export function PriceSettingsForm() {
                         price: variant.price,
                         channelPrices: variant.channelPrices || [],
                     });
-                    return; // continue to next selectedId
+                    return;
                 }
             } else if (parentItem.id === id) {
                  newlySelected.push({
@@ -137,7 +138,7 @@ export function PriceSettingsForm() {
                     price: parentItem.price,
                     channelPrices: parentItem.channelPrices || [],
                 });
-                return; // continue to next selectedId
+                return;
             }
         }
     });
@@ -145,7 +146,10 @@ export function PriceSettingsForm() {
     setSelectedItems(newlySelected);
 
     const formItems = newlySelected.map(item => {
-        const getPrice = (channel: string) => item.channelPrices?.find(p => p.channel === channel)?.price;
+        const getPrice = (channel: string) => {
+            const priceObj = item.channelPrices?.find(p => p.channel === channel);
+            return priceObj?.price;
+        };
         
         const onlinePriceChannels = ['shopee', 'tiktok', 'lazada'];
         const onlinePrices = onlinePriceChannels.map(ch => getPrice(ch)).filter(p => p !== undefined);
@@ -157,9 +161,9 @@ export function PriceSettingsForm() {
             costPrice: item.costPrice ?? undefined,
             price: item.price ?? undefined,
             channelPrices: [
-                { channel: 'pos', price: getPrice('pos') ?? undefined },
-                { channel: 'reseller', price: getPrice('reseller') ?? undefined },
-                { channel: 'online', price: onlinePrice ?? undefined },
+                { channel: 'pos', price: getPrice('pos') },
+                { channel: 'reseller', price: getPrice('reseller') },
+                { channel: 'online', price: onlinePrice },
             ]
         };
     });
@@ -204,7 +208,8 @@ export function PriceSettingsForm() {
   };
   
   const isAllSelected = fields.length > 0 && Object.keys(rowSelection).length === fields.length && Object.values(rowSelection).every(Boolean);
-  const isSomeSelected = Object.values(rowSelection).some(Boolean) && !isAllSelected;
+  const isSomeSelected = Object.values(rowSelection).some(Boolean);
+  const isAnySelected = Object.keys(rowSelection).some(key => rowSelection[key]);
 
   const onSubmit = async (data: FormValues) => {
     if (!form.formState.isDirty) {
@@ -213,12 +218,11 @@ export function PriceSettingsForm() {
     }
     setIsSubmitting(true);
     
-    // The data from the form is already in the correct shape (data.items).
-    // It has the 'type' field because we added it when creating the form items.
     const updates = data.items.map((formItem, index) => {
+      const originalItem = selectedItems[index];
       return {
         id: formItem.id,
-        type: formItem.type,
+        type: originalItem.type,
         costPrice: formItem.costPrice,
         price: formItem.price,
         channelPrices: formItem.channelPrices,
@@ -316,7 +320,7 @@ export function PriceSettingsForm() {
                                                 <FormControl>
                                                     <Input type="number" placeholder="0" {...formField} value={formField.value ?? ''} className="h-8 text-xs"/>
                                                 </FormControl>
-                                                <Button type="button" size="sm" variant="outline" className="h-8" onClick={() => applyMasterPrice(field, targetField, channel)}>
+                                                <Button type="button" size="sm" variant="outline" className="h-8" onClick={() => applyMasterPrice(field, targetField, channel)} disabled={!isAnySelected}>
                                                     Terapkan
                                                 </Button>
                                             </div>
