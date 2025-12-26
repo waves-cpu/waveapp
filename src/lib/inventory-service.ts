@@ -1538,11 +1538,25 @@ export async function deleteDiscountGroup(id: number) {
 
 export async function fetchDiscountGroups(): Promise<DiscountGroup[]> {
     const groups = db.prepare('SELECT * FROM discount_groups ORDER BY name').all() as DiscountGroup[];
-    const productCounts = db.prepare('SELECT groupId, COUNT(*) as count FROM discounted_products GROUP BY groupId').all() as { groupId: number, count: number }[];
-    const countMap = new Map(productCounts.map(item => [item.groupId, item.count]));
+    const products = db.prepare(`
+        SELECT dp.groupId, dp.discountedPrice, p.id as productId, v.id as variantId, p.name as productName, v.name as variantName, COALESCE(v.sku, p.sku) as sku, p.imageUrl, COALESCE(v.price, p.price) as originalPrice
+        FROM discounted_products dp
+        JOIN products p ON dp.productId = p.id
+        LEFT JOIN variants v ON dp.variantId = v.id
+    `).all() as (DiscountedProduct & { groupId: number })[];
+
+    const productMap = new Map<number, DiscountedProduct[]>();
+    products.forEach(p => {
+        if (!productMap.has(p.groupId)) {
+            productMap.set(p.groupId, []);
+        }
+        productMap.get(p.groupId)!.push(p);
+    });
+
     return groups.map(group => ({
         ...group,
-        productCount: countMap.get(group.id) || 0,
+        products: productMap.get(group.id) || [],
+        productCount: (productMap.get(group.id) || []).length,
     }));
 }
 
