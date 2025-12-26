@@ -1,4 +1,5 @@
 
+
 'use server';
 
 import { db as dbProxy } from './db';
@@ -873,7 +874,7 @@ export async function performSale(
         
         // Apply admin fee for online marketplaces if price was not explicitly passed in options
         if (isOnlineChannel && options?.priceAtSale === undefined) {
-            finalPriceAtSale = finalPriceAtSale - (finalPriceAtSale * ADMIN_FEE_PERCENTAGE);
+            finalPriceAtSale = finalPriceAtSale * (1 - ADMIN_FEE_PERCENTAGE);
         }
 
         const saleResult = db.prepare(`
