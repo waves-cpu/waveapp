@@ -195,7 +195,7 @@ const Pagination = ({ totalPages, currentPage, onPageChange, className, scrollCo
         <PaginationContainer className={className}>
             <PaginationContent>
                 <PaginationItem>
-                    <Button variant="ghost" size="icon" onClick={onPrevious} disabled={currentPage === 1} className="h-8 w-8">
+                    <Button type="button" variant="ghost" size="icon" onClick={onPrevious} disabled={currentPage === 1} className="h-8 w-8">
                         <ChevronLeft className="h-4 w-4" />
                     </Button>
                 </PaginationItem>
@@ -214,7 +214,7 @@ const Pagination = ({ totalPages, currentPage, onPageChange, className, scrollCo
                     </div>
                 </PaginationItem>
                  <PaginationItem>
-                     <Button variant="ghost" size="icon" onClick={onNext} disabled={currentPage === totalPages} className="h-8 w-8">
+                     <Button type="button" variant="ghost" size="icon" onClick={onNext} disabled={currentPage === totalPages} className="h-8 w-8">
                         <ChevronRight className="h-4 w-4" />
                     </Button>
                 </PaginationItem>
