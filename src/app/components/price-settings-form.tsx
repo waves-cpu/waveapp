@@ -101,10 +101,10 @@ export function PriceSettingsForm() {
     );
   }, [items, categoryFilter]);
   
-  const flattenedFilteredItemsById = useMemo(() => {
+  const flattenedItemsById = useMemo(() => {
     const map = new Map<string, SelectedItem>();
-    const itemsToProcess = categoryFilter ? availableItemsForSelection : items;
-    itemsToProcess.forEach(item => { // Use all items for a complete map
+    const itemsToProcess = availableItemsForSelection;
+    itemsToProcess.forEach(item => { 
         if (item.variants && item.variants.length > 0) {
             item.variants.forEach(variant => {
                 map.set(variant.id, {
@@ -136,11 +136,11 @@ export function PriceSettingsForm() {
         }
     });
     return map;
-  }, [items, categoryFilter, availableItemsForSelection]);
+  }, [availableItemsForSelection]);
 
   const handleProductsSelected = (selectedIds: string[]) => {
     const newlySelected = selectedIds
-        .map(id => flattenedFilteredItemsById.get(id))
+        .map(id => flattenedItemsById.get(id))
         .filter((item): item is SelectedItem => !!item);
     
     setSelectedItems(newlySelected);
@@ -210,15 +210,17 @@ export function PriceSettingsForm() {
         return;
     }
     setIsSubmitting(true);
-    const updates = data.items.map((formItem, index) => {
-        const originalItem = selectedItems[index];
-        return {
-            id: originalItem.id,
-            type: originalItem.type,
-            costPrice: formItem.costPrice,
-            price: formItem.price,
-            channelPrices: formItem.channelPrices,
-        };
+    
+    // Correctly map form data to update payload
+    const updates = data.items.map((formItem) => {
+      const originalItem = flattenedItemsById.get(formItem.id);
+      return {
+        id: formItem.id,
+        type: originalItem!.type,
+        costPrice: formItem.costPrice,
+        price: formItem.price,
+        channelPrices: formItem.channelPrices,
+      };
     });
 
     if (updates.length === 0) {
@@ -441,5 +443,3 @@ export function PriceSettingsForm() {
     </>
   );
 }
-
-    
