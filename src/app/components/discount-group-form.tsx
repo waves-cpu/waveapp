@@ -47,7 +47,7 @@ const discountedProductSchema = z.object({
   variantName: z.string().optional(),
   sku: z.string().optional(),
   imageUrl: z.string().optional(),
-  originalPrice: z.number(),
+  originalPrice: z.number().nullable(),
   discountedPrice: z.coerce.number().min(0, "Harga harus non-negatif."),
 });
 
@@ -138,7 +138,7 @@ export function DiscountGroupForm({ existingGroup }: DiscountGroupFormProps) {
                   const existingDiscount = existingGroup?.products.find(p => p.productId === Number(product.id) && !p.variantId);
                   discountedProducts.push({
                       ...baseProductInfo,
-                      originalPrice: product.price || 0,
+                      originalPrice: product.price ?? null,
                       discountedPrice: existingDiscount?.discountedPrice ?? (product.price || 0),
                   });
               }
@@ -166,6 +166,8 @@ export function DiscountGroupForm({ existingGroup }: DiscountGroupFormProps) {
 
     paginatedFields.forEach(field => {
         const originalPrice = field.originalPrice;
+        if (originalPrice === null) return; // Skip if no original price
+        
         let newPrice = 0;
 
         if (bulkDiscountType === 'fixed') {
@@ -189,7 +191,7 @@ export function DiscountGroupForm({ existingGroup }: DiscountGroupFormProps) {
         channel: values.channel,
         startDate: values.dateRange.from.toISOString(),
         endDate: values.dateRange.to.toISOString(),
-        products: values.products,
+        products: values.products.filter(p => p.originalPrice !== null) as DiscountedProduct[], // Filter out items with no price
     };
 
     try {
@@ -388,17 +390,19 @@ export function DiscountGroupForm({ existingGroup }: DiscountGroupFormProps) {
                                         </TableCell>
                                         <TableCell>
                                             <span className="text-muted-foreground line-through">
-                                                {field.originalPrice.toLocaleString('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 })}
+                                                {field.originalPrice !== null && field.originalPrice !== undefined
+                                                  ? field.originalPrice.toLocaleString('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 })
+                                                  : '-'}
                                             </span>
                                         </TableCell>
                                         <TableCell>
                                              <FormField
                                                 control={form.control}
                                                 name={`products.${field.originalIndex}.discountedPrice`}
-                                                render={({ field }) => (
+                                                render={({ field: formField }) => (
                                                     <FormItem>
                                                         <FormControl>
-                                                            <Input type="number" placeholder="cth. 99000" {...field} />
+                                                            <Input type="number" placeholder="cth. 99000" {...formField} disabled={field.originalPrice === null} />
                                                         </FormControl>
                                                         <FormMessage />
                                                     </FormItem>
