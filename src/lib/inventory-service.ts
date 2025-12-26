@@ -834,9 +834,9 @@ export async function performSale(
         let cogsAtSale;
         let saleStatus = options?.status || 'Completed';
         let parentProduct: any;
-        let productId: number | string | null = null;
-        let variantId: number | string | null = null;
-        let accessoryId: number | string | null = null;
+        let productId: string | number | null = null;
+        let variantId: string | number | null = null;
+        let accessoryId: string | number | null = null;
         
         let finalPriceAtSale: number;
 
@@ -853,11 +853,10 @@ export async function performSale(
             if (variant.stock < quantity) throw new Error('Insufficient stock for variant.');
             
             cogsAtSale = variant.costPrice || 0;
-            finalPriceAtSale = options?.priceAtSale ?? variant.price;
-            if (options?.priceAtSale === undefined) {
-                const discountPrice = getActiveDiscountPrice(productId, variantId, parentProduct.category, channel);
-                finalPriceAtSale = discountPrice ?? variant.price;
-            }
+            
+            // This is the main logic change: Prioritize discount price.
+            const discountPrice = getActiveDiscountPrice(productId, variantId, parentProduct.category, channel);
+            finalPriceAtSale = discountPrice !== null ? discountPrice : (options?.priceAtSale ?? variant.price);
 
             adjustStock(variant.id.toString(), -quantity, saleReason);
 
@@ -867,11 +866,9 @@ export async function performSale(
             if (product.stock! < quantity) throw new Error('Insufficient stock for product.');
             
             cogsAtSale = product.costPrice || 0;
-            finalPriceAtSale = options?.priceAtSale ?? product.price!;
-             if (options?.priceAtSale === undefined) {
-                const discountPrice = getActiveDiscountPrice(productId, null, parentProduct.category, channel);
-                finalPriceAtSale = discountPrice ?? product.price!;
-            }
+
+            const discountPrice = getActiveDiscountPrice(productId, null, parentProduct.category, channel);
+            finalPriceAtSale = discountPrice !== null ? discountPrice : (options?.priceAtSale ?? product.price!);
             
             adjustStock(product.id.toString(), -quantity, saleReason);
         
@@ -888,6 +885,7 @@ export async function performSale(
         }
         
         if (isOnlineChannel && options?.priceAtSale === undefined) {
+            // Admin fee is only deducted if there's no overriding discount price
             const discountPrice = getActiveDiscountPrice(productId, variantId, parentProduct.category, channel);
             if (discountPrice === null) {
                 finalPriceAtSale = finalPriceAtSale * (1 - ADMIN_FEE_PERCENTAGE);
@@ -986,59 +984,60 @@ export async function getActiveDiscountPrice(productId: string | number, variant
 
 export async function recordSaleWithReceipt(receiptData: Omit<ShippingReceipt, 'id'>, salesData: Omit<Sale, 'id'>[]) {
     const transaction = db.transaction(() => {
-        // First, add the receipt. The addShippingReceipt function already handles potential duplicates.
-        const addReceiptStmt = db.prepare('INSERT INTO shipping_receipts (awb, date, channel, salesChannel, status, transactionId) VALUES (@awb, @date, @channel, @salesChannel, @status, @transactionId)');
-        addReceiptStmt.run({
-            ...receiptData,
-            transactionId: receiptData.awb
-        });
+        // Upsert logic for receipt
+        const existingReceipt = db.prepare('SELECT id FROM shipping_receipts WHERE awb = ?').get(receiptData.awb) as { id: number } | undefined;
+        if (existingReceipt) {
+            db.prepare('UPDATE shipping_receipts SET status = ? WHERE id = ?').run('Dikirim', existingReceipt.id);
+        } else {
+            const addReceiptStmt = db.prepare('INSERT INTO shipping_receipts (awb, date, channel, salesChannel, status, transactionId) VALUES (@awb, @date, @channel, @salesChannel, @status, @transactionId)');
+            addReceiptStmt.run({
+                ...receiptData,
+                status: 'Dikirim', // Always set to 'Dikirim' when processed
+                transactionId: receiptData.awb
+            });
+        }
 
-        // Then, record each sale item associated with this receipt.
+        // Record each sale item
         salesData.forEach(sale => {
             if (!sale.sku) {
                  throw new Error(`SKU is missing for a sale item in transaction ${sale.transactionId}`);
             }
-             const options = {
-                saleDate: parseISO(sale.saleDate as string),
-                transactionId: sale.transactionId,
-                priceAtSale: sale.priceAtSale,
-                status: sale.status,
-            };
-            // Directly call the logic from performSale, but without creating a nested transaction
+            // Re-implement sale logic here to avoid nested transactions
+            const saleReason = `Sale (${sale.channel}) - AWB: ${receiptData.awb}`;
+            
             const getProductStmt = db.prepare('SELECT * FROM products WHERE sku = ? AND hasVariants = 0');
             const getVariantStmt = db.prepare('SELECT * FROM variants WHERE sku = ?');
             const getParentProductStmt = db.prepare('SELECT * FROM products WHERE id = ?');
-            const saleReason = `Sale (${sale.channel}) - AWB: ${receiptData.awb}`;
-
+            
             let cogsAtSale, parentProduct, productId = null, variantId = null;
 
             const variant = getVariantStmt.get(sale.sku) as (InventoryItemVariant & { id: number, productId: number, costPrice?: number }) | undefined;
             const product = getProductStmt.get(sale.sku) as (InventoryItem & { id: number, costPrice?: number, sku: string }) | undefined;
-
+            
             if (variant) {
                 parentProduct = getParentProductStmt.get(variant.productId);
                 productId = parentProduct.id;
                 variantId = variant.id;
-                if (variant.stock < sale.quantity) throw new Error('Insufficient stock for variant.');
+                if (variant.stock < sale.quantity) throw new Error(`Insufficient stock for variant SKU: ${sale.sku}.`);
                 cogsAtSale = variant.costPrice || 0;
                 adjustStock(variant.id.toString(), -sale.quantity, saleReason);
             } else if (product) {
                 parentProduct = product;
                 productId = product.id;
-                if (product.stock! < sale.quantity) throw new Error('Insufficient stock for product.');
+                if (product.stock! < sale.quantity) throw new Error(`Insufficient stock for product SKU: ${sale.sku}.`);
                 cogsAtSale = product.costPrice || 0;
                 adjustStock(product.id.toString(), -sale.quantity, saleReason);
             } else {
-                throw new Error('SKU not found or product has variants.');
+                throw new Error(`SKU not found for sale item: ${sale.sku}.`);
             }
 
             db.prepare(`
                 INSERT INTO sales (transactionId, paymentMethod, resellerName, productId, variantId, accessoryId, channel, quantity, priceAtSale, cogsAtSale, saleDate, status, parentSku, productCategory, parentImageUrl)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             `).run(
-                options.transactionId, null, null, productId, variantId, null,
-                sale.channel, sale.quantity, options.priceAtSale, cogsAtSale, options.saleDate.toISOString(),
-                options.status, parentProduct?.sku, parentProduct?.category, parentProduct?.imageUrl
+                sale.transactionId, null, null, productId, variantId, null,
+                sale.channel, sale.quantity, sale.priceAtSale, cogsAtSale, sale.saleDate,
+                'Dikirim', parentProduct?.sku, parentProduct?.category, parentProduct?.imageUrl
             );
         });
     });
@@ -1298,6 +1297,7 @@ export async function clearPosTransactions(date: Date) {
     });
 
     transaction();
+    return salesToDelete;
 }
 
 
@@ -1631,3 +1631,6 @@ async function updateShippingReceiptStatusByAwb(awb: string, status: string) {
 
 
 
+
+
+    
