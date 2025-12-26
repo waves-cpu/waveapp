@@ -31,12 +31,6 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
@@ -75,7 +69,7 @@ export default function LazadaChannelPage() {
   const [detailItems, setDetailItems] = useState<Sale[]>([]);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
 
-  const [receiptForSale, setReceiptForSale] = useState<Omit<ShippingReceipt, 'id'> | null>(null);
+  const [receiptForSale, setReceiptForSale] = useState<Omit<ShippingReceipt, 'id'> | ShippingReceipt | null>(null);
   const [isSaleDialogOpen, setIsSaleDialogOpen] = useState(false);
 
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
@@ -193,16 +187,19 @@ export default function LazadaChannelPage() {
   };
   
   const handleViewDetails = (receipt: ShippingReceipt) => {
-    if (!receipt.transactionId) return;
+    if (!receipt.transactionId) {
+        setReceiptForSale(receipt);
+        setIsSaleDialogOpen(true);
+        return;
+    };
+    
     const items = salesByReceipt.get(receipt.transactionId) || [];
     if (items.length > 0) {
         setDetailItems(items);
         setIsDetailOpen(true);
     } else {
-        toast({
-            title: 'Tidak Ada Detail',
-            description: 'Tidak ada produk yang tercatat untuk resi ini.'
-        });
+        setReceiptForSale(receipt);
+        setIsSaleDialogOpen(true);
     }
   }
   
@@ -283,7 +280,6 @@ export default function LazadaChannelPage() {
                   <TableHead>No. Resi (AWB)</TableHead>
                   <TableHead>Produk</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead className="text-center">{t.inventoryTable.actions}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -294,9 +290,6 @@ export default function LazadaChannelPage() {
                           <TableCell><Skeleton className="h-4 w-[250px]" /></TableCell>
                           <TableCell><Skeleton className="h-4 w-[80px]" /></TableCell>
                           <TableCell><Skeleton className="h-6 w-[100px]" /></TableCell>
-                          <TableCell className="text-center">
-                            <Skeleton className="h-8 w-8 rounded-full" />
-                          </TableCell>
                       </TableRow>
                   ))
                 ) : receipts.length > 0 ? (
@@ -310,7 +303,7 @@ export default function LazadaChannelPage() {
                           <TableCell className="font-medium">{receipt.awb}</TableCell>
                           <TableCell>
                             <Button variant="link" size="sm" className="h-auto p-0 text-xs" onClick={() => handleViewDetails(receipt)}>
-                                {isProcessed ? `${relatedSales.reduce((acc, s) => acc + s.quantity, 0)} produk` : 'N/A'}
+                                {isProcessed ? `${relatedSales.reduce((acc, s) => acc + s.quantity, 0)} produk` : 'Catat Produk'}
                                 <Eye className="ml-2 h-3 w-3" />
                             </Button>
                           </TableCell>
@@ -319,9 +312,6 @@ export default function LazadaChannelPage() {
                                     {receipt.status}
                                 </Badge>
                            </TableCell>
-                           <TableCell className="text-center">
-                              
-                          </TableCell>
                         </TableRow>
                     )
                   })
