@@ -49,8 +49,8 @@ interface CartItem {
 interface RecordSaleForReceiptDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSaleComplete: () => Promise<void>;
-  receipt: Omit<ShippingReceipt, 'id'> | null;
+  onSaleComplete: (receiptData: Omit<ShippingReceipt, 'id'>, salesData: Omit<Sale, 'id'>[]) => Promise<void>;
+  receipt: Omit<ShippingReceipt, 'id'> | ShippingReceipt | null;
 }
 
 export function RecordSaleForReceiptDialog({
@@ -106,24 +106,25 @@ export function RecordSaleForReceiptDialog({
     
     const onlinePriceResult = itemToAddRaw.channelPrices?.find(p => ['shopee', 'tiktok', 'lazada'].includes(p.channel));
     const price = onlinePriceResult?.price ?? itemToAddRaw.price!;
+    const itemSku = variant?.sku || item.sku;
 
-    const itemToAdd = {
+    if (!itemSku) {
+        toast({ variant: 'destructive', title: 'SKU Tidak Ditemukan', description: 'Produk ini tidak memiliki SKU dan tidak dapat ditambahkan.' });
+        playErrorSound();
+        return;
+    }
+
+    const itemToAdd: CartItem = {
         productId: item.id,
         productName: item.name,
         variantId: variant?.id,
         variantName: variant?.name,
-        sku: variant?.sku || item.sku || '',
+        sku: itemSku,
         quantity: 1,
         price: price,
         imageUrl: item.imageUrl,
         maxStock: itemToAddRaw.stock || 0
     };
-
-    if (!itemToAdd.sku) {
-        toast({ variant: 'destructive', title: 'SKU Tidak Ditemukan', description: 'Produk ini tidak memiliki SKU dan tidak dapat ditambahkan.' });
-        playErrorSound();
-        return;
-    }
 
     setCart(currentCart => {
       const existingItem = currentCart.find(ci => ci.sku === itemToAdd.sku);
@@ -203,20 +204,9 @@ export function RecordSaleForReceiptDialog({
     }));
     
     try {
-      await recordSaleWithReceipt(receipt, salesData);
-      
-      toast({
-        title: 'Penjualan Dicatat',
-        description: `Stok untuk ${cart.length} produk telah berhasil dikurangi.`,
-      });
-      await onSaleComplete();
+      await onSaleComplete(receipt, salesData);
     } catch (error) {
       console.error('Failed to record sale:', error);
-      toast({
-        variant: 'destructive',
-        title: 'Gagal Mencatat Penjualan',
-        description: error instanceof Error ? error.message : 'Terjadi kesalahan.',
-      });
     } finally {
       setIsSubmitting(false);
     }
@@ -328,3 +318,5 @@ export function RecordSaleForReceiptDialog({
     </>
   );
 }
+
+    
