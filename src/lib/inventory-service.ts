@@ -972,25 +972,18 @@ function getActiveDiscountPrice(productId: string | number, variantId: string | 
 
 export async function recordSaleWithReceipt(receiptData: Omit<ShippingReceipt, 'id'>, salesData: Omit<Sale, 'id'>[]) {
     const transaction = db.transaction(() => {
-        const existingReceipt = db.prepare('SELECT id FROM shipping_receipts WHERE awb = ?').get(receiptData.awb);
-        if (existingReceipt) {
-            throw new Error(`DUPLICATE_AWB::${receiptData.awb}`);
-        }
-
         addShippingReceipt(receiptData);
 
         salesData.forEach(sale => {
+            if (!sale.sku) {
+                 throw new Error(`SKU is missing for a sale item in transaction ${sale.transactionId}`);
+            }
             const options = {
                 saleDate: parseISO(sale.saleDate as string),
                 transactionId: sale.transactionId,
                 priceAtSale: sale.priceAtSale,
                 status: sale.status,
             };
-            
-            if (!sale.sku) {
-                 throw new Error(`SKU is missing for a sale item in transaction ${sale.transactionId}`);
-            }
-
             performSale(sale.sku, sale.channel, sale.quantity, options);
         });
     });
@@ -1570,6 +1563,7 @@ async function updateShippingReceiptStatusByAwb(awb: string, status: string) {
     const stmt = db.prepare(`UPDATE shipping_receipts SET status = ? WHERE awb = ?`);
     stmt.run(status, awb);
 }
+
 
 
 
