@@ -82,7 +82,7 @@ export function UpdateStockDialog({ open, onOpenChange, itemId }: UpdateStockDia
               form.setValue('newStock', parentItem.stock);
           }
       }
-    } else {
+    } else if (!open) {
         form.reset({ newStock: undefined, reason: '' });
         setItemDetails({ parentName: '', variantName: '', stock: undefined });
     }
