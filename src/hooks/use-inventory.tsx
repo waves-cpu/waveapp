@@ -147,20 +147,17 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
   const fetchAllData = useCallback(async () => {
     setLoading(true);
     try {
-      const [inventoryData, salesData, resellerData, receiptData, discountData] = await Promise.all([
-        fetchInventoryData(),
-        fetchAllSales(),
-        getResellers(),
-        fetchShippingReceiptsDb({ page: 1, limit: 100000 }), // Fetch all receipts
-        fetchDiscountGroupsDb(),
-      ]);
+      const inventoryData = await fetchInventoryData();
+      const salesData = await fetchAllSales();
+      const resellerData = await getResellers();
+      const receiptData = await fetchShippingReceiptsDb({ page: 1, limit: 100000 });
       
       setItems(inventoryData.items);
       setAccessories(inventoryData.accessories);
       setAllSales(salesData);
       setResellers(resellerData);
       setAllShippingReceipts(receiptData.receipts);
-      setDiscountGroups(discountData);
+      setDiscountGroups(inventoryData.discountGroups);
 
     } catch (error) {
     } finally {
@@ -483,15 +480,15 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
   
   const addDiscountGroup = async (group: Omit<DiscountGroup, 'id'|'productCount'>) => {
       await addDiscountGroupDb(group);
-      await fetchDiscountGroups();
+      await fetchAllData();
   }
   const editDiscountGroup = async (id: number, group: Omit<DiscountGroup, 'id'|'productCount'>) => {
       await editDiscountGroupDb(id, group);
-      await fetchDiscountGroups();
+      await fetchAllData();
   }
   const deleteDiscountGroup = async (id: number) => {
       await deleteDiscountGroupDb(id);
-      await fetchDiscountGroups();
+      await fetchAllData();
   }
   const getDiscountGroup = async (id: number) => {
       return await getDiscountGroupDb(id);
@@ -568,4 +565,3 @@ export const useInventory = () => {
   }
   return context;
 };
-

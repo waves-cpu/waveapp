@@ -171,11 +171,21 @@ const PriceDisplay = ({ item, discountGroups }: { item: InventoryItem | Inventor
     const activeDiscount = useMemo(() => {
         if (isParentProduct) return null;
         const now = new Date();
+        const category = 'category' in item ? (item as InventoryItem).category : undefined;
+
         for (const group of discountGroups) {
+            // Check if group category matches item category
+            if (category && group.category !== category) {
+                continue;
+            }
+
             const startDate = parseISO(group.startDate);
             const endDate = endOfDay(parseISO(group.endDate));
             if (isWithinInterval(now, { start: startDate, end: endDate })) {
-                const discountedProduct = group.products.find((p: any) => p.variantId ? p.variantId === Number(item.id) : p.productId === Number(item.id));
+                const discountedProduct = group.products.find((p: any) => 
+                    (p.variantId && p.variantId === Number(item.id)) ||
+                    (!p.variantId && 'productId' in item && p.productId === Number((item as any).productId))
+                );
 
                 if (discountedProduct) {
                     return discountedProduct;
@@ -194,7 +204,7 @@ const PriceDisplay = ({ item, discountGroups }: { item: InventoryItem | Inventor
         return <span className="text-sm">{formatCurrency(minPrice)} - {formatCurrency(maxPrice)}</span>
     }
 
-    if (activeDiscount) {
+    if (activeDiscount && item.price != null) {
         return (
             <div>
                 <div className="font-semibold text-primary">{formatCurrency(activeDiscount.discountedPrice)}</div>
@@ -448,7 +458,7 @@ export function InventoryTable({ onUpdateStock, isAccessoryTable = false }: Inve
                                         </div>
                                     </TableCell>
                                     <TableCell>
-                                        <PriceDisplay item={variant} discountGroups={discountGroups} />
+                                        <PriceDisplay item={{...variant, category: item.category}} discountGroups={discountGroups} />
                                     </TableCell>
                                     <TableCell>
                                         <StockBar stock={variant.stock} onUpdateClick={() => onUpdateStock(variant.id)} item={item} />
@@ -591,6 +601,3 @@ export function InventoryTable({ onUpdateStock, isAccessoryTable = false }: Inve
     </>
   );
 }
-
-
-

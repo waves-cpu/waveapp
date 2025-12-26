@@ -282,6 +282,8 @@ export async function fetchInventoryData() {
     const fetchedHistory = db.prepare('SELECT * FROM history ORDER BY date DESC').all();
     const fetchedAccessoryHistory = db.prepare('SELECT * FROM accessory_history ORDER BY date DESC').all();
     const fetchedChannelPrices = db.prepare('SELECT * FROM channel_prices').all() as any[];
+    const fetchedDiscountGroups = db.prepare("SELECT * FROM discount_groups").all() as any[];
+    const fetchedDiscountedProducts = db.prepare("SELECT * FROM discounted_products").all() as any[];
 
     const historyMap = new Map<string, AdjustmentHistory[]>();
     for (const entry of fetchedHistory as any[]) {
@@ -367,10 +369,25 @@ export async function fetchInventoryData() {
             history: accessoryHistoryMap.get(itemIdStr) || [],
         };
     });
+    
+    const discountProductMap = new Map<number, any[]>();
+    fetchedDiscountedProducts.forEach(p => {
+        if (!discountProductMap.has(p.groupId)) {
+            discountProductMap.set(p.groupId, []);
+        }
+        discountProductMap.get(p.groupId)!.push(p);
+    });
+
+    const fullDiscountGroups = fetchedDiscountGroups.map(g => ({
+        ...g,
+        products: discountProductMap.get(g.id) || [],
+        productCount: (discountProductMap.get(g.id) || []).length
+    }));
+
 
     const uniqueCategories = [...new Set(fullItems.map(item => item.category))].sort();
     
-    return { items: fullItems, accessories: fullAccessories, categories: uniqueCategories };
+    return { items: fullItems, accessories: fullAccessories, categories: uniqueCategories, discountGroups: fullDiscountGroups };
 }
 
 export async function addProduct(itemData: any): Promise<string> {
@@ -938,6 +955,7 @@ export async function performSale(
 
 function getActiveDiscountPrice(productId: string | number, variantId: string | number | null, category: string): number | null {
   const now = new Date().toISOString();
+  // Filter groups by the correct category first
   const getGroupStmt = db.prepare('SELECT id FROM discount_groups WHERE category = ? AND startDate <= ? AND endDate >= ?');
   const groups = getGroupStmt.all(category, now, now) as {id: number}[];
   
@@ -946,17 +964,18 @@ function getActiveDiscountPrice(productId: string | number, variantId: string | 
   const groupIds = groups.map(g => g.id);
   const placeholders = groupIds.map(() => '?').join(',');
 
+  // Now search for the product within those filtered groups
   const getDiscountStmt = db.prepare(`
       SELECT discountedPrice
       FROM discounted_products
       WHERE groupId IN (${placeholders})
         AND productId = ?
-        AND (variantId = ? OR variantId IS NULL)
+        AND (variantId = ? OR (variantId IS NULL AND ? IS NULL))
       ORDER BY variantId DESC -- Prioritize variant-specific discounts
       LIMIT 1
   `);
 
-  const params = [...groupIds, productId, variantId ?? null];
+  const params = [...groupIds, productId, variantId ?? null, variantId ?? null];
   const result = getDiscountStmt.get(...params) as { discountedPrice: number } | undefined;
 
   return result ? result.discountedPrice : null;
@@ -1478,7 +1497,7 @@ export async function resetAllPrices() {
 }
     
 // Discount Group Functions
-export async function addDiscountGroup(group: Omit<DiscountGroup, 'id' | 'productCount'>) {
+export async function addDiscountGroup(group: Omit<DiscountGroup, 'id' | 'productCount'>): Promise<void> {
     const transaction = db.transaction(() => {
         const addGroupStmt = db.prepare('INSERT INTO discount_groups (name, category, startDate, endDate) VALUES (@name, @category, @startDate, @endDate)');
         const addProductStmt = db.prepare('INSERT INTO discounted_products (groupId, productId, variantId, discountedPrice) VALUES (@groupId, @productId, @variantId, @discountedPrice)');
@@ -1504,7 +1523,7 @@ export async function addDiscountGroup(group: Omit<DiscountGroup, 'id' | 'produc
     return transaction();
 }
 
-export async function editDiscountGroup(id: number, group: Omit<DiscountGroup, 'id' | 'productCount'>) {
+export async function editDiscountGroup(id: number, group: Omit<DiscountGroup, 'id' | 'productCount'>): Promise<void> {
     const transaction = db.transaction(() => {
         const updateGroupStmt = db.prepare('UPDATE discount_groups SET name = @name, category = @category, startDate = @startDate, endDate = @endDate WHERE id = @id');
         const deleteProductsStmt = db.prepare('DELETE FROM discounted_products WHERE groupId = ?');
@@ -1532,32 +1551,29 @@ export async function editDiscountGroup(id: number, group: Omit<DiscountGroup, '
     return transaction();
 }
 
-export async function deleteDiscountGroup(id: number) {
+export async function deleteDiscountGroup(id: number): Promise<void> {
     return db.prepare('DELETE FROM discount_groups WHERE id = ?').run(id);
 }
 
 export async function fetchDiscountGroups(): Promise<DiscountGroup[]> {
     const groups = db.prepare('SELECT * FROM discount_groups ORDER BY name').all() as DiscountGroup[];
-    const products = db.prepare(`
+    
+    const productsStmt = db.prepare(`
         SELECT dp.groupId, dp.discountedPrice, p.id as productId, v.id as variantId, p.name as productName, v.name as variantName, COALESCE(v.sku, p.sku) as sku, p.imageUrl, COALESCE(v.price, p.price) as originalPrice
         FROM discounted_products dp
         JOIN products p ON dp.productId = p.id
         LEFT JOIN variants v ON dp.variantId = v.id
-    `).all() as (DiscountedProduct & { groupId: number })[];
+        WHERE dp.groupId = ?
+    `);
 
-    const productMap = new Map<number, DiscountedProduct[]>();
-    products.forEach(p => {
-        if (!productMap.has(p.groupId)) {
-            productMap.set(p.groupId, []);
-        }
-        productMap.get(p.groupId)!.push(p);
+    return groups.map(group => {
+        const products = productsStmt.all(group.id) as DiscountedProduct[];
+        return {
+            ...group,
+            products: products,
+            productCount: products.length,
+        };
     });
-
-    return groups.map(group => ({
-        ...group,
-        products: productMap.get(group.id) || [],
-        productCount: (productMap.get(group.id) || []).length,
-    }));
 }
 
 export async function getDiscountGroup(id: number): Promise<DiscountGroup | null> {
