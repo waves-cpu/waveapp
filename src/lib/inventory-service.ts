@@ -874,7 +874,7 @@ export async function performSale(
         
         // Apply admin fee for online marketplaces if price was not explicitly passed in options
         if (isOnlineChannel && options?.priceAtSale === undefined) {
-            finalPriceAtSale = finalPriceAtSale * (1 - ADMIN_FEE_PERCENTAGE);
+            finalPriceAtSale = finalPriceAtSale - (finalPriceAtSale * ADMIN_FEE_PERCENTAGE);
         }
 
         const saleResult = db.prepare(`
@@ -1282,8 +1282,6 @@ export async function updatePrices(updates: { id: string, type: 'product' | 'var
                 deleteChannelPricesByVariant.run(id);
             }
             
-            const onlinePrice = update.channelPrices?.find(p => p.channel === 'online')?.price;
-
             update.channelPrices?.forEach(channelPrice => {
                 const priceIsValid = channelPrice.price !== undefined && channelPrice.price !== null && channelPrice.price >= 0;
                 
@@ -1452,3 +1450,4 @@ async function updateShippingReceiptStatusByAwb(awb: string, status: string) {
     stmt.run(status, awb);
 }
     
+
