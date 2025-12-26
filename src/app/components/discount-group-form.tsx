@@ -40,8 +40,6 @@ import Image from 'next/image';
 import { Pagination } from '@/components/ui/pagination';
 import { Label } from '@/components/ui/label';
 
-const ITEMS_PER_PAGE = 10;
-
 const discountedProductSchema = z.object({
   productId: z.number(),
   variantId: z.number().optional(),
@@ -78,6 +76,7 @@ export function DiscountGroupForm({ existingGroup }: DiscountGroupFormProps) {
   const isEditMode = !!existingGroup;
 
   const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
   const [bulkDiscountType, setBulkDiscountType] = useState<'fixed' | 'percent'>('fixed');
   const [bulkDiscountValue, setBulkDiscountValue] = useState<number | ''>('');
   
@@ -148,16 +147,16 @@ export function DiscountGroupForm({ existingGroup }: DiscountGroupFormProps) {
       }
   }, [selectedCategory, items, replace, existingGroup]);
   
-  const totalPages = Math.ceil(fields.length / ITEMS_PER_PAGE);
+  const totalPages = Math.ceil(fields.length / itemsPerPage);
 
   const paginatedFields = useMemo(() => {
-    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-    const endIndex = startIndex + ITEMS_PER_PAGE;
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
     return fields.slice(startIndex, endIndex).map((field, index) => ({
       ...field,
       originalIndex: startIndex + index, // Keep track of the original index in the `fields` array
     }));
-  }, [fields, currentPage]);
+  }, [fields, currentPage, itemsPerPage]);
 
 
   const handleApplyBulkDiscount = () => {
@@ -393,12 +392,36 @@ export function DiscountGroupForm({ existingGroup }: DiscountGroupFormProps) {
                       <FormMessage className="mt-2">{form.formState.errors.products?.message}</FormMessage>
 
                       {totalPages > 1 && (
-                        <Pagination 
-                            totalPages={totalPages}
-                            currentPage={currentPage}
-                            onPageChange={setCurrentPage}
-                            className="mt-4"
-                        />
+                        <div className="flex items-center justify-between mt-4">
+                             <div className="text-sm text-muted-foreground">
+                                Menampilkan {paginatedFields.length} dari {fields.length} produk.
+                             </div>
+                             <div className="flex items-center gap-4">
+                                <Pagination 
+                                    totalPages={totalPages}
+                                    currentPage={currentPage}
+                                    onPageChange={setCurrentPage}
+                                />
+                                <Select
+                                    value={`${itemsPerPage}`}
+                                    onValueChange={(value) => {
+                                        setItemsPerPage(Number(value))
+                                        setCurrentPage(1)
+                                    }}
+                                >
+                                    <SelectTrigger className="h-8 w-[150px]">
+                                        <SelectValue placeholder={itemsPerPage} />
+                                    </SelectTrigger>
+                                    <SelectContent side="top">
+                                        {[10, 20, 50].map((pageSize) => (
+                                        <SelectItem key={pageSize} value={`${pageSize}`}>
+                                            Tampilkan {pageSize}
+                                        </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                             </div>
+                        </div>
                       )}
                 </div>
             )}
