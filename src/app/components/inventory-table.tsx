@@ -193,6 +193,7 @@ const PriceDisplay = ({ item, discountGroups }: { item: (InventoryItem | Invento
         const allActiveDiscounts: ActiveDiscount[] = [];
 
         for (const group of discountGroups) {
+            if (!group.products) continue;
             // Category check
             if (group.category !== category) {
                 continue;
@@ -252,7 +253,7 @@ const PriceDisplay = ({ item, discountGroups }: { item: (InventoryItem | Invento
                  <TooltipProvider>
                     <Tooltip>
                         <TooltipTrigger asChild>
-                             <span className="underline decoration-dashed cursor-pointer pb-5">
+                             <span className="underline decoration-dashed cursor-pointer underline-offset-4">
                                 {item.price != null ? formatCurrency(item.price) : '-'}
                             </span>
                         </TooltipTrigger>
@@ -677,6 +678,7 @@ export function InventoryTable({ onUpdateStock, isAccessoryTable = false }: Inve
     </>
   );
 }
+
 
 
 
