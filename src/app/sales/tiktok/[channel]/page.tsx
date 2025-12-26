@@ -205,10 +205,25 @@ export default function TiktokChannelPage() {
   
   const totalPages = Math.ceil(totalReceipts / itemsPerPage);
 
-  const handleSaleComplete = async () => {
-    setIsSaleDialogOpen(false);
-    setReceiptForSale(null);
-    await loadReceipts();
+  const handleSaleComplete = async (receiptData: Omit<ShippingReceipt, 'id'>, salesData: Omit<Sale, 'id'>[]) => {
+      try {
+        await recordSaleWithReceipt(receiptData, salesData);
+        toast({
+            title: "Penjualan Berhasil Dicatat",
+            description: `Penjualan untuk resi ${receiptData.awb} telah disimpan.`,
+        });
+      } catch (error) {
+          console.error("Failed to record sale with receipt:", error);
+          toast({
+              title: "Gagal Mencatat Penjualan",
+              description: "Terjadi kesalahan saat menyimpan data penjualan.",
+              variant: "destructive",
+          });
+      } finally {
+        setIsSaleDialogOpen(false);
+        setReceiptForSale(null);
+        await loadReceipts();
+      }
   };
 
   return (
