@@ -831,13 +831,14 @@ export async function performSale(
         const saleDateString = saleDate.toISOString();
         const saleReason = `Sale (${channel})` + (options?.resellerName ? ` - ${options.resellerName}` : '');
 
-        let finalPriceAtSale = options?.priceAtSale ?? 0;
         let cogsAtSale;
         let saleStatus = options?.status || 'Completed';
         let parentProduct: any;
         let productId: number | string | null = null;
         let variantId: number | string | null = null;
         let accessoryId: number | string | null = null;
+        
+        let finalPriceAtSale: number;
 
         const variant = getVariantStmt.get(sku) as (InventoryItemVariant & { id: number, productId: number, costPrice?: number }) | undefined;
         const product = getProductStmt.get(sku) as (InventoryItem & { id: number, costPrice?: number, sku: string }) | undefined;
@@ -850,9 +851,10 @@ export async function performSale(
             productId = parentProduct.id;
             variantId = variant.id;
             if (variant.stock < quantity) throw new Error('Insufficient stock for variant.');
-            if (finalPriceAtSale === 0) {
-                 finalPriceAtSale = getActiveDiscountPrice(productId, variantId, parentProduct.category, channel) ?? variant.price;
-            }
+            
+            const discountPrice = getActiveDiscountPrice(productId, variantId, parentProduct.category, channel);
+            finalPriceAtSale = discountPrice ?? (options?.priceAtSale ?? variant.price);
+
             cogsAtSale = variant.costPrice || 0;
             adjustStock(variant.id.toString(), -quantity, saleReason);
 
@@ -860,9 +862,10 @@ export async function performSale(
             parentProduct = product;
             productId = product.id;
             if (product.stock! < quantity) throw new Error('Insufficient stock for product.');
-            if (finalPriceAtSale === 0) {
-                finalPriceAtSale = getActiveDiscountPrice(productId, null, parentProduct.category, channel) ?? product.price!;
-            }
+            
+            const discountPrice = getActiveDiscountPrice(productId, null, parentProduct.category, channel);
+            finalPriceAtSale = discountPrice ?? (options?.priceAtSale ?? product.price!);
+            
             cogsAtSale = product.costPrice || 0;
             adjustStock(product.id.toString(), -quantity, saleReason);
         
@@ -879,7 +882,11 @@ export async function performSale(
         }
         
         if (isOnlineChannel && options?.priceAtSale === undefined) {
-            finalPriceAtSale = finalPriceAtSale * (1 - ADMIN_FEE_PERCENTAGE);
+            // Apply admin fee only if a specific price was not passed in (i.e. we are calculating it now)
+            // And if there's no discount active
+            if (getActiveDiscountPrice(productId, variantId, parentProduct.category, channel) === null) {
+                finalPriceAtSale = finalPriceAtSale * (1 - ADMIN_FEE_PERCENTAGE);
+            }
         }
 
         const saleResult = db.prepare(`
@@ -938,16 +945,11 @@ function getActiveDiscountPrice(productId: string | number, variantId: string | 
     const now = new Date().toISOString();
     
     let groups: {id: number}[] = [];
-    const getGroupStmt = db.prepare('SELECT id FROM discount_groups WHERE category = ? AND channel = ? AND startDate <= ? AND endDate >= ?');
+    const getGroupStmt = db.prepare('SELECT id FROM discount_groups WHERE category = ? AND startDate <= ? AND endDate >= ? AND (channel = ? OR channel = ?)');
+    const isOnlineSale = ['shopee', 'tiktok', 'lazada'].includes(channel.toLowerCase());
 
     // 1. Check for specific channel
-    groups = getGroupStmt.all(category, channel, now, now) as {id: number}[];
-
-    // 2. Fallback to 'online' if it's an online sale and no specific channel discount was found
-    const isOnlineSale = ['shopee', 'tiktok', 'lazada'].includes(channel.toLowerCase());
-    if (groups.length === 0 && isOnlineSale) {
-        groups = getGroupStmt.all(category, 'online', now, now) as {id: number}[];
-    }
+    groups = getGroupStmt.all(category, now, now, channel, isOnlineSale ? 'online' : '-----') as {id: number}[];
     
     if (groups.length === 0) return null;
 
@@ -955,16 +957,23 @@ function getActiveDiscountPrice(productId: string | number, variantId: string | 
     const placeholders = groupIds.map(() => '?').join(',');
 
     const getDiscountStmt = db.prepare(`
-        SELECT discountedPrice
-        FROM discounted_products
-        WHERE groupId IN (${placeholders})
-          AND productId = ?
-          AND (variantId = ? OR (variantId IS NULL AND ? IS NULL))
-        ORDER BY variantId DESC
+        SELECT dp.discountedPrice, dg.channel
+        FROM discounted_products dp
+        JOIN discount_groups dg ON dp.groupId = dg.id
+        WHERE dp.groupId IN (${placeholders})
+          AND dp.productId = ?
+          AND (dp.variantId = ? OR (dp.variantId IS NULL AND ? IS NULL))
+        ORDER BY
+          CASE dg.channel
+            WHEN ? THEN 1 -- Prioritize specific channel
+            WHEN 'online' THEN 2 -- Then 'online' channel
+            ELSE 3
+          END,
+          dp.variantId DESC
         LIMIT 1
     `);
     
-    const params: (string|number|null)[] = [...groupIds, productId, variantId ?? null, variantId ?? null];
+    const params: (string|number|null)[] = [...groupIds, productId, variantId ?? null, variantId ?? null, channel];
     const result = getDiscountStmt.get(...params) as { discountedPrice: number } | undefined;
 
     return result ? result.discountedPrice : null;
@@ -1563,6 +1572,7 @@ async function updateShippingReceiptStatusByAwb(awb: string, status: string) {
     const stmt = db.prepare(`UPDATE shipping_receipts SET status = ? WHERE awb = ?`);
     stmt.run(status, awb);
 }
+
 
 
 
