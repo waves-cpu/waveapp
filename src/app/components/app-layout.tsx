@@ -242,14 +242,6 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                                     </SidebarMenuButton>
                                 </Link>
                               </SidebarMenuItem>
-                             <SidebarMenuItem>
-                                <Link href="/finance/settings">
-                                    <SidebarMenuButton variant="ghost" size="sm" isActive={isActive('/finance/settings')}>
-                                        <Settings2 />
-                                        {t.finance.priceSettings}
-                                    </SidebarMenuButton>
-                                </Link>
-                              </SidebarMenuItem>
                         </SidebarMenu>
                     </CollapsibleContent>
                 </Collapsible>

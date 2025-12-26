@@ -27,7 +27,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import {
   Search,
   Pencil,
@@ -165,59 +164,9 @@ function StockBar({ stock, onUpdateClick, item }: { stock: number; onUpdateClick
 
 const formatCurrency = (amount: number) => `Rp${Math.round(amount).toLocaleString('id-ID')}`;
 
-const PriceWithDetails = ({ item }: { item: InventoryItem | InventoryItemVariant }) => {
-    const { language } = useLanguage();
-    const t = translations[language];
-    const TPrice = t.finance.priceSettingsPage;
-
+const SimplePrice = ({ item }: { item: InventoryItem | InventoryItemVariant }) => {
     const priceDisplay = item.price != null ? formatCurrency(item.price) : '-';
-
-    const onlinePrice = item.channelPrices?.find(p => ['shopee', 'tiktok', 'lazada'].includes(p.channel) && p.price != null)?.price;
-    
-    const channelPrices = [
-        { channel: 'pos', price: item.channelPrices?.find(p => p.channel === 'pos')?.price },
-        { channel: 'reseller', price: item.channelPrices?.find(p => p.channel === 'reseller')?.price },
-        { channel: 'online', price: onlinePrice },
-    ].filter(p => p.price != null && p.price > 0);
-
-    const getChannelTranslation = (channel: string) => {
-        switch(channel) {
-            case 'pos': return t.sales.pos;
-            case 'reseller': return t.sales.reseller;
-            case 'online': return TPrice.onlinePrice;
-            default: return channel;
-        }
-    }
-
-    const triggerText = `${channelPrices.length} ${TPrice.sellingPrices}`;
-
-    return (
-        <div className="flex flex-col items-start">
-            <span>{priceDisplay}</span>
-            {channelPrices.length > 0 && (
-                <Popover>
-                    <PopoverTrigger asChild>
-                         <button className="text-xs text-primary hover:underline mt-1">
-                            {triggerText}
-                         </button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-60">
-                        <div className="space-y-2">
-                            <h4 className="font-medium leading-none">{TPrice.channelPriceDetails}</h4>
-                            <div className="grid gap-2 text-sm">
-                                {channelPrices.map(({ channel, price }) => (
-                                     <div key={channel} className="grid grid-cols-2 items-center gap-4">
-                                        <span className="text-muted-foreground">{getChannelTranslation(channel)}</span>
-                                        <span className="font-semibold text-right">{formatCurrency(price!)}</span>
-                                     </div>
-                                ))}
-                            </div>
-                        </div>
-                    </PopoverContent>
-                </Popover>
-            )}
-        </div>
-    );
+    return <span>{priceDisplay}</span>;
 };
 
 
@@ -468,7 +417,7 @@ export function InventoryTable({ onUpdateStock, isAccessoryTable = false }: Inve
                                         </div>
                                     </TableCell>
                                     <TableCell>
-                                        <PriceWithDetails item={variant} />
+                                        <SimplePrice item={variant} />
                                     </TableCell>
                                     <TableCell>
                                         <StockBar stock={variant.stock} onUpdateClick={() => onUpdateStock(variant.id)} item={item} />
@@ -504,7 +453,7 @@ export function InventoryTable({ onUpdateStock, isAccessoryTable = false }: Inve
                                 </div>
                             </TableCell>
                              <TableCell>
-                                <PriceWithDetails item={item} />
+                                <SimplePrice item={item} />
                              </TableCell>
                             <TableCell>
                                 {isAccessoryTable ? (
