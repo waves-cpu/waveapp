@@ -27,6 +27,7 @@ export const translations = {
             title: "Finance",
             priceSettings: "Price Settings",
             statements: "Sales Report",
+            discounts: "Discount Prices",
             statementsPage: {
                 title: "Sales Report",
                 grossRevenue: "Gross Revenue",
@@ -559,6 +560,7 @@ export const translations = {
             title: "Keuangan",
             priceSettings: "Pengaturan Harga",
             statements: "Laporan Penjualan",
+            discounts: "Harga Diskon",
             statementsPage: {
                 title: "Laporan Penjualan",
                 grossRevenue: "Total Omzet",

@@ -42,6 +42,7 @@ import {
   Warehouse,
   FilePlus2,
   FileClock,
+  Tags,
 } from 'lucide-react';
 import { Logo } from './logo';
 import { Separator } from '@/components/ui/separator';
@@ -239,6 +240,14 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                                     <SidebarMenuButton variant="ghost" size="sm" isActive={isActive('/finance/statements')}>
                                         <FileBarChart />
                                         {t.finance.statements}
+                                    </SidebarMenuButton>
+                                </Link>
+                              </SidebarMenuItem>
+                               <SidebarMenuItem>
+                                <Link href="/finance/discounts">
+                                    <SidebarMenuButton variant="ghost" size="sm" isActive={isActive('/finance/discounts')}>
+                                        <Tags />
+                                        {t.finance.discounts}
                                     </SidebarMenuButton>
                                 </Link>
                               </SidebarMenuItem>

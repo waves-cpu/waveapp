@@ -1277,8 +1277,8 @@ export async function updatePrices(updates: { id: string, type: 'product' | 'var
             update.channelPrices?.forEach(channelPrice => {
                 const priceIsValid = typeof channelPrice.price === 'number' && channelPrice.price >= 0;
 
-                if (channelPrice.channel === 'online') {
-                    if (priceIsValid) {
+                if (priceIsValid) {
+                    if (channelPrice.channel === 'online') {
                         ['shopee', 'tiktok', 'lazada'].forEach(onlineChannel => {
                             upsertChannelPriceStmt.run({
                                 productId: update.type === 'product' ? update.id : null,
@@ -1287,9 +1287,7 @@ export async function updatePrices(updates: { id: string, type: 'product' | 'var
                                 price: channelPrice.price
                             });
                         });
-                    }
-                } else {
-                     if (priceIsValid) {
+                    } else {
                         upsertChannelPriceStmt.run({
                             productId: update.type === 'product' ? update.id : null,
                             variantId: update.type === 'variant' ? update.id : null,
@@ -1443,13 +1441,10 @@ async function updateShippingReceiptStatusByAwb(awb: string, status: string) {
 }
 
 export async function resetAllPrices() {
-    db.transaction(() => {
-        db.exec('DELETE FROM channel_prices');
-        db.exec('UPDATE products SET price = NULL, costPrice = NULL');
-        db.exec('UPDATE variants SET price = 0, costPrice = NULL');
-    })();
+    // This function is no longer needed as the price settings page is removed.
 }
     
 
     
+
 
