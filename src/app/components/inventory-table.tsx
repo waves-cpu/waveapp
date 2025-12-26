@@ -250,7 +250,7 @@ const PriceDisplay = ({ item, discountGroups }: { item: InventoryItem | Inventor
                  <TooltipProvider>
                     <Tooltip>
                         <TooltipTrigger asChild>
-                             <span className="underline decoration-dashed cursor-pointer pb-1">
+                             <span className="underline decoration-dashed cursor-pointer pb-1.5">
                                 {item.price != null ? formatCurrency(item.price) : '-'}
                             </span>
                         </TooltipTrigger>
@@ -675,4 +675,5 @@ export function InventoryTable({ onUpdateStock, isAccessoryTable = false }: Inve
     </>
   );
 }
+
 
