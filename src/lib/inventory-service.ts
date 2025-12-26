@@ -805,6 +805,7 @@ export async function performSale(
     const getParentProductStmt = db.prepare('SELECT * FROM products WHERE id = ?');
     
     const ONLINE_MARKETPLACES = ['shopee', 'tiktok', 'lazada'];
+    const ADMIN_FEE_PERCENTAGE = 0.32;
     
     let updatedItem: InventoryItem | undefined = undefined;
     let updatedAccessory: Accessory | undefined = undefined;
@@ -826,13 +827,14 @@ export async function performSale(
         const product = getProductStmt.get(sku) as (InventoryItem & { id: number, costPrice?: number, sku: string }) | undefined;
         const accessory = getAccessoryStmt.get(sku) as (Accessory & { id: number, costPrice?: number, sku: string }) | undefined;
         
+        const isOnlineChannel = ONLINE_MARKETPLACES.includes(channel.toLowerCase());
+
         if (variant) {
             parentProduct = getParentProductStmt.get(variant.productId);
             productId = parentProduct.id;
             variantId = variant.id;
             if (variant.stock < quantity) throw new Error('Insufficient stock for variant.');
             if (finalPriceAtSale === 0) { // Only calculate if not provided
-                 const isOnlineChannel = ONLINE_MARKETPLACES.includes(channel.toLowerCase());
                  let priceResult;
                  priceResult = getChannelPriceStmt.get({ productId: null, variantId: variant.id, channel: channel.toLowerCase() }) as { price: number } | undefined;
                  if (!priceResult && isOnlineChannel) {
@@ -848,7 +850,6 @@ export async function performSale(
             productId = product.id;
             if (product.stock! < quantity) throw new Error('Insufficient stock for product.');
             if (finalPriceAtSale === 0) {
-                const isOnlineChannel = ONLINE_MARKETPLACES.includes(channel.toLowerCase());
                 let priceResult;
                 priceResult = getChannelPriceStmt.get({ productId: product.id, variantId: null, channel: channel.toLowerCase() }) as { price: number } | undefined;
                 if (!priceResult && isOnlineChannel) {
@@ -871,6 +872,11 @@ export async function performSale(
             throw new Error('SKU not found or product has variants.');
         }
         
+        // Apply admin fee for online marketplaces if price was not explicitly passed in options
+        if (isOnlineChannel && options?.priceAtSale === undefined) {
+            finalPriceAtSale = finalPriceAtSale * (1 - ADMIN_FEE_PERCENTAGE);
+        }
+
         const saleResult = db.prepare(`
             INSERT INTO sales (transactionId, paymentMethod, resellerName, productId, variantId, accessoryId, channel, quantity, priceAtSale, cogsAtSale, saleDate, status, parentSku, productCategory, parentImageUrl)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
