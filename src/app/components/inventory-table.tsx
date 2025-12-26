@@ -75,7 +75,7 @@ import { useToast } from '@/hooks/use-toast';
 import { UpdateStockDialogAccessories } from './update-stock-dialog-accessories';
 import { Checkbox } from '@/components/ui/checkbox';
 import { VariantDisplayDialog } from './variant-display-dialog';
-import { isWithinInterval, parseISO, endOfDay } from 'date-fns';
+import { isWithinInterval, parseISO, endOfDay, format as formatDate, isBefore, isAfter } from 'date-fns';
 
 interface InventoryTableProps {
   onUpdateStock: (itemId: string) => void;
@@ -174,32 +174,48 @@ const formatCurrency = (amount: number) => `Rp${Math.round(amount).toLocaleStrin
 const PriceDisplay = ({ item, discountGroups }: { item: InventoryItem | InventoryItemVariant; discountGroups: DiscountGroup[] }) => {
     const isParentProduct = 'variants' in item && item.variants && item.variants.length > 0;
     
-    const activeDiscounts = useMemo(() => {
+    type ActiveDiscount = {
+      groupName: string;
+      discountedPrice: number;
+      originalPrice: number;
+      startDate: string;
+      endDate: string;
+    };
+
+    const activeDiscounts = useMemo((): ActiveDiscount[] => {
         if (isParentProduct) return [];
         const now = new Date();
         const category = 'category' in item ? (item as InventoryItem).category : undefined;
-
-        const allActiveDiscounts: { channel: string; discountedPrice: number }[] = [];
+        
+        const allActiveDiscounts: ActiveDiscount[] = [];
 
         for (const group of discountGroups) {
+            // Category check
             if (category && group.category !== category) {
                 continue;
             }
+
             const startDate = parseISO(group.startDate);
             const endDate = endOfDay(parseISO(group.endDate));
+            
+            // Date check
+            if (!isWithinInterval(now, { start: startDate, end: endDate })) {
+                continue;
+            }
 
-            if (isWithinInterval(now, { start: startDate, end: endDate })) {
-                const discountedProduct = group.products.find((p: any) => 
-                    (p.variantId && p.variantId === Number(item.id)) ||
-                    (!p.variantId && 'productId' in item && p.productId === Number((item as any).productId))
-                );
+            const discountedProduct = group.products.find((p: any) => 
+                (p.variantId && p.variantId === Number(item.id)) ||
+                (!p.variantId && 'productId' in item && p.productId === Number((item as any).productId))
+            );
 
-                if (discountedProduct) {
-                    allActiveDiscounts.push({
-                        channel: group.channel,
-                        discountedPrice: discountedProduct.discountedPrice
-                    });
-                }
+            if (discountedProduct && item.price && discountedProduct.discountedPrice < item.price) {
+                allActiveDiscounts.push({
+                    groupName: group.name,
+                    discountedPrice: discountedProduct.discountedPrice,
+                    originalPrice: item.price,
+                    startDate: group.startDate,
+                    endDate: group.endDate
+                });
             }
         }
         return allActiveDiscounts;
@@ -215,6 +231,16 @@ const PriceDisplay = ({ item, discountGroups }: { item: InventoryItem | Inventor
     }
 
     const hasActiveDiscount = activeDiscounts.length > 0;
+    
+    const getStatus = (startDateStr: string, endDateStr: string): { text: string; variant: 'default' | 'secondary' | 'outline' } => {
+        const now = new Date();
+        const start = parseISO(startDateStr);
+        const end = parseISO(endDateStr);
+
+        if (isBefore(now, start)) return { text: 'Dijadwalkan', variant: 'secondary' };
+        if (isAfter(now, end)) return { text: 'Berakhir', variant: 'outline' };
+        return { text: 'Berjalan', variant: 'default' };
+    }
 
     return (
         <div className="flex items-center gap-1">
@@ -225,15 +251,30 @@ const PriceDisplay = ({ item, discountGroups }: { item: InventoryItem | Inventor
                         <TooltipTrigger>
                             <Tags className="h-4 w-4 text-primary" />
                         </TooltipTrigger>
-                        <TooltipContent>
-                            <div className="space-y-1 p-1">
-                                <p className="font-bold text-sm">Diskon Aktif:</p>
-                                {activeDiscounts.map(d => (
-                                    <div key={d.channel} className="flex justify-between items-center gap-2 text-xs">
-                                        <span className="font-medium capitalize">{d.channel}:</span>
-                                        <span className="font-semibold">{formatCurrency(d.discountedPrice)}</span>
-                                    </div>
-                                ))}
+                        <TooltipContent className="p-2 w-80" side="top" align="center">
+                            <div className="space-y-2">
+                                {activeDiscounts.map((discount, index) => {
+                                    const status = getStatus(discount.startDate, discount.endDate);
+                                    return (
+                                        <div key={index} className="p-3 border rounded-md bg-background text-foreground">
+                                            <div className="flex justify-between items-start mb-2">
+                                                <h4 className="font-semibold text-sm">{discount.groupName}</h4>
+                                                <Badge variant={status.variant} className="text-xs">{status.text}</Badge>
+                                            </div>
+                                            <div className="flex justify-between items-end mb-2">
+                                                <span className="text-xs text-muted-foreground">Harga Promo</span>
+                                                <div className="text-right">
+                                                    <p className="font-bold text-base text-primary">{formatCurrency(discount.discountedPrice)}</p>
+                                                    <p className="text-xs text-muted-foreground line-through">{formatCurrency(discount.originalPrice)}</p>
+                                                </div>
+                                            </div>
+                                             <div className="flex justify-between items-center text-xs text-muted-foreground">
+                                                 <span>Durasi</span>
+                                                 <span>{formatDate(parseISO(discount.startDate), "dd/MM/yy")} - {formatDate(parseISO(discount.endDate), "dd/MM/yy")}</span>
+                                             </div>
+                                        </div>
+                                    )
+                                })}
                             </div>
                         </TooltipContent>
                     </Tooltip>
