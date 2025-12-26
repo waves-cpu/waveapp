@@ -1,10 +1,9 @@
 
-
 'use server';
 
 import { db as dbProxy } from './db';
 const db = dbProxy;
-import type { InventoryItem, AdjustmentHistory, InventoryItemVariant, Sale, Reseller, ChannelPrice, Accessory, ShippingReceipt, BulkImportHistory, User, ReturnedItem } from '@/types';
+import type { InventoryItem, AdjustmentHistory, InventoryItemVariant, Sale, Reseller, ChannelPrice, Accessory, ShippingReceipt, BulkImportHistory, User, ReturnedItem, DiscountGroup, DiscountedProduct } from '@/types';
 import { categories as allCategories } from '@/types';
 import { format as formatDate, parseISO, startOfDay, endOfDay } from 'date-fns';
 
@@ -1444,7 +1443,86 @@ export async function resetAllPrices() {
     // This function is no longer needed as the price settings page is removed.
 }
     
+// Discount Group Functions
+export async function addDiscountGroup(group: Omit<DiscountGroup, 'id' | 'productCount'>) {
+    const transaction = db.transaction(() => {
+        const addGroupStmt = db.prepare('INSERT INTO discount_groups (name, category, startDate, endDate) VALUES (@name, @category, @startDate, @endDate)');
+        const addProductStmt = db.prepare('INSERT INTO discounted_products (groupId, productId, variantId, discountedPrice) VALUES (@groupId, @productId, @variantId, @discountedPrice)');
+        
+        const groupResult = addGroupStmt.run({
+            name: group.name,
+            category: group.category,
+            startDate: group.startDate,
+            endDate: group.endDate,
+        });
 
-    
+        const groupId = groupResult.lastInsertRowid;
 
+        group.products.forEach(product => {
+            addProductStmt.run({
+                groupId,
+                productId: product.productId,
+                variantId: product.variantId || null,
+                discountedPrice: product.discountedPrice,
+            });
+        });
+    });
+    return transaction();
+}
 
+export async function editDiscountGroup(id: number, group: Omit<DiscountGroup, 'id' | 'productCount'>) {
+    const transaction = db.transaction(() => {
+        const updateGroupStmt = db.prepare('UPDATE discount_groups SET name = @name, category = @category, startDate = @startDate, endDate = @endDate WHERE id = @id');
+        const deleteProductsStmt = db.prepare('DELETE FROM discounted_products WHERE groupId = ?');
+        const addProductStmt = db.prepare('INSERT INTO discounted_products (groupId, productId, variantId, discountedPrice) VALUES (@groupId, @productId, @variantId, @discountedPrice)');
+
+        updateGroupStmt.run({
+            id,
+            name: group.name,
+            category: group.category,
+            startDate: group.startDate,
+            endDate: group.endDate,
+        });
+
+        deleteProductsStmt.run(id);
+
+        group.products.forEach(product => {
+            addProductStmt.run({
+                groupId: id,
+                productId: product.productId,
+                variantId: product.variantId || null,
+                discountedPrice: product.discountedPrice,
+            });
+        });
+    });
+    return transaction();
+}
+
+export async function deleteDiscountGroup(id: number) {
+    return db.prepare('DELETE FROM discount_groups WHERE id = ?').run(id);
+}
+
+export async function fetchDiscountGroups(): Promise<DiscountGroup[]> {
+    const groups = db.prepare('SELECT * FROM discount_groups ORDER BY name').all() as DiscountGroup[];
+    const productCounts = db.prepare('SELECT groupId, COUNT(*) as count FROM discounted_products GROUP BY groupId').all() as { groupId: number, count: number }[];
+    const countMap = new Map(productCounts.map(item => [item.groupId, item.count]));
+    return groups.map(group => ({
+        ...group,
+        productCount: countMap.get(group.id) || 0,
+    }));
+}
+
+export async function getDiscountGroup(id: number): Promise<DiscountGroup | null> {
+    const group = db.prepare('SELECT * FROM discount_groups WHERE id = ?').get(id) as DiscountGroup | undefined;
+    if (!group) return null;
+
+    const products = db.prepare(`
+        SELECT dp.discountedPrice, p.id as productId, v.id as variantId, p.name as productName, v.name as variantName, COALESCE(v.sku, p.sku) as sku, p.imageUrl, COALESCE(v.price, p.price) as originalPrice
+        FROM discounted_products dp
+        JOIN products p ON dp.productId = p.id
+        LEFT JOIN variants v ON dp.variantId = v.id
+        WHERE dp.groupId = ?
+    `).all(id) as DiscountedProduct[];
+
+    return { ...group, products };
+}

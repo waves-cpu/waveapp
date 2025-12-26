@@ -310,6 +310,25 @@ const createSchema = () => {
         skippedSkus TEXT,
         error TEXT
     );
+
+    CREATE TABLE IF NOT EXISTS discount_groups (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        category TEXT NOT NULL,
+        startDate TEXT NOT NULL,
+        endDate TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS discounted_products (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        groupId INTEGER NOT NULL,
+        productId INTEGER NOT NULL,
+        variantId INTEGER,
+        discountedPrice REAL NOT NULL,
+        FOREIGN KEY (groupId) REFERENCES discount_groups(id) ON DELETE CASCADE,
+        FOREIGN KEY (productId) REFERENCES products(id) ON DELETE CASCADE,
+        FOREIGN KEY (variantId) REFERENCES variants(id) ON DELETE CASCADE
+    );
   `);
 };
 
@@ -360,5 +379,4 @@ const dbProxy = {
 // Replace direct 'db' export with the proxy
 export { dbProxy as db };
 
-// Initialize the database connection when the module is loaded
-initializeDatabase();
+// Initialize the database connection when

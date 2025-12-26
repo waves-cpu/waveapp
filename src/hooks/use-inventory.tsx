@@ -3,7 +3,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
-import type { InventoryItem, AdjustmentHistory, InventoryItemVariant, Sale, Reseller, Accessory, ShippingReceipt, BulkImportHistory, User, ReturnedItem } from '@/types';
+import type { InventoryItem, AdjustmentHistory, InventoryItemVariant, Sale, Reseller, Accessory, ShippingReceipt, BulkImportHistory, User, ReturnedItem, DiscountGroup, DiscountedProduct } from '@/types';
 import { categories as allCategories } from '@/types';
 import {
   fetchInventoryData,
@@ -49,6 +49,11 @@ import {
   clearPosTransactions as clearPosTransactionsDb,
   recordSaleWithReceipt as recordSaleWithReceiptDb,
   resetAllPrices as resetAllPricesDb,
+  addDiscountGroup as addDiscountGroupDb,
+  editDiscountGroup as editDiscountGroupDb,
+  deleteDiscountGroup as deleteDiscountGroupDb,
+  fetchDiscountGroups as fetchDiscountGroupsDb,
+  getDiscountGroup as getDiscountGroupDb,
 } from '@/lib/inventory-service';
 
 
@@ -107,6 +112,13 @@ interface InventoryContextType {
   pendingTransaction: Sale[] | null;
   loadPendingTransaction: (sales: Sale[]) => void;
   clearPendingTransaction: () => void;
+  // Discounts
+  discountGroups: DiscountGroup[];
+  fetchDiscountGroups: () => Promise<void>;
+  addDiscountGroup: (group: Omit<DiscountGroup, 'id' | 'productCount'>) => Promise<void>;
+  editDiscountGroup: (id: number, group: Omit<DiscountGroup, 'id' | 'productCount'>) => Promise<void>;
+  getDiscountGroup: (id: number) => Promise<DiscountGroup | null>;
+  deleteDiscountGroup: (id: number) => Promise<void>;
 }
 
 const InventoryContext = createContext<InventoryContextType | undefined>(undefined);
@@ -118,6 +130,7 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
   const [allSales, setAllSales] = useState<Sale[]>([]);
   const [resellers, setResellers] = useState<Reseller[]>([]);
   const [allShippingReceipts, setAllShippingReceipts] = useState<ShippingReceipt[]>([]);
+  const [discountGroups, setDiscountGroups] = useState<DiscountGroup[]>([]);
   const [loading, setLoading] = useState(true);
   const [pendingTransaction, setPendingTransaction] = useState<Sale[] | null>(null);
 
@@ -134,11 +147,12 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
   const fetchAllData = useCallback(async () => {
     setLoading(true);
     try {
-      const [inventoryData, salesData, resellerData, receiptData] = await Promise.all([
+      const [inventoryData, salesData, resellerData, receiptData, discountData] = await Promise.all([
         fetchInventoryData(),
         fetchAllSales(),
         getResellers(),
-        fetchShippingReceiptsDb({ page: 1, limit: 100000 }) // Fetch all receipts
+        fetchShippingReceiptsDb({ page: 1, limit: 100000 }), // Fetch all receipts
+        fetchDiscountGroupsDb(),
       ]);
       
       setItems(inventoryData.items);
@@ -146,6 +160,7 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
       setAllSales(salesData);
       setResellers(resellerData);
       setAllShippingReceipts(receiptData.receipts);
+      setDiscountGroups(discountData);
 
     } catch (error) {
     } finally {
@@ -461,6 +476,27 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
     await clearPosTransactionsDb(date);
   };
 
+  const fetchDiscountGroups = useCallback(async () => {
+    const groups = await fetchDiscountGroupsDb();
+    setDiscountGroups(groups);
+  }, []);
+  
+  const addDiscountGroup = async (group: Omit<DiscountGroup, 'id'|'productCount'>) => {
+      await addDiscountGroupDb(group);
+      await fetchDiscountGroups();
+  }
+  const editDiscountGroup = async (id: number, group: Omit<DiscountGroup, 'id'|'productCount'>) => {
+      await editDiscountGroupDb(id, group);
+      await fetchDiscountGroups();
+  }
+  const deleteDiscountGroup = async (id: number) => {
+      await deleteDiscountGroupDb(id);
+      await fetchDiscountGroups();
+  }
+  const getDiscountGroup = async (id: number) => {
+      return await getDiscountGroupDb(id);
+  }
+
   return (
     <InventoryContext.Provider value={{ 
         items, 
@@ -513,6 +549,12 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
         pendingTransaction,
         loadPendingTransaction,
         clearPendingTransaction,
+        discountGroups,
+        fetchDiscountGroups,
+        addDiscountGroup,
+        editDiscountGroup,
+        getDiscountGroup,
+        deleteDiscountGroup,
       }}>
       {children}
     </InventoryContext.Provider>
@@ -526,3 +568,4 @@ export const useInventory = () => {
   }
   return context;
 };
+

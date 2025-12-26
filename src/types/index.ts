@@ -1,4 +1,5 @@
 
+
 export const categories = [
     "T-Shirt Oversize",
     "T-Shirt Boxy",
@@ -157,4 +158,25 @@ export interface ReturnedItem {
     name: string;
     quantity: number;
     price: number;
+}
+
+export interface DiscountedProduct {
+  productId: number;
+  variantId?: number;
+  productName: string;
+  variantName?: string;
+  sku?: string;
+  imageUrl?: string;
+  originalPrice: number;
+  discountedPrice: number;
+}
+
+export interface DiscountGroup {
+  id: number;
+  name: string;
+  category: string;
+  startDate: string;
+  endDate: string;
+  products: DiscountedProduct[];
+  productCount?: number;
 }
