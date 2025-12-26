@@ -743,7 +743,7 @@ export async function adjustStock(itemId: string, change: number, reason: string
 
     db.transaction(() => {
         const variant = db.prepare('SELECT * FROM variants WHERE id = ?').get(itemId) as (InventoryItemVariant & {id: number, productId: number}) | undefined;
-
+        
         if (variant) {
             const newStockLevel = variant.stock + change;
             db.prepare('UPDATE variants SET stock = ? WHERE id = ?').run(newStockLevel, itemId);
@@ -751,20 +751,24 @@ export async function adjustStock(itemId: string, change: number, reason: string
                 INSERT INTO history (productId, variantId, change, reason, newStockLevel, date)
                 VALUES (?, ?, ?, ?, ?, ?)
             `).run(variant.productId, itemId, change, reason, newStockLevel, new Date().toISOString());
-
-        } else { 
-            const item = db.prepare('SELECT * FROM products WHERE id = ?').get(itemId) as InventoryItem | undefined;
-            if (item && item.stock !== undefined) {
+        } else {
+            const item = db.prepare('SELECT * FROM products WHERE id = ?').get(itemId) as (InventoryItem & {id: number}) | undefined;
+            if (item && item.stock !== undefined && item.stock !== null) {
                 const newStockLevel = item.stock + change;
                 db.prepare('UPDATE products SET stock = ? WHERE id = ?').run(newStockLevel, itemId);
                 db.prepare(`
                     INSERT INTO history (productId, variantId, change, reason, newStockLevel, date)
                     VALUES (?, ?, ?, ?, ?, ?)
                 `).run(itemId, null, change, reason, newStockLevel, new Date().toISOString());
+            } else {
+                // If it's not a variant and not a simple product, we do nothing.
+                // This could be a parent product of variants, which doesn't have its own stock.
+                // Or simply an invalid ID.
             }
         }
     })();
 }
+
 
 export async function findProductBySku(sku: string): Promise<InventoryItem | null> {
     const getVariantBySkuStmt = db.prepare('SELECT * FROM variants WHERE sku = ?');
@@ -868,7 +872,7 @@ export async function performSale(
         
         } else if (accessory) {
             accessoryId = accessory.id;
-            parentProduct = { name: accessory.name, sku: accessory.sku, category: accessory.category };
+            parentProduct = { name: accessory.name, sku: accessory.sku, category: accessory.category, imageUrl: undefined };
             if (accessory.stock! < quantity) throw new Error('Insufficient stock for accessory.');
             cogsAtSale = accessory.costPrice || 0;
             finalPriceAtSale = options?.priceAtSale ?? 0;
@@ -972,12 +976,7 @@ function getActiveDiscountPrice(productId: string | number, variantId: string | 
 
 export async function recordSaleWithReceipt(receiptData: Omit<ShippingReceipt, 'id'>, salesData: Omit<Sale, 'id'>[]) {
     const transaction = db.transaction(() => {
-        const existingReceipt = db.prepare('SELECT id FROM shipping_receipts WHERE awb = ?').get(receiptData.awb);
-        if (existingReceipt) {
-            // It already exists, so we just proceed to record sales
-        } else {
-            addShippingReceipt(receiptData);
-        }
+        addShippingReceipt(receiptData);
 
         salesData.forEach(sale => {
             if (!sale.sku) {
@@ -1568,6 +1567,7 @@ async function updateShippingReceiptStatusByAwb(awb: string, status: string) {
     const stmt = db.prepare(`UPDATE shipping_receipts SET status = ? WHERE awb = ?`);
     stmt.run(status, awb);
 }
+
 
 
 
