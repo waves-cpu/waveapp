@@ -102,7 +102,7 @@ export function PriceSettingsForm() {
   
   const flattenedFilteredItemsById = useMemo(() => {
     const map = new Map<string, SelectedItem>();
-    availableItemsForSelection.forEach(item => {
+    items.forEach(item => { // Use all items for a complete map
         if (item.variants && item.variants.length > 0) {
             item.variants.forEach(variant => {
                 map.set(variant.id, {
@@ -134,7 +134,7 @@ export function PriceSettingsForm() {
         }
     });
     return map;
-  }, [availableItemsForSelection]);
+  }, [items]);
 
   const handleProductsSelected = (selectedIds: string[]) => {
     const newlySelected = selectedIds
