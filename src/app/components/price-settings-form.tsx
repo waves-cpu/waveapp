@@ -35,7 +35,6 @@ import { ProductSelectionDialog } from './product-selection-dialog';
 import { Card, CardContent } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 
 const itemPriceSchema = z.object({
     id: z.string(),
@@ -120,7 +119,7 @@ export function PriceSettingsForm() {
                     channelPrices: variant.channelPrices || [],
                 });
             });
-        } else if (item.stock !== undefined) {
+        } else if (item.stock !== undefined) { // Check if it's a simple product
              map.set(item.id, {
                 id: item.id,
                 name: item.name,
@@ -147,7 +146,11 @@ export function PriceSettingsForm() {
 
     const formItems = newlySelected.map(item => {
         const getPrice = (channel: string) => item.channelPrices?.find(p => p.channel === channel)?.price;
-        const onlinePrice = getPrice('shopee') ?? getPrice('tiktok') ?? getPrice('lazada');
+        
+        // Handle online price logic correctly
+        const onlinePriceChannels = ['shopee', 'tiktok', 'lazada'];
+        const onlinePrices = onlinePriceChannels.map(ch => getPrice(ch)).filter(p => p !== undefined);
+        const onlinePrice = onlinePrices.length > 0 ? onlinePrices[0] : undefined;
 
         return {
             id: item.id,
@@ -211,19 +214,18 @@ export function PriceSettingsForm() {
     }
     setIsSubmitting(true);
 
-    const selectedItemsMap = new Map(selectedItems.map(item => [item.id, item]));
-
     const updates = data.items.map((formItem) => {
-      const originalItem = selectedItemsMap.get(formItem.id);
+      // The formItem already contains the 'type' field directly from the form state.
+      // No need to look it up, which was the source of the crash.
       return {
         id: formItem.id,
-        type: originalItem!.type,
+        type: formItem.type, 
         costPrice: formItem.costPrice,
         price: formItem.price,
         channelPrices: formItem.channelPrices,
       };
     });
-
+    
     if (updates.length === 0) {
         toast({ title: TPrice.noChanges, description: "Pilih produk terlebih dahulu." });
         setIsSubmitting(false);
