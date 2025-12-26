@@ -972,7 +972,12 @@ function getActiveDiscountPrice(productId: string | number, variantId: string | 
 
 export async function recordSaleWithReceipt(receiptData: Omit<ShippingReceipt, 'id'>, salesData: Omit<Sale, 'id'>[]) {
     const transaction = db.transaction(() => {
-        addShippingReceipt(receiptData);
+        const existingReceipt = db.prepare('SELECT id FROM shipping_receipts WHERE awb = ?').get(receiptData.awb);
+        if (existingReceipt) {
+            // It already exists, so we just proceed to record sales
+        } else {
+            addShippingReceipt(receiptData);
+        }
 
         salesData.forEach(sale => {
             if (!sale.sku) {
@@ -1563,6 +1568,7 @@ async function updateShippingReceiptStatusByAwb(awb: string, status: string) {
     const stmt = db.prepare(`UPDATE shipping_receipts SET status = ? WHERE awb = ?`);
     stmt.run(status, awb);
 }
+
 
 
 

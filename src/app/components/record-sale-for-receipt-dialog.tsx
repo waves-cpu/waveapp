@@ -201,6 +201,7 @@ export function RecordSaleForReceiptDialog({
         priceAtSale: item.price,
         saleDate: receipt.date,
         status: 'Dikirim',
+        sku: item.sku,
     }));
     
     try {
@@ -318,5 +319,3 @@ export function RecordSaleForReceiptDialog({
     </>
   );
 }
-
-    
