@@ -818,11 +818,10 @@ export async function performSale(
     const getProductStmt = db.prepare('SELECT * FROM products WHERE sku = ? AND hasVariants = 0');
     const getVariantStmt = db.prepare('SELECT * FROM variants WHERE sku = ?');
     const getAccessoryStmt = db.prepare('SELECT * FROM accessories WHERE sku = ?');
-    const getChannelPriceStmt = db.prepare('SELECT price FROM channel_prices WHERE (product_id = @productId OR variant_id = @variantId) AND channel = @channel');
     const getParentProductStmt = db.prepare('SELECT * FROM products WHERE id = ?');
     
     const ONLINE_MARKETPLACES = ['shopee', 'tiktok', 'lazada'];
-    const ADMIN_FEE_PERCENTAGE = 0.32;
+    const ADMIN_FEE_PERCENTAGE = 0.04; // 4%
     
     let updatedItem: InventoryItem | undefined = undefined;
     let updatedAccessory: Accessory | undefined = undefined;
@@ -852,16 +851,7 @@ export async function performSale(
             variantId = variant.id;
             if (variant.stock < quantity) throw new Error('Insufficient stock for variant.');
             if (finalPriceAtSale === 0) {
-                const discountedPrice = getActiveDiscountPrice(productId, variantId, parentProduct.category, channel);
-                if (discountedPrice !== null) {
-                    finalPriceAtSale = discountedPrice;
-                } else {
-                    let priceResult = getChannelPriceStmt.get({ productId: null, variantId: variant.id, channel: channel.toLowerCase() }) as { price: number } | undefined;
-                    if (!priceResult && isOnlineChannel) {
-                        priceResult = getChannelPriceStmt.get({ productId: null, variantId: variant.id, channel: 'online' }) as { price: number } | undefined;
-                    }
-                    finalPriceAtSale = priceResult ? priceResult.price : variant.price;
-                }
+                 finalPriceAtSale = getActiveDiscountPrice(productId, variantId, parentProduct.category, channel) ?? variant.price;
             }
             cogsAtSale = variant.costPrice || 0;
             adjustStock(variant.id.toString(), -quantity, saleReason);
@@ -871,16 +861,7 @@ export async function performSale(
             productId = product.id;
             if (product.stock! < quantity) throw new Error('Insufficient stock for product.');
             if (finalPriceAtSale === 0) {
-                const discountedPrice = getActiveDiscountPrice(productId, null, parentProduct.category, channel);
-                 if (discountedPrice !== null) {
-                    finalPriceAtSale = discountedPrice;
-                } else {
-                    let priceResult = getChannelPriceStmt.get({ productId: product.id, variantId: null, channel: channel.toLowerCase() }) as { price: number } | undefined;
-                    if (!priceResult && isOnlineChannel) {
-                        priceResult = getChannelPriceStmt.get({ productId: product.id, variantId: null, channel: 'online' }) as { price: number } | undefined;
-                    }
-                    finalPriceAtSale = priceResult ? priceResult.price : product.price!;
-                }
+                finalPriceAtSale = getActiveDiscountPrice(productId, null, parentProduct.category, channel) ?? product.price!;
             }
             cogsAtSale = product.costPrice || 0;
             adjustStock(product.id.toString(), -quantity, saleReason);
@@ -954,30 +935,36 @@ export async function performSale(
 }
 
 function getActiveDiscountPrice(productId: string | number, variantId: string | number | null, category: string, channel: string): number | null {
-  const now = new Date().toISOString();
-  
-  const getGroupStmt = db.prepare('SELECT id FROM discount_groups WHERE category = ? AND channel = ? AND startDate <= ? AND endDate >= ?');
-  const groups = getGroupStmt.all(category, channel, now, now) as {id: number}[];
-  
-  if (groups.length === 0) return null;
+    const now = new Date().toISOString();
+    const getGroupStmt = db.prepare('SELECT id FROM discount_groups WHERE category = ? AND channel = ? AND startDate <= ? AND endDate >= ?');
+    
+    let groups = getGroupStmt.all(category, channel, now, now) as {id: number}[];
 
-  const groupIds = groups.map(g => g.id);
-  const placeholders = groupIds.map(() => '?').join(',');
+    // Fallback for online channels
+    const isOnlineSale = ['shopee', 'tiktok', 'lazada'].includes(channel.toLowerCase());
+    if (groups.length === 0 && isOnlineSale) {
+        groups = getGroupStmt.all(category, 'online', now, now) as {id: number}[];
+    }
+    
+    if (groups.length === 0) return null;
 
-  const getDiscountStmt = db.prepare(`
-      SELECT discountedPrice
-      FROM discounted_products
-      WHERE groupId IN (${placeholders})
-        AND productId = ?
-        AND (variantId = ? OR (variantId IS NULL AND ? IS NULL))
-      ORDER BY variantId DESC
-      LIMIT 1
-  `);
+    const groupIds = groups.map(g => g.id);
+    const placeholders = groupIds.map(() => '?').join(',');
 
-  const params = [...groupIds, productId, variantId ?? null, variantId ?? null];
-  const result = getDiscountStmt.get(...params) as { discountedPrice: number } | undefined;
+    const getDiscountStmt = db.prepare(`
+        SELECT discountedPrice
+        FROM discounted_products
+        WHERE groupId IN (${placeholders})
+          AND productId = ?
+          AND (variantId = ? OR (variantId IS NULL AND ? IS NULL))
+        ORDER BY variantId DESC
+        LIMIT 1
+    `);
+    
+    const params: (string|number|null)[] = [...groupIds, productId, variantId ?? null, variantId ?? null];
+    const result = getDiscountStmt.get(...params) as { discountedPrice: number } | undefined;
 
-  return result ? result.discountedPrice : null;
+    return result ? result.discountedPrice : null;
 }
 
 export async function recordSaleWithReceipt(receiptData: Omit<ShippingReceipt, 'id'>, salesData: Omit<Sale, 'id'>[]) {
@@ -1583,4 +1570,5 @@ async function updateShippingReceiptStatusByAwb(awb: string, status: string) {
     const stmt = db.prepare(`UPDATE shipping_receipts SET status = ? WHERE awb = ?`);
     stmt.run(status, awb);
 }
+
 
