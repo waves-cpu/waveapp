@@ -171,7 +171,7 @@ function StockBar({ stock, onUpdateClick, item }: { stock: number; onUpdateClick
 
 const formatCurrency = (amount: number) => `Rp${Math.round(amount).toLocaleString('id-ID')}`;
 
-const PriceDisplay = ({ item, discountGroups }: { item: InventoryItem | InventoryItemVariant; discountGroups: DiscountGroup[] }) => {
+const PriceDisplay = ({ item, discountGroups }: { item: (InventoryItem | InventoryItemVariant) & {category?: string}; discountGroups: DiscountGroup[] }) => {
     const isParentProduct = 'variants' in item && item.variants && item.variants.length > 0;
     
     type ActiveDiscount = {
@@ -186,7 +186,9 @@ const PriceDisplay = ({ item, discountGroups }: { item: InventoryItem | Inventor
     const activeDiscounts = useMemo((): ActiveDiscount[] => {
         if (isParentProduct) return [];
         const now = new Date();
-        const category = 'category' in item ? (item as InventoryItem).category : undefined;
+        const category = item.category;
+
+        if (!category) return [];
         
         const allActiveDiscounts: ActiveDiscount[] = [];
 
@@ -205,8 +207,8 @@ const PriceDisplay = ({ item, discountGroups }: { item: InventoryItem | Inventor
             }
             
             const discountedProduct = group.products.find((p: any) => 
-                (p.variantId && p.variantId === Number(item.id)) ||
-                (!p.variantId && 'productId' in item && p.productId === Number((item as any).productId))
+                (p.variantId && p.variantId.toString() === item.id) ||
+                (!p.variantId && p.productId.toString() === item.id)
             );
 
             if (discountedProduct && item.price && discountedProduct.discountedPrice < item.price) {
@@ -675,6 +677,7 @@ export function InventoryTable({ onUpdateStock, isAccessoryTable = false }: Inve
     </>
   );
 }
+
 
 
 
