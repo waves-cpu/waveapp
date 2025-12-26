@@ -852,10 +852,13 @@ export async function performSale(
             variantId = variant.id;
             if (variant.stock < quantity) throw new Error('Insufficient stock for variant.');
             
-            const discountPrice = getActiveDiscountPrice(productId, variantId, parentProduct.category, channel);
-            finalPriceAtSale = discountPrice ?? (options?.priceAtSale ?? variant.price);
-
             cogsAtSale = variant.costPrice || 0;
+            finalPriceAtSale = options?.priceAtSale ?? variant.price;
+            if (options?.priceAtSale === undefined) {
+                const discountPrice = getActiveDiscountPrice(productId, variantId, parentProduct.category, channel);
+                finalPriceAtSale = discountPrice ?? variant.price;
+            }
+
             adjustStock(variant.id.toString(), -quantity, saleReason);
 
         } else if (product) {
@@ -863,10 +866,13 @@ export async function performSale(
             productId = product.id;
             if (product.stock! < quantity) throw new Error('Insufficient stock for product.');
             
-            const discountPrice = getActiveDiscountPrice(productId, null, parentProduct.category, channel);
-            finalPriceAtSale = discountPrice ?? (options?.priceAtSale ?? product.price!);
-            
             cogsAtSale = product.costPrice || 0;
+            finalPriceAtSale = options?.priceAtSale ?? product.price!;
+             if (options?.priceAtSale === undefined) {
+                const discountPrice = getActiveDiscountPrice(productId, null, parentProduct.category, channel);
+                finalPriceAtSale = discountPrice ?? product.price!;
+            }
+            
             adjustStock(product.id.toString(), -quantity, saleReason);
         
         } else if (accessory) {
@@ -980,23 +986,64 @@ export async function getActiveDiscountPrice(productId: string | number, variant
 
 export async function recordSaleWithReceipt(receiptData: Omit<ShippingReceipt, 'id'>, salesData: Omit<Sale, 'id'>[]) {
     const transaction = db.transaction(() => {
-        addShippingReceipt(receiptData);
+        // First, add the receipt. The addShippingReceipt function already handles potential duplicates.
+        const addReceiptStmt = db.prepare('INSERT INTO shipping_receipts (awb, date, channel, salesChannel, status, transactionId) VALUES (@awb, @date, @channel, @salesChannel, @status, @transactionId)');
+        addReceiptStmt.run({
+            ...receiptData,
+            transactionId: receiptData.awb
+        });
 
+        // Then, record each sale item associated with this receipt.
         salesData.forEach(sale => {
             if (!sale.sku) {
                  throw new Error(`SKU is missing for a sale item in transaction ${sale.transactionId}`);
             }
-            const options = {
+             const options = {
                 saleDate: parseISO(sale.saleDate as string),
                 transactionId: sale.transactionId,
                 priceAtSale: sale.priceAtSale,
                 status: sale.status,
             };
-            performSale(sale.sku, sale.channel, sale.quantity, options);
+            // Directly call the logic from performSale, but without creating a nested transaction
+            const getProductStmt = db.prepare('SELECT * FROM products WHERE sku = ? AND hasVariants = 0');
+            const getVariantStmt = db.prepare('SELECT * FROM variants WHERE sku = ?');
+            const getParentProductStmt = db.prepare('SELECT * FROM products WHERE id = ?');
+            const saleReason = `Sale (${sale.channel}) - AWB: ${receiptData.awb}`;
+
+            let cogsAtSale, parentProduct, productId = null, variantId = null;
+
+            const variant = getVariantStmt.get(sale.sku) as (InventoryItemVariant & { id: number, productId: number, costPrice?: number }) | undefined;
+            const product = getProductStmt.get(sale.sku) as (InventoryItem & { id: number, costPrice?: number, sku: string }) | undefined;
+
+            if (variant) {
+                parentProduct = getParentProductStmt.get(variant.productId);
+                productId = parentProduct.id;
+                variantId = variant.id;
+                if (variant.stock < sale.quantity) throw new Error('Insufficient stock for variant.');
+                cogsAtSale = variant.costPrice || 0;
+                adjustStock(variant.id.toString(), -sale.quantity, saleReason);
+            } else if (product) {
+                parentProduct = product;
+                productId = product.id;
+                if (product.stock! < sale.quantity) throw new Error('Insufficient stock for product.');
+                cogsAtSale = product.costPrice || 0;
+                adjustStock(product.id.toString(), -sale.quantity, saleReason);
+            } else {
+                throw new Error('SKU not found or product has variants.');
+            }
+
+            db.prepare(`
+                INSERT INTO sales (transactionId, paymentMethod, resellerName, productId, variantId, accessoryId, channel, quantity, priceAtSale, cogsAtSale, saleDate, status, parentSku, productCategory, parentImageUrl)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `).run(
+                options.transactionId, null, null, productId, variantId, null,
+                sale.channel, sale.quantity, options.priceAtSale, cogsAtSale, options.saleDate.toISOString(),
+                options.status, parentProduct?.sku, parentProduct?.category, parentProduct?.imageUrl
+            );
         });
     });
 
-    transaction();
+    return transaction();
 }
 
 
@@ -1571,6 +1618,7 @@ async function updateShippingReceiptStatusByAwb(awb: string, status: string) {
     const stmt = db.prepare(`UPDATE shipping_receipts SET status = ? WHERE awb = ?`);
     stmt.run(status, awb);
 }
+
 
 
 
