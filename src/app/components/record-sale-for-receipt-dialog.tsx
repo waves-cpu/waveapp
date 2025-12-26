@@ -49,7 +49,7 @@ interface CartItem {
 interface RecordSaleForReceiptDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSaleComplete: () => void;
+  onSaleComplete: () => Promise<void>;
   receipt: Omit<ShippingReceipt, 'id'> | null;
 }
 
@@ -209,7 +209,7 @@ export function RecordSaleForReceiptDialog({
         title: 'Penjualan Dicatat',
         description: `Stok untuk ${cart.length} produk telah berhasil dikurangi.`,
       });
-      onSaleComplete();
+      await onSaleComplete();
     } catch (error) {
       console.error('Failed to record sale:', error);
       toast({

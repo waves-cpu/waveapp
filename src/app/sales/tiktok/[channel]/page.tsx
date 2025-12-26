@@ -47,7 +47,7 @@ import { RecordSaleForReceiptDialog } from '@/app/components/record-sale-for-rec
 export default function TiktokChannelPage() {
   const { language } = useLanguage();
   const t = translations[language];
-  const { deleteShippingReceipt, fetchShippingReceipts, allSales, cancelSaleTransaction } = useInventory();
+  const { deleteShippingReceipt, fetchShippingReceipts, allSales, cancelSaleTransaction, recordSaleWithReceipt } = useInventory();
   const { toast } = useToast();
   const { playSuccessSound, playErrorSound } = useScanSounds();
   const router = useRouter();
@@ -205,10 +205,10 @@ export default function TiktokChannelPage() {
   
   const totalPages = Math.ceil(totalReceipts / itemsPerPage);
 
-  const handleSaleComplete = () => {
-      setIsSaleDialogOpen(false);
-      setReceiptForSale(null);
-      loadReceipts();
+  const handleSaleComplete = async () => {
+    setIsSaleDialogOpen(false);
+    setReceiptForSale(null);
+    await loadReceipts();
   };
 
   return (
@@ -351,7 +351,12 @@ export default function TiktokChannelPage() {
       />
       <RecordSaleForReceiptDialog
         open={isSaleDialogOpen}
-        onOpenChange={setIsSaleDialogOpen}
+        onOpenChange={(isOpen) => {
+          setIsSaleDialogOpen(isOpen);
+          if (!isOpen) {
+            setReceiptForSale(null);
+          }
+        }}
         onSaleComplete={handleSaleComplete}
         receipt={receiptForSale}
       />

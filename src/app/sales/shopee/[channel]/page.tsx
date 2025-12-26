@@ -47,7 +47,7 @@ import { RecordSaleForReceiptDialog } from '@/app/components/record-sale-for-rec
 export default function ShopeeChannelPage() {
   const { language } = useLanguage();
   const t = translations[language];
-  const { deleteShippingReceipt, fetchShippingReceipts, allSales, cancelSaleTransaction } = useInventory();
+  const { deleteShippingReceipt, fetchShippingReceipts, allSales, cancelSaleTransaction, recordSaleWithReceipt } = useInventory();
   const { toast } = useToast();
   const { playSuccessSound, playErrorSound } = useScanSounds();
   const router = useRouter();
@@ -210,11 +210,12 @@ export default function ShopeeChannelPage() {
   
   const totalPages = Math.ceil(totalReceipts / itemsPerPage);
 
-  const handleSaleComplete = () => {
-      setIsSaleDialogOpen(false);
-      setReceiptForSale(null);
-      loadReceipts();
+  const handleSaleComplete = async () => {
+    setIsSaleDialogOpen(false);
+    setReceiptForSale(null);
+    await loadReceipts();
   };
+
 
   return (
     <AppLayout>
@@ -354,13 +355,17 @@ export default function ShopeeChannelPage() {
           onOpenChange={setIsDetailOpen}
           sales={detailItems}
       />
-      <RecordSaleForReceiptDialog
+       <RecordSaleForReceiptDialog
         open={isSaleDialogOpen}
-        onOpenChange={setIsSaleDialogOpen}
+        onOpenChange={(isOpen) => {
+          setIsSaleDialogOpen(isOpen);
+          if (!isOpen) {
+            setReceiptForSale(null);
+          }
+        }}
         onSaleComplete={handleSaleComplete}
         receipt={receiptForSale}
       />
     </AppLayout>
   );
 }
-
