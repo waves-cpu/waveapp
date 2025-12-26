@@ -38,6 +38,7 @@ import { cn } from '@/lib/utils';
 import { format, addDays } from 'date-fns';
 import Image from 'next/image';
 import { Pagination } from '@/components/ui/pagination';
+import { Label } from '@/components/ui/label';
 
 const ITEMS_PER_PAGE = 10;
 
