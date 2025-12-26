@@ -61,7 +61,7 @@ export function ProductSelectionDialog({
       if(open) {
         setSelectedIds(new Set(initialSelectedIds));
         setSearchTerm('');
-        setCategoryFilter(null);
+        // Category filter is now controlled by parent
         setCurrentPage(1);
         setItemsPerPage(ITEMS_PER_PAGE);
       }
@@ -69,24 +69,30 @@ export function ProductSelectionDialog({
 
   const filteredItems = useMemo(() => {
     return availableItems
-      .filter((item) =>
-        categoryFilter ? item.category === categoryFilter : true
-      )
+      // The parent component now handles category filtering.
       .filter((item) =>
         item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         item.sku?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         item.variants?.some(v => v.name.toLowerCase().includes(searchTerm.toLowerCase()) || v.sku?.toLowerCase().includes(searchTerm.toLowerCase()))
       );
-  }, [availableItems, categoryFilter, searchTerm]);
+  }, [availableItems, searchTerm]);
 
   const totalPages = Math.ceil(filteredItems.length / itemsPerPage);
 
   const { paginatedItems, selectableItemIdsOnPage } = useMemo(() => {
     const startIndex = (currentPage - 1) * itemsPerPage;
     const paginated = filteredItems.slice(startIndex, startIndex + itemsPerPage);
-    const selectableIds = paginated.flatMap(item => 
-        item.variants && item.variants.length > 0 ? item.variants.map(v => v.id) : (item.stock !== undefined ? [item.id] : [])
-    ).filter(id => id); // Filter out potential undefined IDs
+    const selectableIds = paginated.flatMap(item => {
+        // This now correctly includes simple products
+        if (item.variants && item.variants.length > 0) {
+            return item.variants.map(v => v.id);
+        }
+        // If it's a simple product (has stock property), its own ID is selectable
+        if (item.stock !== undefined) {
+            return [item.id];
+        }
+        return [];
+    }).filter(id => id);
     return { paginatedItems: paginated, selectableItemIdsOnPage: selectableIds };
   }, [filteredItems, currentPage, itemsPerPage]);
 
@@ -102,7 +108,10 @@ export function ProductSelectionDialog({
 
   const handleSelectRow = (item: InventoryItem, checked: boolean) => {
     const newSelectedIds = new Set(selectedIds);
-    const idsToToggle = item.variants ? item.variants.map(v => v.id) : [item.id];
+    // Correctly get IDs for both variants and simple products
+    const idsToToggle = (item.variants && item.variants.length > 0)
+        ? item.variants.map(v => v.id)
+        : (item.stock !== undefined ? [item.id] : []);
     
     if (checked) {
       idsToToggle.forEach(id => id && newSelectedIds.add(id));
@@ -154,22 +163,7 @@ export function ProductSelectionDialog({
                 className="pl-10 w-full"
                 />
             </div>
-            <Select onValueChange={(value) => {
-                setCategoryFilter(value === 'all' ? null : value);
-                setCurrentPage(1);
-            }} value={categoryFilter || 'all'}>
-                <SelectTrigger className="w-full md:w-[200px]">
-                <SelectValue placeholder={t.inventoryTable.selectCategoryPlaceholder} />
-                </SelectTrigger>
-                <SelectContent>
-                <SelectItem value="all">{t.inventoryTable.allCategories}</SelectItem>
-                {categories.map((category) => (
-                    <SelectItem key={category} value={category}>
-                    {category}
-                    </SelectItem>
-                ))}
-                </SelectContent>
-            </Select>
+            {/* The parent component now handles category filtering. This control is no longer needed here. */}
         </div>
         <div className="flex-grow flex flex-col overflow-hidden border rounded-md">
            <ScrollArea className="h-full" viewportRef={scrollViewportRef}>
