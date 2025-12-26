@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
@@ -55,9 +56,9 @@ export default function MobileScanShipmentPage() {
                 throw new Error(`Resi sudah berstatus "${receipt.status}".`);
             }
 
-            await updateShippingReceiptStatus(receipt.id, 'Dikirim');
+            await updateShippingReceiptStatus(receipt.id, 'Siap Kirim');
             playSuccessSound();
-            const successMessage = 'Berhasil diproses menjadi "Dikirim".';
+            const successMessage = 'Berhasil diproses menjadi "Siap Kirim".';
             toast({ title: `Resi ${trimmedAwb}`, description: successMessage });
             setRecentlyProcessed(prev => [{ ...receipt, success: true, message: successMessage }, ...prev].slice(0, 20));
 

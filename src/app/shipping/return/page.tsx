@@ -52,7 +52,7 @@ const getStatusVariant = (status: string) => {
     switch (status.toLowerCase()) {
         case 'selesai': return 'default';
         case 'return selesai': return 'default';
-        case 'dikirim':
+        case 'siap kirim': return 'secondary';
         case 'diantar': return 'secondary';
         case 'return':
         case 'dibatalkan':
@@ -548,5 +548,3 @@ export default function ReturnPage() {
 }
 
     
-
-

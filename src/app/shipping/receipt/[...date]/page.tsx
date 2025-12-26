@@ -51,14 +51,14 @@ const getStatusVariant = (status: string) => {
     switch (status.toLowerCase()) {
         case 'selesai': return 'default';
         case 'return selesai': return 'default';
-        case 'dikirim': return 'secondary';
+        case 'siap kirim': return 'secondary';
         case 'return':
         case 'dibatalkan': return 'destructive';
         default: return 'outline';
     }
 };
 
-const STATUS_OPTIONS = ['Perlu Diproses', 'Dikirim', 'Selesai', 'Return', 'Return Selesai', 'Dibatalkan'];
+const STATUS_OPTIONS = ['Perlu Diproses', 'Siap Kirim', 'Selesai', 'Return', 'Return Selesai', 'Dibatalkan'];
 
 function parseDateFromParams(dateArray: string[] | undefined): Date | null {
     if (dateArray && dateArray.length > 0) {
@@ -194,7 +194,7 @@ export default function ReceiptPage() {
         setIsProcessing(true);
         const { toast: toastRef } = toast({ title: t.bulkProcessInProgress, description: `Memproses ${selectedIds.size} resi...` });
         try {
-            await updateShippingReceiptsStatus(Array.from(selectedIds), 'Dikirim');
+            await updateShippingReceiptsStatus(Array.from(selectedIds), 'Siap Kirim');
             toastRef.update({ id: toastRef.id, title: t.bulkProcessSuccess, description: t.bulkProcessSuccessDesc.replace('{count}', selectedIds.size.toString()) });
             setSelectedIds(new Set());
         } catch (error) {
@@ -409,11 +409,11 @@ export default function ReceiptPage() {
                                                     <DropdownMenuContent align="end">
                                                          {item.status === 'Perlu Diproses' && (
                                                             <>
-                                                                <DropdownMenuItem onClick={() => handleChangeStatus(item, 'Dikirim')}>{t.actions.processShipment}</DropdownMenuItem>
+                                                                <DropdownMenuItem onClick={() => handleChangeStatus(item, 'Siap Kirim')}>{t.actions.processShipment}</DropdownMenuItem>
                                                                 <DropdownMenuItem onClick={() => handleChangeStatus(item, 'Dibatalkan')} className="text-destructive">{t.actions.cancel}</DropdownMenuItem>
                                                             </>
                                                          )}
-                                                         {item.status === 'Dikirim' && (
+                                                         {item.status === 'Siap Kirim' && (
                                                             <>
                                                                 <DropdownMenuItem onClick={() => handleChangeStatus(item, 'Selesai')}>{t.actions.markAsDone}</DropdownMenuItem>
                                                                 <DropdownMenuItem onClick={() => handleChangeStatus(item, 'Return')} className="text-destructive">{t.actions.markAsReturn}</DropdownMenuItem>

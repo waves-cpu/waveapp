@@ -33,7 +33,7 @@ import { useToast } from '@/hooks/use-toast';
 type DailyCount = {
   date: string;
   'Perlu Diproses': number;
-  Dikirim: number;
+  'Siap Kirim': number;
   Selesai: number;
   'Return Selesai': number;
   Dibatalkan: number;
@@ -41,11 +41,11 @@ type DailyCount = {
   Total: number;
 };
 
-const STATUS_KEYS = ['Perlu Diproses', 'Dikirim', 'Selesai', 'Return Selesai', 'Dibatalkan', 'Return'];
+const STATUS_KEYS = ['Perlu Diproses', 'Siap Kirim', 'Selesai', 'Return Selesai', 'Dibatalkan', 'Return'];
 
 const chartConfig = {
   PerluDiproses: { label: "Perlu Diproses", color: "hsl(var(--chart-1))" },
-  Dikirim: { label: "Dikirim", color: "hsl(var(--chart-2))" },
+  SiapKirim: { label: "Siap Kirim", color: "hsl(var(--chart-2))" },
   Selesai: { label: "Selesai", color: "hsl(var(--chart-3))" },
   ReturnSelesai: { label: "Return Selesai", color: "hsl(var(--chart-4))" },
   Dibatalkan: { label: "Dibatalkan", color: "hsl(var(--chart-5))" },
@@ -98,7 +98,7 @@ export default function ReceiptReportPage() {
             daysInMonth.forEach(day => {
                 const dateKey = format(day, 'yyyy-MM-dd');
                 dailyData[dateKey] = {
-                    'Perlu Diproses': 0, 'Dikirim': 0, 'Selesai': 0, 'Return Selesai': 0,
+                    'Perlu Diproses': 0, 'Siap Kirim': 0, 'Selesai': 0, 'Return Selesai': 0,
                     'Dibatalkan': 0, 'Return': 0, 'Total': 0
                 };
             });
@@ -150,7 +150,7 @@ export default function ReceiptReportPage() {
             const dataToExport = reportData.map(item => ({
                 'Tanggal': item.date,
                 'Perlu Diproses': item['Perlu Diproses'],
-                'Dikirim': item.Dikirim,
+                'Siap Kirim': item['Siap Kirim'],
                 'Selesai': item.Selesai,
                 'Return Selesai': item['Return Selesai'],
                 'Dibatalkan': item.Dibatalkan,
@@ -161,7 +161,7 @@ export default function ReceiptReportPage() {
             const totalsRow = {
                 'Tanggal': 'TOTAL',
                 'Perlu Diproses': totalCounts['Perlu Diproses'] || 0,
-                'Dikirim': totalCounts.Dikirim || 0,
+                'Siap Kirim': totalCounts['Siap Kirim'] || 0,
                 'Selesai': totalCounts.Selesai || 0,
                 'Return Selesai': totalCounts['Return Selesai'] || 0,
                 'Dibatalkan': totalCounts.Dibatalkan || 0,
@@ -256,7 +256,7 @@ export default function ReceiptReportPage() {
                                         <TableRow key={item.date}>
                                             <TableCell className="font-medium">{item.date}</TableCell>
                                             <TableCell className="text-center">{item['Perlu Diproses']}</TableCell>
-                                            <TableCell className="text-center">{item.Dikirim}</TableCell>
+                                            <TableCell className="text-center">{item['Siap Kirim']}</TableCell>
                                             <TableCell className="text-center">{item.Selesai}</TableCell>
                                             <TableCell className="text-center">{item['Return Selesai']}</TableCell>
                                             <TableCell className="text-center">{item.Dibatalkan}</TableCell>
@@ -279,7 +279,7 @@ export default function ReceiptReportPage() {
                                     <TableRow>
                                         <TableHead className="font-bold">TOTAL</TableHead>
                                         <TableHead className="text-center font-bold">{totalCounts['Perlu Diproses'] || 0}</TableHead>
-                                        <TableHead className="text-center font-bold">{totalCounts.Dikirim || 0}</TableHead>
+                                        <TableHead className="text-center font-bold">{totalCounts['Siap Kirim'] || 0}</TableHead>
                                         <TableHead className="text-center font-bold">{totalCounts.Selesai || 0}</TableHead>
                                         <TableHead className="text-center font-bold">{totalCounts['Return Selesai'] || 0}</TableHead>
                                         <TableHead className="text-center font-bold">{totalCounts.Dibatalkan || 0}</TableHead>

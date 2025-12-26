@@ -820,9 +820,6 @@ export async function performSale(
     const getAccessoryStmt = db.prepare('SELECT * FROM accessories WHERE sku = ?');
     const getParentProductStmt = db.prepare('SELECT * FROM products WHERE id = ?');
     
-    const ONLINE_MARKETPLACES = ['shopee', 'tiktok', 'lazada'];
-    const ADMIN_FEE_PERCENTAGE = 0.04; // 4%
-    
     let updatedItem: InventoryItem | undefined = undefined;
     let updatedAccessory: Accessory | undefined = undefined;
 
@@ -878,25 +875,6 @@ export async function performSale(
         } else {
             throw new Error('SKU not found or product has variants.');
         }
-
-        // The logic to get discount price is now outside, so we use what's passed in.
-        const isOnlineChannel = ONLINE_MARKETPLACES.includes(channel.toLowerCase());
-        let priceToUse = options?.priceAtSale;
-        
-        if (priceToUse === undefined) {
-             const discountPrice = getActiveDiscountPrice(productId, variantId, parentProduct.category, channel);
-             priceToUse = discountPrice ?? (variant ? variant.price : product!.price)!;
-        }
-
-        if (isOnlineChannel) {
-             const discountPrice = getActiveDiscountPrice(productId, variantId, parentProduct.category, channel);
-             if (discountPrice === null) {
-                priceToUse = priceToUse * (1 - ADMIN_FEE_PERCENTAGE);
-             }
-        }
-        
-        finalPriceAtSale = priceToUse;
-
 
         const saleResult = db.prepare(`
             INSERT INTO sales (transactionId, paymentMethod, resellerName, productId, variantId, accessoryId, channel, quantity, priceAtSale, cogsAtSale, saleDate, status, parentSku, productCategory, parentImageUrl)
@@ -992,9 +970,7 @@ export async function recordSaleWithReceipt(receiptData: Omit<ShippingReceipt, '
     const transaction = db.transaction(() => {
         const existingReceipt = db.prepare('SELECT id, status FROM shipping_receipts WHERE awb = ?').get(receiptData.awb) as { id: number, status: string } | undefined;
 
-        if (existingReceipt) {
-            // Do not change status automatically. Let the mobile scan do it.
-        } else {
+        if (!existingReceipt) {
             const addReceiptStmt = db.prepare('INSERT INTO shipping_receipts (awb, date, channel, salesChannel, status, transactionId) VALUES (@awb, @date, @channel, @salesChannel, @status, @transactionId)');
             addReceiptStmt.run({
                 ...receiptData,
@@ -1044,7 +1020,7 @@ export async function recordSaleWithReceipt(receiptData: Omit<ShippingReceipt, '
             `).run(
                 sale.transactionId, null, null, productId, variantId, null,
                 sale.channel, sale.quantity, sale.priceAtSale, cogsAtSale, sale.saleDate,
-                'Dikirim', parentProduct?.sku, parentProduct?.category, parentProduct?.imageUrl
+                'Siap Kirim', parentProduct?.sku, parentProduct?.category, parentProduct?.imageUrl
             );
         });
     });
@@ -1641,3 +1617,4 @@ async function updateShippingReceiptStatusByAwb(awb: string, status: string) {
 
 
     
+

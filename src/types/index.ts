@@ -113,7 +113,7 @@ export interface Sale {
   productCategory: string;
   variantName?: string;
   sku?: string;
-  status?: 'Completed' | 'Pending' | 'Cancelled' | 'Return' | 'Return Selesai' | 'Diantar' | 'Tidak Sampai' | 'Dibatalkan';
+  status?: 'Completed' | 'Pending' | 'Cancelled' | 'Return' | 'Return Selesai' | 'Siap Kirim' | 'Tidak Sampai' | 'Dibatalkan';
   parentImageUrl?: string;
 }
 

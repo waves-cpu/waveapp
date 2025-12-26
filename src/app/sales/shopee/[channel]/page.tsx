@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
@@ -329,7 +330,7 @@ export default function ShopeeChannelPage() {
                             </Button>
                           </TableCell>
                            <TableCell>
-                                <Badge variant={receipt.status === 'Dikirim' ? "default" : "outline"}>
+                                <Badge variant={receipt.status === 'Siap Kirim' ? "default" : "outline"}>
                                     {receipt.status}
                                 </Badge>
                            </TableCell>

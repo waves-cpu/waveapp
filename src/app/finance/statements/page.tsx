@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useMemo, useEffect } from 'react';
@@ -154,8 +155,8 @@ export default function StatementsPage() {
                 return; 
             }
 
-            // Only count 'Completed' or 'Dikirim' or 'Selesai' for revenue and units
-            if (['Completed', 'Dikirim', 'Selesai'].includes(sale.status || '')) {
+            // Only count 'Completed' or 'Siap Kirim' or 'Selesai' for revenue and units
+            if (['Completed', 'Siap Kirim', 'Selesai'].includes(sale.status || '')) {
                 revenue += salePrice;
                 units += sale.quantity;
                 profit += saleProfit;
@@ -448,4 +449,5 @@ export default function StatementsPage() {
         </AppLayout>
     );
 }
+
 
