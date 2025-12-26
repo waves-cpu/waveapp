@@ -166,16 +166,16 @@ function StockBar({ stock, onUpdateClick, item }: { stock: number; onUpdateClick
 const formatCurrency = (amount: number) => `Rp${Math.round(amount).toLocaleString('id-ID')}`;
 
 const PriceDisplay = ({ item, discountGroups }: { item: InventoryItem | InventoryItemVariant; discountGroups: any[] }) => {
+    const isParentProduct = 'variants' in item && item.variants && item.variants.length > 0;
+    
     const activeDiscount = useMemo(() => {
+        if (isParentProduct) return null;
         const now = new Date();
         for (const group of discountGroups) {
             const startDate = parseISO(group.startDate);
             const endDate = endOfDay(parseISO(group.endDate));
             if (isWithinInterval(now, { start: startDate, end: endDate })) {
-                const discountedProduct = group.products.find((p: any) => 
-                    (p.variantId && p.variantId === Number(item.id)) || 
-                    (!p.variantId && 'productId' in item && p.productId === Number((item as any).productId))
-                );
+                const discountedProduct = group.products.find((p: any) => p.variantId ? p.variantId === Number(item.id) : p.productId === Number(item.id));
 
                 if (discountedProduct) {
                     return discountedProduct;
@@ -183,13 +183,22 @@ const PriceDisplay = ({ item, discountGroups }: { item: InventoryItem | Inventor
             }
         }
         return null;
-    }, [item, discountGroups]);
+    }, [item, discountGroups, isParentProduct]);
+    
+    if (isParentProduct) {
+        const prices = item.variants!.map(v => v.price).filter(p => p !== undefined && p !== null);
+        if (prices.length === 0) return <span>-</span>;
+        const minPrice = Math.min(...prices);
+        const maxPrice = Math.max(...prices);
+        if (minPrice === maxPrice) return <span>{formatCurrency(minPrice)}</span>;
+        return <span className="text-sm">{formatCurrency(minPrice)} - {formatCurrency(maxPrice)}</span>
+    }
 
     if (activeDiscount) {
         return (
             <div>
-                <span className="font-semibold text-primary">{formatCurrency(activeDiscount.discountedPrice)}</span>
-                <span className="text-xs text-muted-foreground line-through ml-2">{formatCurrency(item.price!)}</span>
+                <div className="font-semibold text-primary">{formatCurrency(activeDiscount.discountedPrice)}</div>
+                <div className="text-xs text-muted-foreground line-through">{formatCurrency(item.price!)}</div>
             </div>
         )
     }
@@ -582,5 +591,6 @@ export function InventoryTable({ onUpdateStock, isAccessoryTable = false }: Inve
     </>
   );
 }
+
 
 
