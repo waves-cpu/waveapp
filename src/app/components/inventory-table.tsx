@@ -69,7 +69,7 @@ import { useToast } from '@/hooks/use-toast';
 import { UpdateStockDialogAccessories } from './update-stock-dialog-accessories';
 import { Checkbox } from '@/components/ui/checkbox';
 import { VariantDisplayDialog } from './variant-display-dialog';
-import { isWithinInterval, parseISO } from 'date-fns';
+import { isWithinInterval, parseISO, endOfDay } from 'date-fns';
 
 interface InventoryTableProps {
   onUpdateStock: (itemId: string) => void;
@@ -582,4 +582,5 @@ export function InventoryTable({ onUpdateStock, isAccessoryTable = false }: Inve
     </>
   );
 }
+
 
