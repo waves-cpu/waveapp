@@ -34,7 +34,6 @@ import { useToast } from '@/hooks/use-toast';
 import { ProductSelectionDialog } from './product-selection-dialog';
 import { Card, CardContent } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const itemPriceSchema = z.object({
@@ -119,7 +118,7 @@ export function PriceSettingsForm() {
                     channelPrices: variant.channelPrices || [],
                 });
             });
-        } else {
+        } else if (item.stock !== undefined) {
              map.set(item.id, {
                 id: item.id,
                 name: item.name,
@@ -167,20 +166,21 @@ export function PriceSettingsForm() {
       
       indicesToUpdate.forEach(index => {
         if (channel) {
-            const channelIndex = fields[index].channelPrices?.findIndex(p => p.channel === channel);
-            if(channelIndex !== -1 && fields[index].channelPrices) {
-                const newChannelPrices = [...fields[index].channelPrices!];
-                newChannelPrices[channelIndex] = {...newChannelPrices[channelIndex], price: masterValue};
-                update(index, { ...fields[index], channelPrices: newChannelPrices });
+            const currentItem = fields[index];
+            const channelIndex = currentItem.channelPrices?.findIndex(p => p.channel === channel);
+            if (channelIndex !== -1 && currentItem.channelPrices) {
+                const newChannelPrices = [...currentItem.channelPrices];
+                newChannelPrices[channelIndex] = { ...newChannelPrices[channelIndex], price: masterValue };
+                update(index, { ...currentItem, channelPrices: newChannelPrices });
             }
         } else {
-             if (targetField === 'costPrice' || targetField === 'price') {
+            if (targetField === 'costPrice' || targetField === 'price') {
                  update(index, { ...fields[index], [targetField]: masterValue });
             }
         }
       });
       toast({ title: "Harga Diterapkan", description: `Harga telah diterapkan ke ${indicesToUpdate.length} produk.` });
-      form.trigger(); // Manually trigger validation display
+      form.trigger();
     }
   };
 
@@ -203,11 +203,16 @@ export function PriceSettingsForm() {
         return;
     }
     setIsSubmitting(true);
-    const updates = data.items.map((formItem, index) => ({
-        ...formItem,
-        id: selectedItems[index].id,
-        type: selectedItems[index].type,
-    }));
+    const updates = data.items.map((formItem, index) => {
+        const originalItem = selectedItems[index];
+        return {
+            id: originalItem.id,
+            type: originalItem.type,
+            costPrice: formItem.costPrice,
+            price: formItem.price,
+            channelPrices: formItem.channelPrices,
+        };
+    });
 
     if (updates.length === 0) {
         toast({ title: TPrice.noChanges, description: "Pilih produk terlebih dahulu." });
@@ -222,6 +227,8 @@ export function PriceSettingsForm() {
         setSelectedItems([]);
         replace([]);
         form.reset({}, { keepValues: false });
+        setRowSelection({});
+        setCategoryFilter(null);
     } catch (error) {
         toast({ variant: 'destructive', title: TPrice.errorTitle, description: TPrice.errorDesc });
     } finally {
@@ -235,7 +242,7 @@ export function PriceSettingsForm() {
     <>
     <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            {selectedItems.length === 0 ? (
+            {fields.length === 0 ? (
                  <div className="flex flex-col items-center justify-center h-96 border-2 border-dashed rounded-lg text-center">
                     <Settings className="h-16 w-16 text-muted-foreground" />
                     <h3 className="mt-4 text-lg font-semibold">{TPrice.title}</h3>
