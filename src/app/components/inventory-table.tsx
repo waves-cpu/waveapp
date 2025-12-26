@@ -69,6 +69,7 @@ import { useToast } from '@/hooks/use-toast';
 import { UpdateStockDialogAccessories } from './update-stock-dialog-accessories';
 import { Checkbox } from '@/components/ui/checkbox';
 import { VariantDisplayDialog } from './variant-display-dialog';
+import { isWithinInterval, parseISO } from 'date-fns';
 
 interface InventoryTableProps {
   onUpdateStock: (itemId: string) => void;
@@ -164,14 +165,41 @@ function StockBar({ stock, onUpdateClick, item }: { stock: number; onUpdateClick
 
 const formatCurrency = (amount: number) => `Rp${Math.round(amount).toLocaleString('id-ID')}`;
 
-const SimplePrice = ({ item }: { item: InventoryItem | InventoryItemVariant }) => {
-    const priceDisplay = item.price != null ? formatCurrency(item.price) : '-';
-    return <span>{priceDisplay}</span>;
+const PriceDisplay = ({ item, discountGroups }: { item: InventoryItem | InventoryItemVariant; discountGroups: any[] }) => {
+    const activeDiscount = useMemo(() => {
+        const now = new Date();
+        for (const group of discountGroups) {
+            const startDate = parseISO(group.startDate);
+            const endDate = endOfDay(parseISO(group.endDate));
+            if (isWithinInterval(now, { start: startDate, end: endDate })) {
+                const discountedProduct = group.products.find((p: any) => 
+                    (p.variantId && p.variantId === Number(item.id)) || 
+                    (!p.variantId && 'productId' in item && p.productId === Number((item as any).productId))
+                );
+
+                if (discountedProduct) {
+                    return discountedProduct;
+                }
+            }
+        }
+        return null;
+    }, [item, discountGroups]);
+
+    if (activeDiscount) {
+        return (
+            <div>
+                <span className="font-semibold text-primary">{formatCurrency(activeDiscount.discountedPrice)}</span>
+                <span className="text-xs text-muted-foreground line-through ml-2">{formatCurrency(item.price!)}</span>
+            </div>
+        )
+    }
+
+    return <span>{item.price != null ? formatCurrency(item.price) : '-'}</span>;
 };
 
 
 export function InventoryTable({ onUpdateStock, isAccessoryTable = false }: InventoryTableProps) {
-  const { items, accessories, loading, archiveProduct } = useInventory();
+  const { items, accessories, loading, archiveProduct, discountGroups } = useInventory();
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
@@ -326,14 +354,6 @@ export function InventoryTable({ onUpdateStock, isAccessoryTable = false }: Inve
             {paginatedItems.length > 0 ? (
               paginatedItems.flatMap((item) => {
                 if (item.variants && item.variants.length > 0) {
-                    const prices = item.variants.map(v => v.price).filter(p => p != null) as number[];
-                    const minPrice = Math.min(...prices);
-                    const maxPrice = Math.max(...prices);
-                    const priceDisplay = prices.length > 0
-                        ? minPrice === maxPrice
-                            ? formatCurrency(minPrice)
-                            : `${formatCurrency(minPrice)} - ${formatCurrency(maxPrice)}`
-                        : '-';
                     const totalStock = item.variants.reduce((sum, v) => sum + v.stock, 0);
 
                     return (
@@ -354,7 +374,9 @@ export function InventoryTable({ onUpdateStock, isAccessoryTable = false }: Inve
                                         </div>
                                     </div>
                                 </TableCell>
-                                <TableCell>{priceDisplay}</TableCell>
+                                <TableCell>
+                                    <PriceDisplay item={item} discountGroups={discountGroups} />
+                                </TableCell>
                                 <TableCell>
                                     <StockBar stock={totalStock} onUpdateClick={() => {setSelectedBulkEditItem(item); setBulkEditDialogOpen(true);}} item={item} />
                                 </TableCell>
@@ -417,7 +439,7 @@ export function InventoryTable({ onUpdateStock, isAccessoryTable = false }: Inve
                                         </div>
                                     </TableCell>
                                     <TableCell>
-                                        <SimplePrice item={variant} />
+                                        <PriceDisplay item={variant} discountGroups={discountGroups} />
                                     </TableCell>
                                     <TableCell>
                                         <StockBar stock={variant.stock} onUpdateClick={() => onUpdateStock(variant.id)} item={item} />
@@ -453,7 +475,7 @@ export function InventoryTable({ onUpdateStock, isAccessoryTable = false }: Inve
                                 </div>
                             </TableCell>
                              <TableCell>
-                                <SimplePrice item={item} />
+                                <PriceDisplay item={item} discountGroups={discountGroups} />
                              </TableCell>
                             <TableCell>
                                 {isAccessoryTable ? (
@@ -560,3 +582,4 @@ export function InventoryTable({ onUpdateStock, isAccessoryTable = false }: Inve
     </>
   );
 }
+

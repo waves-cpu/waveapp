@@ -1,11 +1,12 @@
 
+
 'use server';
 
 import { db as dbProxy } from './db';
 const db = dbProxy;
 import type { InventoryItem, AdjustmentHistory, InventoryItemVariant, Sale, Reseller, ChannelPrice, Accessory, ShippingReceipt, BulkImportHistory, User, ReturnedItem, DiscountGroup, DiscountedProduct } from '@/types';
 import { categories as allCategories } from '@/types';
-import { format as formatDate, parseISO, startOfDay, endOfDay } from 'date-fns';
+import { format as formatDate, parseISO, startOfDay, endOfDay, isWithinInterval } from 'date-fns';
 
 // User functions
 export async function authenticateUser(username: string, password: string): Promise<User | null> {
@@ -833,13 +834,17 @@ export async function performSale(
             productId = parentProduct.id;
             variantId = variant.id;
             if (variant.stock < quantity) throw new Error('Insufficient stock for variant.');
-            if (finalPriceAtSale === 0) { // Only calculate if not provided
-                 let priceResult;
-                 priceResult = getChannelPriceStmt.get({ productId: null, variantId: variant.id, channel: channel.toLowerCase() }) as { price: number } | undefined;
-                 if (!priceResult && isOnlineChannel) {
-                     priceResult = getChannelPriceStmt.get({ productId: null, variantId: variant.id, channel: 'online' }) as { price: number } | undefined;
-                 }
-                 finalPriceAtSale = priceResult ? priceResult.price : variant.price;
+            if (finalPriceAtSale === 0) {
+                 const discountedPrice = getActiveDiscountPrice(productId, variantId, parentProduct.category);
+                if (discountedPrice !== null) {
+                    finalPriceAtSale = discountedPrice;
+                } else {
+                    let priceResult = getChannelPriceStmt.get({ productId: null, variantId: variant.id, channel: channel.toLowerCase() }) as { price: number } | undefined;
+                    if (!priceResult && isOnlineChannel) {
+                        priceResult = getChannelPriceStmt.get({ productId: null, variantId: variant.id, channel: 'online' }) as { price: number } | undefined;
+                    }
+                    finalPriceAtSale = priceResult ? priceResult.price : variant.price;
+                }
             }
             cogsAtSale = variant.costPrice || 0;
             adjustStock(variant.id.toString(), -quantity, saleReason);
@@ -849,12 +854,16 @@ export async function performSale(
             productId = product.id;
             if (product.stock! < quantity) throw new Error('Insufficient stock for product.');
             if (finalPriceAtSale === 0) {
-                let priceResult;
-                priceResult = getChannelPriceStmt.get({ productId: product.id, variantId: null, channel: channel.toLowerCase() }) as { price: number } | undefined;
-                if (!priceResult && isOnlineChannel) {
-                    priceResult = getChannelPriceStmt.get({ productId: product.id, variantId: null, channel: 'online' }) as { price: number } | undefined;
+                const discountedPrice = getActiveDiscountPrice(productId, null, parentProduct.category);
+                 if (discountedPrice !== null) {
+                    finalPriceAtSale = discountedPrice;
+                } else {
+                    let priceResult = getChannelPriceStmt.get({ productId: product.id, variantId: null, channel: channel.toLowerCase() }) as { price: number } | undefined;
+                    if (!priceResult && isOnlineChannel) {
+                        priceResult = getChannelPriceStmt.get({ productId: product.id, variantId: null, channel: 'online' }) as { price: number } | undefined;
+                    }
+                    finalPriceAtSale = priceResult ? priceResult.price : product.price!;
                 }
-                finalPriceAtSale = priceResult ? priceResult.price : product.price!;
             }
             cogsAtSale = product.costPrice || 0;
             adjustStock(product.id.toString(), -quantity, saleReason);
@@ -863,7 +872,7 @@ export async function performSale(
             accessoryId = accessory.id;
             parentProduct = { name: accessory.name, sku: accessory.sku, category: accessory.category };
             if (accessory.stock! < quantity) throw new Error('Insufficient stock for accessory.');
-            cogsAtSale = accessory.costPrice || 0; // Use cost price for COGS
+            cogsAtSale = accessory.costPrice || 0;
             finalPriceAtSale = options?.priceAtSale ?? 0;
             adjustAccessoryStock(accessory.id.toString(), -quantity, saleReason);
 
@@ -871,7 +880,6 @@ export async function performSale(
             throw new Error('SKU not found or product has variants.');
         }
         
-        // Apply admin fee for online marketplaces if price was not explicitly passed in options
         if (isOnlineChannel && options?.priceAtSale === undefined) {
             finalPriceAtSale = finalPriceAtSale * (1 - ADMIN_FEE_PERCENTAGE);
         }
@@ -926,6 +934,32 @@ export async function performSale(
     }
     
     return { newSale, updatedItem, updatedAccessory };
+}
+
+function getActiveDiscountPrice(productId: string | number, variantId: string | number | null, category: string): number | null {
+  const now = new Date().toISOString();
+  const getGroupStmt = db.prepare('SELECT id FROM discount_groups WHERE category = ? AND startDate <= ? AND endDate >= ?');
+  const groups = getGroupStmt.all(category, now, now) as {id: number}[];
+  
+  if (groups.length === 0) return null;
+
+  const groupIds = groups.map(g => g.id);
+  const placeholders = groupIds.map(() => '?').join(',');
+
+  const getDiscountStmt = db.prepare(`
+      SELECT discountedPrice
+      FROM discounted_products
+      WHERE groupId IN (${placeholders})
+        AND productId = ?
+        AND (variantId = ? OR variantId IS NULL)
+      ORDER BY variantId DESC -- Prioritize variant-specific discounts
+      LIMIT 1
+  `);
+
+  const params = [...groupIds, productId, variantId ?? null];
+  const result = getDiscountStmt.get(...params) as { discountedPrice: number } | undefined;
+
+  return result ? result.discountedPrice : null;
 }
 
 export async function recordSaleWithReceipt(receiptData: Omit<ShippingReceipt, 'id'>, salesData: Omit<Sale, 'id'>[]): Promise<void> {
