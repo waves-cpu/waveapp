@@ -210,10 +210,11 @@ export function PriceSettingsForm() {
         return;
     }
     setIsSubmitting(true);
-    
-    // Correctly map form data to update payload
+
+    const selectedItemsMap = new Map(selectedItems.map(item => [item.id, item]));
+
     const updates = data.items.map((formItem) => {
-      const originalItem = flattenedItemsById.get(formItem.id);
+      const originalItem = selectedItemsMap.get(formItem.id);
       return {
         id: formItem.id,
         type: originalItem!.type,
@@ -232,7 +233,6 @@ export function PriceSettingsForm() {
     try {
         await updatePrices(updates);
         toast({ title: TPrice.successTitle, description: TPrice.successDesc });
-        // Reset the form state to clear selections and table
         setSelectedItems([]);
         replace([]);
         form.reset({}, { keepValues: false });
