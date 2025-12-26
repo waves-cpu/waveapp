@@ -218,15 +218,14 @@ export function PriceSettingsForm() {
     }
     setIsSubmitting(true);
     
-    const updates = data.items.map((formItem, index) => {
-      const originalItem = selectedItems[index];
-      return {
-        id: formItem.id,
-        type: originalItem.type,
-        costPrice: formItem.costPrice,
-        price: formItem.price,
-        channelPrices: formItem.channelPrices,
-      };
+    const updates = data.items.map((formItem) => {
+        return {
+            id: formItem.id,
+            type: formItem.type,
+            costPrice: formItem.costPrice,
+            price: formItem.price,
+            channelPrices: formItem.channelPrices,
+        };
     });
 
     if (updates.length === 0) {
@@ -292,46 +291,7 @@ export function PriceSettingsForm() {
                         {TPrice.saveButton}
                     </Button>
                 </div>
-
-                <Card>
-                    <CardContent className="p-4 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-                        {(['masterCostPrice', 'masterPrice', 'masterPosPrice', 'masterResellerPrice', 'masterOnlinePrice'] as const).map(field => {
-                            const priceType = field.replace('master', '').replace('Price','').toLowerCase();
-                            let targetField: string, channel: string | undefined;
-
-                            if (priceType === 'cost') targetField = 'costPrice';
-                            else if (priceType === '') targetField = 'price';
-                            else {
-                                targetField = 'channelPrices';
-                                channel = priceType;
-                            }
-                            
-                            const labelMap = { cost: TPrice.costPrice, '': TPrice.sellingPrice, pos: TPrice.posPrice, reseller: TPrice.resellerPrice, online: TPrice.onlinePrice };
-                            
-                            return (
-                                <FormField
-                                    key={field}
-                                    control={form.control}
-                                    name={field}
-                                    render={({ field: formField }) => (
-                                        <FormItem className="space-y-1">
-                                            <FormLabel className="text-xs">{labelMap[priceType as keyof typeof labelMap]}</FormLabel>
-                                            <div className="flex items-center gap-2">
-                                                <FormControl>
-                                                    <Input type="number" placeholder="0" {...formField} value={formField.value ?? ''} className="h-8 text-xs"/>
-                                                </FormControl>
-                                                <Button type="button" size="sm" variant="outline" className="h-8" onClick={() => applyMasterPrice(field, targetField, channel)} disabled={!isAnySelected}>
-                                                    Terapkan
-                                                </Button>
-                                            </div>
-                                        </FormItem>
-                                    )}
-                                />
-                            );
-                        })}
-                    </CardContent>
-                </Card>
-
+                
                 <div className="border rounded-lg shadow-sm overflow-hidden">
                     <Table>
                         <TableHeader className="sticky top-0 bg-card">

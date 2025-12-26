@@ -48,6 +48,7 @@ import {
   fetchSingleAccessory,
   clearPosTransactions as clearPosTransactionsDb,
   recordSaleWithReceipt as recordSaleWithReceiptDb,
+  resetAllPrices as resetAllPricesDb,
 } from '@/lib/inventory-service';
 
 
@@ -79,6 +80,7 @@ interface InventoryContextType {
   deleteReseller: (id: number) => Promise<void>;
   fetchResellers: () => Promise<void>;
   updatePrices: (updates: any[]) => Promise<void>;
+  resetAllPrices: () => Promise<void>;
   archiveProduct: (itemId: string, isArchived: boolean) => Promise<void>;
   deleteProductPermanently: (itemId: string) => Promise<void>;
   // Accessories
@@ -380,6 +382,11 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const resetAllPrices = async () => {
+    await resetAllPricesDb();
+    await fetchAllData();
+  };
+
   const archiveProduct = async (itemId: string, isArchived: boolean) => {
     await archiveProductDb(itemId, isArchived);
     setItems(prev => prev.map(i => i.id === itemId ? { ...i, isArchived: isArchived } : i));
@@ -483,6 +490,7 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
         deleteReseller,
         fetchResellers: () => Promise.resolve(), // No-op as it's part of fetchAllData
         updatePrices,
+        resetAllPrices,
         archiveProduct,
         deleteProductPermanently,
         accessories,
@@ -518,4 +526,3 @@ export const useInventory = () => {
   }
   return context;
 };
-

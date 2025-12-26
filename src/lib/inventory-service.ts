@@ -1441,6 +1441,15 @@ async function updateShippingReceiptStatusByAwb(awb: string, status: string) {
     const stmt = db.prepare(`UPDATE shipping_receipts SET status = ? WHERE awb = ?`);
     stmt.run(status, awb);
 }
+
+export async function resetAllPrices() {
+    db.transaction(() => {
+        db.exec('DELETE FROM channel_prices');
+        db.exec('UPDATE products SET price = NULL, costPrice = NULL');
+        db.exec('UPDATE variants SET price = 0, costPrice = NULL');
+    })();
+}
     
 
     
+
