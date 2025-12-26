@@ -1,13 +1,11 @@
 
-
 'use client';
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowLeft, ScanLine, Camera, Calendar as CalendarIcon, ShoppingBag, Truck, CheckCircle, XCircle } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { ArrowLeft, ScanLine, Camera, Truck, CheckCircle, XCircle } from 'lucide-react';
 import { useInventory } from '@/hooks/use-inventory';
 import { useToast } from '@/hooks/use-toast';
 import { useScanSounds } from '@/hooks/use-scan-sounds';
@@ -83,7 +81,8 @@ export default function MobileScanShipmentPage() {
         } finally {
             setIsSubmitting(false);
             if (isCameraOpen) {
-                 setTimeout(() => setIsScanningPaused(false), 1500);
+                 setIsScanningPaused(true); // Pause scanning after a result
+                 setTimeout(() => setIsScanningPaused(false), 1500); // Resume after 1.5s
             } else {
                  setAwb('');
                  inputRef.current?.focus();
@@ -99,7 +98,6 @@ export default function MobileScanShipmentPage() {
     
     const handleDecode = (result: string) => {
         if (isScanningPaused) return;
-        setIsScanningPaused(true);
         processAwb(result);
     };
     
