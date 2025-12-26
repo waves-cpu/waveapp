@@ -35,7 +35,7 @@ interface UpdateStockDialogProps {
 }
 
 export function UpdateStockDialog({ open, onOpenChange, itemId }: UpdateStockDialogProps) {
-  const { updateStock, items, getItem } = useInventory();
+  const { updateStock, items } = useInventory();
   const { toast } = useToast();
   const { language } = useLanguage();
   const t = translations[language];
@@ -61,32 +61,46 @@ export function UpdateStockDialog({ open, onOpenChange, itemId }: UpdateStockDia
 
   useEffect(() => {
     if (open && itemId) {
-      const parentItem = getItem(itemId);
-      if (parentItem) {
-          if (parentItem.variants && parentItem.variants.length > 0) {
-              const variant = parentItem.variants.find(v => v.id === itemId);
-              if (variant) {
-                  setItemDetails({
-                      parentName: parentItem.name,
-                      variantName: variant.name,
-                      stock: variant.stock,
-                  });
-                  form.setValue('newStock', variant.stock);
-              }
-          } else {
-              setItemDetails({
-                  parentName: parentItem.name,
-                  variantName: '',
-                  stock: parentItem.stock,
-              });
-              form.setValue('newStock', parentItem.stock);
-          }
-      }
+        // Find if the itemId matches a simple product (no variants)
+        const simpleProduct = items.find(i => i.id === itemId && (!i.variants || i.variants.length === 0));
+        
+        if (simpleProduct) {
+            setItemDetails({
+                parentName: simpleProduct.name,
+                variantName: '',
+                stock: simpleProduct.stock,
+            });
+            form.setValue('newStock', simpleProduct.stock);
+        } else {
+            // Otherwise, find the parent product and the specific variant
+            let parentItem: InventoryItem | undefined;
+            let variant: InventoryItemVariant | undefined;
+
+            for (const p of items) {
+                if (p.variants && p.variants.length > 0) {
+                    const foundVariant = p.variants.find(v => v.id === itemId);
+                    if (foundVariant) {
+                        parentItem = p;
+                        variant = foundVariant;
+                        break;
+                    }
+                }
+            }
+
+            if (parentItem && variant) {
+                setItemDetails({
+                    parentName: parentItem.name,
+                    variantName: variant.name,
+                    stock: variant.stock,
+                });
+                form.setValue('newStock', variant.stock);
+            }
+        }
     } else if (!open) {
         form.reset({ newStock: undefined, reason: '' });
         setItemDetails({ parentName: '', variantName: '', stock: undefined });
     }
-  }, [open, itemId, getItem, form]);
+  }, [open, itemId, items, form]);
 
 
   function onSubmit(values: z.infer<typeof formSchema>) {
