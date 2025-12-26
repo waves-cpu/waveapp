@@ -147,12 +147,6 @@ export default function DiscountPage() {
                             <Tags className="mx-auto h-12 w-12" />
                             <h3 className="mt-4 text-lg font-semibold">Belum Ada Grup Diskon</h3>
                             <p className="mt-1 text-sm">Buat grup diskon pertama Anda untuk memulai promosi.</p>
-                            <Button asChild className="mt-4">
-                                <Link href="/finance/discounts/new">
-                                    <PlusCircle className="mr-2 h-4 w-4" />
-                                    Buat Grup Diskon
-                                </Link>
-                            </Button>
                         </div>
                     )}
                 </div>
