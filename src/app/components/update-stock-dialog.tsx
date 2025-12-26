@@ -35,7 +35,7 @@ interface UpdateStockDialogProps {
 }
 
 export function UpdateStockDialog({ open, onOpenChange, itemId }: UpdateStockDialogProps) {
-  const { updateStock, items } = useInventory();
+  const { updateStock, items, getItem } = useInventory();
   const { toast } = useToast();
   const { language } = useLanguage();
   const t = translations[language];
@@ -174,3 +174,4 @@ export function UpdateStockDialog({ open, onOpenChange, itemId }: UpdateStockDia
     </Dialog>
   );
 }
+

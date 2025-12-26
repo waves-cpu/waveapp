@@ -760,10 +760,6 @@ export async function adjustStock(itemId: string, change: number, reason: string
                     INSERT INTO history (productId, variantId, change, reason, newStockLevel, date)
                     VALUES (?, ?, ?, ?, ?, ?)
                 `).run(itemId, null, change, reason, newStockLevel, new Date().toISOString());
-            } else {
-                // If it's not a variant and not a simple product, we do nothing.
-                // This could be a parent product of variants, which doesn't have its own stock.
-                // Or simply an invalid ID.
             }
         }
     })();
@@ -1567,6 +1563,8 @@ async function updateShippingReceiptStatusByAwb(awb: string, status: string) {
     const stmt = db.prepare(`UPDATE shipping_receipts SET status = ? WHERE awb = ?`);
     stmt.run(status, awb);
 }
+
+
 
 
 
