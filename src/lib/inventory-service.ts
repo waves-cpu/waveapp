@@ -882,9 +882,8 @@ export async function performSale(
         }
         
         if (isOnlineChannel && options?.priceAtSale === undefined) {
-            // Apply admin fee only if a specific price was not passed in (i.e. we are calculating it now)
-            // And if there's no discount active
-            if (getActiveDiscountPrice(productId, variantId, parentProduct.category, channel) === null) {
+            const discountPrice = getActiveDiscountPrice(productId, variantId, parentProduct.category, channel);
+            if (discountPrice === null) {
                 finalPriceAtSale = finalPriceAtSale * (1 - ADMIN_FEE_PERCENTAGE);
             }
         }
@@ -941,7 +940,7 @@ export async function performSale(
     return { newSale, updatedItem, updatedAccessory };
 }
 
-function getActiveDiscountPrice(productId: string | number, variantId: string | number | null, category: string, channel: string): number | null {
+export async function getActiveDiscountPrice(productId: string | number, variantId: string | number | null, category: string, channel: string): Promise<number | null> {
     const now = new Date().toISOString();
     
     let groups: {id: number}[] = [];
@@ -1572,6 +1571,8 @@ async function updateShippingReceiptStatusByAwb(awb: string, status: string) {
     const stmt = db.prepare(`UPDATE shipping_receipts SET status = ? WHERE awb = ?`);
     stmt.run(status, awb);
 }
+
+
 
 
 
