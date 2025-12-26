@@ -176,6 +176,7 @@ const PriceDisplay = ({ item, discountGroups }: { item: InventoryItem | Inventor
     
     type ActiveDiscount = {
       groupName: string;
+      channel: string;
       discountedPrice: number;
       originalPrice: number;
       startDate: string;
@@ -191,7 +192,7 @@ const PriceDisplay = ({ item, discountGroups }: { item: InventoryItem | Inventor
 
         for (const group of discountGroups) {
             // Category check
-            if (category && group.category !== category) {
+            if (group.category !== category) {
                 continue;
             }
 
@@ -202,7 +203,7 @@ const PriceDisplay = ({ item, discountGroups }: { item: InventoryItem | Inventor
             if (!isWithinInterval(now, { start: startDate, end: endDate })) {
                 continue;
             }
-
+            
             const discountedProduct = group.products.find((p: any) => 
                 (p.variantId && p.variantId === Number(item.id)) ||
                 (!p.variantId && 'productId' in item && p.productId === Number((item as any).productId))
@@ -211,6 +212,7 @@ const PriceDisplay = ({ item, discountGroups }: { item: InventoryItem | Inventor
             if (discountedProduct && item.price && discountedProduct.discountedPrice < item.price) {
                 allActiveDiscounts.push({
                     groupName: group.name,
+                    channel: group.channel,
                     discountedPrice: discountedProduct.discountedPrice,
                     originalPrice: item.price,
                     startDate: group.startDate,
@@ -244,21 +246,23 @@ const PriceDisplay = ({ item, discountGroups }: { item: InventoryItem | Inventor
 
     return (
         <div className="flex items-center gap-1">
-            <span>{item.price != null ? formatCurrency(item.price) : '-'}</span>
-            {hasActiveDiscount && (
-                <TooltipProvider>
+             {hasActiveDiscount ? (
+                 <TooltipProvider>
                     <Tooltip>
-                        <TooltipTrigger>
-                            <Tags className="h-4 w-4 text-primary" />
+                        <TooltipTrigger asChild>
+                             <span className="underline decoration-dashed cursor-pointer">
+                                {item.price != null ? formatCurrency(item.price) : '-'}
+                            </span>
                         </TooltipTrigger>
-                        <TooltipContent className="p-2 w-80" side="top" align="center">
+                        <TooltipContent className="p-0 w-80" side="top" align="center">
                             <div className="space-y-2">
                                 {activeDiscounts.map((discount, index) => {
                                     const status = getStatus(discount.startDate, discount.endDate);
+                                    const title = discount.channel === 'online' ? 'Diskon Online' : discount.groupName;
                                     return (
-                                        <div key={index} className="p-3 border rounded-md bg-background text-foreground">
+                                        <div key={index} className="p-3 border-b last:border-b-0">
                                             <div className="flex justify-between items-start mb-2">
-                                                <h4 className="font-semibold text-sm">{discount.groupName}</h4>
+                                                <h4 className="font-semibold text-sm">{title}</h4>
                                                 <Badge variant={status.variant} className="text-xs">{status.text}</Badge>
                                             </div>
                                             <div className="flex justify-between items-end mb-2">
@@ -279,6 +283,8 @@ const PriceDisplay = ({ item, discountGroups }: { item: InventoryItem | Inventor
                         </TooltipContent>
                     </Tooltip>
                 </TooltipProvider>
+            ) : (
+                <span>{item.price != null ? formatCurrency(item.price) : '-'}</span>
             )}
         </div>
     );
