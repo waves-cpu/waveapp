@@ -32,6 +32,8 @@ import { useLanguage } from '@/hooks/use-language';
 import { translations } from '@/types/language';
 import { PosSearch } from './pos-search';
 import { useDebounce } from '@/hooks/use-debounce';
+import { getActiveDiscountPrice } from '@/lib/inventory-service';
+
 
 interface CartItem {
     productId: string;
@@ -88,7 +90,7 @@ export function RecordSaleForReceiptDialog({
     }
   }, [open]);
 
-  const addToCart = useCallback((item: InventoryItem, variant?: InventoryItemVariant) => {
+  const addToCart = useCallback(async (item: InventoryItem, variant?: InventoryItemVariant) => {
     const itemToAddRaw = variant || item;
     
     const quantityInCart = cart.find(ci => ci.sku === itemToAddRaw.sku)?.quantity || 0;
@@ -104,8 +106,10 @@ export function RecordSaleForReceiptDialog({
         return;
     }
     
-    const onlinePriceResult = itemToAddRaw.channelPrices?.find(p => ['shopee', 'tiktok', 'lazada'].includes(p.channel));
-    const price = onlinePriceResult?.price ?? itemToAddRaw.price!;
+    // Correctly determine the price, prioritizing discounts.
+    const discountPrice = await getActiveDiscountPrice(item.id, itemToAddRaw.id, item.category, receipt!.salesChannel!);
+    const price = discountPrice ?? itemToAddRaw.price!;
+
     const itemSku = variant?.sku || item.sku;
 
     if (!itemSku) {
@@ -137,7 +141,7 @@ export function RecordSaleForReceiptDialog({
       return [...currentCart, itemToAdd];
     });
     setSearchTerm('');
-  }, [cart, toast, playErrorSound, playSuccessSound]);
+  }, [cart, toast, playErrorSound, playSuccessSound, receipt]);
 
   const handleProductSelect = useCallback((product: InventoryItem) => {
     if (product.variants && product.variants.length > 1) {
