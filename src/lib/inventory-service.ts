@@ -844,8 +844,6 @@ export async function performSale(
         const product = getProductStmt.get(sku) as (InventoryItem & { id: number, costPrice?: number, sku: string }) | undefined;
         const accessory = getAccessoryStmt.get(sku) as (Accessory & { id: number, costPrice?: number, sku: string }) | undefined;
         
-        const isOnlineChannel = ONLINE_MARKETPLACES.includes(channel.toLowerCase());
-
         if (variant) {
             parentProduct = getParentProductStmt.get(variant.productId);
             productId = parentProduct.id;
@@ -854,9 +852,7 @@ export async function performSale(
             
             cogsAtSale = variant.costPrice || 0;
             
-            // This is the main logic change: Prioritize discount price.
-            const discountPrice = getActiveDiscountPrice(productId, variantId, parentProduct.category, channel);
-            finalPriceAtSale = discountPrice !== null ? discountPrice : (options?.priceAtSale ?? variant.price);
+            finalPriceAtSale = options?.priceAtSale ?? variant.price;
 
             adjustStock(variant.id.toString(), -quantity, saleReason);
 
@@ -867,8 +863,7 @@ export async function performSale(
             
             cogsAtSale = product.costPrice || 0;
 
-            const discountPrice = getActiveDiscountPrice(productId, null, parentProduct.category, channel);
-            finalPriceAtSale = discountPrice !== null ? discountPrice : (options?.priceAtSale ?? product.price!);
+            finalPriceAtSale = options?.priceAtSale ?? product.price!;
             
             adjustStock(product.id.toString(), -quantity, saleReason);
         
@@ -883,14 +878,25 @@ export async function performSale(
         } else {
             throw new Error('SKU not found or product has variants.');
         }
+
+        // The logic to get discount price is now outside, so we use what's passed in.
+        const isOnlineChannel = ONLINE_MARKETPLACES.includes(channel.toLowerCase());
+        let priceToUse = options?.priceAtSale;
         
-        if (isOnlineChannel && options?.priceAtSale === undefined) {
-            // Admin fee is only deducted if there's no overriding discount price
-            const discountPrice = getActiveDiscountPrice(productId, variantId, parentProduct.category, channel);
-            if (discountPrice === null) {
-                finalPriceAtSale = finalPriceAtSale * (1 - ADMIN_FEE_PERCENTAGE);
-            }
+        if (priceToUse === undefined) {
+             const discountPrice = getActiveDiscountPrice(productId, variantId, parentProduct.category, channel);
+             priceToUse = discountPrice ?? (variant ? variant.price : product!.price)!;
         }
+
+        if (isOnlineChannel) {
+             const discountPrice = getActiveDiscountPrice(productId, variantId, parentProduct.category, channel);
+             if (discountPrice === null) {
+                priceToUse = priceToUse * (1 - ADMIN_FEE_PERCENTAGE);
+             }
+        }
+        
+        finalPriceAtSale = priceToUse;
+
 
         const saleResult = db.prepare(`
             INSERT INTO sales (transactionId, paymentMethod, resellerName, productId, variantId, accessoryId, channel, quantity, priceAtSale, cogsAtSale, saleDate, status, parentSku, productCategory, parentImageUrl)
@@ -984,25 +990,26 @@ export async function getActiveDiscountPrice(productId: string | number, variant
 
 export async function recordSaleWithReceipt(receiptData: Omit<ShippingReceipt, 'id'>, salesData: Omit<Sale, 'id'>[]) {
     const transaction = db.transaction(() => {
-        // Upsert logic for receipt
-        const existingReceipt = db.prepare('SELECT id FROM shipping_receipts WHERE awb = ?').get(receiptData.awb) as { id: number } | undefined;
+        const existingReceipt = db.prepare('SELECT id, status FROM shipping_receipts WHERE awb = ?').get(receiptData.awb) as { id: number, status: string } | undefined;
+
         if (existingReceipt) {
-            db.prepare('UPDATE shipping_receipts SET status = ? WHERE id = ?').run('Dikirim', existingReceipt.id);
+            // Do not change status automatically. Let the mobile scan do it.
         } else {
             const addReceiptStmt = db.prepare('INSERT INTO shipping_receipts (awb, date, channel, salesChannel, status, transactionId) VALUES (@awb, @date, @channel, @salesChannel, @status, @transactionId)');
             addReceiptStmt.run({
                 ...receiptData,
-                status: 'Dikirim', // Always set to 'Dikirim' when processed
+                status: 'Perlu Diproses', // Always set to 'Perlu Diproses' initially
                 transactionId: receiptData.awb
             });
         }
 
-        // Record each sale item
+        // Delete existing sales for this transaction to handle edits
+        db.prepare('DELETE FROM sales WHERE transactionId = ?').run(receiptData.awb);
+
         salesData.forEach(sale => {
             if (!sale.sku) {
                  throw new Error(`SKU is missing for a sale item in transaction ${sale.transactionId}`);
             }
-            // Re-implement sale logic here to avoid nested transactions
             const saleReason = `Sale (${sale.channel}) - AWB: ${receiptData.awb}`;
             
             const getProductStmt = db.prepare('SELECT * FROM products WHERE sku = ? AND hasVariants = 0');
