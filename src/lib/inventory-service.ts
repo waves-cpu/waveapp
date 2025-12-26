@@ -936,11 +936,14 @@ export async function performSale(
 
 function getActiveDiscountPrice(productId: string | number, variantId: string | number | null, category: string, channel: string): number | null {
     const now = new Date().toISOString();
-    const getGroupStmt = db.prepare('SELECT id FROM discount_groups WHERE category = ? AND channel = ? AND startDate <= ? AND endDate >= ?');
     
-    let groups = getGroupStmt.all(category, channel, now, now) as {id: number}[];
+    let groups: {id: number}[] = [];
+    const getGroupStmt = db.prepare('SELECT id FROM discount_groups WHERE category = ? AND channel = ? AND startDate <= ? AND endDate >= ?');
 
-    // Fallback for online channels
+    // 1. Check for specific channel
+    groups = getGroupStmt.all(category, channel, now, now) as {id: number}[];
+
+    // 2. Fallback to 'online' if it's an online sale and no specific channel discount was found
     const isOnlineSale = ['shopee', 'tiktok', 'lazada'].includes(channel.toLowerCase());
     if (groups.length === 0 && isOnlineSale) {
         groups = getGroupStmt.all(category, 'online', now, now) as {id: number}[];
@@ -983,15 +986,12 @@ export async function recordSaleWithReceipt(receiptData: Omit<ShippingReceipt, '
                 priceAtSale: sale.priceAtSale,
                 status: sale.status,
             };
-
-            const item = db.prepare('SELECT sku FROM products WHERE id = ?').get(sale.productId) as { sku: string } | undefined
-                || db.prepare('SELECT sku FROM variants WHERE id = ?').get(sale.variantId) as { sku: string } | undefined;
             
-            if(!item?.sku) {
-                throw new Error(`SKU not found for product/variant ID during sale recording.`);
+            if (!sale.sku) {
+                 throw new Error(`SKU is missing for a sale item in transaction ${sale.transactionId}`);
             }
 
-            performSale(item.sku, sale.channel, sale.quantity, options);
+            performSale(sale.sku, sale.channel, sale.quantity, options);
         });
     });
 
@@ -1570,5 +1570,6 @@ async function updateShippingReceiptStatusByAwb(awb: string, status: string) {
     const stmt = db.prepare(`UPDATE shipping_receipts SET status = ? WHERE awb = ?`);
     stmt.run(status, awb);
 }
+
 
 
