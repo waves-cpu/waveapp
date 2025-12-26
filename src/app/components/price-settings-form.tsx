@@ -35,6 +35,7 @@ import { ProductSelectionDialog } from './product-selection-dialog';
 import { Card, CardContent } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 
 const itemPriceSchema = z.object({
     id: z.string(),
@@ -102,7 +103,8 @@ export function PriceSettingsForm() {
   
   const flattenedFilteredItemsById = useMemo(() => {
     const map = new Map<string, SelectedItem>();
-    items.forEach(item => { // Use all items for a complete map
+    const itemsToProcess = categoryFilter ? availableItemsForSelection : items;
+    itemsToProcess.forEach(item => { // Use all items for a complete map
         if (item.variants && item.variants.length > 0) {
             item.variants.forEach(variant => {
                 map.set(variant.id, {
@@ -134,7 +136,7 @@ export function PriceSettingsForm() {
         }
     });
     return map;
-  }, [items]);
+  }, [items, categoryFilter, availableItemsForSelection]);
 
   const handleProductsSelected = (selectedIds: string[]) => {
     const newlySelected = selectedIds
@@ -143,17 +145,22 @@ export function PriceSettingsForm() {
     
     setSelectedItems(newlySelected);
 
-    const formItems = newlySelected.map(item => ({
-        id: item.id,
-        type: item.type,
-        costPrice: item.costPrice ?? undefined,
-        price: item.price ?? undefined,
-        channelPrices: [
-            { channel: 'pos', price: item.channelPrices?.find(p => p.channel === 'pos')?.price ?? undefined },
-            { channel: 'reseller', price: item.channelPrices?.find(p => p.channel === 'reseller')?.price ?? undefined },
-            { channel: 'online', price: item.channelPrices?.find(p => ['shopee','tiktok','lazada'].includes(p.channel))?.price ?? undefined },
-        ]
-    }));
+    const formItems = newlySelected.map(item => {
+        const getPrice = (channel: string) => item.channelPrices?.find(p => p.channel === channel)?.price;
+        const onlinePrice = getPrice('shopee') ?? getPrice('tiktok') ?? getPrice('lazada');
+
+        return {
+            id: item.id,
+            type: item.type,
+            costPrice: item.costPrice ?? undefined,
+            price: item.price ?? undefined,
+            channelPrices: [
+                { channel: 'pos', price: getPrice('pos') ?? undefined },
+                { channel: 'reseller', price: getPrice('reseller') ?? undefined },
+                { channel: 'online', price: onlinePrice ?? undefined },
+            ]
+        };
+    });
     replace(formItems);
     setRowSelection({});
   };
@@ -434,3 +441,5 @@ export function PriceSettingsForm() {
     </>
   );
 }
+
+    
