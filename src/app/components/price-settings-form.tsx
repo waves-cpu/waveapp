@@ -100,54 +100,53 @@ export function PriceSettingsForm() {
     );
   }, [items, categoryFilter]);
   
-  const flattenedItemsById = useMemo(() => {
-    const map = new Map<string, SelectedItem>();
-    const itemsToProcess = availableItemsForSelection;
-    itemsToProcess.forEach(item => { 
-        if (item.variants && item.variants.length > 0) {
-            item.variants.forEach(variant => {
-                map.set(variant.id, {
-                    id: variant.id,
-                    name: variant.name,
-                    parentName: item.name,
-                    sku: variant.sku,
-                    type: 'variant',
-                    category: item.category,
-                    imageUrl: item.imageUrl,
-                    costPrice: variant.costPrice,
-                    price: variant.price,
-                    channelPrices: variant.channelPrices || [],
+  const handleProductsSelected = (selectedIds: string[]) => {
+    const newlySelected: SelectedItem[] = [];
+    const availableItemsMap = new Map<string, InventoryItem>();
+    availableItemsForSelection.forEach(item => availableItemsMap.set(item.id, item));
+
+    selectedIds.forEach(id => {
+        for (const parentItem of availableItemsForSelection) {
+            if (parentItem.variants && parentItem.variants.length > 0) {
+                const variant = parentItem.variants.find(v => v.id === id);
+                if (variant) {
+                    newlySelected.push({
+                        id: variant.id,
+                        name: variant.name,
+                        parentName: parentItem.name,
+                        sku: variant.sku,
+                        type: 'variant',
+                        category: parentItem.category,
+                        imageUrl: parentItem.imageUrl,
+                        costPrice: variant.costPrice,
+                        price: variant.price,
+                        channelPrices: variant.channelPrices || [],
+                    });
+                    return; // continue to next selectedId
+                }
+            } else if (parentItem.id === id) {
+                 newlySelected.push({
+                    id: parentItem.id,
+                    name: parentItem.name,
+                    parentName: null,
+                    sku: parentItem.sku,
+                    type: 'product',
+                    category: parentItem.category,
+                    imageUrl: parentItem.imageUrl,
+                    costPrice: parentItem.costPrice,
+                    price: parentItem.price,
+                    channelPrices: parentItem.channelPrices || [],
                 });
-            });
-        } else if (item.stock !== undefined) { // Check if it's a simple product
-             map.set(item.id, {
-                id: item.id,
-                name: item.name,
-                parentName: null,
-                sku: item.sku,
-                type: 'product',
-                category: item.category,
-                imageUrl: item.imageUrl,
-                costPrice: item.costPrice,
-                price: item.price,
-                channelPrices: item.channelPrices || [],
-            });
+                return; // continue to next selectedId
+            }
         }
     });
-    return map;
-  }, [availableItemsForSelection]);
 
-  const handleProductsSelected = (selectedIds: string[]) => {
-    const newlySelected = selectedIds
-        .map(id => flattenedItemsById.get(id))
-        .filter((item): item is SelectedItem => !!item);
-    
     setSelectedItems(newlySelected);
 
     const formItems = newlySelected.map(item => {
         const getPrice = (channel: string) => item.channelPrices?.find(p => p.channel === channel)?.price;
         
-        // Handle online price logic correctly
         const onlinePriceChannels = ['shopee', 'tiktok', 'lazada'];
         const onlinePrices = onlinePriceChannels.map(ch => getPrice(ch)).filter(p => p !== undefined);
         const onlinePrice = onlinePrices.length > 0 ? onlinePrices[0] : undefined;
@@ -213,19 +212,19 @@ export function PriceSettingsForm() {
         return;
     }
     setIsSubmitting(true);
-
-    const updates = data.items.map((formItem) => {
-      // The formItem already contains the 'type' field directly from the form state.
-      // No need to look it up, which was the source of the crash.
+    
+    // The data from the form is already in the correct shape (data.items).
+    // It has the 'type' field because we added it when creating the form items.
+    const updates = data.items.map((formItem, index) => {
       return {
         id: formItem.id,
-        type: formItem.type, 
+        type: formItem.type,
         costPrice: formItem.costPrice,
         price: formItem.price,
         channelPrices: formItem.channelPrices,
       };
     });
-    
+
     if (updates.length === 0) {
         toast({ title: TPrice.noChanges, description: "Pilih produk terlebih dahulu." });
         setIsSubmitting(false);
