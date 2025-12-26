@@ -55,6 +55,7 @@ const formSchema = z.object({
   id: z.number().optional(),
   name: z.string().min(2, { message: 'Nama grup diskon minimal 2 karakter.' }),
   category: z.string().min(1, { message: 'Kategori harus dipilih.' }),
+  channel: z.string().min(1, { message: 'Kanal penjualan harus dipilih.' }),
   dateRange: z.object({
       from: z.date({ required_error: "Tanggal mulai harus diisi." }),
       to: z.date({ required_error: "Tanggal berakhir harus diisi." }),
@@ -91,6 +92,7 @@ export function DiscountGroupForm({ existingGroup }: DiscountGroupFormProps) {
     } : {
       name: '',
       category: '',
+      channel: '',
       dateRange: { from: new Date(), to: addDays(new Date(), 7) },
       products: [],
     },
@@ -184,6 +186,7 @@ export function DiscountGroupForm({ existingGroup }: DiscountGroupFormProps) {
     const groupData: Omit<DiscountGroup, 'id' | 'productCount'> = {
         name: values.name,
         category: values.category,
+        channel: values.channel,
         startDate: values.dateRange.from.toISOString(),
         endDate: values.dateRange.to.toISOString(),
         products: values.products,
@@ -215,7 +218,7 @@ export function DiscountGroupForm({ existingGroup }: DiscountGroupFormProps) {
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)}>
           <CardContent className="pt-6 space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <FormField
                 control={form.control}
                 name="name"
@@ -247,6 +250,28 @@ export function DiscountGroupForm({ existingGroup }: DiscountGroupFormProps) {
                             {category}
                           </SelectItem>
                         ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+               <FormField
+                control={form.control}
+                name="channel"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Kanal Penjualan</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Pilih kanal penjualan" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="online">Online (Shopee, Tiktok, etc)</SelectItem>
+                        <SelectItem value="pos">POS (Point of Sale)</SelectItem>
+                        <SelectItem value="reseller">Reseller</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />

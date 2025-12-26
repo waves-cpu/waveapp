@@ -56,7 +56,7 @@ export default function EditDiscountGroupPage() {
                     <SidebarTrigger className="md:hidden" />
                     <h1 className="text-lg font-bold">Ubah Grup Diskon</h1>
                 </div>
-                 <div className="max-w-6xl mx-auto">
+                 <div className="max-w-7xl mx-auto">
                     {pageLoading ? (
                         <EditDiscountPageSkeleton />
                     ) : group ? (
@@ -69,4 +69,3 @@ export default function EditDiscountGroupPage() {
         </AppLayout>
     );
 }
-

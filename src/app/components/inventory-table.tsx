@@ -28,6 +28,12 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
   Search,
   Pencil,
   PlusCircle,
@@ -39,7 +45,7 @@ import {
   Archive,
   DollarSign,
 } from 'lucide-react';
-import type { InventoryItem, InventoryItemVariant, Accessory } from '@/types';
+import type { InventoryItem, InventoryItemVariant, Accessory, DiscountGroup } from '@/types';
 import { categories as allCategories } from '@/types';
 import { useLanguage } from '@/hooks/use-language';
 import { translations } from '@/types/language';
@@ -165,22 +171,23 @@ function StockBar({ stock, onUpdateClick, item }: { stock: number; onUpdateClick
 
 const formatCurrency = (amount: number) => `Rp${Math.round(amount).toLocaleString('id-ID')}`;
 
-const PriceDisplay = ({ item, discountGroups }: { item: InventoryItem | InventoryItemVariant; discountGroups: any[] }) => {
+const PriceDisplay = ({ item, discountGroups }: { item: InventoryItem | InventoryItemVariant; discountGroups: DiscountGroup[] }) => {
     const isParentProduct = 'variants' in item && item.variants && item.variants.length > 0;
     
-    const activeDiscount = useMemo(() => {
-        if (isParentProduct) return null;
+    const activeDiscounts = useMemo(() => {
+        if (isParentProduct) return [];
         const now = new Date();
         const category = 'category' in item ? (item as InventoryItem).category : undefined;
 
+        const allActiveDiscounts: { channel: string; discountedPrice: number }[] = [];
+
         for (const group of discountGroups) {
-            // Check if group category matches item category
             if (category && group.category !== category) {
                 continue;
             }
-
             const startDate = parseISO(group.startDate);
             const endDate = endOfDay(parseISO(group.endDate));
+
             if (isWithinInterval(now, { start: startDate, end: endDate })) {
                 const discountedProduct = group.products.find((p: any) => 
                     (p.variantId && p.variantId === Number(item.id)) ||
@@ -188,13 +195,16 @@ const PriceDisplay = ({ item, discountGroups }: { item: InventoryItem | Inventor
                 );
 
                 if (discountedProduct) {
-                    return discountedProduct;
+                    allActiveDiscounts.push({
+                        channel: group.channel,
+                        discountedPrice: discountedProduct.discountedPrice
+                    });
                 }
             }
         }
-        return null;
+        return allActiveDiscounts;
     }, [item, discountGroups, isParentProduct]);
-    
+
     if (isParentProduct) {
         const prices = item.variants!.map(v => v.price).filter(p => p !== undefined && p !== null);
         if (prices.length === 0) return <span>-</span>;
@@ -204,16 +214,33 @@ const PriceDisplay = ({ item, discountGroups }: { item: InventoryItem | Inventor
         return <span className="text-sm">{formatCurrency(minPrice)} - {formatCurrency(maxPrice)}</span>
     }
 
-    if (activeDiscount && item.price != null) {
-        return (
-            <div>
-                <div className="font-semibold text-primary">{formatCurrency(activeDiscount.discountedPrice)}</div>
-                <div className="text-xs text-muted-foreground line-through">{formatCurrency(item.price!)}</div>
-            </div>
-        )
-    }
+    const hasActiveDiscount = activeDiscounts.length > 0;
 
-    return <span>{item.price != null ? formatCurrency(item.price) : '-'}</span>;
+    return (
+        <div className="flex items-center gap-1">
+            <span>{item.price != null ? formatCurrency(item.price) : '-'}</span>
+            {hasActiveDiscount && (
+                <TooltipProvider>
+                    <Tooltip>
+                        <TooltipTrigger>
+                            <Tags className="h-4 w-4 text-primary" />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                            <div className="space-y-1 p-1">
+                                <p className="font-bold text-sm">Diskon Aktif:</p>
+                                {activeDiscounts.map(d => (
+                                    <div key={d.channel} className="flex justify-between items-center gap-2 text-xs">
+                                        <span className="font-medium capitalize">{d.channel}:</span>
+                                        <span className="font-semibold">{formatCurrency(d.discountedPrice)}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        </TooltipContent>
+                    </Tooltip>
+                </TooltipProvider>
+            )}
+        </div>
+    );
 };
 
 

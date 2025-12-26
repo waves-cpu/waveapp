@@ -1,4 +1,5 @@
 
+
 import Database from 'better-sqlite3';
 import path from 'path';
 import fs from 'fs';
@@ -163,12 +164,15 @@ const runMigrations = () => {
         stmt.run();
     }
     
-    // Drop manual_journal_entries if it exists
     const journalTable = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='manual_journal_entries'").get();
     if (journalTable) {
         db.exec('DROP TABLE manual_journal_entries');
     }
 
+    const discountGroupColumns = db.pragma('table_info(discount_groups)');
+    if (discountGroupColumns && !discountGroupColumns.some((col: any) => col.name === 'channel')) {
+        db.exec('ALTER TABLE discount_groups ADD COLUMN channel TEXT');
+    }
 
   } catch (error) {
   }
@@ -315,6 +319,7 @@ const createSchema = () => {
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT NOT NULL,
         category TEXT NOT NULL,
+        channel TEXT NOT NULL,
         startDate TEXT NOT NULL,
         endDate TEXT NOT NULL
     );
@@ -379,4 +384,3 @@ const dbProxy = {
 // Replace direct 'db' export with the proxy
 export { dbProxy as db };
 
-// Initialize the database connection when

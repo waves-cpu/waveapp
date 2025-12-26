@@ -175,6 +175,7 @@ export interface DiscountGroup {
   id: number;
   name: string;
   category: string;
+  channel: string;
   startDate: string;
   endDate: string;
   products: DiscountedProduct[];
