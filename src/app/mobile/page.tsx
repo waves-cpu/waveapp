@@ -26,6 +26,7 @@ export default function MobileHubPage() {
         const fetchCounts = async () => {
             try {
                 setLoading(true);
+                // Fetch receipts with "Terproses" status, which need to be processed on mobile.
                 const counts = await getReceiptCountByStatus('Terproses');
                 setPendingCounts(counts);
             } catch (error) {
@@ -58,7 +59,7 @@ export default function MobileHubPage() {
                                     <Skeleton className="h-6 w-24" />
                                 ) : (
                                     count > 0 && (
-                                        <Badge variant="destructive">{count} Perlu Diproses</Badge>
+                                        <Badge variant="destructive">{count} Siap Kirim</Badge>
                                     )
                                 )}
                                 </div>

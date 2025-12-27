@@ -162,7 +162,7 @@ const getStatusVariant = (status: string) => {
     }
 };
 
-const STATUS_OPTIONS = ['Perlu Diproses', 'Terproses', 'Siap Kirim', 'Selesai', 'Return', 'Return Selesai', 'Dibatalkan'];
+const STATUS_OPTIONS = ['Terproses', 'Siap Kirim', 'Selesai', 'Return', 'Return Selesai', 'Dibatalkan'];
 
 function parseDateFromParams(dateArray: string[] | undefined): Date | null {
     if (dateArray && dateArray.length > 0) {
@@ -332,7 +332,7 @@ export default function ReceiptPage() {
     
     const handleSelectAll = (checked: boolean) => {
         if (checked) {
-            const processableIds = paginatedReceipts.filter(r => r.status === 'Perlu Diproses' || r.status === 'Terproses').map(r => r.id);
+            const processableIds = paginatedReceipts.filter(r => r.status === 'Terproses').map(r => r.id);
             setSelectedIds(new Set(processableIds));
         } else {
             setSelectedIds(new Set());
@@ -359,11 +359,11 @@ export default function ReceiptPage() {
     
     const handleShowAllPending = () => {
         router.push('/shipping/receipt/semua');
-        setActiveStatusFilter('Perlu Diproses');
+        setActiveStatusFilter('Terproses');
     };
 
     const totalPages = Math.ceil(filteredReceipts.length / itemsPerPage);
-    const isAllSelected = paginatedReceipts.length > 0 && paginatedReceipts.filter(r => r.status === 'Perlu Diproses' || r.status === 'Terproses').length > 0 && paginatedReceipts.filter(r => r.status === 'Perlu Diproses' || r.status === 'Terproses').every(r => selectedIds.has(r.id));
+    const isAllSelected = paginatedReceipts.length > 0 && paginatedReceipts.filter(r => r.status === 'Terproses').length > 0 && paginatedReceipts.filter(r => r.status === 'Terproses').every(r => selectedIds.has(r.id));
     const finalStatuses = ['Selesai', 'Return', 'Dibatalkan', 'Return Selesai'];
 
     return (
@@ -511,7 +511,7 @@ export default function ReceiptPage() {
                                                 checked={isAllSelected}
                                                 onCheckedChange={handleSelectAll}
                                                 aria-label={t.selectAll}
-                                                disabled={paginatedReceipts.filter(r => r.status === 'Perlu Diproses' || r.status === 'Terproses').length === 0}
+                                                disabled={paginatedReceipts.filter(r => r.status === 'Terproses').length === 0}
                                             />
                                         </TableHead>
                                         <TableHead>{t.table.awb}</TableHead>
@@ -532,7 +532,7 @@ export default function ReceiptPage() {
                                                     checked={selectedIds.has(item.id)}
                                                     onCheckedChange={(checked) => handleSelectOne(item.id, !!checked)}
                                                     aria-label={`${t.select} ${item.awb}`}
-                                                    disabled={!['Perlu Diproses', 'Terproses'].includes(item.status)}
+                                                    disabled={item.status !== 'Terproses'}
                                                 />
                                             </TableCell>
                                             <TableCell className="font-medium">{item.awb || '(Resi Tercetak)'}</TableCell>
@@ -550,7 +550,7 @@ export default function ReceiptPage() {
                                                         </Button>
                                                     </DropdownMenuTrigger>
                                                     <DropdownMenuContent align="end">
-                                                         {item.status === 'Perlu Diproses' && (
+                                                         {item.status === 'Terproses' && (
                                                             <>
                                                                 <DropdownMenuItem onClick={() => handleChangeStatus(item, 'Siap Kirim')}>{t.actions.processShipment}</DropdownMenuItem>
                                                                 <DropdownMenuItem onClick={() => handleChangeStatus(item, 'Dibatalkan')} className="text-destructive">{t.actions.cancel}</DropdownMenuItem>
@@ -618,6 +618,8 @@ export default function ReceiptPage() {
         </AppLayout>
     );
 }
+
+type ShippingProvider = "SPX" | "J&T" | "JNE" | "INSTANT" | "CARGO";
 
 function useReceiptPageLogic() {
     const { 
