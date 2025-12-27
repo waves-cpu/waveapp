@@ -5,20 +5,38 @@ import path from 'path';
 import fs from 'fs';
 
 const dbDir = path.join(process.cwd(), 'db');
-if (!fs.existsSync(dbDir)) {
-  fs.mkdirSync(dbDir, { recursive: true });
-}
-
 const dbPath = path.join(dbDir, 'waves.db');
 
 let db: Database.Database;
 
 function initializeDatabase() {
+  try {
+    if (!fs.existsSync(dbDir)) {
+      fs.mkdirSync(dbDir, { recursive: true });
+    }
     db = new Database(dbPath);
     db.pragma('journal_mode = WAL');
-    createSchema();
-    runMigrations();
-    seedData();
+  } catch (error) {
+    if (error instanceof Error && (error.message.includes('not a database') || error.message.includes('corrupt'))) {
+      console.error('Database file is corrupt or invalid. Re-initializing...');
+      if(db && db.open) {
+        db.close();
+      }
+      // Delete the corrupt file and its directory to ensure a clean start
+      if (fs.existsSync(dbDir)) {
+        fs.rmSync(dbDir, { recursive: true, force: true });
+      }
+      fs.mkdirSync(dbDir, { recursive: true });
+      db = new Database(dbPath);
+      db.pragma('journal_mode = WAL');
+    } else {
+      throw error; // Re-throw other errors
+    }
+  }
+
+  createSchema();
+  runMigrations();
+  seedData();
 }
 
 
