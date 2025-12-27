@@ -999,7 +999,7 @@ export async function recordSaleWithReceipt(receiptData: Omit<ShippingReceipt, '
             const addReceiptStmt = db.prepare('INSERT INTO shipping_receipts (awb, date, channel, salesChannel, status, transactionId) VALUES (@awb, @date, @channel, @salesChannel, @status, @transactionId)');
             const result = addReceiptStmt.run({
                 ...receiptData,
-                status: 'Perlu Diproses',
+                status: 'Terproses', // Set initial status to Terproses
                 transactionId: awb
             });
             receiptId = result.lastInsertRowid as number;
@@ -1046,12 +1046,12 @@ export async function recordSaleWithReceipt(receiptData: Omit<ShippingReceipt, '
             `).run(
                 sale.transactionId, null, null, productId, variantId, null,
                 sale.channel, sale.quantity, sale.priceAtSale, cogsAtSale, sale.saleDate,
-                'Siap Kirim', parentProduct?.sku, parentProduct?.category, parentProduct?.imageUrl
+                'Terproses', parentProduct?.sku, parentProduct?.category, parentProduct?.imageUrl
             );
         });
 
         // Update the final status of the receipt
-        db.prepare('UPDATE shipping_receipts SET status = ? WHERE id = ?').run('Siap Kirim', receiptId);
+        db.prepare('UPDATE shipping_receipts SET status = ? WHERE id = ?').run('Terproses', receiptId);
     });
 
     return transaction();
@@ -1646,5 +1646,6 @@ async function updateShippingReceiptStatusByAwb(awb: string, status: string) {
 
 
     
+
 
 

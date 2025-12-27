@@ -160,7 +160,7 @@ export default function ShopeeChannelPage() {
         salesChannel: salesChannel,
         channel: shippingChannel,
         date: format(selectedDate, "yyyy-MM-dd'T'HH:mm:ss"),
-        status: 'Perlu Diproses', // This status will only be finalized upon saving the sale
+        status: 'Terproses', // This status will only be finalized upon saving the sale
         transactionId: trimmedAwb
     };
     
@@ -385,3 +385,4 @@ export default function ShopeeChannelPage() {
     </AppLayout>
   );
 }
+

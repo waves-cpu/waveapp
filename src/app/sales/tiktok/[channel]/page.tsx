@@ -158,7 +158,7 @@ export default function TiktokChannelPage() {
         salesChannel: salesChannel,
         channel: shippingChannel,
         date: format(selectedDate, "yyyy-MM-dd'T'HH:mm:ss"),
-        status: 'Perlu Diproses',
+        status: 'Terproses',
         transactionId: trimmedAwb
     };
 

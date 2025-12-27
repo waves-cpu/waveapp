@@ -59,15 +59,18 @@ export default function MobileScanShipmentPage() {
                 throw new Error(`Resi ini untuk ${receipt.channel}, bukan ${channel}.`);
             }
 
-            if (receipt.status !== 'Perlu Diproses') {
-                throw new Error(`Resi sudah berstatus "${receipt.status}".`);
+            if (receipt.status !== 'Terproses') {
+                if (receipt.status === 'Siap Kirim') {
+                    throw new Error('Resi ini sudah siap kirim.');
+                }
+                throw new Error(`Status resi saat ini adalah "${receipt.status}", tidak bisa diubah.`);
             }
 
             await updateShippingReceiptStatus(receipt.id, 'Siap Kirim');
             playSuccessSound();
-            const successMessage = 'Berhasil diproses menjadi "Siap Kirim".';
+            const successMessage = 'Berhasil diubah menjadi "Siap Kirim".';
             toast({ title: `Resi ${trimmedAwb}`, description: successMessage });
-            setRecentlyProcessed(prev => [{ ...receipt, success: true, message: successMessage }, ...prev].slice(0, 20));
+            setRecentlyProcessed(prev => [{ ...receipt, success: true, message: successMessage, status: 'Siap Kirim' }, ...prev].slice(0, 20));
 
         } catch (error: any) {
             playErrorSound();

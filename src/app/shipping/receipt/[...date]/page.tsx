@@ -36,6 +36,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
+  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Dialog, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogContent, DialogTrigger } from '@/components/ui/dialog';
@@ -152,16 +153,16 @@ const getStatusVariant = (status: string) => {
         case 'selesai': return 'default';
         case 'return selesai': return 'default';
         case 'siap kirim': return 'secondary';
+        case 'terproses': return 'secondary';
         case 'diantar': return 'secondary';
         case 'return':
         case 'dibatalkan':
         case 'tidak sampai': return 'destructive';
-        case 'tercetak': return 'outline';
         default: return 'outline';
     }
 };
 
-const STATUS_OPTIONS = ['Perlu Diproses', 'Siap Kirim', 'Selesai', 'Return', 'Return Selesai', 'Dibatalkan'];
+const STATUS_OPTIONS = ['Perlu Diproses', 'Terproses', 'Siap Kirim', 'Selesai', 'Return', 'Return Selesai', 'Dibatalkan'];
 
 function parseDateFromParams(dateArray: string[] | undefined): Date | null {
     if (dateArray && dateArray.length > 0) {
@@ -331,7 +332,7 @@ export default function ReceiptPage() {
     
     const handleSelectAll = (checked: boolean) => {
         if (checked) {
-            const processableIds = paginatedReceipts.filter(r => r.status === 'Perlu Diproses').map(r => r.id);
+            const processableIds = paginatedReceipts.filter(r => r.status === 'Perlu Diproses' || r.status === 'Terproses').map(r => r.id);
             setSelectedIds(new Set(processableIds));
         } else {
             setSelectedIds(new Set());
@@ -362,7 +363,7 @@ export default function ReceiptPage() {
     };
 
     const totalPages = Math.ceil(filteredReceipts.length / itemsPerPage);
-    const isAllSelected = paginatedReceipts.length > 0 && paginatedReceipts.filter(r => r.status === 'Perlu Diproses').length > 0 && paginatedReceipts.filter(r => r.status === 'Perlu Diproses').every(r => selectedIds.has(r.id));
+    const isAllSelected = paginatedReceipts.length > 0 && paginatedReceipts.filter(r => r.status === 'Perlu Diproses' || r.status === 'Terproses').length > 0 && paginatedReceipts.filter(r => r.status === 'Perlu Diproses' || r.status === 'Terproses').every(r => selectedIds.has(r.id));
     const finalStatuses = ['Selesai', 'Return', 'Dibatalkan', 'Return Selesai'];
 
     return (
@@ -510,7 +511,7 @@ export default function ReceiptPage() {
                                                 checked={isAllSelected}
                                                 onCheckedChange={handleSelectAll}
                                                 aria-label={t.selectAll}
-                                                disabled={paginatedReceipts.filter(r => r.status === 'Perlu Diproses').length === 0}
+                                                disabled={paginatedReceipts.filter(r => r.status === 'Perlu Diproses' || r.status === 'Terproses').length === 0}
                                             />
                                         </TableHead>
                                         <TableHead>{t.table.awb}</TableHead>
@@ -531,7 +532,7 @@ export default function ReceiptPage() {
                                                     checked={selectedIds.has(item.id)}
                                                     onCheckedChange={(checked) => handleSelectOne(item.id, !!checked)}
                                                     aria-label={`${t.select} ${item.awb}`}
-                                                    disabled={item.status !== 'Perlu Diproses'}
+                                                    disabled={!['Perlu Diproses', 'Terproses'].includes(item.status)}
                                                 />
                                             </TableCell>
                                             <TableCell className="font-medium">{item.awb || '(Resi Tercetak)'}</TableCell>
@@ -561,7 +562,7 @@ export default function ReceiptPage() {
                                                                 <DropdownMenuItem onClick={() => handleChangeStatus(item, 'Return')} className="text-destructive">{t.actions.markAsReturn}</DropdownMenuItem>
                                                             </>
                                                          )}
-                                                         {['Dibatalkan', 'Return', 'Tercetak'].includes(item.status) && (
+                                                         {['Dibatalkan', 'Return'].includes(item.status) && (
                                                               <AlertDialog>
                                                                 <AlertDialogTrigger asChild>
                                                                     <DropdownMenuItem onSelect={e => e.preventDefault()} className="text-destructive">
