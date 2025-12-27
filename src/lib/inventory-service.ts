@@ -243,25 +243,19 @@ export async function fetchShippingReceiptCounts(filters: {
     };
 }
 
-export async function getReceiptCountByStatus(status: string[], dateRange: { from: Date, to: Date }): Promise<number> {
-    const { from, to } = dateRange;
-    const whereClauses: string[] = ["date BETWEEN @from AND @to"];
-    const params: any = {
-        from: from.toISOString(),
-        to: endOfDay(to).toISOString(),
-    };
-
-    if (status && status.length > 0) {
-        whereClauses.push(`status IN (${status.map((_, i) => `@status${i}`).join(',')})`);
-        status.forEach((s, i) => {
-            params[`status${i}`] = s;
-        });
-    }
-    
-    const whereString = `WHERE ${whereClauses.join(' AND ')}`;
-    const query = db.prepare(`SELECT COUNT(*) as count FROM shipping_receipts ${whereString}`);
-    const result = query.get(params) as { count: number };
-    return result.count;
+export async function getReceiptCountByStatus(status: string): Promise<Record<string, number>> {
+    const query = db.prepare(`
+        SELECT channel, COUNT(*) as count
+        FROM shipping_receipts
+        WHERE status = ?
+        GROUP BY channel
+    `);
+    const results = query.all(status) as { channel: string; count: number }[];
+    const counts: Record<string, number> = {};
+    results.forEach(row => {
+        counts[row.channel] = row.count;
+    });
+    return counts;
 }
 
 
@@ -986,27 +980,15 @@ export async function getActiveDiscountPrice(productId: string | number, variant
 export async function recordSaleWithReceipt(receiptData: Omit<ShippingReceipt, 'id'>, salesData: Omit<Sale, 'id'>[]) {
     const transaction = db.transaction(() => {
         const { awb, channel: shippingChannel, salesChannel, date: dateString } = receiptData;
-
-        // Try to consume a printed receipt count first
-        const consumed = consumePrintedReceipt(salesChannel!, shippingChannel, new Date(dateString));
         
-        let receiptId: number;
-        const existingReceipt = db.prepare('SELECT id FROM shipping_receipts WHERE awb = ?').get(awb) as { id: number } | undefined;
+        consumePrintedReceipt(salesChannel!, shippingChannel, new Date(dateString));
 
-        if (existingReceipt) {
-            receiptId = existingReceipt.id;
-        } else {
-            const addReceiptStmt = db.prepare('INSERT INTO shipping_receipts (awb, date, channel, salesChannel, status, transactionId) VALUES (@awb, @date, @channel, @salesChannel, @status, @transactionId)');
-            const result = addReceiptStmt.run({
-                ...receiptData,
-                status: 'Terproses', // Set initial status to Terproses
-                transactionId: awb
-            });
-            receiptId = result.lastInsertRowid as number;
-        }
-
-        // Delete existing sales for this transaction to handle edits
-        db.prepare('DELETE FROM sales WHERE transactionId = ?').run(awb);
+        const addReceiptStmt = db.prepare('INSERT INTO shipping_receipts (awb, date, channel, salesChannel, status, transactionId) VALUES (@awb, @date, @channel, @salesChannel, @status, @transactionId)');
+        addReceiptStmt.run({
+            ...receiptData,
+            status: 'Terproses',
+            transactionId: awb
+        });
 
         salesData.forEach(sale => {
             if (!sale.sku) {
@@ -1049,9 +1031,6 @@ export async function recordSaleWithReceipt(receiptData: Omit<ShippingReceipt, '
                 'Terproses', parentProduct?.sku, parentProduct?.category, parentProduct?.imageUrl
             );
         });
-
-        // Update the final status of the receipt
-        db.prepare('UPDATE shipping_receipts SET status = ? WHERE id = ?').run('Terproses', receiptId);
     });
 
     return transaction();
@@ -1646,6 +1625,7 @@ async function updateShippingReceiptStatusByAwb(awb: string, status: string) {
 
 
     
+
 
 
 
