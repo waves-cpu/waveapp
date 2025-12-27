@@ -4,7 +4,7 @@
 
 import { db as dbProxy } from './db';
 const db = dbProxy;
-import type { InventoryItem, AdjustmentHistory, InventoryItemVariant, Sale, Reseller, ChannelPrice, Accessory, ShippingReceipt, BulkImportHistory, User, ReturnedItem, DiscountGroup, DiscountedProduct } from '@/types';
+import type { InventoryItem, AdjustmentHistory, InventoryItemVariant, Sale, Reseller, ChannelPrice, Accessory, ShippingReceipt, BulkImportHistory, User, ReturnedItem, DiscountGroup, DiscountedProduct, PrintedReceiptCount } from '@/types';
 import { categories as allCategories } from '@/types';
 import { format as formatDate, parseISO, startOfDay, endOfDay, isWithinInterval } from 'date-fns';
 
@@ -92,6 +92,31 @@ export async function deleteBulkImportHistory(id: number) {
     db.prepare('DELETE FROM bulk_import_history WHERE id = ?').run(id);
 }
 
+
+// Printed Receipt Count Functions
+export async function addPrintedReceipts(date: string, salesChannel: string, shippingChannel: string, count: number) {
+    const existing = db.prepare('SELECT id, count FROM printed_receipt_counts WHERE date = ? AND salesChannel = ? AND shippingChannel = ?').get(date, salesChannel, shippingChannel) as PrintedReceiptCount | undefined;
+    if (existing) {
+        db.prepare('UPDATE printed_receipt_counts SET count = count + ? WHERE id = ?').run(count, existing.id);
+    } else {
+        db.prepare('INSERT INTO printed_receipt_counts (date, salesChannel, shippingChannel, count) VALUES (?, ?, ?, ?)').run(date, salesChannel, shippingChannel, count);
+    }
+}
+
+export async function consumePrintedReceipt(salesChannel: string, shippingChannel: string, date: Date): Promise<boolean> {
+    const dateString = formatDate(date, 'yyyy-MM-dd');
+    const record = db.prepare('SELECT id, count FROM printed_receipt_counts WHERE date = ? AND salesChannel = ? AND shippingChannel = ? AND count > 0').get(dateString, salesChannel, shippingChannel) as PrintedReceiptCount | undefined;
+    
+    if (record) {
+        db.prepare('UPDATE printed_receipt_counts SET count = count - 1 WHERE id = ?').run(record.id);
+        return true;
+    }
+    return false;
+}
+
+export async function getPrintedReceiptCountsForDate(date: string): Promise<PrintedReceiptCount[]> {
+    return db.prepare('SELECT * FROM printed_receipt_counts WHERE date = ?').all(date) as PrintedReceiptCount[];
+}
 
 // Shipping Receipt Functions
 export async function fetchShippingReceipts(options: {
@@ -242,20 +267,12 @@ export async function getReceiptCountByStatus(status: string[], dateRange: { fro
 
 
 export async function addShippingReceipt(receipt: Omit<ShippingReceipt, 'id'>): Promise<ShippingReceipt> {
-    try {
-        const result = db.prepare('INSERT INTO shipping_receipts (awb, date, channel, salesChannel, status, transactionId) VALUES (@awb, @date, @channel, @salesChannel, @status, @transactionId)').run({
-            ...receipt,
-            transactionId: receipt.awb, // Use AWB as transactionId
-        });
-        const newReceipt = db.prepare('SELECT * FROM shipping_receipts WHERE id = ?').get(result.lastInsertRowid) as ShippingReceipt;
-        return newReceipt;
-    } catch (error: any) {
-        if (error.code === 'SQLITE_CONSTRAINT_UNIQUE') {
-            const existingReceipt = db.prepare('SELECT date FROM shipping_receipts WHERE awb = ?').get(receipt.awb) as { date: string };
-            throw new Error(`DUPLICATE_AWB_DATE::${existingReceipt.date}`);
-        }
-        throw error;
-    }
+    const result = db.prepare('INSERT INTO shipping_receipts (awb, date, channel, salesChannel, status, transactionId) VALUES (@awb, @date, @channel, @salesChannel, @status, @transactionId)').run({
+        ...receipt,
+        transactionId: receipt.awb,
+    });
+    const newReceipt = db.prepare('SELECT * FROM shipping_receipts WHERE id = ?').get(result.lastInsertRowid) as ShippingReceipt;
+    return newReceipt;
 }
 
 export async function deleteShippingReceipt(id: number) {
@@ -968,25 +985,34 @@ export async function getActiveDiscountPrice(productId: string | number, variant
 
 export async function recordSaleWithReceipt(receiptData: Omit<ShippingReceipt, 'id'>, salesData: Omit<Sale, 'id'>[]) {
     const transaction = db.transaction(() => {
-        const existingReceipt = db.prepare('SELECT id, status FROM shipping_receipts WHERE awb = ?').get(receiptData.awb) as { id: number, status: string } | undefined;
+        const { awb, channel: shippingChannel, salesChannel, date: dateString } = receiptData;
 
-        if (!existingReceipt) {
+        // Try to consume a printed receipt count first
+        const consumed = consumePrintedReceipt(salesChannel!, shippingChannel, new Date(dateString));
+        
+        let receiptId: number;
+        const existingReceipt = db.prepare('SELECT id FROM shipping_receipts WHERE awb = ?').get(awb) as { id: number } | undefined;
+
+        if (existingReceipt) {
+            receiptId = existingReceipt.id;
+        } else {
             const addReceiptStmt = db.prepare('INSERT INTO shipping_receipts (awb, date, channel, salesChannel, status, transactionId) VALUES (@awb, @date, @channel, @salesChannel, @status, @transactionId)');
-            addReceiptStmt.run({
+            const result = addReceiptStmt.run({
                 ...receiptData,
-                status: 'Perlu Diproses', // Always set to 'Perlu Diproses' initially
-                transactionId: receiptData.awb
+                status: 'Perlu Diproses',
+                transactionId: awb
             });
+            receiptId = result.lastInsertRowid as number;
         }
 
         // Delete existing sales for this transaction to handle edits
-        db.prepare('DELETE FROM sales WHERE transactionId = ?').run(receiptData.awb);
+        db.prepare('DELETE FROM sales WHERE transactionId = ?').run(awb);
 
         salesData.forEach(sale => {
             if (!sale.sku) {
                  throw new Error(`SKU is missing for a sale item in transaction ${sale.transactionId}`);
             }
-            const saleReason = `Sale (${sale.channel}) - AWB: ${receiptData.awb}`;
+            const saleReason = `Sale (${sale.channel}) - AWB: ${awb}`;
             
             const getProductStmt = db.prepare('SELECT * FROM products WHERE sku = ? AND hasVariants = 0');
             const getVariantStmt = db.prepare('SELECT * FROM variants WHERE sku = ?');
@@ -1023,10 +1049,14 @@ export async function recordSaleWithReceipt(receiptData: Omit<ShippingReceipt, '
                 'Siap Kirim', parentProduct?.sku, parentProduct?.category, parentProduct?.imageUrl
             );
         });
+
+        // Update the final status of the receipt
+        db.prepare('UPDATE shipping_receipts SET status = ? WHERE id = ?').run('Siap Kirim', receiptId);
     });
 
     return transaction();
 }
+
 
 
 export async function fetchSingleItem(itemId: string): Promise<InventoryItem> {
@@ -1280,7 +1310,6 @@ export async function clearPosTransactions(date: Date) {
     });
 
     transaction();
-    return salesToDelete;
 }
 
 
@@ -1617,4 +1646,5 @@ async function updateShippingReceiptStatusByAwb(awb: string, status: string) {
 
 
     
+
 

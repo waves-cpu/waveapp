@@ -9,7 +9,7 @@ if (!fs.existsSync(dbDir)) {
   fs.mkdirSync(dbDir, { recursive: true });
 }
 
-const dbPath = path.join(dbDir, 'waves.db');
+const dbPath = path.join(dbDir, 'db', 'waves.db');
 
 let db: Database.Database;
 
@@ -24,21 +24,46 @@ function initializeDatabase() {
 
 const runMigrations = () => {
   try {
-    // Check if the transactionId column exists in shipping_receipts
-    const shippingReceiptColumns = db.pragma('table_info(shipping_receipts)');
-    if (shippingReceiptColumns && !shippingReceiptColumns.some((col: any) => col.name === 'transactionId')) {
-        db.exec('ALTER TABLE shipping_receipts ADD COLUMN transactionId TEXT');
-    }
-    if (shippingReceiptColumns && !shippingReceiptColumns.some((col: any) => col.name === 'salesChannel')) {
-        db.exec('ALTER TABLE shipping_receipts ADD COLUMN salesChannel TEXT');
+    const shippingReceiptsTable = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='shipping_receipts'").get();
+    if (shippingReceiptsTable) {
+        // Check for transactionId and salesChannel before attempting to recreate the table
+        const shippingReceiptColumns = db.pragma('table_info(shipping_receipts)');
+        const hasTransactionId = shippingReceiptColumns.some((col: any) => col.name === 'transactionId');
+        const hasSalesChannel = shippingReceiptColumns.some((col: any) => col.name === 'salesChannel');
+
+        // Check if awb has a unique constraint by looking at indices
+        const indices = db.pragma('index_list(shipping_receipts)') as { name: string, unique: number }[];
+        const uniqueAwbIndex = indices.find(idx => idx.name.includes('sqlite_autoindex_shipping_receipts') && idx.unique === 1);
+
+        if (!hasTransactionId || !hasSalesChannel || uniqueAwbIndex) {
+            db.exec('ALTER TABLE shipping_receipts RENAME TO shipping_receipts_old');
+            db.exec(`
+                CREATE TABLE shipping_receipts (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    awb TEXT,
+                    date TEXT NOT NULL,
+                    channel TEXT NOT NULL,
+                    salesChannel TEXT,
+                    status TEXT NOT NULL,
+                    transactionId TEXT
+                );
+            `);
+            // Explicitly drop the auto-index if it exists
+            if(uniqueAwbIndex) {
+               db.exec(`DROP INDEX IF EXISTS ${uniqueAwbIndex.name}`);
+            }
+            db.exec('INSERT INTO shipping_receipts (id, awb, date, channel, salesChannel, status, transactionId) SELECT id, awb, date, channel, salesChannel, status, transactionId FROM shipping_receipts_old');
+            db.exec('DROP TABLE shipping_receipts_old');
+        }
+        
+        // One-time migration to populate empty transactionId fields from AWB
+        db.exec(`
+            UPDATE shipping_receipts
+            SET transactionId = awb
+            WHERE (transactionId IS NULL OR transactionId = '') AND awb IS NOT NULL AND awb != '';
+        `);
     }
 
-    // One-time migration to populate empty transactionId fields from AWB
-    db.exec(`
-        UPDATE shipping_receipts
-        SET transactionId = awb
-        WHERE transactionId IS NULL OR transactionId = '';
-    `);
 
     db.exec("UPDATE products SET sku = SUBSTR(sku, 1, LENGTH(sku) - 2) WHERE sku LIKE '%.0'");
     db.exec("UPDATE variants SET sku = SUBSTR(sku, 1, LENGTH(sku) - 2) WHERE sku LIKE '%.0'");
@@ -295,12 +320,20 @@ const createSchema = () => {
 
     CREATE TABLE IF NOT EXISTS shipping_receipts (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        awb TEXT NOT NULL UNIQUE,
+        awb TEXT,
         date TEXT NOT NULL,
         channel TEXT NOT NULL,
         salesChannel TEXT,
         status TEXT NOT NULL,
         transactionId TEXT
+    );
+
+    CREATE TABLE IF NOT EXISTS printed_receipt_counts (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        date TEXT NOT NULL,
+        salesChannel TEXT NOT NULL,
+        shippingChannel TEXT NOT NULL,
+        count INTEGER NOT NULL
     );
 
     CREATE TABLE IF NOT EXISTS bulk_import_history (
@@ -366,21 +399,20 @@ function executeQuery<T>(query: (db: Database.Database) => T): T {
 
 const dbProxy = {
   prepare: (sql: string) => {
-    const stmt = executeQuery(db => db.prepare(sql));
+    const stmt = getDb().prepare(sql);
     return {
-      run: (...params: any[]) => executeQuery(() => stmt.run(...params)),
-      get: (...params: any[]) => executeQuery(() => stmt.get(...params)),
-      all: (...params: any[]) => executeQuery(() => stmt.all(...params)),
+      run: (...params: any[]) => stmt.run(...params),
+      get: (...params: any[]) => stmt.get(...params),
+      all: (...params: any[]) => stmt.all(...params),
     };
   },
-  exec: (sql: string) => executeQuery(db => db.exec(sql)),
+  exec: (sql: string) => getDb().exec(sql),
   transaction: (fn: (...args: any[]) => any) => {
-    const transactionalFn = executeQuery(db => db.transaction(fn));
-    return (...args: any[]) => executeQuery(() => transactionalFn(...args));
+    return getDb().transaction(fn);
   },
-  pragma: (sql: string) => executeQuery(db => db.pragma(sql)),
+  pragma: (sql: string) => getDb().pragma(sql),
 };
+
 
 // Replace direct 'db' export with the proxy
 export { dbProxy as db };
-
