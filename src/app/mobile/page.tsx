@@ -1,13 +1,9 @@
 
-'use client';
-
-import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Card, CardHeader, CardTitle } from '@/components/ui/card';
 import { Truck } from 'lucide-react';
-import { useInventory } from '@/hooks/use-inventory';
+import { getReceiptCountByStatus } from '@/lib/inventory-service';
 import { Badge } from '@/components/ui/badge';
-import { Skeleton } from '@/components/ui/skeleton';
 
 const shippingProviders = [
     { name: 'SPX', icon: Truck },
@@ -17,27 +13,8 @@ const shippingProviders = [
     { name: 'CARGO', icon: Truck },
 ];
 
-export default function MobileHubPage() {
-    const { getReceiptCountByStatus } = useInventory();
-    const [pendingCounts, setPendingCounts] = useState<Record<string, number>>({});
-    const [loading, setLoading] = useState(true);
-
-    useEffect(() => {
-        const fetchCounts = async () => {
-            try {
-                setLoading(true);
-                // Fetch receipts with "Terproses" status, which need to be processed on mobile.
-                const counts = await getReceiptCountByStatus('Terproses');
-                setPendingCounts(counts);
-            } catch (error) {
-                console.error("Failed to fetch pending counts", error);
-            } finally {
-                setLoading(false);
-            }
-        };
-        fetchCounts();
-    }, [getReceiptCountByStatus]);
-
+export default async function MobileHubPage() {
+    const pendingCounts = await getReceiptCountByStatus('Terproses');
 
     return (
         <div className="min-h-screen bg-muted/40 p-4">
@@ -55,12 +32,8 @@ export default function MobileHubPage() {
                                     <CardTitle className="text-lg">{provider.name}</CardTitle>
                                 </CardHeader>
                                 <div className="pb-4">
-                                {loading ? (
-                                    <Skeleton className="h-6 w-24" />
-                                ) : (
-                                    count > 0 && (
-                                        <Badge variant="destructive">{count} Siap Kirim</Badge>
-                                    )
+                                {count > 0 && (
+                                    <Badge variant="destructive">{count} Siap Kirim</Badge>
                                 )}
                                 </div>
                             </Card>
