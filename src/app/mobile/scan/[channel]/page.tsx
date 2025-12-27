@@ -6,7 +6,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ArrowLeft, ScanLine, Camera, Truck, CheckCircle, XCircle } from 'lucide-react';
-import { useInventory } from '@/hooks/use-inventory';
 import { useToast } from '@/hooks/use-toast';
 import { useScanSounds } from '@/hooks/use-scan-sounds';
 import type { ShippingReceipt } from '@/types';
@@ -15,8 +14,15 @@ import { QrScanner } from '@yudiel/react-qr-scanner';
 import { Badge } from '@/components/ui/badge';
 import { useParams, useRouter } from 'next/navigation';
 
+interface ProcessedItem extends Partial<ShippingReceipt> {
+    id: number | string;
+    awb: string;
+    success: boolean;
+    message: string;
+    date: string;
+}
+
 export default function MobileScanShipmentPage() {
-    const { updateShippingReceiptStatus, findShippingReceiptByAwb } = useInventory();
     const { toast } = useToast();
     const { playSuccessSound, playErrorSound, initializeAudio } = useScanSounds();
     const router = useRouter();
@@ -26,7 +32,7 @@ export default function MobileScanShipmentPage() {
 
     const [awb, setAwb] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [recentlyProcessed, setRecentlyProcessed] = useState<(ShippingReceipt & { success: boolean; message: string })[]>([]);
+    const [recentlyProcessed, setRecentlyProcessed] = useState<ProcessedItem[]>([]);
     const inputRef = useRef<HTMLInputElement>(null);
     const [isCameraOpen, setIsCameraOpen] = useState(false);
     const [isScanningPaused, setIsScanningPaused] = useState(false);
@@ -43,34 +49,26 @@ export default function MobileScanShipmentPage() {
 
     const processAwb = useCallback(async (scannedAwb: string) => {
         const trimmedAwb = scannedAwb.trim();
-        if (!trimmedAwb) return;
-        if (isSubmitting) return;
+        if (!trimmedAwb || isSubmitting) return;
 
         setIsSubmitting(true);
         
         try {
-            const receipt = await findShippingReceiptByAwb(trimmedAwb);
+            const response = await fetch('/api/shipping/scan', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ awb: trimmedAwb, channel }),
+            });
 
-            if (!receipt) {
-                throw new Error('Resi tidak ditemukan di sistem.');
+            const result = await response.json();
+
+            if (!response.ok) {
+                throw new Error(result.message || 'Terjadi kesalahan.');
             }
-
-            if (receipt.channel.toUpperCase() !== channel) {
-                throw new Error(`Resi ini untuk ${receipt.channel}, bukan ${channel}.`);
-            }
-
-            if (receipt.status !== 'Terproses') {
-                if (receipt.status === 'Siap Kirim') {
-                    throw new Error('Resi ini sudah siap kirim.');
-                }
-                throw new Error(`Status resi saat ini adalah "${receipt.status}", tidak bisa diubah.`);
-            }
-
-            await updateShippingReceiptStatus(receipt.id, 'Siap Kirim');
+            
             playSuccessSound();
-            const successMessage = 'Berhasil diubah menjadi "Siap Kirim".';
-            toast({ title: `Resi ${trimmedAwb}`, description: successMessage });
-            setRecentlyProcessed(prev => [{ ...receipt, success: true, message: successMessage, status: 'Siap Kirim' }, ...prev].slice(0, 20));
+            toast({ title: `Resi ${trimmedAwb}`, description: result.message });
+            setRecentlyProcessed(prev => [{ ...result.receipt, id: result.receipt.id, awb: result.receipt.awb, success: true, message: result.message, date: new Date().toISOString() }, ...prev].slice(0, 20));
 
         } catch (error: any) {
             playErrorSound();
@@ -80,25 +78,18 @@ export default function MobileScanShipmentPage() {
                 title: `Resi ${trimmedAwb}`,
                 description: errorMessage,
             });
-            const failedReceipt: Partial<ShippingReceipt> = {
-                id: Date.now(), // Temporary ID for list key
-                awb: trimmedAwb,
-                date: new Date().toISOString(),
-                channel: 'N/A',
-                status: 'Error',
-            };
-            setRecentlyProcessed(prev => [{ ...(failedReceipt as ShippingReceipt), success: false, message: errorMessage }, ...prev].slice(0, 20));
+            setRecentlyProcessed(prev => [{ id: Date.now(), awb: trimmedAwb, success: false, message: errorMessage, date: new Date().toISOString() }, ...prev].slice(0, 20));
         } finally {
             setIsSubmitting(false);
             if (isCameraOpen) {
-                 setIsScanningPaused(true); // Pause scanning after a result
-                 setTimeout(() => setIsScanningPaused(false), 1500); // Resume after 1.5s
+                 setIsScanningPaused(true);
+                 setTimeout(() => setIsScanningPaused(false), 1500);
             } else {
                  setAwb('');
                  inputRef.current?.focus();
             }
         }
-    }, [isSubmitting, findShippingReceiptByAwb, updateShippingReceiptStatus, playSuccessSound, playErrorSound, toast, isCameraOpen, channel]);
+    }, [isSubmitting, channel, playSuccessSound, playErrorSound, toast, isCameraOpen]);
 
 
     const handleFormSubmit = (e: React.FormEvent) => {
@@ -204,4 +195,3 @@ export default function MobileScanShipmentPage() {
         </div>
     );
 }
-

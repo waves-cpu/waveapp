@@ -1,9 +1,12 @@
 
+'use client';
+
 import Link from 'next/link';
 import { Card, CardHeader, CardTitle } from '@/components/ui/card';
 import { Truck } from 'lucide-react';
-import { getReceiptCountByStatus } from '@/lib/inventory-service';
 import { Badge } from '@/components/ui/badge';
+import { useEffect, useState } from 'react';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const shippingProviders = [
     { name: 'SPX', icon: Truck },
@@ -13,8 +16,27 @@ const shippingProviders = [
     { name: 'CARGO', icon: Truck },
 ];
 
-export default async function MobileHubPage() {
-    const pendingCounts = await getReceiptCountByStatus('Terproses');
+export default function MobileHubPage() {
+    const [pendingCounts, setPendingCounts] = useState<Record<string, number>>({});
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        async function fetchCounts() {
+            try {
+                const response = await fetch('/api/shipping/counts?status=Terproses');
+                if (!response.ok) {
+                    throw new Error('Failed to fetch counts');
+                }
+                const data = await response.json();
+                setPendingCounts(data);
+            } catch (error) {
+                console.error("Error fetching pending counts:", error);
+            } finally {
+                setLoading(false);
+            }
+        }
+        fetchCounts();
+    }, []);
 
     return (
         <div className="min-h-screen bg-muted/40 p-4">
@@ -32,7 +54,9 @@ export default async function MobileHubPage() {
                                     <CardTitle className="text-lg">{provider.name}</CardTitle>
                                 </CardHeader>
                                 <div className="pb-4">
-                                {count > 0 && (
+                                {loading ? (
+                                    <Skeleton className="h-6 w-20" />
+                                ) : count > 0 && (
                                     <Badge variant="destructive">{count} Siap Kirim</Badge>
                                 )}
                                 </div>
