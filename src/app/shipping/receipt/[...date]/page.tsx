@@ -161,7 +161,7 @@ const getStatusVariant = (status: string) => {
     }
 };
 
-const STATUS_OPTIONS = ['Perlu Diproses', 'Tercetak', 'Siap Kirim', 'Selesai', 'Return', 'Return Selesai', 'Dibatalkan'];
+const STATUS_OPTIONS = ['Perlu Diproses', 'Siap Kirim', 'Selesai', 'Return', 'Return Selesai', 'Dibatalkan'];
 
 function parseDateFromParams(dateArray: string[] | undefined): Date | null {
     if (dateArray && dateArray.length > 0) {
