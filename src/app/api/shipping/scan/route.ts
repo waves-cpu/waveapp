@@ -1,8 +1,16 @@
 
 import { findShippingReceiptByAwb, updateShippingReceiptStatus } from '@/lib/inventory-service';
 import { NextRequest, NextResponse } from 'next/server';
+import { headers } from 'next/headers';
 
 export async function POST(request: NextRequest) {
+  const headersList = headers();
+  const apiKey = headersList.get('X-API-Key');
+
+  if (apiKey !== process.env.API_KEY) {
+    return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
+  }
+
   try {
     const body = await request.json();
     const { awb, channel } = body;
