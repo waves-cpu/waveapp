@@ -134,6 +134,14 @@ export interface ShippingReceipt {
     transactionId?: string;
 }
 
+export interface PrintedReceiptCount {
+    id: number;
+    date: string;
+    salesChannel: string;
+    shippingChannel: string;
+    count: number;
+}
+
 export interface BulkImportHistory {
     id: number;
     fileName: string;

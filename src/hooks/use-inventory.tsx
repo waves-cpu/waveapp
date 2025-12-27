@@ -3,7 +3,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
-import type { InventoryItem, AdjustmentHistory, InventoryItemVariant, Sale, Reseller, Accessory, ShippingReceipt, BulkImportHistory, User, ReturnedItem, DiscountGroup, DiscountedProduct } from '@/types';
+import type { InventoryItem, AdjustmentHistory, InventoryItemVariant, Sale, Reseller, Accessory, ShippingReceipt, BulkImportHistory, User, ReturnedItem, DiscountGroup, DiscountedProduct, PrintedReceiptCount } from '@/types';
 import { categories as allCategories } from '@/types';
 import {
   fetchInventoryData,
@@ -54,6 +54,8 @@ import {
   deleteDiscountGroup as deleteDiscountGroupDb,
   fetchDiscountGroups as fetchDiscountGroupsDb,
   getDiscountGroup as getDiscountGroupDb,
+  addPrintedReceipts as addPrintedReceiptsDb,
+  getPrintedReceiptCountsForDate as getPrintedReceiptCountsForDateDb,
 } from '@/lib/inventory-service';
 
 
@@ -104,6 +106,8 @@ interface InventoryContextType {
   fetchShippingReceiptCounts: (filters: { dateString?: string; salesChannel?: string; shippingChannel?: string; status?: string; }) => Promise<{ salesChannels: Record<string, number>; shippingChannels: Record<string, number>; statuses: Record<string, number>; }>;
   getReceiptCountByStatus: (status: string[], dateRange: { from: Date, to: Date }) => Promise<number>;
   getPendingReceiptsBeforeDate: (date: Date) => Promise<number>;
+  addPrintedReceipts: (date: string, salesChannel: string, shippingChannel: string, count: number) => Promise<void>;
+  getPrintedReceiptCountsForDate: (date: string) => Promise<PrintedReceiptCount[]>;
   // Bulk Import History
   fetchImportHistory: () => Promise<BulkImportHistory[]>;
   deleteImportHistory: (id: number) => Promise<void>;
@@ -441,6 +445,14 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
     setAllShippingReceipts(prev => [newReceipt, ...prev].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
     return newReceipt;
   };
+  
+  const addPrintedReceipts = async (date: string, salesChannel: string, shippingChannel: string, count: number) => {
+      await addPrintedReceiptsDb(date, salesChannel, shippingChannel, count);
+  };
+
+  const getPrintedReceiptCountsForDate = async (date: string) => {
+      return getPrintedReceiptCountsForDateDb(date);
+  };
 
   const deleteShippingReceipt = async (id: number) => {
     await deleteShippingReceiptDb(id);
@@ -540,6 +552,8 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
         fetchShippingReceiptCounts,
         getReceiptCountByStatus,
         getPendingReceiptsBeforeDate,
+        addPrintedReceipts,
+        getPrintedReceiptCountsForDate,
         fetchImportHistory: fetchBulkImportHistory,
         deleteImportHistory,
         clearPosTransactions,

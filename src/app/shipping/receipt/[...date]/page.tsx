@@ -6,16 +6,16 @@ import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { AppLayout } from '@/app/components/app-layout';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Calendar as CalendarIcon, FileDown, Trash2, Truck, ScanLine, Search, Send, Ban, MoreVertical, Loader2, AlertCircle } from 'lucide-react';
+import { Calendar as CalendarIcon, FileDown, Trash2, Truck, ScanLine, Search, Send, Ban, MoreVertical, Loader2, AlertCircle, FilePlus2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { format, parse, isValid, endOfDay, startOfDay, parseISO } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { useInventory } from '@/hooks/use-inventory';
-import type { ShippingReceipt } from '@/types';
+import type { ShippingReceipt, PrintedReceiptCount } from '@/types';
 import { Pagination } from '@/components/ui/pagination';
 import { useToast } from '@/hooks/use-toast';
 import { useLanguage } from '@/hooks/use-language';
@@ -36,29 +36,131 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { Dialog, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useParams, useRouter } from 'next/navigation';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 
-type ShippingProvider = 'SPX' | 'J&T' | 'JNE' | 'INSTANT' | 'CARGO';
+function AddPrintedReceiptDialog({
+    isOpen,
+    setIsOpen,
+    onSave,
+}: {
+    isOpen: boolean;
+    setIsOpen: (open: boolean) => void;
+    onSave: (salesChannel: string, shippingChannel: string, count: number) => Promise<void>;
+}) {
+    const [salesChannel, setSalesChannel] = useState('');
+    const [shippingChannel, setShippingChannel] = useState('');
+    const [count, setCount] = useState<number | ''>('');
+    const [isSaving, setIsSaving] = useState(false);
+
+    useEffect(() => {
+        if (!isOpen) {
+            setSalesChannel('');
+            setShippingChannel('');
+            setCount('');
+            setIsSaving(false);
+        }
+    }, [isOpen]);
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!salesChannel || !shippingChannel || !count || count <= 0) return;
+        setIsSaving(true);
+        await onSave(salesChannel, shippingChannel, count);
+        setIsSaving(false);
+        setIsOpen(false);
+    };
+
+    return (
+        <Dialog open={isOpen} onOpenChange={setIsOpen}>
+            <DialogTrigger asChild>
+                <Button size="sm">
+                    <FilePlus2 className="mr-2 h-4 w-4" />
+                    Input Resi Tercetak
+                </Button>
+            </DialogTrigger>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Input Resi Tercetak</DialogTitle>
+                    <DialogDescription>
+                        Masukkan jumlah resi yang baru saja Anda cetak dari marketplace.
+                    </DialogDescription>
+                </DialogHeader>
+                <form onSubmit={handleSubmit} className="space-y-4 pt-4">
+                     <div className="space-y-2">
+                        <Label htmlFor="salesChannel">Kanal Penjualan</Label>
+                        <Select value={salesChannel} onValueChange={setSalesChannel} required>
+                            <SelectTrigger id="salesChannel">
+                                <SelectValue placeholder="Pilih Kanal Penjualan" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="Shopee">Shopee</SelectItem>
+                                <SelectItem value="Tiktok">Tiktok</SelectItem>
+                                <SelectItem value="Lazada">Lazada</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+                     <div className="space-y-2">
+                        <Label htmlFor="shippingChannel">Jasa Kirim</Label>
+                        <Select value={shippingChannel} onValueChange={setShippingChannel} required>
+                            <SelectTrigger id="shippingChannel">
+                                <SelectValue placeholder="Pilih Jasa Kirim" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="SPX">SPX</SelectItem>
+                                <SelectItem value="J&T">J&T</SelectItem>
+                                <SelectItem value="JNE">JNE</SelectItem>
+                                <SelectItem value="INSTANT">INSTANT</SelectItem>
+                                <SelectItem value="CARGO">CARGO</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="count">Jumlah Resi</Label>
+                        <Input
+                            id="count"
+                            type="number"
+                            placeholder="e.g. 50"
+                            value={count}
+                            onChange={(e) => setCount(e.target.value === '' ? '' : parseInt(e.target.value))}
+                            min="1"
+                            required
+                        />
+                    </div>
+                    <DialogFooter>
+                        <Button type="button" variant="ghost" onClick={() => setIsOpen(false)} disabled={isSaving}>Batal</Button>
+                        <Button type="submit" disabled={isSaving}>
+                            {isSaving ? 'Menyimpan...' : 'Simpan'}
+                        </Button>
+                    </DialogFooter>
+                </form>
+            </DialogContent>
+        </Dialog>
+    );
+}
 
 const getStatusVariant = (status: string) => {
     switch (status.toLowerCase()) {
         case 'selesai': return 'default';
         case 'return selesai': return 'default';
         case 'siap kirim': return 'secondary';
+        case 'diantar': return 'secondary';
         case 'return':
-        case 'dibatalkan': return 'destructive';
+        case 'dibatalkan':
+        case 'tidak sampai': return 'destructive';
+        case 'tercetak': return 'outline';
         default: return 'outline';
     }
 };
 
-const STATUS_OPTIONS = ['Perlu Diproses', 'Siap Kirim', 'Selesai', 'Return', 'Return Selesai', 'Dibatalkan'];
+const STATUS_OPTIONS = ['Perlu Diproses', 'Tercetak', 'Siap Kirim', 'Selesai', 'Return', 'Return Selesai', 'Dibatalkan'];
 
 function parseDateFromParams(dateArray: string[] | undefined): Date | null {
     if (dateArray && dateArray.length > 0) {
@@ -74,7 +176,7 @@ function parseDateFromParams(dateArray: string[] | undefined): Date | null {
 
 
 export default function ReceiptPage() {
-    const { allShippingReceipts, loading, toast, language, t, router, params, deleteShippingReceipt, cancelSaleTransaction, updateShippingReceiptStatus, updateShippingReceiptsStatus, getPendingReceiptsBeforeDate } = useReceiptPageLogic();
+    const { allShippingReceipts, loading, toast, language, t, router, params, deleteShippingReceipt, cancelSaleTransaction, updateShippingReceiptStatus, updateShippingReceiptsStatus, getPendingReceiptsBeforeDate, addPrintedReceipts, getPrintedReceiptCountsForDate } = useReceiptPageLogic();
 
     const [activeShippingTab, setActiveShippingTab] = useState<string | null>(null);
     const [activeSalesChannelTab, setActiveSalesChannelTab] = useState<string | null>(null);
@@ -84,13 +186,22 @@ export default function ReceiptPage() {
     const [itemsPerPage, setItemsPerPage] = useState(50);
     const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
     const [isProcessing, setIsProcessing] = useState(false);
+    const [isAddPrintedOpen, setAddPrintedOpen] = useState(false);
     
     const [activeStatusFilter, setActiveStatusFilter] = useState<string>(STATUS_OPTIONS[0]);
 
     const [pendingOldReceiptsCount, setPendingOldReceiptsCount] = useState(0);
+    const [printedReceiptCounts, setPrintedReceiptCounts] = useState<PrintedReceiptCount[]>([]);
 
     const currentDate = useMemo(() => parseDateFromParams(Array.isArray(params.date) ? params.date : undefined), [params.date]);
     
+    const fetchCounts = useCallback(async () => {
+        if (!currentDate) return;
+        const dateString = format(currentDate, 'yyyy-MM-dd');
+        const counts = await getPrintedReceiptCountsForDate(dateString);
+        setPrintedReceiptCounts(counts);
+    }, [currentDate, getPrintedReceiptCountsForDate]);
+
     const checkOldPendingReceipts = useCallback(async () => {
         if (!currentDate) return;
         try {
@@ -101,8 +212,11 @@ export default function ReceiptPage() {
     }, [currentDate, getPendingReceiptsBeforeDate]);
 
     useEffect(() => {
-        if(currentDate) checkOldPendingReceipts();
-    }, [checkOldPendingReceipts, currentDate]);
+        if(currentDate) {
+            checkOldPendingReceipts();
+            fetchCounts();
+        }
+    }, [checkOldPendingReceipts, fetchCounts, currentDate]);
     
     useEffect(() => {
         setCurrentPage(1);
@@ -130,7 +244,7 @@ export default function ReceiptPage() {
             const salesChannelMatch = !activeSalesChannelTab || receipt.salesChannel === activeSalesChannelTab;
             const shippingChannelMatch = !activeShippingTab || receipt.channel === activeShippingTab;
             const statusMatch = activeStatusFilter === 'Semua Status' || receipt.status === activeStatusFilter;
-            const searchMatch = !searchTerm || receipt.awb.toLowerCase().includes(searchTerm.toLowerCase());
+            const searchMatch = !searchTerm || (receipt.awb && receipt.awb.toLowerCase().includes(searchTerm.toLowerCase()));
             return salesChannelMatch && shippingChannelMatch && statusMatch && searchMatch;
         });
     }, [filteredByDate, activeSalesChannelTab, activeShippingTab, activeStatusFilter, searchTerm]);
@@ -232,6 +346,14 @@ export default function ReceiptPage() {
         }
         setSelectedIds(newSelectedIds);
     };
+
+    const handleAddPrintedReceipts = async (salesChannel: string, shippingChannel: string, count: number) => {
+        if (!currentDate) return;
+        const dateString = format(currentDate, 'yyyy-MM-dd');
+        await addPrintedReceipts(dateString, salesChannel, shippingChannel, count);
+        await fetchCounts();
+        toast({ title: 'Berhasil', description: `${count} resi tercetak telah ditambahkan.` });
+    };
     
     const handleShowAllPending = () => {
         router.push('/shipping/receipt/semua');
@@ -286,6 +408,7 @@ export default function ReceiptPage() {
                             />
                             </PopoverContent>
                         </Popover>
+                         <AddPrintedReceiptDialog isOpen={isAddPrintedOpen} setIsOpen={setAddPrintedOpen} onSave={handleAddPrintedReceipts} />
                          {selectedIds.size > 0 && (
                             <Button size="sm" onClick={handleProcessShipment} disabled={isProcessing}>
                                 <Send className="mr-2 h-4 w-4" />
@@ -304,6 +427,24 @@ export default function ReceiptPage() {
                         </AlertDescription>
                     </Alert>
                 )}
+
+                 <Card>
+                    <CardHeader>
+                        <CardTitle className="text-base">Sisa Resi Tercetak Hari Ini</CardTitle>
+                        <CardDescription>Jumlah resi yang telah dicetak dan siap untuk diproses gudang.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="flex flex-wrap gap-4">
+                        {loading ? <Skeleton className="h-8 w-24" /> : printedReceiptCounts.length > 0 ? (
+                            printedReceiptCounts.map(item => (
+                                <Badge key={`${item.salesChannel}-${item.shippingChannel}`} variant="secondary" className="text-sm py-1 px-3">
+                                    {item.salesChannel} - {item.shippingChannel}: <span className="font-bold ml-2">{item.count}</span>
+                                </Badge>
+                            ))
+                        ) : (
+                            <p className="text-sm text-muted-foreground">Belum ada resi yang diinput untuk hari ini.</p>
+                        )}
+                    </CardContent>
+                </Card>
 
 
                 <div className="flex flex-col gap-4">
@@ -392,7 +533,7 @@ export default function ReceiptPage() {
                                                     disabled={item.status !== 'Perlu Diproses'}
                                                 />
                                             </TableCell>
-                                            <TableCell className="font-medium">{item.awb}</TableCell>
+                                            <TableCell className="font-medium">{item.awb || '(Resi Tercetak)'}</TableCell>
                                             <TableCell>{format(new Date(item.date), 'dd MMM yyyy')}</TableCell>
                                             <TableCell>{item.salesChannel}</TableCell>
                                             <TableCell>{item.channel}</TableCell>
@@ -419,7 +560,7 @@ export default function ReceiptPage() {
                                                                 <DropdownMenuItem onClick={() => handleChangeStatus(item, 'Return')} className="text-destructive">{t.actions.markAsReturn}</DropdownMenuItem>
                                                             </>
                                                          )}
-                                                         {['Dibatalkan', 'Return'].includes(item.status) && (
+                                                         {['Dibatalkan', 'Return', 'Tercetak'].includes(item.status) && (
                                                               <AlertDialog>
                                                                 <AlertDialogTrigger asChild>
                                                                     <DropdownMenuItem onSelect={e => e.preventDefault()} className="text-destructive">
@@ -430,7 +571,7 @@ export default function ReceiptPage() {
                                                                     <AlertDialogHeader>
                                                                         <AlertDialogTitle>{t.deleteConfirmTitle}</AlertDialogTitle>
                                                                         <AlertDialogDescription>
-                                                                            {t.deleteConfirmDesc.replace('{awb}', item.awb)}
+                                                                            {t.deleteConfirmDesc.replace('{awb}', item.awb || `resi tercetak`)}
                                                                         </AlertDialogDescription>
                                                                     </AlertDialogHeader>
                                                                     <AlertDialogFooter>
@@ -484,7 +625,9 @@ function useReceiptPageLogic() {
         cancelSaleTransaction, 
         updateShippingReceiptStatus,
         updateShippingReceiptsStatus,
-        getPendingReceiptsBeforeDate
+        getPendingReceiptsBeforeDate,
+        addPrintedReceipts,
+        getPrintedReceiptCountsForDate,
     } = useInventory();
     const { toast: showToast } = useToast();
     const { language } = useLanguage();
@@ -505,5 +648,7 @@ function useReceiptPageLogic() {
         updateShippingReceiptStatus,
         updateShippingReceiptsStatus,
         getPendingReceiptsBeforeDate,
+        addPrintedReceipts,
+        getPrintedReceiptCountsForDate,
     };
 }
