@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
@@ -149,7 +148,7 @@ export function useReceiptPageLogic(salesChannel: 'Shopee' | 'Tiktok' | 'Lazada'
         setIsSubmitting(true);
         
         try {
-            const isAvailable = await inventoryContext.checkPrintedReceiptAvailability(salesChannel, shippingChannel, new Date());
+            const isAvailable = await inventoryContext.checkPrintedReceiptAvailability(salesChannel, shippingChannel, selectedDate);
             if (!isAvailable) {
                 playErrorSound();
                 toast({
@@ -172,7 +171,7 @@ export function useReceiptPageLogic(salesChannel: 'Shopee' | 'Tiktok' | 'Lazada'
             awb: trimmedAwb,
             salesChannel: salesChannel,
             channel: shippingChannel,
-            date: new Date().toISOString(), // Always use current time for new scans
+            date: selectedDate.toISOString(),
             status: 'Terproses',
             transactionId: trimmedAwb
         };
@@ -393,5 +392,3 @@ export default function ShopeeChannelPage() {
     </AppLayout>
   );
 }
-
-
