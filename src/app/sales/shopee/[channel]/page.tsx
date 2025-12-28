@@ -73,6 +73,7 @@ export function useReceiptPageLogic(salesChannel: 'Shopee' | 'Tiktok' | 'Lazada'
     const [isSaleDialogOpen, setIsSaleDialogOpen] = useState(false);
 
     useEffect(() => {
+        // Set date on client-side to avoid hydration mismatch
         setSelectedDate(new Date());
     }, []);
 
@@ -86,13 +87,14 @@ export function useReceiptPageLogic(salesChannel: 'Shopee' | 'Tiktok' | 'Lazada'
         if (!selectedDate) return;
         setLoading(true);
         try {
+            const dateString = format(selectedDate, 'yyyy-MM-dd');
             const { receipts: receiptsData, total } = await inventoryContext.fetchShippingReceipts({ 
                 page: currentPage, 
                 limit: itemsPerPage, 
                 salesChannel: salesChannel,
                 channel: shippingChannel, 
                 awb: searchTerm,
-                date_range: { from: selectedDate, to: null }
+                dateString: dateString
             });
             setReceipts(receiptsData);
             setTotalReceipts(total);
@@ -391,4 +393,5 @@ export default function ShopeeChannelPage() {
     </AppLayout>
   );
 }
+
 

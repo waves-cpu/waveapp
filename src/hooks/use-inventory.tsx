@@ -71,7 +71,7 @@ interface InventoryContextType {
   adjustAccessoryStock: (accessoryId: string, change: number, reason: string) => Promise<void>;
   // Shipping
   allShippingReceipts: ShippingReceipt[];
-  fetchShippingReceipts: (options: { page: number; limit: number; salesChannel?: string; channel?: string; date_range?: { from: Date | null; to: Date }; status?: string[]; awb?: string; }) => Promise<{ receipts: ShippingReceipt[]; total: number; }>;
+  fetchShippingReceipts: (options: { page: number; limit: number; salesChannel?: string; channel?: string; dateString?: string; status?: string[]; awb?: string; }) => Promise<{ receipts: ShippingReceipt[]; total: number; }>;
   findShippingReceiptByAwb: (awb: string) => Promise<ShippingReceipt | null>;
   addShippingReceipt: (receipt: Omit<ShippingReceipt, 'id'>) => Promise<ShippingReceipt>;
   deleteShippingReceipt: (id: number) => Promise<void>;
@@ -289,7 +289,7 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
     return result?.receipts?.[0] || null;
   };
   
-  const fetchShippingReceipts = async (options: { page: number; limit: number; channel?: string; salesChannel?: string; date_range?: {from: Date | null, to: Date}; status?: string[]; awb?: string; }) => {
+  const fetchShippingReceipts = async (options: { page: number; limit: number; channel?: string; salesChannel?: string; dateString?: string; status?: string[]; awb?: string; }) => {
     const params = new URLSearchParams({
         page: options.page.toString(),
         limit: options.limit.toString(),
@@ -298,8 +298,7 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
     if (options.channel) params.append('channel', options.channel);
     if (options.awb) params.append('awb', options.awb);
     if (options.status) params.append('status', options.status.join(','));
-    if (options.date_range?.from) params.append('from', options.date_range.from.toISOString());
-    if (options.date_range?.to) params.append('to', options.date_range.to.toISOString());
+    if (options.dateString) params.append('date', options.dateString);
 
     return await apiFetch(`/api/shipping/receipts?${params.toString()}`);
   };

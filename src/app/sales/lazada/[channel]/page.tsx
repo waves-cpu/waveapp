@@ -27,7 +27,7 @@ import { DailySalesDetailDialog } from '@/app/components/daily-sales-detail-dial
 import { Badge } from '@/components/ui/badge';
 import { RecordSaleForReceiptDialog } from '@/app/components/record-sale-for-receipt-dialog';
 // Import the hook from the Shopee page
-import ShopeeChannelPage, { useReceiptPageLogic } from '../../shopee/[channel]/page';
+import { useReceiptPageLogic } from '../../shopee/[channel]/page';
 
 export default function LazadaChannelPage() {
   const {
@@ -190,3 +190,4 @@ export default function LazadaChannelPage() {
     </AppLayout>
   );
 }
+

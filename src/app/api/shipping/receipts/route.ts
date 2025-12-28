@@ -21,10 +21,7 @@ export async function GET(request: NextRequest) {
         channel: searchParams.get('channel') || undefined,
         awb: searchParams.get('awb') || undefined,
         status: searchParams.get('status')?.split(','),
-        date_range: {
-            from: searchParams.get('from') ? new Date(searchParams.get('from')!) : null,
-            to: searchParams.get('to') ? new Date(searchParams.get('to')!) : new Date(),
-        }
+        dateString: searchParams.get('date') || undefined,
     };
 
     try {

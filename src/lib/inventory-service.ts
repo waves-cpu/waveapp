@@ -130,11 +130,11 @@ export async function fetchShippingReceipts(options: {
     limit: number;
     salesChannel?: string;
     channel?: string;
-    date_range?: { from: Date | null; to: Date | null };
+    dateString?: string; // Changed from date_range
     status?: string[];
     awb?: string;
 }): Promise<{ receipts: ShippingReceipt[]; total: number }> {
-    const { page, limit, salesChannel, channel, date_range, status, awb } = options;
+    const { page, limit, salesChannel, channel, dateString, status, awb } = options;
     const offset = (page - 1) * limit;
 
     let whereClauses: string[] = [];
@@ -153,10 +153,9 @@ export async function fetchShippingReceipts(options: {
         whereClauses.push("channel = @channel");
         params.channel = channel;
     }
-    if (date_range?.from) {
-        whereClauses.push("date >= @from AND date <= @to");
-        params.from = startOfDay(date_range.from).toISOString();
-        params.to = endOfDay(date_range.to || date_range.from).toISOString();
+    if (dateString) {
+        whereClauses.push("date(date) = @dateString");
+        params.dateString = dateString;
     }
     
 
@@ -1689,6 +1688,7 @@ async function updateShippingReceiptStatusByAwb(awb: string, status: string) {
 
 
     
+
 
 
 
