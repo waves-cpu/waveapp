@@ -220,13 +220,12 @@ export function BulkAddSheet({ open, onOpenChange }: BulkAddSheetProps) {
       
       toast({
         title: TBulk.importSuccess,
-        description: `${result.addedProducts.length} ${TBulk.importSuccessDesc}`,
+        description: `${result.addedCount} ${TBulk.importSuccessDesc}`,
       });
-      if (result.skippedProducts && result.skippedProducts.length > 0) {
-          const skippedProductNames = result.skippedProducts.map(p => `${p.name} (SKU: ${p.sku})`).join(', ');
+      if (result.skippedSkus && result.skippedSkus.length > 0) {
           toast({
               title: TBulk.skippedTitle,
-              description: TBulk.skippedDesc.replace('{count}', result.skippedProducts.length.toString()),
+              description: TBulk.skippedDesc.replace('{count}', result.skippedCount.toString()),
           });
       }
     } catch (error) {
