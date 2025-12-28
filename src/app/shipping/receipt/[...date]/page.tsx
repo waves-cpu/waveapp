@@ -175,6 +175,42 @@ function parseDateFromParams(dateArray: string[] | undefined): Date | null {
     return new Date();
 }
 
+function useReceiptPageLogic() {
+    const { 
+        allShippingReceipts, 
+        loading: inventoryLoading, 
+        deleteShippingReceipt, 
+        cancelSaleTransaction, 
+        updateShippingReceiptStatus,
+        updateShippingReceiptsStatus,
+        getPendingReceiptsBeforeDate,
+        addPrintedReceipts,
+        getPrintedReceiptCountsForDate,
+    } = useInventory();
+    const { toast } = useToast();
+    const { language } = useLanguage();
+    const t = translations[language].shipping.receiptPage;
+    const router = useRouter();
+    const params = useParams();
+
+    return {
+        allShippingReceipts,
+        loading: inventoryLoading,
+        toast,
+        language,
+        t,
+        router,
+        params,
+        deleteShippingReceipt,
+        cancelSaleTransaction,
+        updateShippingReceiptStatus,
+        updateShippingReceiptsStatus,
+        getPendingReceiptsBeforeDate,
+        addPrintedReceipts,
+        getPrintedReceiptCountsForDate,
+    };
+}
+
 
 export default function ReceiptPage() {
     const { allShippingReceipts, loading, toast, language, t, router, params, deleteShippingReceipt, cancelSaleTransaction, updateShippingReceiptStatus, updateShippingReceiptsStatus, getPendingReceiptsBeforeDate, addPrintedReceipts, getPrintedReceiptCountsForDate } = useReceiptPageLogic();
@@ -462,7 +498,7 @@ export default function ReceiptPage() {
                                     variant={activeSalesChannelTab === tab ? 'secondary' : 'ghost'}
                                     size="sm"
                                     onClick={() => setActiveSalesChannelTab(prev => prev === tab ? null : tab)}
-                                    className="shrink-0 text-green-600"
+                                    className={cn("shrink-0", activeSalesChannelTab === tab && "text-green-600")}
                                 >
                                     {tab}
                                     <Badge variant={activeSalesChannelTab === tab ? 'default' : 'secondary'} className="ml-2">
@@ -479,7 +515,7 @@ export default function ReceiptPage() {
                                 variant={activeShippingTab === tab ? 'secondary' : 'ghost'}
                                 size="sm"
                                 onClick={() => setActiveShippingTab(prev => prev === tab ? null : tab)}
-                                className="shrink-0 text-green-600"
+                                className={cn("shrink-0", activeShippingTab === tab && "text-green-600")}
                             >
                                 {tab}
                                 <Badge variant={activeShippingTab === tab ? 'default' : 'secondary'} className="ml-2">
@@ -495,7 +531,7 @@ export default function ReceiptPage() {
                                 variant={activeStatusFilter === status ? 'secondary' : 'ghost'}
                                 size="sm"
                                 onClick={() => setActiveStatusFilter(status)}
-                                className="shrink-0 text-green-600"
+                                className={cn("shrink-0", activeStatusFilter === status && "text-green-600")}
                             >
                                 {status}
                                 <Badge variant={activeStatusFilter === status ? 'default' : 'secondary'} className="ml-2">
@@ -625,41 +661,3 @@ export default function ReceiptPage() {
 }
 
 type ShippingProvider = "SPX" | "J&T" | "JNE" | "INSTANT" | "CARGO";
-
-function useReceiptPageLogic() {
-    const { 
-        allShippingReceipts, 
-        loading: inventoryLoading, 
-        deleteShippingReceipt, 
-        cancelSaleTransaction, 
-        updateShippingReceiptStatus,
-        updateShippingReceiptsStatus,
-        getPendingReceiptsBeforeDate,
-        addPrintedReceipts,
-        getPrintedReceiptCountsForDate,
-    } = useInventory();
-    const { toast } = useToast();
-    const { language } = useLanguage();
-    const t = translations[language].shipping.receiptPage;
-    const router = useRouter();
-    const params = useParams();
-
-    return {
-        allShippingReceipts,
-        loading: inventoryLoading,
-        toast,
-        language,
-        t,
-        router,
-        params,
-        deleteShippingReceipt,
-        cancelSaleTransaction,
-        updateShippingReceiptStatus,
-        updateShippingReceiptsStatus,
-        getPendingReceiptsBeforeDate,
-        addPrintedReceipts,
-        getPrintedReceiptCountsForDate,
-    };
-}
-
-    
