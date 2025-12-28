@@ -57,6 +57,7 @@ import {
   addPrintedReceipts as addPrintedReceiptsDb,
   getPrintedReceiptCountsForDate as getPrintedReceiptCountsForDateDb,
   consumePrintedReceipt,
+  checkPrintedReceiptAvailability,
 } from '@/lib/inventory-service';
 
 
@@ -108,6 +109,7 @@ interface InventoryContextType {
   getReceiptCountByStatus: (status: string) => Promise<Record<string, number>>;
   getPendingReceiptsBeforeDate: (date: Date) => Promise<number>;
   addPrintedReceipts: (date: string, salesChannel: string, shippingChannel: string, count: number) => Promise<void>;
+  checkPrintedReceiptAvailability: (salesChannel: string, shippingChannel: string, date: Date) => Promise<boolean>;
   getPrintedReceiptCountsForDate: (date: string) => Promise<PrintedReceiptCount[]>;
   // Bulk Import History
   fetchImportHistory: () => Promise<BulkImportHistory[]>;
@@ -442,10 +444,6 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
   
 
   const addShippingReceipt = async (receipt: Omit<ShippingReceipt, 'id'>) => {
-    const consumed = await consumePrintedReceipt(receipt.salesChannel!, receipt.channel, new Date(receipt.date));
-    if(!consumed) {
-        throw new Error('No printed receipts available to consume.');
-    }
     const newReceipt = await addShippingReceiptDb(receipt);
     setAllShippingReceipts(prev => [newReceipt, ...prev].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
     return newReceipt;
@@ -559,6 +557,7 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
         getPendingReceiptsBeforeDate,
         addPrintedReceipts,
         getPrintedReceiptCountsForDate,
+        checkPrintedReceiptAvailability,
         fetchImportHistory: fetchBulkImportHistory,
         deleteImportHistory,
         clearPosTransactions,
@@ -584,3 +583,4 @@ export const useInventory = () => {
   }
   return context;
 };
+

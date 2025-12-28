@@ -141,6 +141,26 @@ export function useReceiptPageLogic(salesChannel: 'Shopee' | 'Tiktok' | 'Lazada'
         
         setIsSubmitting(true);
         
+        try {
+            const isAvailable = await inventoryContext.checkPrintedReceiptAvailability(salesChannel, shippingChannel, new Date());
+            if (!isAvailable) {
+                playErrorSound();
+                toast({
+                    variant: 'destructive',
+                    title: 'Kuota Resi Habis',
+                    description: 'Jumlah resi tercetak untuk hari ini sudah habis. Hubungi admin untuk menambah.',
+                });
+                setIsSubmitting(false);
+                setAwb('');
+                return;
+            }
+        } catch (error) {
+             playErrorSound();
+             toast({ variant: 'destructive', title: 'Error', description: 'Gagal memeriksa ketersediaan resi.' });
+             setIsSubmitting(false);
+             return;
+        }
+
          const newReceipt: Omit<ShippingReceipt, 'id'> = {
             awb: trimmedAwb,
             salesChannel: salesChannel,
@@ -366,7 +386,3 @@ export default function ShopeeChannelPage() {
     </AppLayout>
   );
 }
-
-
-
-
