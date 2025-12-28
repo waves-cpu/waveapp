@@ -7,6 +7,7 @@ import { SidebarTrigger } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from '@/components/ui/table';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Calendar as CalendarIcon, FileDown, Trash2, Truck, ScanLine, Search, Send, Ban, MoreVertical, Loader2, AlertCircle, FilePlus2, CheckCircle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -35,14 +36,14 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
+  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { Dialog, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogContent, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogContent } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useParams, useRouter } from 'next/navigation';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 
 
@@ -239,44 +240,42 @@ export default function ReceiptPage() {
     }, [allShippingReceipts, currentDate]);
 
 
-    const filteredReceipts = useMemo(() => {
-        return filteredByDate.filter(receipt => {
+    const { filteredReceipts, salesChannelCounts, shippingChannelCounts, statusCounts } = useMemo(() => {
+        const preFiltered = filteredByDate.filter(receipt => {
+            const searchMatch = !searchTerm || (receipt.awb && receipt.awb.toLowerCase().includes(searchTerm.toLowerCase()));
+            return searchMatch;
+        });
+
+        const sc: Record<string, number> = {};
+        const shc: Record<string, number> = {};
+        const st: Record<string, number> = {};
+        
+        preFiltered.forEach(r => {
+            if (r.salesChannel) sc[r.salesChannel] = (sc[r.salesChannel] || 0) + 1;
+            if (r.channel) shc[r.channel] = (shc[r.channel] || 0) + 1;
+            st[r.status] = (st[r.status] || 0) + 1;
+        });
+
+        const finalFiltered = preFiltered.filter(receipt => {
             const salesChannelMatch = !activeSalesChannelTab || receipt.salesChannel === activeSalesChannelTab;
             const shippingChannelMatch = !activeShippingTab || receipt.channel === activeShippingTab;
             const statusMatch = activeStatusFilter === 'Semua Status' || receipt.status === activeStatusFilter;
-            const searchMatch = !searchTerm || (receipt.awb && receipt.awb.toLowerCase().includes(searchTerm.toLowerCase()));
-            return salesChannelMatch && shippingChannelMatch && statusMatch && searchMatch;
+            return salesChannelMatch && shippingChannelMatch && statusMatch;
         });
+
+        return { 
+            filteredReceipts: finalFiltered, 
+            salesChannelCounts: sc, 
+            shippingChannelCounts: shc, 
+            statusCounts: st 
+        };
     }, [filteredByDate, activeSalesChannelTab, activeShippingTab, activeStatusFilter, searchTerm]);
+
 
     const paginatedReceipts = useMemo(() => {
         const startIndex = (currentPage - 1) * itemsPerPage;
         return filteredReceipts.slice(startIndex, startIndex + itemsPerPage);
     }, [filteredReceipts, currentPage, itemsPerPage]);
-
-    const { salesChannelCounts, shippingChannelCounts, statusCounts } = useMemo(() => {
-        const sc: Record<string, number> = {};
-        const shc: Record<string, number> = {};
-        const st: Record<string, number> = {};
-        
-        const sourceForCounts = filteredByDate.filter(r => {
-            const searchMatch = !searchTerm || (r.awb && r.awb.toLowerCase().includes(searchTerm.toLowerCase()));
-            return searchMatch;
-        });
-
-        sourceForCounts.forEach(r => {
-            if (r.salesChannel) {
-                sc[r.salesChannel] = (sc[r.salesChannel] || 0) + 1;
-            }
-            if (r.channel) {
-                shc[r.channel] = (shc[r.channel] || 0) + 1;
-            }
-            st[r.status] = (st[r.status] || 0) + 1;
-        });
-        
-        return { salesChannelCounts: sc, shippingChannelCounts: shc, statusCounts: st };
-    }, [filteredByDate, searchTerm]);
-
 
     const handleDelete = async (receiptToDelete: ShippingReceipt) => {
         if (!receiptToDelete) return;
@@ -410,13 +409,13 @@ export default function ReceiptPage() {
                             </PopoverContent>
                         </Popover>
                          <AddPrintedReceiptDialog isOpen={isAddPrintedOpen} setIsOpen={setAddPrintedOpen} onSave={handleAddPrintedReceipts} />
-                         {selectedIds.size > 0 && activeStatusFilter === 'Terproses' && (
+                         {(selectedIds.size > 0 && activeStatusFilter === 'Terproses') && (
                             <Button size="sm" onClick={() => handleBulkAction('Siap Kirim')} disabled={isProcessing}>
                                 <Send className="mr-2 h-4 w-4" />
                                 {isProcessing ? t.processing : `${t.processSelected} (${selectedIds.size})`}
                             </Button>
                          )}
-                         {selectedIds.size > 0 && activeStatusFilter === 'Siap Kirim' && (
+                         {(selectedIds.size > 0 && activeStatusFilter === 'Siap Kirim') && (
                             <Button size="sm" onClick={() => handleBulkAction('Selesai')} disabled={isProcessing}>
                                 <CheckCircle className="mr-2 h-4 w-4" />
                                 {isProcessing ? 'Memproses...' : `Tandai Selesai (${selectedIds.size})`}
