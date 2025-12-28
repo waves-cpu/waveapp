@@ -39,7 +39,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { Dialog, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogContent } from '@/components/ui/dialog';
+import { Dialog, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -462,7 +462,7 @@ export default function ReceiptPage() {
                                     variant={activeSalesChannelTab === tab ? 'secondary' : 'ghost'}
                                     size="sm"
                                     onClick={() => setActiveSalesChannelTab(prev => prev === tab ? null : tab)}
-                                    className={cn("shrink-0", activeSalesChannelTab === tab && "text-green-600")}
+                                    className="shrink-0 text-green-600"
                                 >
                                     {tab}
                                     <Badge variant={activeSalesChannelTab === tab ? 'default' : 'secondary'} className="ml-2">
@@ -479,7 +479,7 @@ export default function ReceiptPage() {
                                 variant={activeShippingTab === tab ? 'secondary' : 'ghost'}
                                 size="sm"
                                 onClick={() => setActiveShippingTab(prev => prev === tab ? null : tab)}
-                                className={cn("shrink-0", activeShippingTab === tab && "text-green-600")}
+                                className="shrink-0 text-green-600"
                             >
                                 {tab}
                                 <Badge variant={activeShippingTab === tab ? 'default' : 'secondary'} className="ml-2">
@@ -495,14 +495,12 @@ export default function ReceiptPage() {
                                 variant={activeStatusFilter === status ? 'secondary' : 'ghost'}
                                 size="sm"
                                 onClick={() => setActiveStatusFilter(status)}
-                                className={cn("shrink-0", activeStatusFilter === status && "text-green-600")}
+                                className="shrink-0 text-green-600"
                             >
                                 {status}
-                                {(statusCounts[status] || 0) > 0 && (
                                 <Badge variant={activeStatusFilter === status ? 'default' : 'secondary'} className="ml-2">
                                     {statusCounts[status] || 0}
                                 </Badge>
-                                )}
                             </Button>
                         ))}
                     </div>
@@ -663,3 +661,5 @@ function useReceiptPageLogic() {
         getPrintedReceiptCountsForDate,
     };
 }
+
+    
