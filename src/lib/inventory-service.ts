@@ -1066,7 +1066,7 @@ export async function recordSaleWithReceipt(receiptData: Omit<ShippingReceipt, '
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             `).run(
                 sale.transactionId, null, null, productId, variantId, null,
-                sale.channel, sale.quantity, sale.priceAtSale, cogsAtSale, sale.saleDate,
+                sale.channel, sale.quantity, sale.priceAtSale ?? 0, cogsAtSale, sale.saleDate,
                 'Terproses', parentProduct?.sku, parentProduct?.category, parentProduct?.imageUrl
             );
         });
@@ -1692,6 +1692,7 @@ async function updateShippingReceiptStatusByAwb(awb: string, status: string) {
 
 
     
+
 
 
 
