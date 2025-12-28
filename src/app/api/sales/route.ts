@@ -1,4 +1,5 @@
 
+
 import { performSale, fetchAllSales } from '@/lib/inventory-service';
 import { NextRequest, NextResponse } from 'next/server';
 import { headers } from 'next/headers';
@@ -9,7 +10,7 @@ const API_KEY = process.env.API_KEY || 'secret-api-key-for-waveapp';
 // Handler for GET requests to fetch sales data
 export async function GET(request: NextRequest) {
   const headersList = await headers();
-  const apiKey = (await headersList).get('X-API-Key');
+  const apiKey = headersList.get('X-API-Key');
 
   if (apiKey !== API_KEY) {
     return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
@@ -22,17 +23,17 @@ export async function GET(request: NextRequest) {
   try {
     const allSales = await fetchAllSales();
 
-    const filteredSales = allSales.filter(sale => {
-      if (startDateParam && endDateParam) {
-        const saleDate = parseISO(sale.saleDate);
-        const startDate = startOfDay(parseISO(startDateParam));
-        const endDate = endOfDay(parseISO(endDateParam));
-        return isWithinInterval(saleDate, { start: startDate, end: endDate });
-      }
-      return true; // If no date range, return all sales
-    });
+    if (startDateParam && endDateParam) {
+        const filteredSales = allSales.filter(sale => {
+            const saleDate = parseISO(sale.saleDate);
+            const startDate = startOfDay(parseISO(startDateParam));
+            const endDate = endOfDay(parseISO(endDateParam));
+            return isWithinInterval(saleDate, { start: startDate, end: endDate });
+        });
+        return NextResponse.json({ sales: filteredSales });
+    }
 
-    return NextResponse.json({ sales: filteredSales });
+    return NextResponse.json({ sales: allSales });
   } catch (error) {
     console.error('API Error fetching sales:', error);
     return NextResponse.json({ message: 'Internal Server Error' }, { status: 500 });
@@ -42,7 +43,7 @@ export async function GET(request: NextRequest) {
 // Handler for POST requests to record a new sale
 export async function POST(request: NextRequest) {
   const headersList = await headers();
-  const apiKey = (await headersList).get('X-API-Key');
+  const apiKey = headersList.get('X-API-Key');
 
   if (apiKey !== API_KEY) {
     return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
@@ -74,3 +75,4 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ message: error.message || 'Internal Server Error' }, { status: 500 });
   }
 }
+

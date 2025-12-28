@@ -130,7 +130,7 @@ export async function fetchShippingReceipts(options: {
     limit: number;
     salesChannel?: string;
     channel?: string;
-    dateString?: string; // Changed from date_range
+    dateString?: string;
     status?: string[];
     awb?: string;
 }): Promise<{ receipts: ShippingReceipt[]; total: number }> {
@@ -436,11 +436,8 @@ export async function addProduct(itemData: any): Promise<string> {
         
         let releaseDateValue: string | null = null;
         if (itemData.releaseDate) {
-            if (typeof itemData.releaseDate === 'string') {
-                releaseDateValue = itemData.releaseDate;
-            } else if (itemData.releaseDate.toISOString) {
-                releaseDateValue = itemData.releaseDate.toISOString();
-            }
+            // The date is already a string from the form
+            releaseDateValue = itemData.releaseDate;
         }
 
         const productResult = addProductStmt.run({
@@ -498,7 +495,7 @@ export async function addProduct(itemData: any): Promise<string> {
     return transaction();
 }
 
-export async function bulkAddProducts(data: any[]): Promise<{ addedProducts: {sku: string, name: string}[], skippedProducts: {sku: string, name: string}[] }> {
+export async function bulkAddProducts(data: any[], fileName: string): Promise<{ addedCount: number, skippedCount: number, addedSkus: any[], skippedSkus: any[] }> {
     const getProductStmt = db.prepare('SELECT id, name FROM products WHERE sku = ?');
     const addProductStmt = db.prepare('INSERT INTO products (name, category, sku, imageUrl, hasVariants) VALUES (@name, @category, @sku, @imageUrl, @hasVariants)');
     const addVariantStmt = db.prepare('INSERT INTO variants (productId, name, sku, price, stock, costPrice) VALUES (@productId, @name, @sku, @price, @stock, @costPrice)');
@@ -584,7 +581,7 @@ export async function bulkAddProducts(data: any[]): Promise<{ addedProducts: {sk
         }
     })();
     
-    return { addedProducts, skippedProducts };
+    return { addedCount: addedProducts.length, skippedCount: skippedProducts.length, addedSkus: addedProducts, skippedSkus: skippedProducts };
 }
 
 export async function bulkUpdateProducts(data: any[]): Promise<{ updatedCount: number; notFoundSkus: string[] }> {
@@ -654,11 +651,8 @@ export async function editProduct(itemId: string, itemData: any) {
 
         let releaseDateValue: string | null = null;
         if (itemData.releaseDate) {
-            if (typeof itemData.releaseDate === 'string') {
-                releaseDateValue = itemData.releaseDate;
-            } else if (itemData.releaseDate.toISOString) {
-                releaseDateValue = itemData.releaseDate.toISOString();
-            }
+            // The date is already a string from the form
+            releaseDateValue = itemData.releaseDate;
         }
 
         updateProductStmt.run({
@@ -868,7 +862,8 @@ export async function performSale(
 
     const { newSaleId } = db.transaction(() => {
         const saleDate = options?.saleDate || new Date();
-        const saleDateString = saleDate.toISOString();
+        // Use local time string to avoid timezone shifts
+        const saleDateString = new Date(saleDate.getTime() - (saleDate.getTimezoneOffset() * 60000)).toISOString().slice(0, -1);
         const saleReason = `Sale (${channel})` + (options?.resellerName ? ` - ${options.resellerName}` : '');
 
         let cogsAtSale;
@@ -1688,6 +1683,7 @@ async function updateShippingReceiptStatusByAwb(awb: string, status: string) {
 
 
     
+
 
 
 

@@ -103,7 +103,7 @@ export default function HistoryPage() {
     items.forEach(item => {
       const processHistory = (history: AdjustmentHistory[], parentItem: InventoryItem, variant?: InventoryItemVariant) => {
         history.forEach(entry => {
-            const entryDate = new Date(entry.date);
+            const entryDate = parseISO(entry.date as any);
             if (!isWithinInterval(entryDate, { start: startDate, end: endDate })) {
                 return;
             }
@@ -114,7 +114,7 @@ export default function HistoryPage() {
             if (!isSaleAdjustment && (entry.change !== 0 || !reasonLower.includes('penyesuaian modal'))) {
                  historyList.push({
                     type: 'adjustment',
-                    date: new Date(entry.date),
+                    date: entryDate,
                     change: entry.change,
                     reason: entry.reason,
                     newStockLevel: entry.newStockLevel,
@@ -591,5 +591,6 @@ export default function HistoryPage() {
     </AppLayout>
   );
 }
+
 
 
