@@ -56,7 +56,10 @@ export default function MobileScanShipmentPage() {
         try {
             const response = await fetch('/api/shipping/scan', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'X-API-Key': process.env.NEXT_PUBLIC_API_KEY || 'secret-api-key-for-waveapp'
+                },
                 body: JSON.stringify({ awb: trimmedAwb, channel }),
             });
 

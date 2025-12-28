@@ -7,7 +7,7 @@ export async function GET(request: NextRequest) {
   const headersList = headers();
   const apiKey = headersList.get('X-API-Key');
 
-  if (apiKey !== process.env.API_KEY) {
+  if (apiKey !== (process.env.API_KEY || 'secret-api-key-for-waveapp')) {
     return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
   }
 

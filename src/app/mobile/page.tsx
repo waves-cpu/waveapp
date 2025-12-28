@@ -23,7 +23,11 @@ export default function MobileHubPage() {
     useEffect(() => {
         async function fetchCounts() {
             try {
-                const response = await fetch('/api/shipping/counts?status=Terproses');
+                const response = await fetch('/api/shipping/counts?status=Terproses', {
+                    headers: {
+                        'X-API-Key': process.env.NEXT_PUBLIC_API_KEY || 'secret-api-key-for-waveapp'
+                    }
+                });
                 if (!response.ok) {
                     throw new Error('Failed to fetch counts');
                 }
