@@ -53,7 +53,7 @@ interface InventoryContextType {
   recordSaleWithReceipt: (receiptData: Omit<ShippingReceipt, 'id'>, salesData: Omit<Sale, 'id'>[]) => Promise<void>;
   fetchSales: (channel: string, date: Date, page: number, limit: number) => Promise<{sales: Sale[], total: number}>;
   cancelSaleTransaction: (transactionId: string) => Promise<void>;
-  returnSaleTransaction: (transactionId: string) => Promise<void>;
+  returnSaleTransaction: (transactionId: string, items: ReturnedItem[]) => Promise<void>;
   revertSaleItem: (transactionId: string, sku: string) => Promise<void>;
   getProductBySku: (sku: string) => Promise<InventoryItem | null>;
   allSales: Sale[];
@@ -157,18 +157,18 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
   }, [fetchAllData]);
 
   const addReseller = async (name: string, phone?: string, address?: string) => {
-    const newReseller = await apiFetch('/api/resellers', { method: 'POST', body: JSON.stringify({ name, phone, address }) });
-    setResellers(prev => [...prev, newReseller].sort((a, b) => a.name.localeCompare(b.name)));
+    await apiFetch('/api/resellers', { method: 'POST', body: JSON.stringify({ name, phone, address }) });
+    await fetchAllData();
   };
   
   const editReseller = async (id: number, data: Omit<Reseller, 'id'>) => {
-    const updatedReseller = await apiFetch(`/api/resellers/${id}`, { method: 'PUT', body: JSON.stringify(data) });
-    setResellers(prev => prev.map(r => r.id === id ? updatedReseller : r).sort((a, b) => a.name.localeCompare(b.name)));
+    await apiFetch(`/api/resellers/${id}`, { method: 'PUT', body: JSON.stringify(data) });
+    await fetchAllData();
   };
   
   const deleteReseller = async (id: number) => {
     await apiFetch(`/api/resellers/${id}`, { method: 'DELETE' });
-    setResellers(prev => prev.filter(r => r.id !== id));
+    await fetchAllData();
   };
 
   const addItem = async (itemData: any) => {
@@ -245,8 +245,8 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
     await fetchAllData();
   }
   
-  const returnSaleTransaction = async (transactionId: string) => {
-    await apiFetch(`/api/sales/transaction/${transactionId}/return`, { method: 'POST' });
+  const returnSaleTransaction = async (transactionId: string, items: ReturnedItem[]) => {
+    await apiFetch(`/api/sales/transaction/${transactionId}/return`, { method: 'POST', body: JSON.stringify({ items }) });
     await fetchAllData();
   }
   
@@ -305,7 +305,7 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
 
   const addShippingReceipt = async (receipt: Omit<ShippingReceipt, 'id'>) => {
     const newReceipt = await apiFetch('/api/shipping/receipts', { method: 'POST', body: JSON.stringify(receipt) });
-    setAllShippingReceipts(prev => [newReceipt, ...prev].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+    await fetchAllData();
     return newReceipt;
   };
   
@@ -319,7 +319,7 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
 
   const deleteShippingReceipt = async (id: number) => {
     await apiFetch(`/api/shipping/receipts/${id}`, { method: 'DELETE' });
-    setAllShippingReceipts(prev => prev.filter(r => r.id !== id));
+    await fetchAllData();
   };
 
   const updateShippingReceiptsStatus = async (ids: number[], status: string) => {
@@ -341,11 +341,13 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
   }
   
   const getPendingReceiptsBeforeDate = async (date: Date) => {
-      return await apiFetch(`/api/shipping/receipts/pending-count?before=${date.toISOString()}`).then(res => res.count);
+      const result = await apiFetch(`/api/shipping/receipts/pending-count?before=${date.toISOString()}`);
+      return result.count;
   }
 
   const clearPosTransactions = async (date: Date) => {
     await apiFetch(`/api/sales/pos-history?date=${date.toISOString()}`, { method: 'DELETE' });
+    await fetchAllData();
   };
 
   const fetchDiscountGroups = useCallback(async () => {
@@ -355,15 +357,15 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
   
   const addDiscountGroup = async (group: Omit<DiscountGroup, 'id'|'productCount'>) => {
       await apiFetch('/api/finance/discounts', { method: 'POST', body: JSON.stringify(group) });
-      await fetchDiscountGroups();
+      await fetchAllData();
   }
   const editDiscountGroup = async (id: number, group: Omit<DiscountGroup, 'id'|'productCount'>) => {
       await apiFetch(`/api/finance/discounts/${id}`, { method: 'PUT', body: JSON.stringify(group) });
-      await fetchDiscountGroups();
+      await fetchAllData();
   }
   const deleteDiscountGroup = async (id: number) => {
       await apiFetch(`/api/finance/discounts/${id}`, { method: 'DELETE' });
-      await fetchDiscountGroups();
+      await fetchAllData();
   }
   const getDiscountGroup = async (id: number) => {
       return await apiFetch(`/api/finance/discounts/${id}`);

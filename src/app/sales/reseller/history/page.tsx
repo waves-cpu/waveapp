@@ -26,7 +26,6 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
@@ -206,29 +205,29 @@ export default function ResellerHistoryPage() {
                                     </TableRow>
                                 ) : groupedSales.length > 0 ? (
                                     groupedSales.map(group => (
-                                        <TableRow key={group.transactionId}>
-                                            <TableCell className="font-medium text-sm" onClick={() => handleViewDetails(group.items)}>
+                                        <TableRow key={group.transactionId} className="cursor-pointer" onClick={() => handleViewDetails(group.items)}>
+                                            <TableCell className="font-medium text-sm">
                                                 {format(new Date(group.saleDate), 'HH:mm:ss')}
                                             </TableCell>
-                                            <TableCell onClick={() => handleViewDetails(group.items)}>
+                                            <TableCell>
                                                 <div className="flex items-center gap-2">
                                                     <Users className="h-4 w-4 text-muted-foreground" />
                                                     <span className="font-medium text-sm">{group.resellerName}</span>
                                                 </div>
                                             </TableCell>
-                                            <TableCell onClick={() => handleViewDetails(group.items)}>
+                                            <TableCell>
                                                 <div className="font-medium text-sm">{group.items.length} product types ({group.totalItems} items)</div>
                                                 <div className="text-xs text-muted-foreground max-w-xs truncate">
                                                     {group.items.map(i => i.productName).join(', ')}
                                                 </div>
                                             </TableCell>
-                                            <TableCell onClick={() => handleViewDetails(group.items)}>
+                                            <TableCell>
                                                 <Badge variant="outline">{group.paymentMethod || 'N/A'}</Badge>
                                             </TableCell>
-                                            <TableCell className="text-right font-semibold text-sm" onClick={() => handleViewDetails(group.items)}>
+                                            <TableCell className="text-right font-semibold text-sm">
                                                 {group.totalAmount.toLocaleString('id-ID', { style: 'currency', currency: 'IDR' })}
                                             </TableCell>
-                                            <TableCell className="text-center">
+                                            <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
                                                 <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handlePrintInvoice(group)}>
                                                     <Printer className="h-4 w-4" />
                                                 </Button>

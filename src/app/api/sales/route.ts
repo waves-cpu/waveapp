@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
 
     const transactionId = options?.transactionId || `trans-${Date.now()}`;
     const salePromises = sales.map((sale: any) => 
-      performSale(sale.sku, sale.channel, sale.quantity, {
+      performSale(sale.sku, options.channel, sale.quantity, {
         ...options,
         transactionId: transactionId,
         priceAtSale: sale.price,

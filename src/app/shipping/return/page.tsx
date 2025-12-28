@@ -17,7 +17,6 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-  TableFooter,
 } from '@/components/ui/table';
 import { Undo2, Truck, CheckCircle, Package, Trash2, Search, FileDown, Loader2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
@@ -38,7 +37,6 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { useLanguage } from '@/hooks/use-language';
 import { Dialog, DialogHeader, DialogTitle, DialogContent, DialogDescription, DialogFooter } from '@/components/ui/dialog';
@@ -302,7 +300,7 @@ export default function ReturnPage() {
     
     const handleProcessReturn = async (transactionId: string, returnedItems: ReturnedItem[]) => {
         try {
-            await returnSaleTransaction(transactionId);
+            await returnSaleTransaction(transactionId, returnedItems);
             
             if (selectedReceipt) {
                 const finalStatus = selectedReceipt.status === 'Dibatalkan' ? 'Selesai' : 'Return Selesai';
