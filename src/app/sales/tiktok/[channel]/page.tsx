@@ -1,8 +1,7 @@
 
-
 'use client';
 
-import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -13,219 +12,31 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { ScanLine, Trash2, ShoppingCart, Search, Eye, ArrowLeft, MoreVertical, Calendar as CalendarIcon } from 'lucide-react';
-import { format, parseISO, startOfDay, endOfDay } from 'date-fns';
-import { useInventory } from '@/hooks/use-inventory';
+import { ScanLine, ShoppingCart, Search, Eye, ArrowLeft, Calendar as CalendarIcon } from 'lucide-react';
+import { format, parseISO } from 'date-fns';
 import { useLanguage } from '@/hooks/use-language';
-import { translations } from '@/types/language';
 import { SidebarTrigger } from '@/components/ui/sidebar';
-import type { Sale, ShippingReceipt } from '@/types';
-import { useToast } from '@/hooks/use-toast';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AppLayout } from '@/app/components/app-layout';
-import { useScanSounds } from '@/hooks/use-scan-sounds';
-import { useParams, useRouter } from 'next/navigation';
 import { Pagination } from '@/components/ui/pagination';
 import { DailySalesDetailDialog } from '@/app/components/daily-sales-detail-dialog';
 import { Badge } from '@/components/ui/badge';
 import { RecordSaleForReceiptDialog } from '@/app/components/record-sale-for-receipt-dialog';
+// Import the hook from the Shopee page
+import ShopeeChannelPage, { useReceiptPageLogic } from '../../shopee/[channel]/page';
 
 
 export default function TiktokChannelPage() {
-  const { language } = useLanguage();
-  const t = translations[language];
-  const { deleteShippingReceipt, fetchShippingReceipts, allSales, cancelSaleTransaction, recordSaleWithReceipt } = useInventory();
-  const { toast } = useToast();
-  const { playSuccessSound, playErrorSound } = useScanSounds();
-  const router = useRouter();
-  const params = useParams();
-
-  const salesChannel = "Tiktok";
-  const shippingChannel = typeof params.channel === 'string' ? decodeURIComponent(params.channel).toUpperCase() : '';
-
-  const [receipts, setReceipts] = useState<ShippingReceipt[]>([]);
-  const [totalReceipts, setTotalReceipts] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const [awb, setAwb] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const awbInputRef = useRef<HTMLInputElement>(null);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(50);
-  const [searchTerm, setSearchTerm] = useState('');
-  
-  const [detailItems, setDetailItems] = useState<Sale[]>([]);
-  const [isDetailOpen, setIsDetailOpen] = useState(false);
-
-  const [receiptForSale, setReceiptForSale] = useState<Omit<ShippingReceipt, 'id'> | ShippingReceipt | null>(null);
-  const [isSaleDialogOpen, setIsSaleDialogOpen] = useState(false);
-
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
-
-  useEffect(() => {
-    setSelectedDate(new Date());
-  }, []);
-
-  const refocusInput = useCallback(() => {
-    if (!isSaleDialogOpen) {
-        setTimeout(() => awbInputRef.current?.focus(), 100);
-    }
-  }, [isSaleDialogOpen]);
-
-  const loadReceipts = useCallback(async () => {
-    if (!selectedDate) return;
-    setLoading(true);
-    try {
-      const { receipts: receiptsData, total } = await fetchShippingReceipts({ 
-          page: currentPage, 
-          limit: itemsPerPage, 
-          salesChannel: salesChannel,
-          channel: shippingChannel, 
-          awb: searchTerm,
-          date_range: { from: startOfDay(selectedDate), to: endOfDay(selectedDate) }
-      });
-      setReceipts(receiptsData);
-      setTotalReceipts(total);
-    } catch (error) {
-      console.error('Failed to fetch receipts:', error);
-      toast({
-        variant: 'destructive',
-        title: 'Gagal Memuat Resi',
-        description: 'Terjadi kesalahan saat mengambil data resi.',
-      });
-    } finally {
-      setLoading(false);
-    }
-  }, [fetchShippingReceipts, toast, currentPage, itemsPerPage, searchTerm, salesChannel, shippingChannel, selectedDate]);
-  
-  useEffect(() => {
-    loadReceipts();
-  }, [loadReceipts]);
-
-  useEffect(() => {
-    refocusInput();
-  }, [refocusInput, receipts, isSaleDialogOpen]);
-
-
-  const salesByReceipt = useMemo(() => {
-    const map = new Map<string, Sale[]>();
-    allSales.forEach(sale => {
-      const key = sale.transactionId;
-      if (key) {
-        if (!map.has(key)) {
-          map.set(key, []);
-        }
-        map.get(key)!.push(sale);
-      }
-    });
-    return map;
-  }, [allSales]);
-
-  const handleAwbSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const trimmedAwb = awb.trim();
-    if (!trimmedAwb || isSubmitting || !selectedDate) return;
-
-    const existingReceipt = receipts.find(r => r.awb.toLowerCase() === trimmedAwb.toLowerCase());
-    if (existingReceipt) {
-        playErrorSound();
-        toast({
-            variant: "destructive",
-            title: "Resi Duplikat",
-            description: `Resi ini sudah discan pada ${format(parseISO(existingReceipt.date), 'dd MMM yyyy, HH:mm')}`
-        });
-        setAwb('');
-        return;
-    }
-    
-    setIsSubmitting(true);
-    
-     const newReceipt: Omit<ShippingReceipt, 'id'> = {
-        awb: trimmedAwb,
-        salesChannel: salesChannel,
-        channel: shippingChannel,
-        date: format(selectedDate, "yyyy-MM-dd'T'HH:mm:ss"),
-        status: 'Terproses',
-        transactionId: trimmedAwb
-    };
-
-    setReceiptForSale(newReceipt);
-    setIsSaleDialogOpen(true);
-    setAwb('');
-    setIsSubmitting(false);
-    playSuccessSound();
-  };
-  
-  const handleDeleteReceipt = async (receipt: ShippingReceipt) => {
-    try {
-        if (receipt.transactionId) {
-            await cancelSaleTransaction(receipt.transactionId);
-        }
-        await deleteShippingReceipt(receipt.id);
-        
-        toast({
-            title: 'Resi Dihapus & Stok Dikembalikan',
-            description: `Resi ${receipt.awb} telah dihapus dan stok telah dikembalikan.`,
-        });
-        await loadReceipts(); 
-    } catch (error) {
-        console.error("Error during receipt deletion:", error);
-        toast({ variant: 'destructive', title: 'Gagal Menghapus', description: 'Terjadi kesalahan saat menghapus resi dan mengembalikan stok.' });
-    }
-  };
-  
-  const handleViewDetails = (receipt: ShippingReceipt) => {
-    if (!receipt.transactionId) {
-        setReceiptForSale(receipt);
-        setIsSaleDialogOpen(true);
-        return;
-    };
-    
-    const items = salesByReceipt.get(receipt.transactionId) || [];
-    if (items.length > 0) {
-        setDetailItems(items);
-        setIsDetailOpen(true);
-    } else {
-        setReceiptForSale(receipt);
-        setIsSaleDialogOpen(true);
-    }
-  }
-  
-  const totalPages = Math.ceil(totalReceipts / itemsPerPage);
-
-  const handleSaleComplete = async (receiptData: Omit<ShippingReceipt, 'id'>, salesData: Omit<Sale, 'id'>[]) => {
-      try {
-        await recordSaleWithReceipt(receiptData, salesData);
-        toast({
-            title: "Penjualan Berhasil Dicatat",
-            description: `Penjualan untuk resi ${receiptData.awb} telah disimpan.`,
-        });
-      } catch (error) {
-          console.error("Failed to record sale with receipt:", error);
-          toast({
-              title: "Gagal Mencatat Penjualan",
-              description: "Terjadi kesalahan saat menyimpan data penjualan.",
-              variant: "destructive",
-          });
-      } finally {
-        setIsSaleDialogOpen(false);
-        setReceiptForSale(null);
-        await loadReceipts();
-      }
-  };
+  const {
+      t, router, receipts, totalReceipts, loading, awb, setAwb, isSubmitting, awbInputRef,
+      currentPage, setCurrentPage, itemsPerPage, searchTerm, setSearchTerm, selectedDate,
+      setSelectedDate, detailItems, isDetailOpen, setIsDetailOpen, receiptForSale,
+      isSaleDialogOpen, setIsSaleDialogOpen, salesChannel, shippingChannel, salesByReceipt,
+      handleAwbSubmit, handleViewDetails, handleSaleComplete, totalPages
+  } = useReceiptPageLogic('Tiktok');
 
   return (
     <AppLayout>

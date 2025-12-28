@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
@@ -44,7 +43,7 @@ import { DailySalesDetailDialog } from '@/app/components/daily-sales-detail-dial
 import { Badge } from '@/components/ui/badge';
 import { RecordSaleForReceiptDialog } from '@/app/components/record-sale-for-receipt-dialog';
 
-function useReceiptPageLogic() {
+function useReceiptPageLogic(salesChannel: 'Shopee' | 'Tiktok' | 'Lazada') {
     const params = useParams();
     const router = useRouter();
     const inventoryContext = useInventory();
@@ -53,7 +52,6 @@ function useReceiptPageLogic() {
     const { language } = useLanguage();
     const t = translations[language];
 
-    const salesChannel = "Shopee";
     const shippingChannel = typeof params.channel === 'string' ? decodeURIComponent(params.channel).toUpperCase() : '';
 
     const [receipts, setReceipts] = useState<ShippingReceipt[]>([]);
@@ -102,7 +100,7 @@ function useReceiptPageLogic() {
         } finally {
             setLoading(false);
         }
-    }, [inventoryContext.fetchShippingReceipts, toast, currentPage, itemsPerPage, searchTerm, salesChannel, shippingChannel, selectedDate]);
+    }, [inventoryContext, toast, currentPage, itemsPerPage, searchTerm, salesChannel, shippingChannel, selectedDate]);
     
     useEffect(() => {
         loadReceipts();
@@ -213,7 +211,7 @@ export default function ShopeeChannelPage() {
       setSelectedDate, detailItems, isDetailOpen, setIsDetailOpen, receiptForSale,
       isSaleDialogOpen, setIsSaleDialogOpen, salesChannel, shippingChannel, salesByReceipt,
       handleAwbSubmit, handleViewDetails, handleSaleComplete, totalPages
-  } = useReceiptPageLogic();
+  } = useReceiptPageLogic('Shopee');
 
   return (
     <AppLayout>
@@ -367,5 +365,6 @@ export default function ShopeeChannelPage() {
     </AppLayout>
   );
 }
+
 
 
