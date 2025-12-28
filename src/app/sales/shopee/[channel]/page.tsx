@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
@@ -63,7 +64,7 @@ export function useReceiptPageLogic(salesChannel: 'Shopee' | 'Tiktok' | 'Lazada'
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(50);
     const [searchTerm, setSearchTerm] = useState('');
-    const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
+    const [selectedDate, setSelectedDate] = useState<Date | undefined>();
     
     const [detailItems, setDetailItems] = useState<Sale[]>([]);
     const [isDetailOpen, setIsDetailOpen] = useState(false);
@@ -91,7 +92,7 @@ export function useReceiptPageLogic(salesChannel: 'Shopee' | 'Tiktok' | 'Lazada'
                 salesChannel: salesChannel,
                 channel: shippingChannel, 
                 awb: searchTerm,
-                date_range: { from: startOfDay(selectedDate), to: endOfDay(selectedDate) }
+                date_range: { from: selectedDate, to: null }
             });
             setReceipts(receiptsData);
             setTotalReceipts(total);
@@ -390,3 +391,4 @@ export default function ShopeeChannelPage() {
     </AppLayout>
   );
 }
+
