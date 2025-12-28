@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useMemo, useEffect } from 'react';
@@ -73,8 +74,8 @@ export function PosOrderSummary({ cart, onSaleComplete, clearCart, channel, pend
 
     const handleSale = async (status: 'Completed' | 'Pending') => {
         setIsSubmitting(true);
-        const saleData: ReceiptData = {
-            items: cart,
+        const receiptData: ReceiptData = {
+            items: cart.map(item => ({...item, name: item.productName})),
             subtotal,
             discount,
             total,
@@ -85,7 +86,7 @@ export function PosOrderSummary({ cart, onSaleComplete, clearCart, channel, pend
         };
         
         try {
-            await onSaleComplete(paymentMethod, saleData, status);
+            await onSaleComplete(paymentMethod, receiptData, status);
             resetForm();
         } catch (error) {
             console.error("Sale failed, not resetting form.", error);

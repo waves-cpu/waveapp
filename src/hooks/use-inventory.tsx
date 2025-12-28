@@ -3,7 +3,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
-import type { InventoryItem, AdjustmentHistory, InventoryItemVariant, Sale, Reseller, Accessory, ShippingReceipt, BulkImportHistory, User, ReturnedItem, DiscountGroup, DiscountedProduct, PrintedReceiptCount } from '@/types';
+import type { InventoryItem, AdjustmentHistory, InventoryItemVariant, Sale, Reseller, ChannelPrice, Accessory, ShippingReceipt, BulkImportHistory, User, ReturnedItem, DiscountGroup, DiscountedProduct, PrintedReceiptCount } from '@/types';
 import { categories as allCategories } from '@/types';
 import { useToast } from './use-toast';
 
@@ -49,7 +49,7 @@ interface InventoryContextType {
   bulkUpdateVariants: (itemId: string, variants: InventoryItemVariant[], reason: string) => Promise<void>;
   fetchItems: () => Promise<void>;
   loading: boolean;
-  recordSale: (sku: string, channel: string, quantity: number, options?: { saleDate?: Date; transactionId?: string; paymentMethod?: string; resellerName?: string; priceAtSale?: number; status?: string; }) => Promise<{ newSale: Sale, updatedItem?: InventoryItem, updatedAccessory?: Accessory }>;
+  recordSale: (sku: string, channel: string, quantity: number, options?: { saleDate?: Date; transactionId?: string; paymentMethod?: string; resellerName?: string; priceAtSale?: number; status?: string; }) => Promise<any>;
   recordSaleWithReceipt: (receiptData: Omit<ShippingReceipt, 'id'>, salesData: Omit<Sale, 'id'>[]) => Promise<void>;
   fetchSales: (channel: string, date: Date, page: number, limit: number) => Promise<{sales: Sale[], total: number}>;
   cancelSaleTransaction: (transactionId: string) => Promise<void>;
@@ -204,8 +204,7 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
   };
   
   const getHistory = async (itemId: string): Promise<AdjustmentHistory[]> => {
-    // This is now mainly for client-side filtering if needed, as data comes with items.
-    const item = getItem(itemId);
+    const item = items.find(i => i.id === itemId);
     return item?.history || [];
   };
 
@@ -218,7 +217,7 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
     return undefined;
   }, [items]);
 
-  const recordSale = async (sku: string, channel: string, quantity: number, options?: { saleDate?: Date, transactionId?: string, paymentMethod?: string, resellerName?: string, priceAtSale?: number, status?: string }): Promise<{ newSale: Sale, updatedItem?: InventoryItem, updatedAccessory?: Accessory }> => {
+  const recordSale = async (sku: string, channel: string, quantity: number, options?: { saleDate?: Date, transactionId?: string, paymentMethod?: string, resellerName?: string, priceAtSale?: number, status?: string }): Promise<any> => {
     const salePayload = {
       sales: [{ sku, quantity, price: options?.priceAtSale }],
       options: { ...options, channel }
@@ -286,7 +285,8 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const findShippingReceiptByAwb = async (awb: string): Promise<ShippingReceipt | null> => {
-    return await apiFetch(`/api/shipping/receipts?awb=${awb}`).then(res => res.receipts[0] || null);
+    const result = await apiFetch(`/api/shipping/receipts?awb=${awb}`);
+    return result?.receipts?.[0] || null;
   };
   
   const fetchShippingReceipts = async (options: { page: number; limit: number; channel?: string; salesChannel?: string; date_range?: {from: Date | null, to: Date}; status?: string[]; awb?: string; }) => {

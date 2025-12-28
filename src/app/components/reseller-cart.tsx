@@ -208,23 +208,20 @@ export function ResellerCart({ reseller }: ResellerCartProps) {
     };
 
     const handleSaleComplete = async (paymentMethod: string, receiptData: ReceiptData, status: 'Completed' | 'Pending' = 'Completed') => {
-        const salesPayload = {
-            sales: cart.map(item => ({
-                sku: item.sku!,
-                channel: 'reseller',
-                quantity: item.quantity,
-                price: item.price,
-            })),
-            options: {
+        const salesPayload = cart.map(item => ({
+            sku: item.sku!,
+            quantity: item.quantity,
+            price: item.price,
+        }));
+
+        try {
+            await recordSale('reseller', 0, {
+                sales: salesPayload,
                 transactionId: `trans-${Date.now()}`,
                 paymentMethod,
                 resellerName: reseller.name,
                 status,
-            }
-        };
-
-        try {
-            await apiFetch('/api/sales', { method: 'POST', body: JSON.stringify(salesPayload) });
+            });
 
             toast({
                 title: "Invoice Dibuat",

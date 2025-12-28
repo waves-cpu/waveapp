@@ -314,22 +314,19 @@ export function PosCart() {
     };
 
     const handleSaleComplete = async (paymentMethod: string, receiptData: ReceiptData, status: 'Completed' | 'Pending' = 'Completed') => {
-        const salesPayload = {
-            sales: cart.map(item => ({
-                sku: item.sku,
-                channel: 'pos',
-                quantity: item.quantity,
-                price: item.price,
-            })),
-            options: {
+        const salesPayload = cart.map(item => ({
+            sku: item.sku,
+            quantity: item.quantity,
+            price: item.price,
+        }));
+
+        try {
+            await recordSale('pos', 0, {
+                sales: salesPayload,
                 transactionId: pendingTransactionId || `trans-${Date.now()}`,
                 paymentMethod: paymentMethod,
                 status: status,
-            }
-        };
-
-        try {
-            await apiFetch('/api/sales', { method: 'POST', body: JSON.stringify(salesPayload) });
+            });
 
             if (status === 'Completed') {
                 const isAccessoryOnly = cart.every(item => item.type === 'accessory');
