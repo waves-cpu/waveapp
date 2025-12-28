@@ -6,6 +6,8 @@ import React, { createContext, useContext, useState, ReactNode, useEffect, useCa
 import type { InventoryItem, AdjustmentHistory, InventoryItemVariant, Sale, Reseller, ChannelPrice, Accessory, ShippingReceipt, BulkImportHistory, User, ReturnedItem, DiscountGroup, DiscountedProduct, PrintedReceiptCount } from '@/types';
 import { categories as allCategories } from '@/types';
 import { useToast } from './use-toast';
+import { format as formatDate, parseISO, startOfDay, endOfDay } from 'date-fns';
+
 
 const API_KEY = process.env.NEXT_PUBLIC_API_KEY || 'secret-api-key-for-waveapp';
 
@@ -49,7 +51,7 @@ interface InventoryContextType {
   bulkUpdateVariants: (itemId: string, variants: InventoryItemVariant[], reason: string) => Promise<void>;
   fetchItems: () => Promise<void>;
   loading: boolean;
-  recordSale: (sku: string, channel: string, quantity: number, options?: { saleDate?: Date; transactionId?: string; paymentMethod?: string; resellerName?: string; priceAtSale?: number; status?: string; }) => Promise<any>;
+  recordSale: (channel: string, quantity: number, options: any) => Promise<any>;
   recordSaleWithReceipt: (receiptData: Omit<ShippingReceipt, 'id'>, salesData: Omit<Sale, 'id'>[]) => Promise<void>;
   fetchSales: (channel: string, date: Date, page: number, limit: number) => Promise<{sales: Sale[], total: number}>;
   cancelSaleTransaction: (transactionId: string) => Promise<void>;
@@ -81,7 +83,7 @@ interface InventoryContextType {
   getReceiptCountByStatus: (status: string) => Promise<Record<string, number>>;
   getPendingReceiptsBeforeDate: (date: Date) => Promise<number>;
   addPrintedReceipts: (date: string, salesChannel: string, shippingChannel: string, count: number) => Promise<void>;
-  checkPrintedReceiptAvailability: (salesChannel: string, shippingChannel: string, date: Date) => Promise<boolean>;
+  checkPrintedReceiptAvailability: (salesChannel: string, shippingChannel: string, date: string) => Promise<boolean>;
   getPrintedReceiptCountsForDate: (date: string) => Promise<PrintedReceiptCount[]>;
   // Bulk Import History
   fetchImportHistory: () => Promise<BulkImportHistory[]>;
@@ -217,9 +219,9 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
     return undefined;
   }, [items]);
 
-  const recordSale = async (sku: string, channel: string, quantity: number, options?: { saleDate?: Date, transactionId?: string, paymentMethod?: string, resellerName?: string, priceAtSale?: number, status?: string }): Promise<any> => {
+  const recordSale = async (channel: string, quantity: number, options: any): Promise<any> => {
     const salePayload = {
-      sales: [{ sku, quantity, price: options?.priceAtSale }],
+      sales: [{ sku: options.sku, quantity, price: options?.priceAtSale }],
       options: { ...options, channel }
     };
     const result = await apiFetch('/api/sales', { method: 'POST', body: JSON.stringify(salePayload) });
@@ -371,8 +373,7 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
       return await apiFetch(`/api/finance/discounts/${id}`);
   }
   
-  const checkPrintedReceiptAvailability = async (salesChannel: string, shippingChannel: string, date: Date) => {
-      const dateString = date.toISOString().split('T')[0];
+  const checkPrintedReceiptAvailability = async (salesChannel: string, shippingChannel: string, dateString: string) => {
       const result = await apiFetch(`/api/shipping/printed-receipts/check?salesChannel=${salesChannel}&shippingChannel=${shippingChannel}&date=${dateString}`);
       return result.isAvailable;
   }

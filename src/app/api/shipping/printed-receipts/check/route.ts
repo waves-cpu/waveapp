@@ -1,4 +1,5 @@
 
+
 import { checkPrintedReceiptAvailability } from '@/lib/inventory-service';
 import { NextRequest, NextResponse } from 'next/server';
 import { headers } from 'next/headers';
@@ -22,7 +23,7 @@ export async function GET(request: NextRequest) {
     }
 
     try {
-        const isAvailable = await checkPrintedReceiptAvailability(salesChannel, shippingChannel, new Date(dateString));
+        const isAvailable = await checkPrintedReceiptAvailability(salesChannel, shippingChannel, dateString);
         return NextResponse.json({ isAvailable });
     } catch (error) {
         console.error('API Error checking printed receipt availability:', error);

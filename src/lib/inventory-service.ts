@@ -103,8 +103,7 @@ export async function addPrintedReceipts(date: string, salesChannel: string, shi
     }
 }
 
-export async function consumePrintedReceipt(salesChannel: string, shippingChannel: string, date: Date): Promise<boolean> {
-    const dateString = formatDate(date, 'yyyy-MM-dd');
+export async function consumePrintedReceipt(salesChannel: string, shippingChannel: string, dateString: string): Promise<boolean> {
     const record = db.prepare('SELECT id, count FROM printed_receipt_counts WHERE date = ? AND salesChannel = ? AND shippingChannel = ? AND count > 0').get(dateString, salesChannel, shippingChannel) as PrintedReceiptCount | undefined;
     
     if (record) {
@@ -114,8 +113,7 @@ export async function consumePrintedReceipt(salesChannel: string, shippingChanne
     return false;
 }
 
-export async function checkPrintedReceiptAvailability(salesChannel: string, shippingChannel: string, date: Date): Promise<boolean> {
-    const dateString = formatDate(date, 'yyyy-MM-dd');
+export async function checkPrintedReceiptAvailability(salesChannel: string, shippingChannel: string, dateString: string): Promise<boolean> {
     const record = db.prepare('SELECT count FROM printed_receipt_counts WHERE date = ? AND salesChannel = ? AND shippingChannel = ?').get(dateString, salesChannel, shippingChannel) as { count: number } | undefined;
     return (record?.count ?? 0) > 0;
 }
@@ -828,10 +826,10 @@ export async function findProductBySku(sku: string): Promise<InventoryItem | nul
 
 
 export async function performSale(
-    sku: string, 
     channel: string, 
     quantity: number, 
-    options?: {
+    options: {
+        sku: string;
         saleDate?: Date, 
         transactionId?: string, 
         paymentMethod?: string,
@@ -850,7 +848,7 @@ export async function performSale(
 
     const { newSaleId } = db.transaction(() => {
         const saleDate = options?.saleDate || new Date();
-        const saleDateString = saleDate.toISOString();
+        const saleDateString = formatDate(saleDate, "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
         const saleReason = `Sale (${channel})` + (options?.resellerName ? ` - ${options.resellerName}` : '');
 
         let cogsAtSale;
@@ -861,6 +859,7 @@ export async function performSale(
         let accessoryId: string | number | null = null;
         
         let finalPriceAtSale: number;
+        const sku = options.sku;
 
         const variant = getVariantStmt.get(sku) as (InventoryItemVariant & { id: number, productId: number, costPrice?: number }) | undefined;
         const product = getProductStmt.get(sku) as (InventoryItem & { id: number, costPrice?: number, sku: string }) | undefined;
@@ -1670,6 +1669,7 @@ async function updateShippingReceiptStatusByAwb(awb: string, status: string) {
 
 
     
+
 
 
 
