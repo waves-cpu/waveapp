@@ -90,9 +90,9 @@ export function BulkEditVariantsDialog({ open, onOpenChange, item }: BulkEditVar
   }, [fields.length]);
 
 
-  function onSubmit(values: z.infer<typeof formSchema>) {
+  async function onSubmit(values: z.infer<typeof formSchema>) {
     const stockOnlyUpdates = values.variants.map(v => ({ id: v.id, stock: v.stock, name: v.name, price: v.price, sku: v.sku }));
-    bulkUpdateVariants(item.id, stockOnlyUpdates, values.reason);
+    await bulkUpdateVariants(item.id, stockOnlyUpdates, values.reason);
     toast({
       title: TBulk.successToastTitle,
       description: TBulk.successToastDesc.replace('{name}', item.name),

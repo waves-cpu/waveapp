@@ -1,5 +1,5 @@
 
-import { recordSale, fetchAllSales } from '@/lib/inventory-service';
+import { performSale, fetchAllSales } from '@/lib/inventory-service';
 import { NextRequest, NextResponse } from 'next/server';
 import { headers } from 'next/headers';
 import { parseISO, isWithinInterval, startOfDay, endOfDay } from 'date-fns';
@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
 
     const transactionId = options?.transactionId || `trans-${Date.now()}`;
     const salePromises = sales.map((sale: any) => 
-      recordSale(sale.sku, sale.channel, sale.quantity, {
+      performSale(sale.sku, sale.channel, sale.quantity, {
         ...options,
         transactionId: transactionId,
         priceAtSale: sale.price,

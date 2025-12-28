@@ -24,6 +24,10 @@ const apiFetch = async (url: string, options: RequestInit = {}) => {
         throw new Error(errorData.message);
     }
 
+    if (res.status === 204) { // No Content
+        return null;
+    }
+
     if (res.headers.get('Content-Type')?.includes('application/json')) {
         return res.json();
     }
@@ -35,7 +39,7 @@ const apiFetch = async (url: string, options: RequestInit = {}) => {
 interface InventoryContextType {
   items: InventoryItem[];
   addItem: (item: any) => Promise<void>;
-  bulkAddProducts: (products: any[], fileName: string) => Promise<{ addedProducts: {sku: string, name: string}[], skippedProducts: {sku: string, name: string}[] }>;
+  bulkAddProducts: (products: any[], fileName: string) => Promise<{ addedCount: number, skippedCount: number, addedSkus: any[], skippedSkus: any[] }>;
   bulkUpdateProducts: (products: any[]) => Promise<{ updatedCount: number; notFoundSkus: string[] }>;
   updateItem: (itemId: string, itemData: any) => Promise<void>;
   updateStock: (itemId: string, change: number, reason: string) => Promise<void>;
@@ -124,17 +128,19 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
   const fetchAllData = useCallback(async () => {
     setLoading(true);
     try {
-      const [inventoryData, salesData, resellerData, receiptData] = await Promise.all([
+      const [inventoryData, salesData, resellerData, receiptData, discountData] = await Promise.all([
           apiFetch('/api/products'),
           apiFetch('/api/sales').then(res => res.sales),
           apiFetch('/api/resellers'),
-          apiFetch('/api/shipping/receipts?limit=100000').then(res => res.receipts)
+          apiFetch('/api/shipping/receipts?limit=100000').then(res => res.receipts),
+          apiFetch('/api/finance/discounts'),
       ]);
       setItems(inventoryData.products);
       setAccessories(inventoryData.accessories);
       setAllSales(salesData);
       setResellers(resellerData);
       setAllShippingReceipts(receiptData);
+      setDiscountGroups(discountData);
     } catch (error) {
        toast({ title: 'Error Fetching Data', description: error instanceof Error ? error.message : 'Could not fetch initial data.', variant: 'destructive'});
     } finally {
@@ -166,49 +172,39 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const addItem = async (itemData: any) => {
-    const { id } = await apiFetch('/api/products', { method: 'POST', body: JSON.stringify(itemData) });
-    const newItem = await apiFetch(`/api/products/${id}`);
-    setItems(prev => [...prev, newItem]);
+    await apiFetch('/api/products', { method: 'POST', body: JSON.stringify(itemData) });
+    await fetchAllData();
   };
   
-  const bulkAddProducts = async (products: any[], fileName: string): Promise<{ addedProducts: {sku: string, name: string}[], skippedProducts: {sku: string, name: string}[] }> => {
-    // This function now directly calls the backend service which handles history and DB operations
-    // const result = await bulkAddProductsDb(products, fileName);
+  const bulkAddProducts = async (products: any[], fileName: string): Promise<{ addedCount: number, skippedCount: number, addedSkus: any[], skippedSkus: any[] }> => {
+    const result = await apiFetch('/api/products/bulk-add', { method: 'POST', body: JSON.stringify({ products, fileName }) });
     await fetchAllData();
-    // return result;
-    return { addedProducts: [], skippedProducts: [] }; // Placeholder, since this is a complex operation better handled by the backend directly
+    return result;
   };
   
   const bulkUpdateProducts = async (products: any[]): Promise<{ updatedCount: number; notFoundSkus: string[] }> => {
-    // const result = await bulkUpdateProductsDb(products);
+    const result = await apiFetch('/api/products/bulk-update', { method: 'POST', body: JSON.stringify({ products }) });
     await fetchAllData();
-    // return result;
-    return { updatedCount: 0, notFoundSkus: [] }; // Placeholder
+    return result;
   };
 
   const updateItem = async (itemId: string, itemData: any) => {
     await apiFetch(`/api/products/${itemId}`, { method: 'PUT', body: JSON.stringify(itemData) });
-    const updatedItem = await apiFetch(`/api/products/${itemId}`);
-    setItems(prev => prev.map(item => item.id === itemId ? updatedItem : item));
+    await fetchAllData();
   };
 
   const bulkUpdateVariants = async (itemId: string, variants: InventoryItemVariant[], reason: string) => {
-    // This is more complex. The API would need to support this. For now, let's assume it doesn't and we would need a new endpoint.
-    // Let's just refetch for now
-    await fetchAllData();
+     await apiFetch(`/api/products/${itemId}/variants-bulk-update`, { method: 'POST', body: JSON.stringify({ variants, reason }) });
+     await fetchAllData();
   };
 
   const updateStock = async (itemId: string, change: number, reason: string) => {
     await apiFetch(`/api/products/${itemId}/stock`, { method: 'POST', body: JSON.stringify({ change, reason }) });
-    const itemToUpdate = getItem(itemId);
-    if(itemToUpdate) {
-        const freshItem = await apiFetch(`/api/products/${itemToUpdate.id}`);
-        setItems(prev => prev.map(i => i.id === itemToUpdate.id ? freshItem : i));
-    }
+    await fetchAllData();
   };
   
   const getHistory = async (itemId: string): Promise<AdjustmentHistory[]> => {
-    // History is part of the item object now, this can be simplified.
+    // This is now mainly for client-side filtering if needed, as data comes with items.
     const item = getItem(itemId);
     return item?.history || [];
   };
@@ -227,9 +223,9 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
       sales: [{ sku, quantity, price: options?.priceAtSale }],
       options: { ...options, channel }
     };
-    const { data } = await apiFetch('/api/sales', { method: 'POST', body: JSON.stringify(salePayload) });
+    const result = await apiFetch('/api/sales', { method: 'POST', body: JSON.stringify(salePayload) });
     await fetchAllData(); // Re-sync state
-    return data;
+    return result;
   };
   
   const recordSaleWithReceipt = async (receiptData: Omit<ShippingReceipt, 'id'>, salesData: Omit<Sale, 'id'>[]) => {
@@ -245,20 +241,17 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
   };
   
   const cancelSaleTransaction = async (transactionId: string) => {
-    // This needs a dedicated API endpoint
-    // await apiFetch(`/api/sales/transaction/${transactionId}`, { method: 'DELETE' });
+    await apiFetch(`/api/sales/transaction/${transactionId}`, { method: 'DELETE' });
     await fetchAllData();
   }
   
   const returnSaleTransaction = async (transactionId: string) => {
-    // This needs a dedicated API endpoint
-    // await apiFetch(`/api/sales/transaction/${transactionId}/return`, { method: 'POST' });
+    await apiFetch(`/api/sales/transaction/${transactionId}/return`, { method: 'POST' });
     await fetchAllData();
   }
   
   const revertSaleItem = async (transactionId: string, sku: string) => {
-    // This needs a dedicated API endpoint
-    // await apiFetch(`/api/sales/transaction/${transactionId}/revert`, { method: 'POST', body: JSON.stringify({ sku }) });
+    await apiFetch(`/api/sales/transaction/${transactionId}/revert`, { method: 'POST', body: JSON.stringify({ sku }) });
     await fetchAllData();
   }
 
@@ -268,12 +261,12 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
 
   const archiveProduct = async (itemId: string, isArchived: boolean) => {
     await apiFetch(`/api/products/${itemId}`, { method: 'PUT', body: JSON.stringify({ isArchived }) });
-    setItems(prev => prev.map(i => i.id === itemId ? { ...i, isArchived: isArchived } : i));
+    await fetchAllData();
   };
   
   const deleteProductPermanently = async (itemId: string) => {
     await apiFetch(`/api/products/${itemId}`, { method: 'DELETE' });
-    setItems(prev => prev.filter(i => i.id !== itemId));
+    await fetchAllData();
   }
   
   const addAccessory = async (accessory: Omit<Accessory, 'id' | 'history'>) => {
@@ -317,12 +310,11 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
   };
   
   const addPrintedReceipts = async (date: string, salesChannel: string, shippingChannel: string, count: number) => {
-    // await addPrintedReceiptsDb(date, salesChannel, shippingChannel, count);
+    await apiFetch('/api/shipping/printed-receipts', { method: 'POST', body: JSON.stringify({ date, salesChannel, shippingChannel, count }) });
   };
 
   const getPrintedReceiptCountsForDate = async (date: string) => {
-      // return getPrintedReceiptCountsForDateDb(date);
-      return [];
+      return await apiFetch(`/api/shipping/printed-receipts?date=${date}`);
   };
 
   const deleteShippingReceipt = async (id: number) => {
@@ -332,16 +324,16 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
 
   const updateShippingReceiptsStatus = async (ids: number[], status: string) => {
     await apiFetch(`/api/shipping/receipts/status`, { method: 'PUT', body: JSON.stringify({ ids, status }) });
-    setAllShippingReceipts(prev => prev.map(r => ids.includes(r.id) ? {...r, status} : r));
+    await fetchAllData();
   };
 
   const updateShippingReceiptStatus = async (id: number, status: string) => {
     await apiFetch(`/api/shipping/receipts/${id}`, { method: 'PUT', body: JSON.stringify({ status }) });
-    setAllShippingReceipts(prev => prev.map(r => r.id === id ? { ...r, status } : r));
+    await fetchAllData();
   };
 
   const deleteImportHistory = async (id: number) => {
-    // await deleteBulkImportHistoryDb(id);
+    await apiFetch(`/api/products/bulk-add/${id}`, { method: 'DELETE' });
   }
 
   const getReceiptCountByStatus = async (status: string) => {
@@ -349,39 +341,42 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
   }
   
   const getPendingReceiptsBeforeDate = async (date: Date) => {
-      // return await getPendingReceiptsBeforeDateDb(date);
-      return 0;
+      return await apiFetch(`/api/shipping/receipts/pending-count?before=${date.toISOString()}`).then(res => res.count);
   }
 
   const clearPosTransactions = async (date: Date) => {
-    // await clearPosTransactionsDb(date);
+    await apiFetch(`/api/sales/pos-history?date=${date.toISOString()}`, { method: 'DELETE' });
   };
 
   const fetchDiscountGroups = useCallback(async () => {
-    // const groups = await fetchDiscountGroupsDb();
-    // setDiscountGroups(groups);
+    const groups = await apiFetch('/api/finance/discounts');
+    setDiscountGroups(groups);
   }, []);
   
   const addDiscountGroup = async (group: Omit<DiscountGroup, 'id'|'productCount'>) => {
-      // await addDiscountGroupDb(group);
-      await fetchAllData();
+      await apiFetch('/api/finance/discounts', { method: 'POST', body: JSON.stringify(group) });
+      await fetchDiscountGroups();
   }
   const editDiscountGroup = async (id: number, group: Omit<DiscountGroup, 'id'|'productCount'>) => {
-      // await editDiscountGroupDb(id, group);
-      await fetchAllData();
+      await apiFetch(`/api/finance/discounts/${id}`, { method: 'PUT', body: JSON.stringify(group) });
+      await fetchDiscountGroups();
   }
   const deleteDiscountGroup = async (id: number) => {
-      // await deleteDiscountGroupDb(id);
-      await fetchAllData();
+      await apiFetch(`/api/finance/discounts/${id}`, { method: 'DELETE' });
+      await fetchDiscountGroups();
   }
   const getDiscountGroup = async (id: number) => {
-      // return await getDiscountGroupDb(id);
-      return null;
+      return await apiFetch(`/api/finance/discounts/${id}`);
   }
   
   const checkPrintedReceiptAvailability = async (salesChannel: string, shippingChannel: string, date: Date) => {
-      // This logic should now be on the server. The client will just get an error.
-      return true;
+      const dateString = date.toISOString().split('T')[0];
+      const result = await apiFetch(`/api/shipping/printed-receipts/check?salesChannel=${salesChannel}&shippingChannel=${shippingChannel}&date=${dateString}`);
+      return result.isAvailable;
+  }
+
+  const fetchImportHistory = async () => {
+      return await apiFetch('/api/products/bulk-add');
   }
 
 
@@ -431,7 +426,7 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
         addPrintedReceipts,
         getPrintedReceiptCountsForDate,
         checkPrintedReceiptAvailability,
-        fetchImportHistory: async () => [],
+        fetchImportHistory,
         deleteImportHistory,
         clearPosTransactions,
         pendingTransaction,
