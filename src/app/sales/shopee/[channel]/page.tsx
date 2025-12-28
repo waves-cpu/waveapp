@@ -63,13 +63,17 @@ export function useReceiptPageLogic(salesChannel: 'Shopee' | 'Tiktok' | 'Lazada'
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(50);
     const [searchTerm, setSearchTerm] = useState('');
-    const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
+    const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
     
     const [detailItems, setDetailItems] = useState<Sale[]>([]);
     const [isDetailOpen, setIsDetailOpen] = useState(false);
     
     const [receiptForSale, setReceiptForSale] = useState<Omit<ShippingReceipt, 'id'> | ShippingReceipt | null>(null);
     const [isSaleDialogOpen, setIsSaleDialogOpen] = useState(false);
+
+    useEffect(() => {
+        setSelectedDate(new Date());
+    }, []);
 
     const refocusInput = useCallback(() => {
         if (!isSaleDialogOpen) {
