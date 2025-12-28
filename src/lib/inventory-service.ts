@@ -434,17 +434,11 @@ export async function addProduct(itemData: any): Promise<string> {
     const transaction = db.transaction(() => {
         const hasVariants = !!(itemData.hasVariants && itemData.variants && itemData.variants.length > 0);
         
-        let releaseDateValue: string | null = null;
-        if (itemData.releaseDate) {
-            // The date is already a string from the form
-            releaseDateValue = itemData.releaseDate;
-        }
-
         const productResult = addProductStmt.run({
             name: itemData.name,
             category: itemData.category,
             sku: itemData.sku || null,
-            releaseDate: releaseDateValue,
+            releaseDate: itemData.releaseDate ? itemData.releaseDate : null,
             imageUrl: itemData.imageUrl || 'https://placehold.co/40x40.png',
             hasVariants: hasVariants ? 1 : 0,
             stock: hasVariants ? null : itemData.stock,
@@ -649,18 +643,12 @@ export async function editProduct(itemId: string, itemData: any) {
     db.transaction(() => {
         const hasVariants = !!(itemData.hasVariants && itemData.variants && itemData.variants.length > 0);
 
-        let releaseDateValue: string | null = null;
-        if (itemData.releaseDate) {
-            // The date is already a string from the form
-            releaseDateValue = itemData.releaseDate;
-        }
-
         updateProductStmt.run({
             id: itemId,
             name: itemData.name,
             category: itemData.category,
             sku: itemData.sku || null,
-            releaseDate: releaseDateValue,
+            releaseDate: itemData.releaseDate ? itemData.releaseDate : null,
             imageUrl: itemData.imageUrl || 'https://placehold.co/40x40.png',
             hasVariants: hasVariants ? 1 : 0,
             stock: hasVariants ? null : itemData.stock,
@@ -862,8 +850,7 @@ export async function performSale(
 
     const { newSaleId } = db.transaction(() => {
         const saleDate = options?.saleDate || new Date();
-        // Use local time string to avoid timezone shifts
-        const saleDateString = new Date(saleDate.getTime() - (saleDate.getTimezoneOffset() * 60000)).toISOString().slice(0, -1);
+        const saleDateString = saleDate.toISOString();
         const saleReason = `Sale (${channel})` + (options?.resellerName ? ` - ${options.resellerName}` : '');
 
         let cogsAtSale;
@@ -1683,6 +1670,7 @@ async function updateShippingReceiptStatusByAwb(awb: string, status: string) {
 
 
     
+
 
 
 

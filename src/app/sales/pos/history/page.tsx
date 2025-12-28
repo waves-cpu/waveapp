@@ -10,7 +10,7 @@ import { translations } from '@/types/language';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { format } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import { id as aing } from 'date-fns/locale';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -78,7 +78,7 @@ export default function PosHistoryPage() {
         const filtered = allSales.filter(s => s.channel === 'pos');
         if (date) {
             const selectedDateString = format(date, 'yyyy-MM-dd');
-            return filtered.filter(s => format(new Date(s.saleDate), 'yyyy-MM-dd') === selectedDateString);
+            return filtered.filter(s => format(parseISO(s.saleDate), 'yyyy-MM-dd') === selectedDateString);
         }
         return filtered;
     }, [allSales, date]);

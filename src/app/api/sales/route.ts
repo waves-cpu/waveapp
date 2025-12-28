@@ -24,11 +24,12 @@ export async function GET(request: NextRequest) {
     const allSales = await fetchAllSales();
 
     if (startDateParam && endDateParam) {
+        const startDate = parseISO(startDateParam);
+        const endDate = parseISO(endDateParam);
         const filteredSales = allSales.filter(sale => {
             const saleDate = parseISO(sale.saleDate);
-            const startDate = startOfDay(parseISO(startDateParam));
-            const endDate = endOfDay(parseISO(endDateParam));
-            return isWithinInterval(saleDate, { start: startDate, end: endDate });
+            // This logic is now correct for inclusive date range filtering
+            return saleDate >= startOfDay(startDate) && saleDate <= endOfDay(endDate);
         });
         return NextResponse.json({ sales: filteredSales });
     }
@@ -75,4 +76,5 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ message: error.message || 'Internal Server Error' }, { status: 500 });
   }
 }
+
 

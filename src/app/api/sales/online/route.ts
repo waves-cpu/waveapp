@@ -1,4 +1,5 @@
 
+
 import { recordSaleWithReceipt } from '@/lib/inventory-service';
 import { NextRequest, NextResponse } from 'next/server';
 import { headers } from 'next/headers';
@@ -43,7 +44,7 @@ export async function POST(request: NextRequest) {
         sku: sale.sku,
         channel: receipt.salesChannel,
         quantity: sale.quantity,
-        priceAtSale: sale.price,
+        priceAtSale: sale.price || 0,
         saleDate: receiptData.date,
         status: 'Terproses',
     }));

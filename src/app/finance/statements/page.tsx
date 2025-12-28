@@ -116,9 +116,10 @@ export default function StatementsPage() {
     } = useMemo(() => {
         if (!date?.from) return { grossRevenue: 0, grossProfit: 0, unitsSold: 0, cancelledSales: { count: 0, value: 0 }, returnedSales: { count: 0, value: 0 }, bestsellers: [], topCategories: [], topSizes: [] };
         
+        const toDate = date.to || date.from;
+
         const salesInDateRange = allSales.filter(sale => {
             const saleDate = parseISO(sale.saleDate);
-            const toDate = date.to || date.from;
             return isWithinInterval(saleDate, { start: startOfDay(date.from!), end: endOfDay(toDate) });
         });
         
@@ -449,6 +450,7 @@ export default function StatementsPage() {
         </AppLayout>
     );
 }
+
 
 
 
