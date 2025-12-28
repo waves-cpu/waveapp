@@ -190,6 +190,12 @@ export async function fetchShippingReceipts(options: {
     return { receipts, total };
 }
 
+export async function fetchSingleShippingReceipt(id: number): Promise<ShippingReceipt | null> {
+    const query = db.prepare('SELECT * FROM shipping_receipts WHERE id = ?');
+    const receipt = query.get(id) as ShippingReceipt | undefined;
+    return receipt || null;
+}
+
 export async function findShippingReceiptByAwb(awb: string): Promise<ShippingReceipt | null> {
     const query = db.prepare('SELECT * FROM shipping_receipts WHERE awb = ?');
     const receipt = query.get(awb) as ShippingReceipt | undefined;
@@ -1640,6 +1646,7 @@ async function updateShippingReceiptStatusByAwb(awb: string, status: string) {
 
 
     
+
 
 
 
