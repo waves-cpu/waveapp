@@ -437,12 +437,21 @@ export async function addProduct(itemData: any): Promise<string> {
 
     const transaction = db.transaction(() => {
         const hasVariants = !!(itemData.hasVariants && itemData.variants && itemData.variants.length > 0);
+        
+        let releaseDateValue: string | null = null;
+        if (itemData.releaseDate) {
+            if (typeof itemData.releaseDate === 'string') {
+                releaseDateValue = itemData.releaseDate;
+            } else if (itemData.releaseDate.toISOString) {
+                releaseDateValue = itemData.releaseDate.toISOString();
+            }
+        }
 
         const productResult = addProductStmt.run({
             name: itemData.name,
             category: itemData.category,
             sku: itemData.sku || null,
-            releaseDate: itemData.releaseDate ? itemData.releaseDate.toISOString() : null,
+            releaseDate: releaseDateValue,
             imageUrl: itemData.imageUrl || 'https://placehold.co/40x40.png',
             hasVariants: hasVariants ? 1 : 0,
             stock: hasVariants ? null : itemData.stock,
@@ -647,12 +656,21 @@ export async function editProduct(itemId: string, itemData: any) {
     db.transaction(() => {
         const hasVariants = !!(itemData.hasVariants && itemData.variants && itemData.variants.length > 0);
 
+        let releaseDateValue: string | null = null;
+        if (itemData.releaseDate) {
+            if (typeof itemData.releaseDate === 'string') {
+                releaseDateValue = itemData.releaseDate;
+            } else if (itemData.releaseDate.toISOString) {
+                releaseDateValue = itemData.releaseDate.toISOString();
+            }
+        }
+
         updateProductStmt.run({
             id: itemId,
             name: itemData.name,
             category: itemData.category,
             sku: itemData.sku || null,
-            releaseDate: itemData.releaseDate ? itemData.releaseDate.toISOString() : null,
+            releaseDate: releaseDateValue,
             imageUrl: itemData.imageUrl || 'https://placehold.co/40x40.png',
             hasVariants: hasVariants ? 1 : 0,
             stock: hasVariants ? null : itemData.stock,
@@ -1278,8 +1296,36 @@ export async function cancelSaleTransaction(transactionId: string) {
     return salesToDelete;
 }
 
-export async function returnSaleTransaction(transactionId: string) {
-    return await revertSaleByTransaction(transactionId, 'Return Selesai');
+export async function returnSaleTransaction(transactionId: string, items?: ReturnedItem[]) {
+    if (items && items.length > 0) {
+        // Selective return
+        const transaction = db.transaction(() => {
+            items.forEach(item => {
+                const getSaleStmt = db.prepare(`
+                    SELECT s.* FROM sales s
+                    LEFT JOIN variants v ON s.variantId = v.id
+                    LEFT JOIN products p ON s.productId = p.id
+                    WHERE s.transactionId = ? AND (v.sku = ? OR (s.variantId IS NULL AND p.sku = ?))
+                    LIMIT 1
+                `);
+                const saleToReturn = getSaleStmt.get(transactionId, item.sku, item.sku) as Sale | undefined;
+
+                if (saleToReturn) {
+                    const stockToReturn = Math.min(saleToReturn.quantity, item.quantity);
+                    const reason = `Return: ${transactionId}`;
+                    if (saleToReturn.variantId) {
+                        adjustStock(saleToReturn.variantId.toString(), stockToReturn, reason);
+                    } else if (saleToReturn.productId) {
+                        adjustStock(saleToReturn.productId.toString(), stockToReturn, reason);
+                    }
+                }
+            });
+        });
+        transaction();
+    } else {
+        // Full transaction return
+        await revertSaleByTransaction(transactionId, 'Return Selesai');
+    }
 }
 
 export async function clearPosTransactions(date: Date) {
@@ -1646,6 +1692,7 @@ async function updateShippingReceiptStatusByAwb(awb: string, status: string) {
 
 
     
+
 
 
 
