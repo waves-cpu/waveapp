@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
@@ -8,7 +7,7 @@ import { SidebarTrigger } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from '@/components/ui/table';
-import { Calendar as CalendarIcon, FileDown, Trash2, Truck, ScanLine, Search, Send, Ban, MoreVertical, Loader2, AlertCircle, FilePlus2 } from 'lucide-react';
+import { Calendar as CalendarIcon, FileDown, Trash2, Truck, ScanLine, Search, Send, Ban, MoreVertical, Loader2, AlertCircle, FilePlus2, CheckCircle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
@@ -36,7 +35,6 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Dialog, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogContent, DialogTrigger } from '@/components/ui/dialog';
@@ -256,34 +254,33 @@ export default function ReceiptPage() {
         return filteredReceipts.slice(startIndex, startIndex + itemsPerPage);
     }, [filteredReceipts, currentPage, itemsPerPage]);
 
-     const { salesChannelCounts, shippingChannelCounts, statusCounts } = useMemo(() => {
+    const { salesChannelCounts, shippingChannelCounts, statusCounts } = useMemo(() => {
         const sc: Record<string, number> = {};
         const shc: Record<string, number> = {};
         const st: Record<string, number> = {};
-        STATUS_OPTIONS.forEach(s => st[s] = 0);
+        
+        const sourceForCounts = filteredByDate.filter(r => {
+            const searchMatch = !searchTerm || (r.awb && r.awb.toLowerCase().includes(searchTerm.toLowerCase()));
+            return searchMatch;
+        });
 
-        filteredByDate.forEach(r => {
-            const salesChannelMatch = !activeSalesChannelTab || r.salesChannel === activeSalesChannelTab;
-            const shippingChannelMatch = !activeShippingTab || r.channel === activeShippingTab;
-            const statusMatch = activeStatusFilter === 'Semua Status' || r.status === activeStatusFilter;
-
-            if (shippingChannelMatch && statusMatch && r.salesChannel) {
+        sourceForCounts.forEach(r => {
+            if (r.salesChannel) {
                 sc[r.salesChannel] = (sc[r.salesChannel] || 0) + 1;
             }
-            if (salesChannelMatch && statusMatch) {
+            if (r.channel) {
                 shc[r.channel] = (shc[r.channel] || 0) + 1;
             }
-            if (salesChannelMatch && shippingChannelMatch) {
-                st[r.status] = (st[r.status] || 0) + 1;
-            }
+            st[r.status] = (st[r.status] || 0) + 1;
         });
+        
         return { salesChannelCounts: sc, shippingChannelCounts: shc, statusCounts: st };
-    }, [filteredByDate, activeSalesChannelTab, activeShippingTab, activeStatusFilter]);
+    }, [filteredByDate, searchTerm]);
 
 
     const handleDelete = async (receiptToDelete: ShippingReceipt) => {
         if (!receiptToDelete) return;
-        const { toast: toastRef } = toast({ title: t.deleteInProgress, description: `Menghapus resi ${receiptToDelete.awb}...` });
+        const toastRef = toast({ title: t.deleteInProgress, description: `Menghapus resi ${receiptToDelete.awb}...` });
         try {
             if (receiptToDelete.transactionId) {
                 await cancelSaleTransaction(receiptToDelete.transactionId);
@@ -296,7 +293,7 @@ export default function ReceiptPage() {
     };
     
     const handleChangeStatus = async (receipt: ShippingReceipt, newStatus: string) => {
-        const { toast: toastRef } = toast({ title: t.statusUpdateInProgress, description: `Mengubah status resi...` });
+        const toastRef = toast({ title: t.statusUpdateInProgress, description: `Mengubah status resi...` });
         try {
             await updateShippingReceiptStatus(receipt.id, newStatus);
             toastRef.update({ id: toastRef.id, title: t.statusUpdateSuccess, description: t.statusUpdateSuccessDesc.replace('{status}', newStatus) });
@@ -305,13 +302,13 @@ export default function ReceiptPage() {
         }
     };
 
-    const handleProcessShipment = async () => {
+    const handleBulkAction = async (newStatus: string) => {
         if (selectedIds.size === 0) return;
         setIsProcessing(true);
-        const { toast: toastRef } = toast({ title: t.bulkProcessInProgress, description: `Memproses ${selectedIds.size} resi...` });
+        const toastRef = toast({ title: t.bulkProcessInProgress, description: `Memproses ${selectedIds.size} resi...` });
         try {
-            await updateShippingReceiptsStatus(Array.from(selectedIds), 'Siap Kirim');
-            toastRef.update({ id: toastRef.id, title: t.bulkProcessSuccess, description: t.bulkProcessSuccessDesc.replace('{count}', selectedIds.size.toString()) });
+            await updateShippingReceiptsStatus(Array.from(selectedIds), newStatus);
+            toastRef.update({ id: toastRef.id, title: t.bulkProcessSuccess, description: `Status untuk ${selectedIds.size} resi berhasil diubah menjadi "${newStatus}".` });
             setSelectedIds(new Set());
         } catch (error) {
             toastRef.update({ id: toastRef.id, title: t.bulkProcessError, description: t.bulkProcessErrorDesc, variant: 'destructive' });
@@ -319,6 +316,7 @@ export default function ReceiptPage() {
             setIsProcessing(false);
         }
     };
+
 
     const handleDateSelect = (selectedDate: Date | undefined) => {
         if (selectedDate) {
@@ -332,7 +330,7 @@ export default function ReceiptPage() {
     
     const handleSelectAll = (checked: boolean) => {
         if (checked) {
-            const processableIds = paginatedReceipts.filter(r => r.status === 'Terproses').map(r => r.id);
+            const processableIds = paginatedReceipts.filter(r => r.status === activeStatusFilter).map(r => r.id);
             setSelectedIds(new Set(processableIds));
         } else {
             setSelectedIds(new Set());
@@ -363,7 +361,8 @@ export default function ReceiptPage() {
     };
 
     const totalPages = Math.ceil(filteredReceipts.length / itemsPerPage);
-    const isAllSelected = paginatedReceipts.length > 0 && paginatedReceipts.filter(r => r.status === 'Terproses').length > 0 && paginatedReceipts.filter(r => r.status === 'Terproses').every(r => selectedIds.has(r.id));
+    
+    const isAllSelected = paginatedReceipts.length > 0 && paginatedReceipts.filter(r => r.status === activeStatusFilter).length > 0 && paginatedReceipts.filter(r => r.status === activeStatusFilter).every(r => selectedIds.has(r.id));
     const finalStatuses = ['Selesai', 'Return', 'Dibatalkan', 'Return Selesai'];
 
     return (
@@ -411,10 +410,16 @@ export default function ReceiptPage() {
                             </PopoverContent>
                         </Popover>
                          <AddPrintedReceiptDialog isOpen={isAddPrintedOpen} setIsOpen={setAddPrintedOpen} onSave={handleAddPrintedReceipts} />
-                         {selectedIds.size > 0 && (
-                            <Button size="sm" onClick={handleProcessShipment} disabled={isProcessing}>
+                         {selectedIds.size > 0 && activeStatusFilter === 'Terproses' && (
+                            <Button size="sm" onClick={() => handleBulkAction('Siap Kirim')} disabled={isProcessing}>
                                 <Send className="mr-2 h-4 w-4" />
                                 {isProcessing ? t.processing : `${t.processSelected} (${selectedIds.size})`}
+                            </Button>
+                         )}
+                         {selectedIds.size > 0 && activeStatusFilter === 'Siap Kirim' && (
+                            <Button size="sm" onClick={() => handleBulkAction('Selesai')} disabled={isProcessing}>
+                                <CheckCircle className="mr-2 h-4 w-4" />
+                                {isProcessing ? t.processing : `Tandai Selesai (${selectedIds.size})`}
                             </Button>
                          )}
                     </div>
@@ -458,7 +463,7 @@ export default function ReceiptPage() {
                                     variant={activeSalesChannelTab === tab ? 'secondary' : 'ghost'}
                                     size="sm"
                                     onClick={() => setActiveSalesChannelTab(prev => prev === tab ? null : tab)}
-                                    className={cn("shrink-0", activeSalesChannelTab === tab && "text-primary")}
+                                    className="shrink-0 text-green-600"
                                 >
                                     {tab}
                                     <Badge variant={activeSalesChannelTab === tab ? 'default' : 'secondary'} className="ml-2">
@@ -475,7 +480,7 @@ export default function ReceiptPage() {
                                 variant={activeShippingTab === tab ? 'secondary' : 'ghost'}
                                 size="sm"
                                 onClick={() => setActiveShippingTab(prev => prev === tab ? null : tab)}
-                                className={cn("shrink-0", activeShippingTab === tab && "text-primary")}
+                                className="shrink-0 text-green-600"
                             >
                                 {tab}
                                 <Badge variant={activeShippingTab === tab ? 'default' : 'secondary'} className="ml-2">
@@ -491,7 +496,7 @@ export default function ReceiptPage() {
                                 variant={activeStatusFilter === status ? 'secondary' : 'ghost'}
                                 size="sm"
                                 onClick={() => setActiveStatusFilter(status)}
-                                className={cn("shrink-0", activeStatusFilter === status && "text-primary")}
+                                className="shrink-0 text-green-600"
                             >
                                 {status}
                                 <Badge variant={activeStatusFilter === status ? 'default' : 'secondary'} className="ml-2">
@@ -511,7 +516,7 @@ export default function ReceiptPage() {
                                                 checked={isAllSelected}
                                                 onCheckedChange={handleSelectAll}
                                                 aria-label={t.selectAll}
-                                                disabled={paginatedReceipts.filter(r => r.status === 'Terproses').length === 0}
+                                                disabled={paginatedReceipts.filter(r => r.status === activeStatusFilter).length === 0}
                                             />
                                         </TableHead>
                                         <TableHead>{t.table.awb}</TableHead>
@@ -532,7 +537,7 @@ export default function ReceiptPage() {
                                                     checked={selectedIds.has(item.id)}
                                                     onCheckedChange={(checked) => handleSelectOne(item.id, !!checked)}
                                                     aria-label={`${t.select} ${item.awb}`}
-                                                    disabled={item.status !== 'Terproses'}
+                                                    disabled={item.status !== activeStatusFilter}
                                                 />
                                             </TableCell>
                                             <TableCell className="font-medium">{item.awb || '(Resi Tercetak)'}</TableCell>
@@ -553,16 +558,17 @@ export default function ReceiptPage() {
                                                          {item.status === 'Terproses' && (
                                                             <>
                                                                 <DropdownMenuItem onClick={() => handleChangeStatus(item, 'Siap Kirim')}>{t.actions.processShipment}</DropdownMenuItem>
-                                                                <DropdownMenuItem onClick={() => handleChangeStatus(item, 'Dibatalkan')} className="text-destructive">{t.actions.cancel}</DropdownMenuItem>
                                                             </>
                                                          )}
                                                          {item.status === 'Siap Kirim' && (
                                                             <>
                                                                 <DropdownMenuItem onClick={() => handleChangeStatus(item, 'Selesai')}>{t.actions.markAsDone}</DropdownMenuItem>
-                                                                <DropdownMenuItem onClick={() => handleChangeStatus(item, 'Return')} className="text-destructive">{t.actions.markAsReturn}</DropdownMenuItem>
                                                             </>
                                                          )}
-                                                         {['Dibatalkan', 'Return'].includes(item.status) && (
+                                                         {['Terproses', 'Siap Kirim'].includes(item.status) && (
+                                                             <DropdownMenuItem onClick={() => handleChangeStatus(item, 'Dibatalkan')} className="text-destructive">{t.actions.cancel}</DropdownMenuItem>
+                                                         )}
+                                                         {finalStatuses.includes(item.status) && (
                                                               <AlertDialog>
                                                                 <AlertDialogTrigger asChild>
                                                                     <DropdownMenuItem onSelect={e => e.preventDefault()} className="text-destructive">
@@ -633,7 +639,7 @@ function useReceiptPageLogic() {
         addPrintedReceipts,
         getPrintedReceiptCountsForDate,
     } = useInventory();
-    const { toast: showToast } = useToast();
+    const { toast } = useToast();
     const { language } = useLanguage();
     const t = translations[language].shipping.receiptPage;
     const router = useRouter();
@@ -642,7 +648,7 @@ function useReceiptPageLogic() {
     return {
         allShippingReceipts,
         loading: inventoryLoading,
-        toast: showToast,
+        toast,
         language,
         t,
         router,
