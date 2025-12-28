@@ -53,7 +53,7 @@ interface InventoryContextType {
   recordSaleWithReceipt: (receiptData: Omit<ShippingReceipt, 'id'>, salesData: Omit<Sale, 'id'>[]) => Promise<void>;
   fetchSales: (channel: string, date: Date, page: number, limit: number) => Promise<{sales: Sale[], total: number}>;
   cancelSaleTransaction: (transactionId: string) => Promise<void>;
-  returnSaleTransaction: (transactionId: string, items: ReturnedItem[]) => Promise<void>;
+  returnSaleTransaction: (transactionId: string, items?: ReturnedItem[]) => Promise<void>;
   revertSaleItem: (transactionId: string, sku: string) => Promise<void>;
   getProductBySku: (sku: string) => Promise<InventoryItem | null>;
   allSales: Sale[];
@@ -237,7 +237,8 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
   const fetchSales = async (channel: string, date: Date, page: number, limit: number): Promise<{ sales: Sale[], total: number }> => {
     const dateString = date.toISOString().split('T')[0];
     const url = `/api/sales?channel=${channel}&startDate=${dateString}&endDate=${dateString}&page=${page}&limit=${limit}`;
-    return await apiFetch(url);
+    const result = await apiFetch(url);
+    return { sales: result.sales, total: result.total };
   };
   
   const cancelSaleTransaction = async (transactionId: string) => {
@@ -245,8 +246,8 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
     await fetchAllData();
   }
   
-  const returnSaleTransaction = async (transactionId: string, items: ReturnedItem[]) => {
-    await apiFetch(`/api/sales/transaction/${transactionId}/return`, { method: 'POST', body: JSON.stringify({ items }) });
+  const returnSaleTransaction = async (transactionId: string, items?: ReturnedItem[]) => {
+    await apiFetch(`/api/sales/transaction/${transactionId}/return`, { method: 'POST', body: JSON.stringify({ items: items || [] }) });
     await fetchAllData();
   }
   
@@ -284,7 +285,7 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
     await fetchAllData();
   };
 
-  const findShippingReceiptByAwb = async (awb: string) => {
+  const findShippingReceiptByAwb = async (awb: string): Promise<ShippingReceipt | null> => {
     return await apiFetch(`/api/shipping/receipts?awb=${awb}`).then(res => res.receipts[0] || null);
   };
   

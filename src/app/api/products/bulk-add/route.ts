@@ -1,5 +1,5 @@
 
-import { bulkAddProducts, addBulkImportHistory, updateBulkImportHistory } from '@/lib/inventory-service';
+import { bulkAddProducts, addBulkImportHistory, updateBulkImportHistory, fetchBulkImportHistory } from '@/lib/inventory-service';
 import { NextRequest, NextResponse } from 'next/server';
 import { headers } from 'next/headers';
 
