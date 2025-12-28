@@ -419,7 +419,7 @@ export default function ReceiptPage() {
                          {selectedIds.size > 0 && activeStatusFilter === 'Siap Kirim' && (
                             <Button size="sm" onClick={() => handleBulkAction('Selesai')} disabled={isProcessing}>
                                 <CheckCircle className="mr-2 h-4 w-4" />
-                                {isProcessing ? t.processing : `Tandai Selesai (${selectedIds.size})`}
+                                {isProcessing ? 'Memproses...' : `Tandai Selesai (${selectedIds.size})`}
                             </Button>
                          )}
                     </div>
@@ -463,7 +463,7 @@ export default function ReceiptPage() {
                                     variant={activeSalesChannelTab === tab ? 'secondary' : 'ghost'}
                                     size="sm"
                                     onClick={() => setActiveSalesChannelTab(prev => prev === tab ? null : tab)}
-                                    className="shrink-0 text-green-600"
+                                    className={cn("shrink-0", activeSalesChannelTab === tab && "text-green-600")}
                                 >
                                     {tab}
                                     <Badge variant={activeSalesChannelTab === tab ? 'default' : 'secondary'} className="ml-2">
@@ -480,7 +480,7 @@ export default function ReceiptPage() {
                                 variant={activeShippingTab === tab ? 'secondary' : 'ghost'}
                                 size="sm"
                                 onClick={() => setActiveShippingTab(prev => prev === tab ? null : tab)}
-                                className="shrink-0 text-green-600"
+                                className={cn("shrink-0", activeShippingTab === tab && "text-green-600")}
                             >
                                 {tab}
                                 <Badge variant={activeShippingTab === tab ? 'default' : 'secondary'} className="ml-2">
@@ -496,12 +496,14 @@ export default function ReceiptPage() {
                                 variant={activeStatusFilter === status ? 'secondary' : 'ghost'}
                                 size="sm"
                                 onClick={() => setActiveStatusFilter(status)}
-                                className="shrink-0 text-green-600"
+                                className={cn("shrink-0", activeStatusFilter === status && "text-green-600")}
                             >
                                 {status}
+                                {(statusCounts[status] || 0) > 0 && (
                                 <Badge variant={activeStatusFilter === status ? 'default' : 'secondary'} className="ml-2">
                                     {statusCounts[status] || 0}
                                 </Badge>
+                                )}
                             </Button>
                         ))}
                     </div>
