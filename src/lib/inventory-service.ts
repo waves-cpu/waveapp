@@ -6,7 +6,7 @@ import { db as dbProxy } from './db';
 const db = dbProxy;
 import type { InventoryItem, AdjustmentHistory, InventoryItemVariant, Sale, Reseller, ChannelPrice, Accessory, ShippingReceipt, BulkImportHistory, User, ReturnedItem, DiscountGroup, DiscountedProduct, PrintedReceiptCount } from '@/types';
 import { categories as allCategories } from '@/types';
-import { format as formatDate, parseISO, startOfDay, endOfDay, isWithinInterval } from 'date-fns';
+import { format as formatDate, parseISO, startOfDay, endOfDay } from 'date-fns';
 
 // User functions
 export async function authenticateUser(username: string, password: string): Promise<User | null> {
@@ -124,7 +124,7 @@ export async function fetchShippingReceipts(options: {
     limit: number;
     salesChannel?: string;
     channel?: string;
-    date_range?: { from: Date | null; to: Date }; // Allow null for "semua"
+    date_range?: { from: Date | null; to: Date };
     status?: string[];
     awb?: string;
 }): Promise<{ receipts: ShippingReceipt[]; total: number }> {
@@ -137,20 +137,23 @@ export async function fetchShippingReceipts(options: {
     if (awb) {
         whereClauses.push("LOWER(REPLACE(awb, ' ', '')) LIKE LOWER(REPLACE(@awb, ' ', ''))");
         params.awb = `%${awb}%`;
-    } else {
-        if (salesChannel) {
-            whereClauses.push("salesChannel = @salesChannel");
-            params.salesChannel = salesChannel;
-        }
-        if (channel) {
-            whereClauses.push("channel = @channel");
-            params.channel = channel;
-        }
-        if (date_range?.from) {
-            whereClauses.push("date >= @from AND date <= @to");
-            params.from = startOfDay(date_range.from).toISOString();
-            params.to = endOfDay(date_range.to!).toISOString();
-        }
+    }
+
+    if (salesChannel) {
+        whereClauses.push("salesChannel = @salesChannel");
+        params.salesChannel = salesChannel;
+    }
+    if (channel) {
+        whereClauses.push("channel = @channel");
+        params.channel = channel;
+    }
+    if (date_range?.from) {
+        const nextDay = new Date(date_range.from);
+        nextDay.setDate(nextDay.getDate() + 1);
+        
+        whereClauses.push("date >= @from AND date < @to");
+        params.from = startOfDay(date_range.from).toISOString();
+        params.to = startOfDay(nextDay).toISOString();
     }
     
 
@@ -261,11 +264,18 @@ export async function getReceiptCountByStatus(status: string): Promise<Record<st
 
 
 export async function addShippingReceipt(receipt: Omit<ShippingReceipt, 'id'>): Promise<ShippingReceipt> {
-    const result = db.prepare('INSERT INTO shipping_receipts (awb, date, channel, salesChannel, status, transactionId) VALUES (@awb, @date, @channel, @salesChannel, @status, @transactionId)').run({
-        ...receipt,
-        transactionId: receipt.awb,
-    });
-    const newReceipt = db.prepare('SELECT * FROM shipping_receipts WHERE id = ?').get(result.lastInsertRowid) as ShippingReceipt;
+    const consumed = await consumePrintedReceipt(receipt.salesChannel!, receipt.channel, new Date(receipt.date));
+    if(!consumed) {
+        throw new Error('Jumlah resi yang dipindai melebihi jumlah yang dicetak oleh admin.');
+    }
+    const newReceipt = await db.transaction(() => {
+        const result = db.prepare('INSERT INTO shipping_receipts (awb, date, channel, salesChannel, status, transactionId) VALUES (@awb, @date, @channel, @salesChannel, @status, @transactionId)').run({
+            ...receipt,
+            transactionId: receipt.awb,
+        });
+        return db.prepare('SELECT * FROM shipping_receipts WHERE id = ?').get(result.lastInsertRowid) as ShippingReceipt;
+    })();
+
     return newReceipt;
 }
 
@@ -978,11 +988,14 @@ export async function getActiveDiscountPrice(productId: string | number, variant
 }
 
 export async function recordSaleWithReceipt(receiptData: Omit<ShippingReceipt, 'id'>, salesData: Omit<Sale, 'id'>[]) {
-    const transaction = db.transaction(() => {
-        const { awb, channel: shippingChannel, salesChannel, date: dateString } = receiptData;
-        
-        consumePrintedReceipt(salesChannel!, shippingChannel, new Date(dateString));
+    const { awb, channel: shippingChannel, salesChannel, date: dateString } = receiptData;
 
+    const consumed = await consumePrintedReceipt(salesChannel!, shippingChannel, new Date(dateString));
+    if (!consumed) {
+        throw new Error('Jumlah resi yang dipindai melebihi jumlah yang dicetak oleh admin.');
+    }
+
+    const transaction = db.transaction(() => {
         const addReceiptStmt = db.prepare('INSERT INTO shipping_receipts (awb, date, channel, salesChannel, status, transactionId) VALUES (@awb, @date, @channel, @salesChannel, @status, @transactionId)');
         addReceiptStmt.run({
             ...receiptData,
@@ -1625,6 +1638,7 @@ async function updateShippingReceiptStatusByAwb(awb: string, status: string) {
 
 
     
+
 
 
 
