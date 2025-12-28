@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
@@ -155,7 +156,7 @@ export function PosCart() {
 
 
     const getPriceForChannel = (item: InventoryItem | InventoryItemVariant | Accessory, channel: string): number => {
-        if ('channelPrices' in item) {
+        if ('channelPrices' in item && item.channelPrices) {
              const channelPrice = item.channelPrices?.find(p => p.channel === channel)?.price;
              return channelPrice ?? item.price!;
         }
@@ -313,33 +314,25 @@ export function PosCart() {
     };
 
     const handleSaleComplete = async (paymentMethod: string, receiptData: ReceiptData, status: 'Completed' | 'Pending' = 'Completed') => {
-        try {
-            const isAccessoryOnly = cart.every(item => item.type === 'accessory');
-             // If we're updating a pending transaction, cancel the old one first
-            if (pendingTransactionId) {
-                await cancelSaleTransaction(pendingTransactionId);
+        const salesPayload = {
+            sales: cart.map(item => ({
+                sku: item.sku,
+                channel: 'pos',
+                quantity: item.quantity,
+                price: item.price,
+            })),
+            options: {
+                transactionId: pendingTransactionId || `trans-${Date.now()}`,
+                paymentMethod: paymentMethod,
+                status: status,
             }
-            
-            const transactionId = pendingTransactionId || `trans-${Date.now()}`;
-            
-            const { discount, subtotal } = receiptData;
-            const discountRatio = subtotal > 0 ? discount / subtotal : 0;
+        };
 
-            const salePromises = cart.map(item => {
-                const pricePerItemAfterDiscount = isAccessoryOnly ? 0 : item.price - (item.price * discountRatio);
+        try {
+            await apiFetch('/api/sales', { method: 'POST', body: JSON.stringify(salesPayload) });
 
-                return recordSale(item.sku, 'pos', item.quantity, {
-                    saleDate: new Date(),
-                    transactionId: transactionId,
-                    paymentMethod,
-                    priceAtSale: pricePerItemAfterDiscount,
-                    status: status,
-                });
-            });
-
-            await Promise.all(salePromises);
-            
             if (status === 'Completed') {
+                const isAccessoryOnly = cart.every(item => item.type === 'accessory');
                 if (isAccessoryOnly) {
                     toast({
                         title: "Pemakaian Aksesoris Dicatat",
@@ -347,7 +340,7 @@ export function PosCart() {
                     });
                     setVoucherToPrint({
                         items: cart,
-                        transactionId: transactionId,
+                        transactionId: salesPayload.options.transactionId,
                         date: new Date(),
                     });
                 } else {
@@ -355,7 +348,7 @@ export function PosCart() {
                         title: "Penjualan Berhasil",
                         description: "Transaksi telah berhasil dicatat."
                     });
-                    setReceiptToPrint({ ...receiptData, transactionId });
+                    setReceiptToPrint({ ...receiptData, transactionId: salesPayload.options.transactionId });
                 }
             } else { // Pending
                 toast({
@@ -363,19 +356,15 @@ export function PosCart() {
                     description: "Transaksi telah disimpan dan dapat dilanjutkan nanti."
                 });
             }
-
+            await fetchItems(); // Re-sync data from server
         } catch (error) {
             console.error("Failed to complete sale:", error);
             toast({
                 variant: "destructive",
                 title: "Gagal Menyelesaikan Penjualan",
-                description: "Terjadi kesalahan saat memproses transaksi.",
+                description: error instanceof Error ? error.message : "Terjadi kesalahan saat memproses transaksi.",
             });
             throw error; // Re-throw to prevent form reset in summary component
-        } finally {
-            if (status === 'Completed' || status === 'Pending') {
-                 await fetchItems();
-            }
         }
     };
 

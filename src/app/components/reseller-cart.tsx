@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
@@ -98,8 +99,11 @@ export function ResellerCart({ reseller }: ResellerCartProps) {
     }, [invoiceToPrint]);
 
     const getPriceForChannel = (item: InventoryItem | InventoryItemVariant, channel: string): number => {
-        const channelPrice = item.channelPrices?.find(p => p.channel === channel)?.price;
-        return channelPrice ?? item.price!;
+        if ('channelPrices' in item && item.channelPrices) {
+            const channelPrice = item.channelPrices?.find(p => p.channel === channel)?.price;
+            return channelPrice ?? item.price!;
+        }
+        return item.price ?? 0;
     };
 
     const addToCart = useCallback((item: InventoryItem, variant?: InventoryItemVariant) => {
@@ -203,22 +207,30 @@ export function ResellerCart({ reseller }: ResellerCartProps) {
         localStorage.removeItem(LOCAL_STORAGE_KEY);
     };
 
-    const handleSaleComplete = async (paymentMethod: string, receiptData: ReceiptData, status?: string) => {
+    const handleSaleComplete = async (paymentMethod: string, receiptData: ReceiptData, status: 'Completed' | 'Pending' = 'Completed') => {
+        const salesPayload = {
+            sales: cart.map(item => ({
+                sku: item.sku!,
+                channel: 'reseller',
+                quantity: item.quantity,
+                price: item.price,
+            })),
+            options: {
+                transactionId: `trans-${Date.now()}`,
+                paymentMethod,
+                resellerName: reseller.name,
+                status,
+            }
+        };
+
         try {
-            const salePromises = cart.map(item =>
-                recordSale(item.sku!, 'reseller', item.quantity, {
-                    transactionId: receiptData.transactionId,
-                    paymentMethod,
-                    resellerName: reseller.name,
-                    status: status, // Pass pending status
-                })
-            );
-            await Promise.all(salePromises);
+            await apiFetch('/api/sales', { method: 'POST', body: JSON.stringify(salesPayload) });
+
             toast({
                 title: "Invoice Dibuat",
                 description: "Invoice telah berhasil dibuat dan stok telah dipotong."
             });
-            setInvoiceToPrint({...receiptData, reseller});
+            setInvoiceToPrint({ ...receiptData, transactionId: salesPayload.options.transactionId, reseller });
         } catch (error) {
             console.error("Failed to complete sale:", error);
             toast({
@@ -299,10 +311,11 @@ export function ResellerCart({ reseller }: ResellerCartProps) {
                 </div>
                 <div className="lg:col-span-2 h-full">
                     <PosOrderSummary
-                        cart={cart}
+                        cart={cart as any}
                         onSaleComplete={handleSaleComplete}
                         clearCart={clearCart}
                         channel="reseller"
+                        pendingTransactionId={null}
                     />
                 </div>
                 {productForVariantSelection && (

@@ -406,7 +406,3 @@ export function AddProductForm({ existingItem }: AddProductFormProps) {
     </Card>
   );
 }
-
-    
-
-    
