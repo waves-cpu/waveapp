@@ -43,7 +43,7 @@ import { DailySalesDetailDialog } from '@/app/components/daily-sales-detail-dial
 import { Badge } from '@/components/ui/badge';
 import { RecordSaleForReceiptDialog } from '@/app/components/record-sale-for-receipt-dialog';
 
-function useReceiptPageLogic(salesChannel: 'Shopee' | 'Tiktok' | 'Lazada') {
+export function useReceiptPageLogic(salesChannel: 'Shopee' | 'Tiktok' | 'Lazada') {
     const params = useParams();
     const router = useRouter();
     const inventoryContext = useInventory();
@@ -187,6 +187,7 @@ function useReceiptPageLogic(salesChannel: 'Shopee' | 'Tiktok' | 'Lazada') {
                 description: error.message || "Terjadi kesalahan saat menyimpan data penjualan.",
                 variant: "destructive",
             });
+            throw error; // Re-throw to allow dialog to handle it
         } finally {
             setIsSaleDialogOpen(false);
             setReceiptForSale(null);
@@ -365,6 +366,7 @@ export default function ShopeeChannelPage() {
     </AppLayout>
   );
 }
+
 
 
 
