@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
@@ -8,11 +9,11 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Calendar as CalendarIcon, FileDown, Trash2, Truck, ScanLine, Search, Send, Ban, MoreVertical, Loader2, AlertCircle, FilePlus2, CheckCircle } from 'lucide-react';
+import { Calendar as CalendarIcon, FileDown, Trash2, Truck, ScanLine, Search, Send, Ban, MoreVertical, Loader2, AlertCircle, FilePlus2, CheckCircle, Undo2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-import { format, parse, isValid, endOfDay, startOfDay, parseISO } from 'date-fns';
+import { format, parse, isValid, endOfDay, startOfDay, parseISO, isWithinInterval } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { useInventory } from '@/hooks/use-inventory';
 import type { ShippingReceipt, PrintedReceiptCount } from '@/types';
@@ -265,38 +266,28 @@ export default function ReceiptPage() {
         setSelectedIds(new Set());
     }, [activeShippingTab, activeSalesChannelTab, currentDate, searchTerm, currentPage, activeStatusFilter]);
 
-    const filteredByDate = useMemo(() => {
-        if (!currentDate) return allShippingReceipts; // Show all if no date is selected
-        const start = startOfDay(currentDate);
-        const end = endOfDay(currentDate);
-        return allShippingReceipts.filter(r => {
-            const receiptDate = parseISO(r.date);
-            return receiptDate >= start && receiptDate <= end;
-        });
-    }, [allShippingReceipts, currentDate]);
-
-
+    const globalReceipts = allShippingReceipts;
     const { filteredReceipts, salesChannelCounts, shippingChannelCounts, statusCounts } = useMemo(() => {
-        const preFiltered = filteredByDate.filter(receipt => {
-            const searchMatch = !searchTerm || (receipt.awb && receipt.awb.toLowerCase().includes(searchTerm.toLowerCase()));
-            return searchMatch;
-        });
+        const filteredByDate = currentDate
+            ? globalReceipts.filter(r => isWithinInterval(parseISO(r.date), { start: startOfDay(currentDate), end: endOfDay(currentDate) }))
+            : globalReceipts;
 
         const sc: Record<string, number> = {};
         const shc: Record<string, number> = {};
         const st: Record<string, number> = {};
         
-        preFiltered.forEach(r => {
+        filteredByDate.forEach(r => {
             if (r.salesChannel) sc[r.salesChannel] = (sc[r.salesChannel] || 0) + 1;
             if (r.channel) shc[r.channel] = (shc[r.channel] || 0) + 1;
             st[r.status] = (st[r.status] || 0) + 1;
         });
 
-        const finalFiltered = preFiltered.filter(receipt => {
+        const finalFiltered = filteredByDate.filter(receipt => {
             const salesChannelMatch = !activeSalesChannelTab || receipt.salesChannel === activeSalesChannelTab;
             const shippingChannelMatch = !activeShippingTab || receipt.channel === activeShippingTab;
             const statusMatch = activeStatusFilter === 'Semua Status' || receipt.status === activeStatusFilter;
-            return salesChannelMatch && shippingChannelMatch && statusMatch;
+            const searchMatch = !searchTerm || (receipt.awb && receipt.awb.toLowerCase().includes(searchTerm.toLowerCase()));
+            return salesChannelMatch && shippingChannelMatch && statusMatch && searchMatch;
         });
 
         return { 
@@ -305,7 +296,7 @@ export default function ReceiptPage() {
             shippingChannelCounts: shc, 
             statusCounts: st 
         };
-    }, [filteredByDate, activeSalesChannelTab, activeShippingTab, activeStatusFilter, searchTerm]);
+    }, [globalReceipts, currentDate, activeSalesChannelTab, activeShippingTab, activeStatusFilter, searchTerm]);
 
 
     const paginatedReceipts = useMemo(() => {
@@ -600,6 +591,12 @@ export default function ReceiptPage() {
                                                                 <DropdownMenuItem onClick={() => handleChangeStatus(item, 'Selesai')}>{t.actions.markAsDone}</DropdownMenuItem>
                                                             </>
                                                          )}
+                                                         {item.status === 'Selesai' && (
+                                                            <DropdownMenuItem onClick={() => handleChangeStatus(item, 'Return')}>
+                                                              <Undo2 className="mr-2 h-4 w-4" />
+                                                              {t.actions.markAsReturn}
+                                                            </DropdownMenuItem>
+                                                         )}
                                                          {['Terproses', 'Siap Kirim'].includes(item.status) && (
                                                              <DropdownMenuItem onClick={() => handleChangeStatus(item, 'Dibatalkan')} className="text-destructive">{t.actions.cancel}</DropdownMenuItem>
                                                          )}
@@ -661,3 +658,4 @@ export default function ReceiptPage() {
 }
 
 type ShippingProvider = "SPX" | "J&T" | "JNE" | "INSTANT" | "CARGO";
+
