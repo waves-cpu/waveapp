@@ -130,7 +130,7 @@ export async function fetchShippingReceipts(options: {
     limit: number;
     salesChannel?: string;
     channel?: string;
-    date_range?: { from: Date | null; to: Date };
+    date_range?: { from: Date | null; to: Date | null };
     status?: string[];
     awb?: string;
 }): Promise<{ receipts: ShippingReceipt[]; total: number }> {
@@ -154,12 +154,9 @@ export async function fetchShippingReceipts(options: {
         params.channel = channel;
     }
     if (date_range?.from) {
-        const nextDay = new Date(date_range.from);
-        nextDay.setDate(nextDay.getDate() + 1);
-        
-        whereClauses.push("date >= @from AND date < @to");
+        whereClauses.push("date >= @from AND date <= @to");
         params.from = startOfDay(date_range.from).toISOString();
-        params.to = startOfDay(nextDay).toISOString();
+        params.to = endOfDay(date_range.to || date_range.from).toISOString();
     }
     
 
@@ -1692,6 +1689,7 @@ async function updateShippingReceiptStatusByAwb(awb: string, status: string) {
 
 
     
+
 
 
 
