@@ -1245,9 +1245,9 @@ export async function revertSaleByTransaction(transactionId: string, newStatus: 
 
     const transaction = db.transaction(() => {
         const revertedSales: Sale[] = [];
-        sales.forEach(sale => {
+        sales.forEach(async sale => {
             const reverted = revertSale(sale.id, newStatus);
-            revertedSales.push(reverted);
+            revertedSales.push(await reverted);
         });
         return revertedSales;
     });

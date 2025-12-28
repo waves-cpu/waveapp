@@ -7,7 +7,7 @@ const API_KEY = process.env.API_KEY || 'secret-api-key-for-waveapp';
 
 // GET a single shipping receipt
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
-  const headersList = headers();
+  const headersList = await headers();
   const apiKey = headersList.get('X-API-Key');
   if (apiKey !== API_KEY) {
     return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
@@ -30,7 +30,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
 
 // UPDATE a shipping receipt (e.g., its status)
 export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
-    const headersList = headers();
+    const headersList = await headers();
     const apiKey = headersList.get('X-API-Key');
     if (apiKey !== API_KEY) {
         return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
@@ -57,7 +57,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
 
 // DELETE a shipping receipt
 export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
-    const headersList = headers();
+    const headersList = await headers();
     const apiKey = headersList.get('X-API-Key');
     if (apiKey !== API_KEY) {
         return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });

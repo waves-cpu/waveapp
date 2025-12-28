@@ -7,7 +7,7 @@ const API_KEY = process.env.API_KEY || 'secret-api-key-for-waveapp';
 
 // GET all resellers
 export async function GET() {
-    const headersList = headers();
+    const headersList = await headers();
     const apiKey = headersList.get('X-API-Key');
     if (apiKey !== API_KEY) {
         return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
@@ -23,7 +23,7 @@ export async function GET() {
 
 // ADD a new reseller
 export async function POST(request: NextRequest) {
-    const headersList = headers();
+    const headersList = await headers();
     const apiKey = headersList.get('X-API-Key');
     if (apiKey !== API_KEY) {
         return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });

@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { headers } from 'next/headers';
 
 export async function POST(request: NextRequest) {
-  const headersList = headers();
+  const headersList = await headers();
   const apiKey = headersList.get('X-API-Key');
 
   if (apiKey !== (process.env.API_KEY || 'secret-api-key-for-waveapp')) {

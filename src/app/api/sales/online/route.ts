@@ -10,7 +10,7 @@ const API_KEY = process.env.API_KEY || 'secret-api-key-for-waveapp';
 
 // Handler for POST requests to record a new online sale with its receipt
 export async function POST(request: NextRequest) {
-  const headersList = headers();
+  const headersList = await headers();
   const apiKey = headersList.get('X-API-Key');
 
   if (apiKey !== API_KEY) {
