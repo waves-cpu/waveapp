@@ -23,7 +23,7 @@ export default function MobileHubPage() {
     useEffect(() => {
         async function fetchCounts() {
             try {
-                const response = await fetch('/api/shipping/counts?status=Terproses', {
+                const response = await fetch('/api/shipping/receipts/counts?status=Terproses', {
                     headers: {
                         'X-API-Key': process.env.NEXT_PUBLIC_API_KEY || 'secret-api-key-for-waveapp'
                     }
@@ -32,7 +32,11 @@ export default function MobileHubPage() {
                     throw new Error('Failed to fetch counts');
                 }
                 const data = await response.json();
-                setPendingCounts(data);
+                if(data && data.shippingChannels) {
+                    setPendingCounts(data.shippingChannels);
+                } else {
+                    setPendingCounts({});
+                }
             } catch (error) {
                 console.error("Error fetching pending counts:", error);
             } finally {
