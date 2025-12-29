@@ -33,9 +33,11 @@ export async function POST(request: NextRequest) {
         sku: sale.sku,
         channel: receipt.salesChannel,
         quantity: sale.quantity,
-        priceAtSale: sale.price,
+        priceAtSale: sale.priceAtSale, // CORRECTED THIS LINE
         saleDate: receiptData.date,
         status: 'Terproses',
+        productId: sale.productId,
+        variantId: sale.variantId,
     }));
 
     await recordSaleWithReceipt(receiptData, salesData);
