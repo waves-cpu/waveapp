@@ -18,7 +18,7 @@ import { useLanguage } from '@/hooks/use-language';
 import { translations } from '@/types/language';
 import { useParams, useRouter } from 'next/navigation';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { Dialog, DialogTrigger, DialogHeader, DialogTitle, DialogDescription, DialogContent, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -310,7 +310,7 @@ export default function ReceiptPage() {
                                 </Alert>
                             )}
 
-                             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+                             <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
                                 {orderedStatuses.map(status => {
                                     const Icon = statusIcons[status] || Package;
                                     const count = statusCounts[status] || 0;
@@ -325,14 +325,12 @@ export default function ReceiptPage() {
                                             )}
                                             onClick={() => canClick && setSelectedStatus(status)}
                                         >
-                                            <CardContent className="flex flex-row items-center justify-between p-6">
-                                                <div className="space-y-1">
-                                                    <p className="text-sm font-medium text-muted-foreground flex items-center">
-                                                        <Icon className="h-4 w-4 mr-2" />
-                                                        {status}
-                                                    </p>
+                                            <CardContent className="flex flex-col items-start gap-2 p-4">
+                                                <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                                                    <Icon className="h-4 w-4" />
+                                                    {status}
                                                 </div>
-                                                <div className="text-2xl font-bold">
+                                                <div className="text-3xl font-bold">
                                                     {countsLoading ? <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /> : count}
                                                 </div>
                                             </CardContent>
@@ -343,7 +341,7 @@ export default function ReceiptPage() {
                         </div>
 
                         <div className="lg:col-span-1">
-                            <Card>
+                             <Card>
                                 <CardHeader>
                                     <CardTitle className="text-base">Ringkasan Resi Tercetak</CardTitle>
                                     <CardDescription>Jumlah resi yang Anda input untuk hari ini.</CardDescription>
@@ -379,8 +377,6 @@ export default function ReceiptPage() {
                             </Card>
                         </div>
                     </div>
-                    
-
                 </main>
             </AppLayout>
             <ProcessedReceiptsDialog
@@ -394,4 +390,3 @@ export default function ReceiptPage() {
         </>
     );
 }
-
