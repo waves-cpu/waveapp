@@ -113,9 +113,16 @@ export async function consumePrintedReceipt(salesChannel: string, shippingChanne
     return false;
 }
 
-export async function checkPrintedReceiptAvailability(salesChannel: string, shippingChannel: string, dateString: string): Promise<boolean> {
-    const record = db.prepare('SELECT count FROM printed_receipt_counts WHERE date = ? AND salesChannel = ? AND shippingChannel = ?').get(dateString, salesChannel, shippingChannel) as { count: number } | undefined;
-    return (record?.count ?? 0) > 0;
+export async function checkPrintedReceiptAvailability(salesChannel: string, shippingChannel: string, date: string): Promise<boolean> {
+    const record = db.prepare('SELECT count FROM printed_receipt_counts WHERE date = ? AND salesChannel = ? AND shippingChannel = ?').get(date, salesChannel, shippingChannel) as { count: number } | undefined;
+    
+    const scannedToday = db.prepare(`
+        SELECT COUNT(*) as count 
+        FROM shipping_receipts 
+        WHERE salesChannel = ? AND channel = ? AND date(date) = ?
+    `).get(salesChannel, shippingChannel, date) as { count: number };
+
+    return (record?.count || 0) > (scannedToday?.count || 0);
 }
 
 export async function getPrintedReceiptCountsForDate(date: string): Promise<PrintedReceiptCount[]> {
@@ -129,10 +136,11 @@ export async function fetchShippingReceipts(options: {
     salesChannel?: string;
     channel?: string;
     dateString?: string;
+    date_range?: { from: Date, to: Date };
     status?: string[];
     awb?: string;
 }): Promise<{ receipts: ShippingReceipt[]; total: number }> {
-    const { page, limit, salesChannel, channel, dateString, status, awb } = options;
+    const { page, limit, salesChannel, channel, dateString, date_range, status, awb } = options;
     const offset = (page - 1) * limit;
 
     let whereClauses: string[] = [];
@@ -154,6 +162,11 @@ export async function fetchShippingReceipts(options: {
     if (dateString) {
         whereClauses.push("date(date) = @dateString");
         params.dateString = dateString;
+    }
+    if (date_range) {
+        whereClauses.push("date(date) BETWEEN @startDate AND @endDate");
+        params.startDate = formatDate(date_range.from, 'yyyy-MM-dd');
+        params.endDate = formatDate(date_range.to, 'yyyy-MM-dd');
     }
     
 
@@ -999,16 +1012,6 @@ export async function getActiveDiscountPrice(productId: string | number, variant
 
 export async function recordSaleWithReceipt(receiptData: Omit<ShippingReceipt, 'id'>, salesData: Omit<Sale, 'id'>[]) {
     const { awb, channel: shippingChannel, salesChannel, date: dateObject } = receiptData;
-
-    if (!salesChannel || !shippingChannel) {
-        throw new Error('Sales channel and shipping channel are required to consume a receipt.');
-    }
-
-    const dateString = formatDate(new Date(dateObject), 'yyyy-MM-dd');
-    const consumed = await consumePrintedReceipt(salesChannel, shippingChannel, dateString);
-    if (!consumed) {
-        throw new Error('Jumlah resi yang dipindai melebihi jumlah yang dicetak oleh admin.');
-    }
 
     const transaction = db.transaction(() => {
         const addReceiptStmt = db.prepare('INSERT INTO shipping_receipts (awb, date, channel, salesChannel, status, transactionId) VALUES (@awb, @date, @channel, @salesChannel, @status, @transactionId)');

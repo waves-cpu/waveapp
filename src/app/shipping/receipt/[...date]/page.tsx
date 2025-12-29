@@ -6,7 +6,7 @@ import { AppLayout } from '@/app/components/app-layout';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import { Calendar as CalendarIcon, FilePlus2, Package, Loader2, AlertCircle } from 'lucide-react';
+import { Calendar as CalendarIcon, FilePlus2, Package, Loader2, AlertCircle, Truck, PackageCheck, Undo2, Ban, History, CheckCircle } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { format, parse, isValid } from 'date-fns';
@@ -23,6 +23,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ProcessedReceiptsDialog } from '@/app/components/processed-receipts-dialog';
+
+const SHIPPING_CHANNEL_OPTIONS = ['Semua Jasa Kirim', 'SPX', 'J&T', 'JNE', 'INSTANT', 'CARGO'];
+const STATUS_ORDER = ['Perlu Diproses', 'Siap Kirim', 'Selesai', 'Diantar', 'Return Selesai', 'Return', 'Dibatalkan', 'Tidak Sampai'];
 
 function parseDateFromParams(dateArray: string[] | undefined): Date | null {
     if (dateArray && dateArray.length > 0) {
@@ -104,11 +107,7 @@ function AddPrintedReceiptDialog({
                                 <SelectValue placeholder="Pilih Jasa Kirim" />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="SPX">SPX</SelectItem>
-                                <SelectItem value="J&T">J&T</SelectItem>
-                                <SelectItem value="JNE">JNE</SelectItem>
-                                <SelectItem value="INSTANT">INSTANT</SelectItem>
-                                <SelectItem value="CARGO">CARGO</SelectItem>
+                                {SHIPPING_CHANNEL_OPTIONS.slice(1).map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
                             </SelectContent>
                         </Select>
                     </div>
@@ -136,6 +135,18 @@ function AddPrintedReceiptDialog({
     );
 }
 
+const statusIcons: { [key: string]: React.ElementType } = {
+    'Perlu Diproses': Package,
+    'Siap Kirim': Truck,
+    'Selesai': CheckCircle,
+    'Return': Undo2,
+    'Return Selesai': History,
+    'Dibatalkan': Ban,
+    'Tidak Sampai': Ban,
+    'Diantar': Truck,
+};
+
+
 export default function ReceiptPage() {
     const { 
         getPendingReceiptsBeforeDate,
@@ -149,10 +160,11 @@ export default function ReceiptPage() {
     const params = useParams();
 
     const [isAddPrintedOpen, setAddPrintedOpen] = useState(false);
-    const [isProcessedDetailOpen, setProcessedDetailOpen] = useState(false);
+    const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
     const [pendingOldReceiptsCount, setPendingOldReceiptsCount] = useState(0);
     const [statusCounts, setStatusCounts] = useState<Record<string, number>>({});
     const [countsLoading, setCountsLoading] = useState(true);
+    const [shippingChannel, setShippingChannel] = useState<string | null>(null);
 
     const currentDate = useMemo(() => parseDateFromParams(Array.isArray(params.date) ? params.date : undefined), [params.date]);
     
@@ -162,6 +174,7 @@ export default function ReceiptPage() {
         try {
             const { statuses } = await fetchShippingReceiptCounts({ 
                 dateString: dateString,
+                shippingChannel: shippingChannel || undefined
             });
             setStatusCounts(statuses);
         } catch (error) {
@@ -169,7 +182,7 @@ export default function ReceiptPage() {
         } finally {
             setCountsLoading(false);
         }
-    }, [currentDate, fetchShippingReceiptCounts, toast]);
+    }, [currentDate, shippingChannel, fetchShippingReceiptCounts, toast]);
 
     const checkOldPendingReceipts = useCallback(async () => {
         if (!currentDate) return;
@@ -199,16 +212,18 @@ export default function ReceiptPage() {
         if (!currentDate) return;
         const dateString = format(currentDate, 'yyyy-MM-dd');
         await addPrintedReceipts(dateString, salesChannel, shippingChannel, count);
+        await fetchCounts();
         toast({ title: 'Berhasil', description: `${count} resi tercetak telah ditambahkan.` });
     };
     
     const handleShowAllPending = () => {
         router.push('/shipping/receipt/semua');
-        // This will trigger a re-render of the dialog with the right filters
-        setProcessedDetailOpen(true); 
+        setSelectedStatus('Perlu Diproses'); 
     };
 
-    const terprosesCount = statusCounts['Terproses'] || 0;
+    const orderedStatuses = useMemo(() => {
+        return STATUS_ORDER.filter(status => statusCounts[status] > 0 || status === 'Perlu Diproses');
+    }, [statusCounts]);
 
     return (
         <>
@@ -246,6 +261,14 @@ export default function ReceiptPage() {
                                 />
                                 </PopoverContent>
                             </Popover>
+                             <Select onValueChange={(v) => setShippingChannel(v === 'Semua Jasa Kirim' ? null : v)} value={shippingChannel || 'Semua Jasa Kirim'}>
+                                <SelectTrigger className="w-[180px] h-9">
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {SHIPPING_CHANNEL_OPTIONS.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
+                                </SelectContent>
+                            </Select>
                              <AddPrintedReceiptDialog isOpen={isAddPrintedOpen} setIsOpen={setAddPrintedOpen} onSave={handleAddPrintedReceipts} />
                         </div>
                     </div>
@@ -261,32 +284,39 @@ export default function ReceiptPage() {
                     )}
                     
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                         <Card
-                            className="hover:bg-accent hover:border-primary transition-colors cursor-pointer"
-                            onClick={() => terprosesCount > 0 && setProcessedDetailOpen(true)}
-                        >
-                            <CardHeader>
-                                <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-2">
-                                        <Package className="h-5 w-5 text-muted-foreground"/>
-                                        <h3 className="text-sm font-semibold">Perlu Diproses</h3>
-                                    </div>
-                                    {countsLoading ? <Loader2 className="h-6 w-6 animate-spin"/> : <div className="text-2xl font-bold">{terprosesCount}</div>}
-                                </div>
-                            </CardHeader>
-                        </Card>
+                         {orderedStatuses.map(status => {
+                             const Icon = statusIcons[status] || Package;
+                             const count = statusCounts[status] || 0;
+                             return (
+                                <Card
+                                    key={status}
+                                    className={cn("hover:bg-accent hover:border-primary transition-colors", count > 0 && "cursor-pointer")}
+                                    onClick={() => count > 0 && setSelectedStatus(status)}
+                                >
+                                    <CardHeader>
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-2">
+                                                <Icon className="h-5 w-5 text-muted-foreground"/>
+                                                <h3 className="text-sm font-semibold">{status}</h3>
+                                            </div>
+                                            {countsLoading ? <Loader2 className="h-6 w-6 animate-spin"/> : <div className="text-2xl font-bold">{count}</div>}
+                                        </div>
+                                    </CardHeader>
+                                </Card>
+                            )
+                         })}
                     </div>
 
                 </main>
             </AppLayout>
             <ProcessedReceiptsDialog
-                open={isProcessedDetailOpen}
-                onOpenChange={setProcessedDetailOpen}
+                open={!!selectedStatus}
+                onOpenChange={(isOpen) => !isOpen && setSelectedStatus(null)}
                 currentDate={currentDate}
                 onDataChange={fetchCounts}
+                initialStatusFilter={selectedStatus}
+                initialChannelFilter={shippingChannel}
             />
         </>
     );
 }
-
-    

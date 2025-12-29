@@ -56,9 +56,18 @@ interface ProcessedReceiptsDialogProps {
   onOpenChange: (open: boolean) => void;
   currentDate: Date | null;
   onDataChange: () => void;
+  initialStatusFilter?: string | null;
+  initialChannelFilter?: string | null;
 }
 
-export function ProcessedReceiptsDialog({ open, onOpenChange, currentDate, onDataChange }: ProcessedReceiptsDialogProps) {
+export function ProcessedReceiptsDialog({ 
+    open, 
+    onOpenChange, 
+    currentDate, 
+    onDataChange, 
+    initialStatusFilter,
+    initialChannelFilter,
+}: ProcessedReceiptsDialogProps) {
   const { 
     fetchShippingReceipts, 
     deleteShippingReceipt, 
@@ -86,9 +95,9 @@ export function ProcessedReceiptsDialog({ open, onOpenChange, currentDate, onDat
             page: currentPage,
             limit: itemsPerPage,
             dateString: currentDate ? format(currentDate, 'yyyy-MM-dd') : undefined,
-            status: ['Terproses'],
+            status: initialStatusFilter ? [initialStatusFilter] : undefined,
             salesChannel: activeSalesChannel || undefined,
-            channel: activeShippingChannel || undefined,
+            channel: activeShippingChannel || initialChannelFilter || undefined,
             awb: searchTerm,
         });
         setReceipts(fetchedReceipts);
@@ -98,10 +107,11 @@ export function ProcessedReceiptsDialog({ open, onOpenChange, currentDate, onDat
     } finally {
         setLoading(false);
     }
-  }, [fetchShippingReceipts, toast, currentPage, itemsPerPage, currentDate, activeSalesChannel, activeShippingChannel, searchTerm]);
+  }, [fetchShippingReceipts, toast, currentPage, itemsPerPage, currentDate, activeSalesChannel, activeShippingChannel, initialChannelFilter, searchTerm, initialStatusFilter]);
 
   useEffect(() => {
     if (open) {
+      setActiveShippingChannel(initialChannelFilter || null);
       loadReceipts();
     } else {
       // Reset state when dialog closes
@@ -111,7 +121,7 @@ export function ProcessedReceiptsDialog({ open, onOpenChange, currentDate, onDat
       setSelectedIds(new Set());
       setCurrentPage(1);
     }
-  }, [open, currentPage, itemsPerPage, activeSalesChannel, activeShippingChannel, searchTerm]);
+  }, [open, currentPage, itemsPerPage, activeSalesChannel, activeShippingChannel, searchTerm, loadReceipts, initialChannelFilter]);
   
   useEffect(() => {
     setCurrentPage(1);
@@ -182,9 +192,9 @@ export function ProcessedReceiptsDialog({ open, onOpenChange, currentDate, onDat
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl h-[90vh] flex flex-col">
         <DialogHeader>
-          <DialogTitle>Daftar Resi Perlu Diproses</DialogTitle>
+          <DialogTitle>Daftar Resi: {initialStatusFilter}</DialogTitle>
           <DialogDescription>
-            Kelola dan proses semua resi yang siap untuk dikirimkan.
+            Kelola dan proses semua resi yang memiliki status '{initialStatusFilter}'.
           </DialogDescription>
         </DialogHeader>
 
@@ -217,7 +227,7 @@ export function ProcessedReceiptsDialog({ open, onOpenChange, currentDate, onDat
                         className="pl-8 h-9 w-full"
                     />
                  </div>
-                 {selectedIds.size > 0 && (
+                 {selectedIds.size > 0 && initialStatusFilter === 'Perlu Diproses' && (
                     <Button size="sm" onClick={() => handleBulkAction('Siap Kirim')} disabled={isProcessing}>
                         <Send className="mr-2 h-4 w-4" />
                         {isProcessing ? 'Memproses...' : `Proses Kirim (${selectedIds.size})`}
@@ -260,8 +270,8 @@ export function ProcessedReceiptsDialog({ open, onOpenChange, currentDate, onDat
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8"><MoreVertical className="h-4 w-4" /></Button></DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => handleChangeStatus(item, 'Siap Kirim')}><Send className="mr-2 h-4 w-4" /> Tandai Siap Kirim</DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleChangeStatus(item, 'Dibatalkan')} className="text-destructive"><Ban className="mr-2 h-4 w-4" /> Batalkan</DropdownMenuItem>
+                            {initialStatusFilter === 'Perlu Diproses' && <DropdownMenuItem onClick={() => handleChangeStatus(item, 'Siap Kirim')}><Send className="mr-2 h-4 w-4" /> Tandai Siap Kirim</DropdownMenuItem>}
+                            {initialStatusFilter !== 'Dibatalkan' && <DropdownMenuItem onClick={() => handleChangeStatus(item, 'Dibatalkan')} className="text-destructive"><Ban className="mr-2 h-4 w-4" /> Batalkan</DropdownMenuItem>}
                              <AlertDialog>
                                 <AlertDialogTrigger asChild>
                                     <DropdownMenuItem onSelect={e => e.preventDefault()} className="text-destructive"><Trash2 className="mr-2 h-4 w-4" /> Hapus</DropdownMenuItem>
@@ -282,7 +292,7 @@ export function ProcessedReceiptsDialog({ open, onOpenChange, currentDate, onDat
                       </TableCell>
                     </TableRow>
                   )) : (
-                    <TableRow><TableCell colSpan={7} className="h-48 text-center text-muted-foreground">Tidak ada resi yang perlu diproses.</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={7} className="h-48 text-center text-muted-foreground">Tidak ada resi yang cocok dengan filter Anda.</TableCell></TableRow>
                   )}
                 </TableBody>
               </Table>
@@ -299,4 +309,3 @@ export function ProcessedReceiptsDialog({ open, onOpenChange, currentDate, onDat
     </Dialog>
   );
 }
-
