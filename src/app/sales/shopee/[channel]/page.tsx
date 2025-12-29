@@ -44,6 +44,23 @@ import { DailySalesDetailDialog } from '@/app/components/daily-sales-detail-dial
 import { Badge } from '@/components/ui/badge';
 import { RecordSaleForReceiptDialog } from '@/app/components/record-sale-for-receipt-dialog';
 
+async function apiFetch(url: string, options: RequestInit = {}) {
+    const res = await fetch(url, {
+        ...options,
+        headers: {
+            'Content-Type': 'application/json',
+            'X-API-Key': process.env.NEXT_PUBLIC_API_KEY || 'secret-api-key-for-waveapp',
+            ...options.headers,
+        },
+    });
+
+    if (!res.ok) {
+        const errorData = await res.json().catch(() => ({ message: 'An unknown error occurred' }));
+        throw new Error(errorData.message);
+    }
+    return res.json();
+}
+
 export function useReceiptPageLogic(salesChannel: 'Shopee' | 'Tiktok' | 'Lazada') {
     const params = useParams();
     const router = useRouter();
@@ -185,18 +202,19 @@ export function useReceiptPageLogic(salesChannel: 'Shopee' | 'Tiktok' | 'Lazada'
         playSuccessSound();
     };
 
-    const handleViewDetails = (receipt: ShippingReceipt) => {
+    const handleViewDetails = async (receipt: ShippingReceipt) => {
         if (!receipt.transactionId) {
             setReceiptForSale(receipt);
             setIsSaleDialogOpen(true);
             return;
-        };
-        
-        const items = salesByReceipt.get(receipt.transactionId) || [];
-        if (items.length > 0) {
-            setDetailItems(items);
+        }
+
+        try {
+            const data = await apiFetch(`/api/sales/transaction/${receipt.transactionId}`);
+            setDetailItems(data.sales);
             setIsDetailOpen(true);
-        } else {
+        } catch (error) {
+            // If fetching fails, it likely means no sale is recorded yet. Open the recording dialog.
             setReceiptForSale(receipt);
             setIsSaleDialogOpen(true);
         }
@@ -227,7 +245,7 @@ export function useReceiptPageLogic(salesChannel: 'Shopee' | 'Tiktok' | 'Lazada'
         language, t, router, receipts, totalReceipts, loading, awb, setAwb, isSubmitting,
         awbInputRef, currentPage, setCurrentPage, itemsPerPage, searchTerm, setSearchTerm,
         selectedDate, setSelectedDate, detailItems, isDetailOpen, setIsDetailOpen, receiptForSale,
-        isSaleDialogOpen, setIsSaleDialogOpen, salesChannel, shippingChannel, salesByReceipt,
+        setReceiptForSale, isSaleDialogOpen, setIsSaleDialogOpen, salesChannel, shippingChannel, salesByReceipt,
         handleAwbSubmit, handleViewDetails, handleSaleComplete, totalPages: Math.ceil(totalReceipts / itemsPerPage)
     };
 }
@@ -237,7 +255,7 @@ export default function ShopeeChannelPage() {
   const {
       t, router, receipts, totalReceipts, loading, awb, setAwb, isSubmitting, awbInputRef,
       currentPage, setCurrentPage, itemsPerPage, searchTerm, setSearchTerm, selectedDate,
-      setSelectedDate, detailItems, isDetailOpen, setIsDetailOpen, receiptForSale,
+      setSelectedDate, detailItems, isDetailOpen, setIsDetailOpen, receiptForSale, setReceiptForSale,
       isSaleDialogOpen, setIsSaleDialogOpen, salesChannel, shippingChannel, salesByReceipt,
       handleAwbSubmit, handleViewDetails, handleSaleComplete, totalPages
   } = useReceiptPageLogic('Shopee');

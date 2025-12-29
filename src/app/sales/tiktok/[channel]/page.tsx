@@ -35,7 +35,7 @@ export default function TiktokChannelPage() {
       t, router, receipts, totalReceipts, loading, awb, setAwb, isSubmitting, awbInputRef,
       currentPage, setCurrentPage, itemsPerPage, searchTerm, setSearchTerm, selectedDate,
       setSelectedDate, detailItems, isDetailOpen, setIsDetailOpen, receiptForSale,
-      isSaleDialogOpen, setIsSaleDialogOpen, salesChannel, shippingChannel, salesByReceipt,
+      setReceiptForSale, isSaleDialogOpen, setIsSaleDialogOpen, salesChannel, shippingChannel, salesByReceipt,
       handleAwbSubmit, handleViewDetails, handleSaleComplete, totalPages
   } = useReceiptPageLogic('Tiktok');
 

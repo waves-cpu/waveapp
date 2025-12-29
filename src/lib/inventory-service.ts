@@ -788,6 +788,16 @@ export async function adjustStock(itemId: string, change: number, reason: string
     })();
 }
 
+export async function bulkAdjustStock(updates: { itemId: string, quantity: number }[], reason: string) {
+    const adjustStmt = db.transaction(() => {
+        for (const update of updates) {
+            // We pass a negative quantity for stock-out
+            adjustStock(update.itemId, update.quantity, reason);
+        }
+    });
+    adjustStmt();
+}
+
 
 export async function findProductBySku(sku: string): Promise<InventoryItem | null> {
     const getVariantBySkuStmt = db.prepare('SELECT * FROM variants WHERE sku = ?');
@@ -1128,6 +1138,32 @@ export async function fetchAllSales(): Promise<Sale[]> {
         ...s, 
         id: s.id.toString(),
         saleDate: s.saleDate, // Keep as string from DB
+    }));
+}
+
+export async function getSalesByTransactionId(transactionId: string): Promise<Sale[]> {
+    const salesQuery = db.prepare(`
+        SELECT 
+            s.id, s.transactionId, s.paymentMethod, s.resellerName, s.productId, s.variantId, s.accessoryId, s.channel, s.quantity, s.priceAtSale, s.cogsAtSale, s.saleDate,
+            COALESCE(p.name, a.name) as productName,
+            COALESCE(p.category, a.category) as productCategory,
+            p.imageUrl as parentImageUrl,
+            COALESCE(p.sku, a.sku) as parentSku,
+            v.name as variantName,
+            COALESCE(v.sku, p.sku, a.sku) as sku,
+            s.status
+        FROM sales s
+        LEFT JOIN products p ON s.productId = p.id
+        LEFT JOIN variants v ON s.variantId = v.id
+        LEFT JOIN accessories a ON s.accessoryId = a.id
+        WHERE s.transactionId = ?
+        ORDER BY s.id
+    `);
+    const sales = salesQuery.all(transactionId) as any[];
+    return sales.map(s => ({
+        ...s, 
+        id: s.id.toString(),
+        saleDate: s.saleDate,
     }));
 }
 
@@ -1674,6 +1710,7 @@ async function updateShippingReceiptStatusByAwb(awb: string, status: string) {
 
 
     
+
 
 
 
