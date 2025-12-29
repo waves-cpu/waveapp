@@ -19,7 +19,7 @@ import { useLanguage } from '@/hooks/use-language';
 import { translations } from '@/types/language';
 import { useParams, useRouter } from 'next/navigation';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { Dialog, DialogHeader, DialogTitle, DialogDescription, DialogContent, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogTrigger, DialogHeader, DialogTitle, DialogDescription, DialogContent, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -138,7 +138,6 @@ function AddPrintedReceiptDialog({
 }
 
 const statusIcons: { [key: string]: React.ElementType } = {
-    'Perlu Diproses': Package,
     'Terproses': Package,
     'Siap Kirim': Truck,
     'Selesai': CheckCircle,
@@ -158,7 +157,6 @@ export default function ReceiptPage() {
     } = useInventory();
     const { toast } = useToast();
     const { language } = useLanguage();
-    const t = translations[language];
     const router = useRouter();
     const params = useParams();
 
@@ -170,6 +168,7 @@ export default function ReceiptPage() {
     const [shippingChannel, setShippingChannel] = useState<string | null>(null);
 
     const currentDate = useMemo(() => parseDateFromParams(Array.isArray(params.date) ? params.date : undefined), [params.date]);
+    const t = translations[language];
     
     const fetchCounts = useCallback(async () => {
         setCountsLoading(true);
@@ -221,7 +220,7 @@ export default function ReceiptPage() {
     
     const handleShowAllPending = () => {
         router.push('/shipping/receipt/semua');
-        setSelectedStatus('Perlu Diproses'); 
+        setSelectedStatus('Terproses'); 
     };
 
     const orderedStatuses = useMemo(() => {
@@ -326,3 +325,4 @@ export default function ReceiptPage() {
         </>
     );
 }
+
