@@ -8,7 +8,7 @@ const API_KEY = process.env.API_KEY || 'secret-api-key-for-waveapp';
 // GET sales by transactionId
 export async function GET(_request: NextRequest, { params }: { params: { id: string } }) {
   const { id } = params;
-  const headersList = headers();
+  const headersList = await headers();
   const apiKey = headersList.get('X-API-Key');
   if (apiKey !== API_KEY) {
     return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
@@ -29,7 +29,7 @@ export async function GET(_request: NextRequest, { params }: { params: { id: str
 
 export async function DELETE(_request: NextRequest, { params }: { params: { id: string } }) {
     const { id } = params;
-    const headersList = headers();
+    const headersList = await headers();
     const apiKey = headersList.get('X-API-Key');
     if (apiKey !== API_KEY) {
         return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
