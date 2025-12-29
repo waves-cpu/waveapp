@@ -839,127 +839,112 @@ export async function performSale(
     channel: string, 
     quantity: number, 
     options: {
-        sku: string;
-        saleDate?: Date, 
+        sales: { sku: string; quantity: number; price: number }[];
         transactionId?: string, 
         paymentMethod?: string,
         resellerName?: string,
-        priceAtSale?: number,
         status?: string
     }
-): Promise<{ newSale: Sale, updatedItem?: InventoryItem, updatedAccessory?: Accessory }> {
+): Promise<{ newSale: Sale, updatedItem?: InventoryItem, updatedAccessory?: Accessory }[]> {
+    const { sales, ...saleOptions } = options;
+
     const getProductStmt = db.prepare('SELECT * FROM products WHERE sku = ? AND hasVariants = 0');
     const getVariantStmt = db.prepare('SELECT * FROM variants WHERE sku = ?');
     const getAccessoryStmt = db.prepare('SELECT * FROM accessories WHERE sku = ?');
     const getParentProductStmt = db.prepare('SELECT * FROM products WHERE id = ?');
     
-    let updatedItem: InventoryItem | undefined = undefined;
-    let updatedAccessory: Accessory | undefined = undefined;
+    const transaction = db.transaction(() => {
+        const results: { newSale: Sale, updatedItem?: InventoryItem, updatedAccessory?: Accessory }[] = [];
 
-    const { newSaleId } = db.transaction(() => {
-        const saleDate = options?.saleDate || new Date();
-        const saleDateString = formatDate(saleDate, "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
-        const saleReason = `Sale (${channel})` + (options?.resellerName ? ` - ${options.resellerName}` : '');
+        sales.forEach(sale => {
+            let updatedItem: InventoryItem | undefined = undefined;
+            let updatedAccessory: Accessory | undefined = undefined;
+            const saleDate = new Date();
+            const saleDateString = formatDate(saleDate, "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
+            const saleReason = `Sale (${channel})` + (saleOptions?.resellerName ? ` - ${saleOptions.resellerName}` : '');
 
-        let cogsAtSale;
-        let saleStatus = options?.status || 'Completed';
-        let parentProduct: any;
-        let productId: string | number | null = null;
-        let variantId: string | number | null = null;
-        let accessoryId: string | number | null = null;
-        
-        let finalPriceAtSale: number;
-        const sku = options.sku;
-
-        const variant = getVariantStmt.get(sku) as (InventoryItemVariant & { id: number, productId: number, costPrice?: number }) | undefined;
-        const product = getProductStmt.get(sku) as (InventoryItem & { id: number, costPrice?: number, sku: string }) | undefined;
-        const accessory = getAccessoryStmt.get(sku) as (Accessory & { id: number, costPrice?: number, sku: string }) | undefined;
-        
-        if (variant) {
-            parentProduct = getParentProductStmt.get(variant.productId);
-            productId = parentProduct.id;
-            variantId = variant.id;
-            if (variant.stock < quantity) throw new Error('Insufficient stock for variant.');
+            let cogsAtSale;
+            let saleStatus = saleOptions?.status || 'Completed';
+            let parentProduct: any;
+            let productId: string | number | null = null;
+            let variantId: string | number | null = null;
+            let accessoryId: string | number | null = null;
             
-            cogsAtSale = variant.costPrice || 0;
+            const sku = sale.sku;
+
+            const variant = getVariantStmt.get(sku) as (InventoryItemVariant & { id: number, productId: number, costPrice?: number }) | undefined;
+            const product = getProductStmt.get(sku) as (InventoryItem & { id: number, costPrice?: number, sku: string }) | undefined;
+            const accessory = getAccessoryStmt.get(sku) as (Accessory & { id: number, costPrice?: number, sku: string }) | undefined;
             
-            finalPriceAtSale = options?.priceAtSale ?? variant.price;
+            if (variant) {
+                parentProduct = getParentProductStmt.get(variant.productId);
+                productId = parentProduct.id;
+                variantId = variant.id;
+                if (variant.stock < sale.quantity) throw new Error('Insufficient stock for variant.');
+                cogsAtSale = variant.costPrice || 0;
+                adjustStock(variant.id.toString(), -sale.quantity, saleReason);
+            } else if (product) {
+                parentProduct = product;
+                productId = product.id;
+                if (product.stock! < sale.quantity) throw new Error('Insufficient stock for product.');
+                cogsAtSale = product.costPrice || 0;
+                adjustStock(product.id.toString(), -sale.quantity, saleReason);
+            } else if (accessory) {
+                accessoryId = accessory.id;
+                parentProduct = { name: accessory.name, sku: accessory.sku, category: accessory.category, imageUrl: undefined };
+                if (accessory.stock! < sale.quantity) throw new Error('Insufficient stock for accessory.');
+                cogsAtSale = accessory.costPrice || 0;
+                adjustAccessoryStock(accessory.id.toString(), -sale.quantity, saleReason);
+            } else {
+                throw new Error('SKU not found or product has variants.');
+            }
 
-            adjustStock(variant.id.toString(), -quantity, saleReason);
-
-        } else if (product) {
-            parentProduct = product;
-            productId = product.id;
-            if (product.stock! < quantity) throw new Error('Insufficient stock for product.');
+            const saleResult = db.prepare(`
+                INSERT INTO sales (transactionId, paymentMethod, resellerName, productId, variantId, accessoryId, channel, quantity, priceAtSale, cogsAtSale, saleDate, status, parentSku, productCategory, parentImageUrl)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `).run(
+                saleOptions?.transactionId || `tx-${Date.now()}`, 
+                saleOptions?.paymentMethod, 
+                saleOptions?.resellerName, 
+                productId, 
+                variantId, 
+                accessoryId,
+                channel, 
+                sale.quantity, 
+                sale.price, // Use price from the sale object
+                cogsAtSale, 
+                saleDateString, 
+                saleStatus,
+                parentProduct?.sku,
+                parentProduct?.category,
+                parentProduct?.imageUrl
+            );
             
-            cogsAtSale = product.costPrice || 0;
-
-            finalPriceAtSale = options?.priceAtSale ?? product.price!;
+            const newSaleId = saleResult.lastInsertRowid;
+            const newSale = db.prepare(`
+                SELECT 
+                    s.id, s.transactionId, s.paymentMethod, s.resellerName, s.productId, s.variantId, s.accessoryId, s.channel, s.quantity, s.priceAtSale, s.cogsAtSale, s.saleDate,
+                    COALESCE(p.name, a.name) as productName,
+                    COALESCE(p.category, a.category) as productCategory,
+                    p.imageUrl as parentImageUrl,
+                    COALESCE(p.sku, a.sku) as parentSku,
+                    v.name as variantName,
+                    COALESCE(v.sku, p.sku, a.sku) as sku,
+                    s.status
+                FROM sales s
+                LEFT JOIN products p ON s.productId = p.id
+                LEFT JOIN variants v ON s.variantId = v.id
+                LEFT JOIN accessories a ON s.accessoryId = a.id
+                WHERE s.id = ?
+            `).get(newSaleId) as Sale;
             
-            adjustStock(product.id.toString(), -quantity, saleReason);
-        
-        } else if (accessory) {
-            accessoryId = accessory.id;
-            parentProduct = { name: accessory.name, sku: accessory.sku, category: accessory.category, imageUrl: undefined };
-            if (accessory.stock! < quantity) throw new Error('Insufficient stock for accessory.');
-            cogsAtSale = accessory.costPrice || 0;
-            finalPriceAtSale = options?.priceAtSale ?? 0;
-            adjustAccessoryStock(accessory.id.toString(), -quantity, saleReason);
+            results.push({ newSale });
+        });
 
-        } else {
-            throw new Error('SKU not found or product has variants.');
-        }
-
-        const saleResult = db.prepare(`
-            INSERT INTO sales (transactionId, paymentMethod, resellerName, productId, variantId, accessoryId, channel, quantity, priceAtSale, cogsAtSale, saleDate, status, parentSku, productCategory, parentImageUrl)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `).run(
-            options?.transactionId || `tx-${Date.now()}`, 
-            options?.paymentMethod, 
-            options?.resellerName, 
-            productId, 
-            variantId, 
-            accessoryId,
-            channel, 
-            quantity, 
-            finalPriceAtSale, 
-            cogsAtSale, 
-            saleDateString, 
-            saleStatus,
-            parentProduct?.sku,
-            parentProduct?.category,
-            parentProduct?.imageUrl
-        );
-        return { newSaleId: saleResult.lastInsertRowid };
-
-    })();
+        return results;
+    });
     
-    // After transaction, fetch the updated data
-    const newSale = db.prepare(`
-        SELECT 
-            s.id, s.transactionId, s.paymentMethod, s.resellerName, s.productId, s.variantId, s.accessoryId, s.channel, s.quantity, s.priceAtSale, s.cogsAtSale, s.saleDate,
-            COALESCE(p.name, a.name) as productName,
-            COALESCE(p.category, a.category) as productCategory,
-            p.imageUrl as parentImageUrl,
-            COALESCE(p.sku, a.sku) as parentSku,
-            v.name as variantName,
-            COALESCE(v.sku, p.sku, a.sku) as sku,
-            s.status
-        FROM sales s
-        LEFT JOIN products p ON s.productId = p.id
-        LEFT JOIN variants v ON s.variantId = v.id
-        LEFT JOIN accessories a ON s.accessoryId = a.id
-        WHERE s.id = ?
-    `).get(newSaleId) as Sale;
-
-    if (newSale.productId) {
-        updatedItem = await fetchSingleItem(newSale.productId.toString());
-    }
-    if (newSale.accessoryId) {
-        updatedAccessory = await fetchSingleAccessory(newSale.accessoryId.toString());
-    }
-    
-    return { newSale, updatedItem, updatedAccessory };
+    return transaction();
 }
 
 export async function getActiveDiscountPrice(productId: string | number, variantId: string | number | null, category: string, channel: string): Promise<number | null> {
@@ -978,10 +963,10 @@ export async function getActiveDiscountPrice(productId: string | number, variant
         WHERE category = ? 
         AND startDate <= ? 
         AND endDate >= ? 
-        AND channel IN (${channelPlaceholders})
+        AND lower(channel) IN (${channelPlaceholders})
     `);
     
-    const groups = getGroupStmt.all(category, now, now, ...channelChecks) as {id: number}[];
+    const groups = getGroupStmt.all(category, now, now, ...channelChecks.map(c => c.toLowerCase())) as {id: number}[];
 
     if (groups.length === 0) return null;
 
@@ -997,14 +982,14 @@ export async function getActiveDiscountPrice(productId: string | number, variant
           AND (dp.variantId = ? OR (dp.variantId IS NULL AND ? IS NULL))
         ORDER BY
           CASE 
-            WHEN dg.channel = ? THEN 1 -- Prioritize specific channel
-            WHEN dg.channel = 'online' THEN 2 -- Then 'online' channel
+            WHEN lower(dg.channel) = ? THEN 1 -- Prioritize specific channel
+            WHEN lower(dg.channel) = 'online' THEN 2 -- Then 'online' channel
             ELSE 3
           END
         LIMIT 1
     `);
     
-    const params: (string|number|null)[] = [...groupIds, productId, variantId ?? null, variantId ?? null, channel];
+    const params: (string|number|null)[] = [...groupIds, productId, variantId ?? null, variantId ?? null, channel.toLowerCase()];
     const result = getDiscountStmt.get(...params) as { discountedPrice: number } | undefined;
 
     return result ? result.discountedPrice : null;
@@ -1068,7 +1053,7 @@ export async function recordSaleWithReceipt(receiptData: Omit<ShippingReceipt, '
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             `).run(
                 sale.transactionId, null, null, productId, variantId, null,
-                sale.channel, sale.quantity, sale.priceAtSale ?? 0, cogsAtSale, sale.saleDate,
+                sale.channel, sale.quantity, sale.priceAtSale, cogsAtSale, sale.saleDate,
                 'Terproses', parentProduct?.sku, parentProduct?.category, parentProduct?.imageUrl
             );
         });
@@ -1720,6 +1705,7 @@ async function updateShippingReceiptStatusByAwb(awb: string, status: string) {
 
 
     
+
 
 
 
