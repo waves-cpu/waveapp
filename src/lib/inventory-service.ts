@@ -1,5 +1,4 @@
 
-
 'use server';
 
 import { db as dbProxy } from './db';
@@ -837,7 +836,6 @@ export async function findProductBySku(sku: string): Promise<InventoryItem | nul
 
 export async function performSale(
     channel: string, 
-    quantity: number, 
     options: {
         sales: { sku: string; quantity: number; price: number }[];
         transactionId?: string, 
@@ -952,7 +950,7 @@ export async function getActiveDiscountPrice(productId: string | number, variant
     
     const isOnlineSale = ['shopee', 'tiktok', 'lazada'].some(c => channel.toLowerCase().includes(c));
 
-    let channelChecks = [channel];
+    let channelChecks = [channel.toLowerCase()];
     if (isOnlineSale) {
         channelChecks.push('online');
     }
@@ -966,7 +964,7 @@ export async function getActiveDiscountPrice(productId: string | number, variant
         AND lower(channel) IN (${channelPlaceholders})
     `);
     
-    const groups = getGroupStmt.all(category, now, now, ...channelChecks.map(c => c.toLowerCase())) as {id: number}[];
+    const groups = getGroupStmt.all(category, now, now, ...channelChecks) as {id: number}[];
 
     if (groups.length === 0) return null;
 
@@ -1705,22 +1703,3 @@ async function updateShippingReceiptStatusByAwb(awb: string, status: string) {
 
 
     
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

@@ -220,7 +220,7 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
 
   const recordSale = async (channel: string, quantity: number, options: any): Promise<any> => {
     const salePayload = {
-      sales: [{ sku: options.sku, quantity, price: options?.priceAtSale }],
+      sales: options.sales,
       options: { ...options, channel }
     };
     const result = await apiFetch('/api/sales', { method: 'POST', body: JSON.stringify(salePayload) });
@@ -451,5 +451,4 @@ export const useInventory = () => {
   if (context === undefined) {
     throw new Error('useInventory must be used within an InventoryProvider');
   }
-  return context;
-};
+  return context
