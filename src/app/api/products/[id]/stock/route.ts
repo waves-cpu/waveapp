@@ -7,9 +7,9 @@ const API_KEY = process.env.API_KEY || 'secret-api-key-for-waveapp';
 
 // ADJUST stock for a product/variant
 export async function POST(request: NextRequest, context: { params: { id: string } }) {
-    const { params } = await context;
+    const { params } = context;
     const { id } = params;
-    const headersList = await headers();
+    const headersList = headers();
     const apiKey = headersList.get('X-API-Key');
     if (apiKey !== API_KEY) {
         return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });

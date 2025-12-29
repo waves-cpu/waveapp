@@ -7,9 +7,9 @@ const API_KEY = process.env.API_KEY || 'secret-api-key-for-waveapp';
 
 // UPDATE a reseller
 export async function PUT(request: NextRequest, context: { params: { id: string } }) {
-    const { params } = await context;
+    const { params } = context;
     const id = parseInt(params.id, 10);
-    const headersList = await headers();
+    const headersList = headers();
     const apiKey = headersList.get('X-API-Key');
     if (apiKey !== API_KEY) {
         return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
@@ -32,9 +32,9 @@ export async function PUT(request: NextRequest, context: { params: { id: string 
 
 // DELETE a reseller
 export async function DELETE(request: NextRequest, context: { params: { id: string } }) {
-    const { params } = await context;
+    const { params } = context;
     const id = parseInt(params.id, 10);
-    const headersList = await headers();
+    const headersList = headers();
     const apiKey = headersList.get('X-API-Key');
     if (apiKey !== API_KEY) {
         return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
