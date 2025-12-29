@@ -179,22 +179,6 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                                     </SidebarMenuButton>
                                 </Link>
                               </SidebarMenuItem>
-                              <SidebarMenuItem>
-                                  <Link href="/stock-in">
-                                      <SidebarMenuButton variant="ghost" size="sm" isActive={isActive('/stock-in')}>
-                                          <PackagePlus/>
-                                          {t.dashboard.stockIn}
-                                      </SidebarMenuButton>
-                                  </Link>
-                              </SidebarMenuItem>
-                              <SidebarMenuItem>
-                                  <Link href="/stock-out">
-                                      <SidebarMenuButton variant="ghost" size="sm" isActive={isActive('/stock-out')}>
-                                          <PackageMinus/>
-                                          {t.dashboard.stockOut}
-                                      </SidebarMenuButton>
-                                  </Link>
-                              </SidebarMenuItem>
                                <SidebarMenuItem>
                                   <Link href="/history">
                                       <SidebarMenuButton variant="ghost" size="sm" isActive={isActive('/history')}>
