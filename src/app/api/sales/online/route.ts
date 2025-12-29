@@ -1,21 +1,10 @@
 
-
 import { recordSaleWithReceipt } from '@/lib/inventory-service';
 import { NextRequest, NextResponse } from 'next/server';
-import { headers } from 'next/headers';
 import type { ShippingReceipt, Sale } from '@/types';
-
-const API_KEY = process.env.API_KEY || 'secret-api-key-for-waveapp';
 
 // Handler for POST requests to record a new online sale with its receipt
 export async function POST(request: NextRequest) {
-  const headersList = await headers();
-  const apiKey = headersList.get('X-API-Key');
-
-  if (apiKey !== API_KEY) {
-    return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
-  }
-
   try {
     const body = await request.json();
     const { receipt, sales } = body;
@@ -44,7 +33,7 @@ export async function POST(request: NextRequest) {
         sku: sale.sku,
         channel: receipt.salesChannel,
         quantity: sale.quantity,
-        priceAtSale: sale.price || 0,
+        priceAtSale: sale.price,
         saleDate: receiptData.date,
         status: 'Terproses',
     }));

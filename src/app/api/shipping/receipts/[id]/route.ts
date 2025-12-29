@@ -1,19 +1,10 @@
 
 import { fetchSingleShippingReceipt, updateShippingReceiptStatus, deleteShippingReceipt } from '@/lib/inventory-service';
 import { NextRequest, NextResponse } from 'next/server';
-import { headers } from 'next/headers';
-
-const API_KEY = process.env.API_KEY || 'secret-api-key-for-waveapp';
 
 // GET a single shipping receipt
-export async function GET(request: NextRequest, context: { params: { id: string } }) {
-  const { params } = context;
+export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   const id = parseInt(params.id, 10);
-  const headersList = headers();
-  const apiKey = headersList.get('X-API-Key');
-  if (apiKey !== API_KEY) {
-    return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
-  }
 
   try {
     if (isNaN(id)) {
@@ -30,14 +21,8 @@ export async function GET(request: NextRequest, context: { params: { id: string 
 }
 
 // UPDATE a shipping receipt (e.g., its status)
-export async function PUT(request: NextRequest, context: { params: { id: string } }) {
-    const { params } = context;
+export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
     const id = parseInt(params.id, 10);
-    const headersList = headers();
-    const apiKey = headersList.get('X-API-Key');
-    if (apiKey !== API_KEY) {
-        return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
-    }
 
     try {
         if (isNaN(id)) {
@@ -58,14 +43,8 @@ export async function PUT(request: NextRequest, context: { params: { id: string 
 }
 
 // DELETE a shipping receipt
-export async function DELETE(request: NextRequest, context: { params: { id: string } }) {
-    const { params } = context;
+export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
     const id = parseInt(params.id, 10);
-    const headersList = headers();
-    const apiKey = headersList.get('X-API-Key');
-    if (apiKey !== API_KEY) {
-        return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
-    }
 
     try {
         if (isNaN(id)) {

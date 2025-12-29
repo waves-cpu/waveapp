@@ -1,19 +1,10 @@
 
 import { fetchSingleItem, editProduct, deleteProductPermanently } from '@/lib/inventory-service';
 import { NextRequest, NextResponse } from 'next/server';
-import { headers } from 'next/headers';
-
-const API_KEY = process.env.API_KEY || 'secret-api-key-for-waveapp';
 
 // GET a single product
-export async function GET(request: NextRequest, context: { params: { id: string } }) {
-  const { params } = context;
+export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   const { id } = params;
-  const headersList = headers();
-  const apiKey = headersList.get('X-API-Key');
-  if (apiKey !== API_KEY) {
-    return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
-  }
 
   try {
     const item = await fetchSingleItem(id);
@@ -27,14 +18,8 @@ export async function GET(request: NextRequest, context: { params: { id: string 
 }
 
 // UPDATE a product
-export async function PUT(request: NextRequest, context: { params: { id: string } }) {
-    const { params } = context;
+export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
     const { id } = params;
-    const headersList = headers();
-    const apiKey = headersList.get('X-API-Key');
-    if (apiKey !== API_KEY) {
-        return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
-    }
 
     try {
         const body = await request.json();
@@ -47,14 +32,8 @@ export async function PUT(request: NextRequest, context: { params: { id: string 
 }
 
 // DELETE a product
-export async function DELETE(request: NextRequest, context: { params: { id: string } }) {
-    const { params } = context;
+export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
     const { id } = params;
-    const headersList = headers();
-    const apiKey = headersList.get('X-API-Key');
-    if (apiKey !== API_KEY) {
-        return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
-    }
 
     try {
         await deleteProductPermanently(id);

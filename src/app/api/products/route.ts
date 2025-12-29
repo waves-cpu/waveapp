@@ -1,18 +1,8 @@
 
 import { fetchInventoryData, addProduct } from '@/lib/inventory-service';
 import { NextResponse, NextRequest } from 'next/server';
-import { headers } from 'next/headers';
-
-const API_KEY = process.env.API_KEY || 'secret-api-key-for-waveapp';
 
 export async function GET() {
-  const headersList = await headers();
-  const apiKey = headersList.get('X-API-Key');
-
-  if (apiKey !== API_KEY) {
-    return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
-  }
-
   try {
     const { items, accessories } = await fetchInventoryData();
     
@@ -24,13 +14,6 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
-  const headersList = await headers();
-  const apiKey = headersList.get('X-API-Key');
-
-  if (apiKey !== API_KEY) {
-    return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
-  }
-
   try {
     const body = await request.json();
     const newItemId = await addProduct(body);

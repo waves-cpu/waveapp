@@ -1,16 +1,8 @@
 
 import { getReceiptCountByStatus } from '@/lib/inventory-service';
 import { NextRequest, NextResponse } from 'next/server';
-import { headers } from 'next/headers';
 
 export async function GET(request: NextRequest) {
-  const headersList = await headers();
-  const apiKey = headersList.get('X-API-Key');
-
-  if (apiKey !== (process.env.API_KEY || 'secret-api-key-for-waveapp')) {
-    return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
-  }
-
   try {
     const { searchParams } = new URL(request.url);
     const status = searchParams.get('status');
