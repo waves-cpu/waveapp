@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
@@ -19,15 +20,15 @@ import { useLanguage } from '@/hooks/use-language';
 import { translations } from '@/types/language';
 import { useParams, useRouter } from 'next/navigation';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { Dialog, DialogTrigger, DialogHeader, DialogTitle, DialogDescription, DialogContent, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogHeader, DialogTitle, DialogDescription, DialogContent, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ProcessedReceiptsDialog } from '@/app/components/processed-receipts-dialog';
 
 const SHIPPING_CHANNEL_OPTIONS = ['Semua Jasa Kirim', 'SPX', 'J&T', 'JNE', 'INSTANT', 'CARGO'];
-const STATUS_ORDER = ['Terproses', 'Siap Kirim', 'Selesai', 'Diantar', 'Return Selesai', 'Return', 'Dibatalkan', 'Tidak Sampai'];
 const CORE_STATUSES = ['Terproses', 'Siap Kirim', 'Selesai', 'Return', 'Dibatalkan', 'Return Selesai'];
+const STATUS_ORDER = ['Terproses', 'Siap Kirim', 'Selesai', 'Diantar', 'Return Selesai', 'Return', 'Dibatalkan', 'Tidak Sampai'];
 
 
 function parseDateFromParams(dateArray: string[] | undefined): Date | null {
@@ -232,7 +233,7 @@ export default function ReceiptPage() {
         setSelectedStatus('Terproses'); 
     };
 
-    const orderedStatuses = useMemo(() => {
+     const orderedStatuses = useMemo(() => {
         return STATUS_ORDER.filter(status => {
             return CORE_STATUSES.includes(status) || (statusCounts[status] > 0);
         });
@@ -296,28 +297,33 @@ export default function ReceiptPage() {
                         </Alert>
                     )}
                     
-                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                         {orderedStatuses.map(status => {
-                             const Icon = statusIcons[status] || Package;
-                             const count = statusCounts[status] || 0;
-                             return (
+                     <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                        {orderedStatuses.map(status => {
+                            const Icon = statusIcons[status] || Package;
+                            const count = statusCounts[status] || 0;
+                            const canClick = count > 0;
+
+                            return (
                                 <Card
                                     key={status}
-                                    className={cn("hover:bg-accent hover:border-primary transition-colors", count > 0 && "cursor-pointer")}
-                                    onClick={() => count > 0 && setSelectedStatus(status)}
+                                    className={cn(
+                                        "transition-all",
+                                        canClick && "cursor-pointer hover:bg-accent hover:border-primary"
+                                    )}
+                                    onClick={() => canClick && setSelectedStatus(status)}
                                 >
-                                    <CardHeader>
-                                        <div className="flex items-center justify-between">
-                                            <div className="flex items-center gap-2">
-                                                <Icon className="h-5 w-5 text-muted-foreground"/>
-                                                <h3 className="text-sm font-semibold">{status}</h3>
-                                            </div>
-                                            {countsLoading ? <Loader2 className="h-6 w-6 animate-spin"/> : <div className="text-2xl font-bold">{count}</div>}
-                                        </div>
-                                    </CardHeader>
+                                    <CardContent className="flex flex-col items-center justify-center p-4 text-center">
+                                        <Icon className="h-7 w-7 text-muted-foreground mb-2" />
+                                        {countsLoading ? (
+                                            <Loader2 className="h-8 w-8 animate-spin" />
+                                        ) : (
+                                            <p className="text-3xl font-bold">{count}</p>
+                                        )}
+                                        <p className="text-xs font-medium text-muted-foreground mt-1">{status}</p>
+                                    </CardContent>
                                 </Card>
                             )
-                         })}
+                        })}
                     </div>
                     
                     <Card>
