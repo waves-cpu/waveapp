@@ -1,9 +1,8 @@
 
-
 'use client';
 
 import React, { useState } from 'react';
-import { StockInForm, type StockInSubmitData } from "@/app/components/stock-in-form";
+import { TransactionForm, type TransactionSubmitData } from "@/app/components/transaction-form";
 import { Button } from '@/components/ui/button';
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { useLanguage } from "@/hooks/use-language";
@@ -18,37 +17,38 @@ import { useRouter } from 'next/navigation';
 export default function StockInPage() {
     const { language } = useLanguage();
     const t = translations[language];
+    const TStockIn = t.stockInForm;
     const { updateStock } = useInventory();
     const { toast } = useToast();
     const router = useRouter();
 
     const [isProductSelectionOpen, setProductSelectionOpen] = useState(false);
-    const [isBulkStockInOpen, setBulkStockInOpen] = useState(false);
+    const [isBulkQuantityOpen, setBulkQuantityOpen] = useState(false);
     const [bulkSelectedIds, setBulkSelectedIds] = useState<Set<string>>(new Set());
 
-    const [stockInData, setStockInData] = useState<StockInSubmitData | null>(null);
+    const [transactionData, setTransactionData] = useState<TransactionSubmitData | null>(null);
     const [isConfirmDialogOpen, setConfirmDialogOpen] = useState(false);
 
-    const handleFormSubmit = (data: StockInSubmitData) => {
-        setStockInData(data);
+    const handleFormSubmit = (data: TransactionSubmitData) => {
+        setTransactionData(data);
         setConfirmDialogOpen(true);
     };
 
-    const handleConfirmStockIn = async (reason: string) => {
-        if (!stockInData) return;
+    const handleConfirmTransaction = async (reason: string) => {
+        if (!transactionData) return;
 
-        const stockUpdates = stockInData.stockInItems
+        const stockUpdates = transactionData.transactionItems
             .filter(item => item.quantity > 0)
             .map(item => updateStock(item.itemId, item.quantity, reason));
         
         try {
             await Promise.all(stockUpdates);
             toast({
-                title: t.stockInForm.successTitle,
-                description: t.stockInForm.successDescription.replace('{count}', stockUpdates.length.toString()),
+                title: TStockIn.successTitle,
+                description: TStockIn.successDescription.replace('{count}', stockUpdates.length.toString()),
             });
             setConfirmDialogOpen(false);
-            setStockInData(null);
+            setTransactionData(null);
             router.push('/');
         } catch (error) {
              console.error("Failed to stock in:", error);
@@ -71,7 +71,7 @@ export default function StockInPage() {
                             <h1 className="text-lg font-bold">{t.dashboard.stockIn}</h1>
                         </div>
                          <div className="flex items-center gap-2">
-                            <Button type="button" variant="outline" onClick={() => setBulkStockInOpen(true)} disabled={bulkSelectedIds.size === 0}>
+                            <Button type="button" variant="outline" onClick={() => setBulkQuantityOpen(true)} disabled={bulkSelectedIds.size === 0}>
                                 <PackagePlus className="mr-2 h-4 w-4" />
                                 {t.stockInForm.bulkAdd}
                             </Button>
@@ -81,27 +81,25 @@ export default function StockInPage() {
                             </Button>
                         </div>
                     </div>
-                    <StockInForm 
+                    <TransactionForm
+                        transactionType="in"
                         isProductSelectionOpen={isProductSelectionOpen}
                         setProductSelectionOpen={setProductSelectionOpen}
-                        isBulkStockInOpen={isBulkStockInOpen}
-                        setBulkStockInOpen={setBulkStockInOpen}
+                        isBulkQuantityOpen={isBulkQuantityOpen}
+                        setBulkQuantityOpen={setBulkQuantityOpen}
                         bulkSelectedIds={bulkSelectedIds}
                         setBulkSelectedIds={setBulkSelectedIds}
                         onFinalSubmit={handleFormSubmit}
-                        dialogTitle={t.stockInForm.title}
-                        dialogDescription={t.productSelectionDialog.description}
-                        submitButtonText={t.stockInForm.submit}
                     />
                 </div>
             </main>
              <ConfirmTransactionDialog
                 open={isConfirmDialogOpen}
                 onOpenChange={setConfirmDialogOpen}
-                onConfirm={handleConfirmStockIn}
-                itemCount={stockInData?.stockInItems.filter(i => i.quantity > 0).length || 0}
+                onConfirm={handleConfirmTransaction}
+                itemCount={transactionData?.transactionItems.filter(i => i.quantity > 0).length || 0}
                 title={t.stockInForm.title}
-                description={t.stockInForm.confirmDialogDescription.replace('{count}', (stockInData?.stockInItems.filter(i => i.quantity > 0).length || 0).toString())}
+                description={t.stockInForm.confirmDialogDescription.replace('{count}', (transactionData?.transactionItems.filter(i => i.quantity > 0).length || 0).toString())}
                 submitText={t.stockInForm.submit}
                 reasonLabel={t.stockInForm.reason}
                 defaultReason={t.stockInForm.defaultReason}

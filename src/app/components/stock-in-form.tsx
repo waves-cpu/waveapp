@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
@@ -28,7 +27,7 @@ import Image from 'next/image';
 import { BulkStockInDialog } from '@/app/components/bulk-stock-in-dialog';
 import { Checkbox } from '@/components/ui/checkbox';
 
-const stockInItemSchema = z.object({
+const transactionItemSchema = z.object({
     itemId: z.string(),
     itemName: z.string(),
     quantity: z.coerce.number().int().min(0, "Quantity must be at least 0."),
@@ -40,42 +39,39 @@ const stockInItemSchema = z.object({
     isVariant: z.boolean(),
 });
 
-type StockInItem = z.infer<typeof stockInItemSchema>;
+type TransactionItem = z.infer<typeof transactionItemSchema>;
 
 const formSchema = z.object({
-  stockInItems: z.array(stockInItemSchema).nonempty("Please add at least one item to stock in."),
+  transactionItems: z.array(transactionItemSchema).nonempty("Please add at least one item."),
   masterQuantities: z.record(z.coerce.number().int().optional())
 });
 
-export type StockInSubmitData = z.infer<typeof formSchema>;
+export type TransactionSubmitData = z.infer<typeof formSchema>;
 
-interface StockInFormProps {
+interface TransactionFormProps {
+    transactionType: 'in' | 'out';
     isProductSelectionOpen: boolean;
     setProductSelectionOpen: (open: boolean) => void;
-    isBulkStockInOpen: boolean;
-    setBulkStockInOpen: (open: boolean) => void;
+    isBulkQuantityOpen: boolean;
+    setBulkQuantityOpen: (open: boolean) => void;
     bulkSelectedIds: Set<string>;
     setBulkSelectedIds: React.Dispatch<React.SetStateAction<Set<string>>>;
-    onFinalSubmit: (data: StockInSubmitData) => void;
-    dialogTitle: string;
-    dialogDescription: string;
-    submitButtonText: string;
+    onFinalSubmit: (data: TransactionSubmitData) => void;
 }
 
-export function StockInForm({
+export function TransactionForm({
+    transactionType,
     isProductSelectionOpen,
     setProductSelectionOpen,
-    isBulkStockInOpen,
-    setBulkStockInOpen,
+    isBulkQuantityOpen,
+    setBulkQuantityOpen,
     bulkSelectedIds,
     setBulkSelectedIds,
     onFinalSubmit,
-    dialogTitle,
-    dialogDescription,
-    submitButtonText,
-}: StockInFormProps) {
+}: TransactionFormProps) {
   const { language } = useLanguage();
   const t = translations[language];
+  const TStockForm = transactionType === 'in' ? t.stockInForm : t.stockOutForm;
   const { items, categories } = useInventory();
   const router = useRouter();
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
@@ -83,14 +79,14 @@ export function StockInForm({
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      stockInItems: [],
+      transactionItems: [],
       masterQuantities: {}
     },
   });
 
   const { fields, append, remove } = useFieldArray({
     control: form.control,
-    name: "stockInItems"
+    name: "transactionItems"
   });
   
   useEffect(() => {
@@ -98,7 +94,6 @@ export function StockInForm({
   }, [fields.length]);
 
   useEffect(() => {
-    // Clear selections when fields change
     setBulkSelectedIds(new Set());
   }, [fields.length, setBulkSelectedIds]);
 
@@ -168,7 +163,7 @@ export function StockInForm({
                 variantSku: itemDetail.variantSku,
                 isVariant: itemDetail.isVariant,
             };
-        }).filter((item): item is Omit<StockInItem, 'reason'> => item !== null);
+        }).filter((item): item is Omit<TransactionItem, 'reason'> => item !== null);
     
     append(newItems);
   };
@@ -177,22 +172,22 @@ export function StockInForm({
     const masterQuantity = form.getValues(`masterQuantities.${parentName}`);
     if (masterQuantity !== undefined && masterQuantity >= 0) {
         fields.forEach((_field, index) => {
-            const field = form.getValues(`stockInItems.${index}`);
+            const field = form.getValues(`transactionItems.${index}`);
             if (field.parentName === parentName) {
-                form.setValue(`stockInItems.${index}.quantity`, masterQuantity, { shouldDirty: true, shouldValidate: true });
+                form.setValue(`transactionItems.${index}.quantity`, masterQuantity, { shouldDirty: true, shouldValidate: true });
             }
         });
     }
   };
   
-  const handleBulkApply = (quantity: number, reason: string) => {
+  const handleBulkApply = (quantity: number) => {
     fields.forEach((_field, index) => {
-        const fieldItemId = form.getValues(`stockInItems.${index}.itemId`);
+        const fieldItemId = form.getValues(`transactionItems.${index}.itemId`);
         if (bulkSelectedIds.has(fieldItemId)) {
-            form.setValue(`stockInItems.${index}.quantity`, quantity, { shouldDirty: true });
+            form.setValue(`transactionItems.${index}.quantity`, quantity, { shouldDirty: true });
         }
     });
-    form.trigger('stockInItems');
+    form.trigger('transactionItems');
   };
 
   const handleSelectAll = (checked: boolean) => {
@@ -217,8 +212,8 @@ export function StockInForm({
   const isSomeSelected = bulkSelectedIds.size > 0 && !isAllSelected;
 
   const groupedItems = useMemo(() => {
-    const groups = new Map<string, (StockInItem & { originalIndex: number })[]>();
-    const simpleItems: (StockInItem & { originalIndex: number })[] = [];
+    const groups = new Map<string, (TransactionItem & { originalIndex: number })[]>();
+    const simpleItems: (TransactionItem & { originalIndex: number })[] = [];
     
     fields.forEach((field, index) => {
         const formField = { ...field, originalIndex: index };
@@ -235,7 +230,7 @@ export function StockInForm({
     return { groups, simpleItems };
   }, [fields]);
 
-  const handleToggleParentSelection = (variants: (StockInItem & { originalIndex: number })[], checked: boolean) => {
+  const handleToggleParentSelection = (variants: (TransactionItem & { originalIndex: number })[], checked: boolean) => {
     const newSelectedIds = new Set(bulkSelectedIds);
     const variantIds = variants.map(v => v.itemId);
 
@@ -289,7 +284,7 @@ export function StockInForm({
                                         />
                                     </TableHead>
                                     <TableHead className="w-[65%]">{t.inventoryTable.name}</TableHead>
-                                    <TableHead className="w-[25%]">{t.stockInForm.quantity}</TableHead>
+                                    <TableHead className="w-[25%]">{TStockForm.quantity}</TableHead>
                                     <TableHead className="w-[50px]"></TableHead>
                                 </TableRow>
                             </TableHeader>
@@ -300,8 +295,8 @@ export function StockInForm({
                                             <div className="flex flex-col items-center justify-center gap-4 text-muted-foreground">
                                                 <ShoppingBag className="h-16 w-16" />
                                                 <div className="text-center">
-                                                    <p className="font-semibold">{t.stockInForm.noProducts}</p>
-                                                    <p className="text-sm">{t.stockInForm.selectProducts} to begin.</p>
+                                                    <p className="font-semibold">{TStockForm.noProducts}</p>
+                                                    <p className="text-sm">{TStockForm.selectProducts} untuk memulai.</p>
                                                 </div>
                                             </div>
                                         </TableCell>
@@ -335,7 +330,7 @@ export function StockInForm({
                                             <TableCell>
                                                 <FormField
                                                     control={form.control}
-                                                    name={`stockInItems.${field.originalIndex}.quantity`}
+                                                    name={`transactionItems.${field.originalIndex}.quantity`}
                                                     render={({ field: formField }) => (
                                                         <FormItem>
                                                             <FormControl>
@@ -398,7 +393,7 @@ export function StockInForm({
                                                             name={`masterQuantities.${parentName}`}
                                                             render={({ field }) => (
                                                                 <FormItem className="flex-grow">
-                                                                <FormControl><Input type="number" placeholder={t.stockInForm.quantity} {...field} value={field.value ?? ''} /></FormControl>
+                                                                <FormControl><Input type="number" placeholder={TStockForm.quantity} {...field} value={field.value ?? ''} /></FormControl>
                                                                 </FormItem>
                                                             )}
                                                         />
@@ -436,7 +431,7 @@ export function StockInForm({
                                                     <TableCell>
                                                         <FormField
                                                             control={form.control}
-                                                            name={`stockInItems.${field.originalIndex}.quantity`}
+                                                            name={`transactionItems.${field.originalIndex}.quantity`}
                                                             render={({ field: formField }) => (
                                                                 <FormItem>
                                                                     <FormControl>
@@ -469,14 +464,14 @@ export function StockInForm({
                         </Table>
                     </div>
                     
-                    <FormMessage>{form.formState.errors.stockInItems?.message}</FormMessage>
+                    <FormMessage>{form.formState.errors.transactionItems?.message}</FormMessage>
 
                 </CardContent>
                 {fields.length > 0 && (
                     <CardFooter className="justify-end gap-2 pt-6">
                         <Button type="button" variant="ghost" onClick={() => router.push('/')}>{t.common.cancel}</Button>
                         <Button type="submit">
-                            {submitButtonText}
+                            {TStockForm.submit}
                         </Button>
                     </CardFooter>
                 )}
@@ -490,13 +485,13 @@ export function StockInForm({
         onSelect={handleProductsSelected}
         availableItems={availableItems}
         categories={categories}
-        title={dialogTitle}
-        description={dialogDescription}
+        title={TStockForm.selectProducts}
+        description={t.productSelectionDialog.description}
     />
     <BulkStockInDialog
-        open={isBulkStockInOpen}
-        onOpenChange={setBulkStockInOpen}
-        onApply={handleBulkApply}
+        open={isBulkQuantityOpen}
+        onOpenChange={setBulkQuantityOpen}
+        onApply={(quantity) => handleBulkApply(quantity)}
     />
     </>
   );

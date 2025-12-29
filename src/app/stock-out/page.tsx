@@ -1,16 +1,14 @@
 
-
 'use client';
 
 import React, { useState } from 'react';
-import { StockInForm, type StockInSubmitData } from "@/app/components/stock-in-form";
+import { TransactionForm, type TransactionSubmitData } from "@/app/components/transaction-form";
 import { Button } from '@/components/ui/button';
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { useLanguage } from "@/hooks/use-language";
 import { translations } from "@/types/language";
-import { PackageMinus, PackagePlus, PlusCircle } from 'lucide-react';
+import { PackageMinus, PlusCircle } from 'lucide-react';
 import { AppLayout } from '../components/app-layout';
-import { BulkStockInDialog } from '@/app/components/bulk-stock-in-dialog';
 import { ConfirmTransactionDialog } from '@/app/components/confirm-transaction-dialog';
 import { useInventory } from '@/hooks/use-inventory';
 import { useToast } from '@/hooks/use-toast';
@@ -25,21 +23,21 @@ export default function StockOutPage() {
     const router = useRouter();
 
     const [isProductSelectionOpen, setProductSelectionOpen] = useState(false);
-    const [isBulkStockInOpen, setBulkStockInOpen] = useState(false);
+    const [isBulkQuantityOpen, setBulkQuantityOpen] = useState(false);
     const [bulkSelectedIds, setBulkSelectedIds] = useState<Set<string>>(new Set());
 
-    const [stockOutData, setStockOutData] = useState<StockInSubmitData | null>(null);
+    const [transactionData, setTransactionData] = useState<TransactionSubmitData | null>(null);
     const [isConfirmDialogOpen, setConfirmDialogOpen] = useState(false);
 
-    const handleFormSubmit = (data: StockInSubmitData) => {
-        setStockOutData(data);
+    const handleFormSubmit = (data: TransactionSubmitData) => {
+        setTransactionData(data);
         setConfirmDialogOpen(true);
     };
 
     const handleConfirmStockOut = async (reason: string) => {
-        if (!stockOutData) return;
+        if (!transactionData) return;
 
-        const stockUpdates = stockOutData.stockInItems
+        const stockUpdates = transactionData.transactionItems
             .filter(item => item.quantity > 0)
             .map(item => updateStock(item.itemId, -item.quantity, reason));
         
@@ -50,7 +48,7 @@ export default function StockOutPage() {
                 description: TStockOut.successDescription.replace('{count}', stockUpdates.length.toString()),
             });
             setConfirmDialogOpen(false);
-            setStockOutData(null);
+            setTransactionData(null);
             router.push('/');
         } catch (error) {
              console.error("Failed to stock out:", error);
@@ -73,8 +71,8 @@ export default function StockOutPage() {
                             <h1 className="text-lg font-bold">{TStockOut.title}</h1>
                         </div>
                          <div className="flex items-center gap-2">
-                            <Button type="button" variant="outline" onClick={() => setBulkStockInOpen(true)} disabled={bulkSelectedIds.size === 0}>
-                                <PackagePlus className="mr-2 h-4 w-4" />
+                            <Button type="button" variant="outline" onClick={() => setBulkQuantityOpen(true)} disabled={bulkSelectedIds.size === 0}>
+                                <PackageMinus className="mr-2 h-4 w-4" />
                                 {TStockOut.bulkAdd}
                             </Button>
                             <Button type="button" onClick={() => setProductSelectionOpen(true)}>
@@ -83,17 +81,15 @@ export default function StockOutPage() {
                             </Button>
                         </div>
                     </div>
-                    <StockInForm 
+                    <TransactionForm 
+                        transactionType="out"
                         isProductSelectionOpen={isProductSelectionOpen}
                         setProductSelectionOpen={setProductSelectionOpen}
-                        isBulkStockInOpen={isBulkStockInOpen}
-                        setBulkStockInOpen={setBulkStockInOpen}
+                        isBulkQuantityOpen={isBulkQuantityOpen}
+                        setBulkQuantityOpen={setBulkQuantityOpen}
                         bulkSelectedIds={bulkSelectedIds}
                         setBulkSelectedIds={setBulkSelectedIds}
                         onFinalSubmit={handleFormSubmit}
-                        dialogTitle={TStockOut.selectProducts}
-                        dialogDescription={t.productSelectionDialog.description}
-                        submitButtonText={TStockOut.submit}
                     />
                 </div>
             </main>
@@ -101,9 +97,9 @@ export default function StockOutPage() {
                 open={isConfirmDialogOpen}
                 onOpenChange={setConfirmDialogOpen}
                 onConfirm={handleConfirmStockOut}
-                itemCount={stockOutData?.stockInItems.filter(i => i.quantity > 0).length || 0}
+                itemCount={transactionData?.transactionItems.filter(i => i.quantity > 0).length || 0}
                 title={TStockOut.title}
-                description={TStockOut.confirmDialogDescription.replace('{count}', (stockOutData?.stockInItems.filter(i => i.quantity > 0).length || 0).toString())}
+                description={TStockOut.confirmDialogDescription.replace('{count}', (transactionData?.transactionItems.filter(i => i.quantity > 0).length || 0).toString())}
                 submitText={TStockOut.submit}
                 reasonLabel={t.stockInForm.reason}
                 defaultReason={TStockOut.defaultReason}
