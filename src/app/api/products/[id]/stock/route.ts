@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 // ADJUST stock for a product/variant
 export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
-    const { id } = params;
+    const id = params.id;
 
     try {
         const { change, reason } = await request.json();

@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 // GET sales by transactionId
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
-  const { id } = params;
+  const id = params.id;
 
   try {
     const sales = await getSalesByTransactionId(id);
@@ -19,7 +19,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
 }
 
 export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
-    const { id } = params;
+    const id = params.id;
 
     try {
         await cancelSaleTransaction(id);

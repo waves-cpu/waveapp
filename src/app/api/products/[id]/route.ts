@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 // GET a single product
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
-  const { id } = params;
+  const id = params.id;
 
   try {
     const item = await fetchSingleItem(id);
@@ -19,7 +19,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
 
 // UPDATE a product
 export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
-    const { id } = params;
+    const id = params.id;
 
     try {
         const body = await request.json();
@@ -33,7 +33,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
 
 // DELETE a product
 export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
-    const { id } = params;
+    const id = params.id;
 
     try {
         await deleteProductPermanently(id);
