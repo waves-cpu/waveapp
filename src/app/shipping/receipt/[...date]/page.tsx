@@ -1,12 +1,12 @@
 
-
 'use client';
 
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { AppLayout } from '@/app/components/app-layout';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Calendar as CalendarIcon, FilePlus2, Package, Loader2, AlertCircle, Truck, PackageCheck, Undo2, Ban, History, CheckCircle } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
@@ -26,8 +26,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ProcessedReceiptsDialog } from '@/app/components/processed-receipts-dialog';
 
 const SHIPPING_CHANNEL_OPTIONS = ['Semua Jasa Kirim', 'SPX', 'J&T', 'JNE', 'INSTANT', 'CARGO'];
-const STATUS_ORDER = ['Terproses', 'Siap Kirim', 'Selesai', 'Diantar', 'Return Selesai', 'Return', 'Dibatalkan', 'Tidak Sampai'];
-const CORE_STATUSES = ['Terproses', 'Siap Kirim', 'Selesai', 'Return', 'Dibatalkan', 'Return Selesai'];
+const STATUS_ORDER = ['Siap Kirim', 'Selesai', 'Diantar', 'Return Selesai', 'Return', 'Dibatalkan', 'Tidak Sampai'];
+const CORE_STATUSES = ['Siap Kirim', 'Selesai', 'Return', 'Dibatalkan', 'Return Selesai'];
+
 
 function parseDateFromParams(dateArray: string[] | undefined): Date | null {
     if (dateArray && dateArray.length > 0) {
@@ -153,38 +154,46 @@ export default function ReceiptPage() {
     const { 
         getPendingReceiptsBeforeDate,
         addPrintedReceipts,
+        getPrintedReceiptCountsForDate,
         fetchShippingReceiptCounts,
     } = useInventory();
     const { toast } = useToast();
-    const { language } = useLanguage();
     const router = useRouter();
     const params = useParams();
+    const { language } = useLanguage();
+    const t = translations[language];
+
 
     const [isAddPrintedOpen, setAddPrintedOpen] = useState(false);
     const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
     const [pendingOldReceiptsCount, setPendingOldReceiptsCount] = useState(0);
     const [statusCounts, setStatusCounts] = useState<Record<string, number>>({});
+    const [printedReceiptCounts, setPrintedReceiptCounts] = useState<PrintedReceiptCount[]>([]);
     const [countsLoading, setCountsLoading] = useState(true);
     const [shippingChannel, setShippingChannel] = useState<string | null>(null);
 
     const currentDate = useMemo(() => parseDateFromParams(Array.isArray(params.date) ? params.date : undefined), [params.date]);
-    const t = translations[language];
     
-    const fetchCounts = useCallback(async () => {
+    const fetchAllCounts = useCallback(async () => {
         setCountsLoading(true);
         const dateString = currentDate ? format(currentDate, 'yyyy-MM-dd') : undefined;
         try {
-            const { statuses } = await fetchShippingReceiptCounts({ 
-                dateString: dateString,
-                shippingChannel: shippingChannel || undefined
-            });
-            setStatusCounts(statuses);
+            const [statusData, printedData] = await Promise.all([
+                fetchShippingReceiptCounts({ 
+                    dateString: dateString,
+                    shippingChannel: shippingChannel || undefined
+                }),
+                dateString ? getPrintedReceiptCountsForDate(dateString) : Promise.resolve([])
+            ]);
+
+            setStatusCounts(statusData.statuses);
+            setPrintedReceiptCounts(printedData);
         } catch (error) {
              toast({ variant: 'destructive', title: "Gagal memuat jumlah status" });
         } finally {
             setCountsLoading(false);
         }
-    }, [currentDate, shippingChannel, fetchShippingReceiptCounts, toast]);
+    }, [currentDate, shippingChannel, fetchShippingReceiptCounts, getPrintedReceiptCountsForDate, toast]);
 
     const checkOldPendingReceipts = useCallback(async () => {
         if (!currentDate) return;
@@ -198,8 +207,8 @@ export default function ReceiptPage() {
 
     useEffect(() => {
         checkOldPendingReceipts();
-        fetchCounts();
-    }, [checkOldPendingReceipts, fetchCounts]);
+        fetchAllCounts();
+    }, [checkOldPendingReceipts, fetchAllCounts]);
 
     const handleDateSelect = (selectedDate: Date | undefined) => {
         if (selectedDate) {
@@ -214,7 +223,7 @@ export default function ReceiptPage() {
         if (!currentDate) return;
         const dateString = format(currentDate, 'yyyy-MM-dd');
         await addPrintedReceipts(dateString, salesChannel, shippingChannel, count);
-        await fetchCounts();
+        await fetchAllCounts();
         toast({ title: 'Berhasil', description: `${count} resi tercetak telah ditambahkan.` });
     };
     
@@ -225,7 +234,6 @@ export default function ReceiptPage() {
 
     const orderedStatuses = useMemo(() => {
         return STATUS_ORDER.filter(status => {
-            // Always show core statuses, or any status that has a count > 0
             return CORE_STATUSES.includes(status) || (statusCounts[status] > 0);
         });
     }, [statusCounts]);
@@ -288,7 +296,7 @@ export default function ReceiptPage() {
                         </Alert>
                     )}
                     
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                          {orderedStatuses.map(status => {
                              const Icon = statusIcons[status] || Package;
                              const count = statusCounts[status] || 0;
@@ -311,6 +319,45 @@ export default function ReceiptPage() {
                             )
                          })}
                     </div>
+                    
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="text-base">Ringkasan Resi Tercetak</CardTitle>
+                            <CardDescription>Jumlah resi yang telah Anda input untuk dicetak hari ini.</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                             <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Kanal Penjualan</TableHead>
+                                        <TableHead>Jasa Kirim</TableHead>
+                                        <TableHead className="text-right">Jumlah</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {countsLoading ? (
+                                        <TableRow>
+                                            <TableCell colSpan={3} className="text-center h-24">Memuat data...</TableCell>
+                                        </TableRow>
+                                    ) : printedReceiptCounts.length > 0 ? (
+                                        printedReceiptCounts.map(item => (
+                                            <TableRow key={`${item.salesChannel}-${item.shippingChannel}`}>
+                                                <TableCell>{item.salesChannel}</TableCell>
+                                                <TableCell>{item.shippingChannel}</TableCell>
+                                                <TableCell className="text-right font-medium">{item.count}</TableCell>
+                                            </TableRow>
+                                        ))
+                                    ) : (
+                                        <TableRow>
+                                            <TableCell colSpan={3} className="text-center h-24 text-muted-foreground">
+                                                Belum ada data resi tercetak untuk hari ini.
+                                            </TableCell>
+                                        </TableRow>
+                                    )}
+                                </TableBody>
+                            </Table>
+                        </CardContent>
+                    </Card>
 
                 </main>
             </AppLayout>
@@ -318,11 +365,10 @@ export default function ReceiptPage() {
                 open={!!selectedStatus}
                 onOpenChange={(isOpen) => !isOpen && setSelectedStatus(null)}
                 currentDate={currentDate}
-                onDataChange={fetchCounts}
+                onDataChange={fetchAllCounts}
                 initialStatusFilter={selectedStatus}
                 initialChannelFilter={shippingChannel}
             />
         </>
     );
 }
-
