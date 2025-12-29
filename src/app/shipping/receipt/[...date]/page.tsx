@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
@@ -162,7 +161,9 @@ const getStatusVariant = (status: string) => {
     }
 };
 
-const STATUS_OPTIONS = ['Terproses', 'Siap Kirim', 'Selesai', 'Return', 'Return Selesai', 'Dibatalkan'];
+const STATUS_OPTIONS = ['Semua Status', 'Terproses', 'Siap Kirim', 'Selesai', 'Return', 'Return Selesai', 'Dibatalkan'];
+const SHIPPING_CHANNEL_OPTIONS = ['Semua Jasa Kirim', 'SPX', 'J&T', 'JNE', 'INSTANT', 'CARGO'];
+const SALES_CHANNEL_OPTIONS = ['Semua Kanal', 'Shopee', 'Tiktok', 'Lazada'];
 
 function parseDateFromParams(dateArray: string[] | undefined): Date | null {
     if (dateArray && dateArray.length > 0) {
@@ -226,7 +227,7 @@ export default function ReceiptPage() {
     const [isProcessing, setIsProcessing] = useState(false);
     const [isAddPrintedOpen, setAddPrintedOpen] = useState(false);
     
-    const [activeStatusFilter, setActiveStatusFilter] = useState<string>(STATUS_OPTIONS[0]);
+    const [activeStatusFilter, setActiveStatusFilter] = useState<string>(STATUS_OPTIONS[1]); // Default to 'Terproses'
 
     const [pendingOldReceiptsCount, setPendingOldReceiptsCount] = useState(0);
     const [printedReceiptCounts, setPrintedReceiptCounts] = useState<PrintedReceiptCount[]>([]);
@@ -258,29 +259,17 @@ export default function ReceiptPage() {
     
     useEffect(() => {
         setCurrentPage(1);
-        setActiveSalesChannelTab(null);
-        setActiveShippingTab(null);
-    }, [currentDate, searchTerm, activeStatusFilter]);
+    }, [currentDate, searchTerm, activeStatusFilter, activeSalesChannelTab, activeShippingTab]);
     
     useEffect(() => {
         setSelectedIds(new Set());
     }, [activeShippingTab, activeSalesChannelTab, currentDate, searchTerm, currentPage, activeStatusFilter]);
 
     const globalReceipts = allShippingReceipts;
-    const { filteredReceipts, salesChannelCounts, shippingChannelCounts, statusCounts } = useMemo(() => {
+    const { filteredReceipts } = useMemo(() => {
         const filteredByDate = currentDate
             ? globalReceipts.filter(r => isWithinInterval(parseISO(r.date), { start: startOfDay(currentDate), end: endOfDay(currentDate) }))
             : globalReceipts;
-
-        const sc: Record<string, number> = {};
-        const shc: Record<string, number> = {};
-        const st: Record<string, number> = {};
-        
-        filteredByDate.forEach(r => {
-            if (r.salesChannel) sc[r.salesChannel] = (sc[r.salesChannel] || 0) + 1;
-            if (r.channel) shc[r.channel] = (shc[r.channel] || 0) + 1;
-            st[r.status] = (st[r.status] || 0) + 1;
-        });
 
         const finalFiltered = filteredByDate.filter(receipt => {
             const salesChannelMatch = !activeSalesChannelTab || receipt.salesChannel === activeSalesChannelTab;
@@ -292,9 +281,6 @@ export default function ReceiptPage() {
 
         return { 
             filteredReceipts: finalFiltered, 
-            salesChannelCounts: sc, 
-            shippingChannelCounts: shc, 
-            statusCounts: st 
         };
     }, [globalReceipts, currentDate, activeSalesChannelTab, activeShippingTab, activeStatusFilter, searchTerm]);
 
@@ -393,7 +379,7 @@ export default function ReceiptPage() {
 
     return (
         <AppLayout>
-            <main className="flex min-h-[calc(100vh_-_theme(spacing.16))] flex-1 flex-col gap-4 bg-muted/40 p-4 md:gap-8 md:p-10">
+            <main className="flex min-h-screen flex-1 flex-col gap-4 bg-muted/40 p-4 md:gap-8 md:p-10">
                 <div className="flex items-center justify-between gap-4">
                     <div className="flex items-center gap-4">
                         <SidebarTrigger className="md:hidden" />
@@ -481,60 +467,37 @@ export default function ReceiptPage() {
 
 
                 <div className="flex flex-col gap-4">
-                     <div className="border-b">
-                         <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-2">
-                            {(['Shopee', 'Tiktok', 'Lazada'] as const).map(tab => (
-                                <Button 
-                                    key={tab}
-                                    variant={activeSalesChannelTab === tab ? 'secondary' : 'ghost'}
-                                    size="sm"
-                                    onClick={() => setActiveSalesChannelTab(prev => prev === tab ? null : tab)}
-                                    className={cn("shrink-0", activeSalesChannelTab === tab && "text-green-600")}
-                                >
-                                    {tab}
-                                    <Badge variant={activeSalesChannelTab === tab ? 'default' : 'secondary'} className="ml-2">
-                                        {salesChannelCounts[tab] || 0}
-                                    </Badge>
-                                </Button>
-                            ))}
-                        </div>
-                    </div>
-                    <div className="flex items-center gap-2 overflow-x-auto no-scrollbar border-b pb-2">
-                        {(['SPX', 'J&T', 'JNE', 'INSTANT', 'CARGO'] as ShippingProvider[]).map(tab => (
-                             <Button 
-                                key={tab}
-                                variant={activeShippingTab === tab ? 'secondary' : 'ghost'}
-                                size="sm"
-                                onClick={() => setActiveShippingTab(prev => prev === tab ? null : tab)}
-                                className={cn("shrink-0", activeShippingTab === tab && "text-green-600")}
-                            >
-                                {tab}
-                                <Badge variant={activeShippingTab === tab ? 'default' : 'secondary'} className="ml-2">
-                                    {shippingChannelCounts[tab] || 0}
-                                </Badge>
-                            </Button>
-                        ))}
-                    </div>
-                     <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
-                        {STATUS_OPTIONS.map(status => (
-                            <Button
-                                key={status}
-                                variant={activeStatusFilter === status ? 'secondary' : 'ghost'}
-                                size="sm"
-                                onClick={() => setActiveStatusFilter(status)}
-                                className={cn("shrink-0", activeStatusFilter === status && "text-green-600")}
-                            >
-                                {status}
-                                <Badge variant={activeStatusFilter === status ? 'default' : 'secondary'} className="ml-2">
-                                    {statusCounts[status] || 0}
-                                </Badge>
-                            </Button>
-                        ))}
-                    </div>
-
                     <Card>
                         <CardContent className="pt-6">
-                            <Table>
+                            <div className="flex flex-col md:flex-row justify-between gap-4">
+                                <div className="flex items-center gap-2">
+                                     <Select value={activeSalesChannelTab || 'Semua Kanal'} onValueChange={(v) => setActiveSalesChannelTab(v === 'Semua Kanal' ? null : v)}>
+                                        <SelectTrigger className="w-[180px]">
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {SALES_CHANNEL_OPTIONS.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
+                                        </SelectContent>
+                                    </Select>
+                                    <Select value={activeShippingTab || 'Semua Jasa Kirim'} onValueChange={(v) => setActiveShippingTab(v === 'Semua Jasa Kirim' ? null : v)}>
+                                        <SelectTrigger className="w-[180px]">
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {SHIPPING_CHANNEL_OPTIONS.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
+                                        </SelectContent>
+                                    </Select>
+                                     <Select value={activeStatusFilter} onValueChange={setActiveStatusFilter}>
+                                        <SelectTrigger className="w-[180px]">
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {STATUS_OPTIONS.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            </div>
+                            <Table className="mt-4">
                                 <TableHeader>
                                     <TableRow>
                                         <TableHead className="w-12">
@@ -658,4 +621,3 @@ export default function ReceiptPage() {
 }
 
 type ShippingProvider = "SPX" | "J&T" | "JNE" | "INSTANT" | "CARGO";
-
