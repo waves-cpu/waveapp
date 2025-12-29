@@ -7,6 +7,7 @@ const API_KEY = process.env.API_KEY || 'secret-api-key-for-waveapp';
 
 // GET sales by transactionId
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+  const { id } = params;
   const headersList = await headers();
   const apiKey = headersList.get('X-API-Key');
   if (apiKey !== API_KEY) {
@@ -14,19 +15,20 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
   }
 
   try {
-    const sales = await getSalesByTransactionId(params.id);
+    const sales = await getSalesByTransactionId(id);
     if (sales.length > 0) {
       return NextResponse.json({ sales });
     }
     return NextResponse.json({ message: 'No sales found for this transaction ID' }, { status: 404 });
   } catch (error) {
-    console.error(`API Error fetching sales for transaction ${params.id}:`, error);
+    console.error(`API Error fetching sales for transaction ${id}:`, error);
     return NextResponse.json({ message: 'Internal Server Error' }, { status: 500 });
   }
 }
 
 
 export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+    const { id } = params;
     const headersList = await headers();
     const apiKey = headersList.get('X-API-Key');
     if (apiKey !== API_KEY) {
@@ -34,10 +36,10 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
     }
 
     try {
-        await cancelSaleTransaction(params.id);
+        await cancelSaleTransaction(id);
         return new NextResponse(null, { status: 204 });
     } catch (error) {
-        console.error(`API Error deleting transaction ${params.id}:`, error);
+        console.error(`API Error deleting transaction ${id}:`, error);
         return NextResponse.json({ message: 'Internal Server Error' }, { status: 500 });
     }
 }

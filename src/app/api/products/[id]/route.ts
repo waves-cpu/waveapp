@@ -7,6 +7,7 @@ const API_KEY = process.env.API_KEY || 'secret-api-key-for-waveapp';
 
 // GET a single product
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+  const { id } = params;
   const headersList = await headers();
   const apiKey = headersList.get('X-API-Key');
   if (apiKey !== API_KEY) {
@@ -14,7 +15,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
   }
 
   try {
-    const item = await fetchSingleItem(params.id);
+    const item = await fetchSingleItem(id);
     if (item) {
       return NextResponse.json(item);
     }
@@ -26,6 +27,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
 
 // UPDATE a product
 export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
+    const { id } = params;
     const headersList = await headers();
     const apiKey = headersList.get('X-API-Key');
     if (apiKey !== API_KEY) {
@@ -34,16 +36,17 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
 
     try {
         const body = await request.json();
-        await editProduct(params.id, body);
+        await editProduct(id, body);
         return NextResponse.json({ message: 'Product updated successfully' });
     } catch (error) {
-        console.error(`API Error updating product ${params.id}:`, error);
+        console.error(`API Error updating product ${id}:`, error);
         return NextResponse.json({ message: 'Internal Server Error' }, { status: 500 });
     }
 }
 
 // DELETE a product
 export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+    const { id } = params;
     const headersList = await headers();
     const apiKey = headersList.get('X-API-Key');
     if (apiKey !== API_KEY) {
@@ -51,10 +54,10 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
     }
 
     try {
-        await deleteProductPermanently(params.id);
+        await deleteProductPermanently(id);
         return NextResponse.json({ message: 'Product deleted permanently' });
     } catch (error) {
-        console.error(`API Error deleting product ${params.id}:`, error);
+        console.error(`API Error deleting product ${id}:`, error);
         return NextResponse.json({ message: 'Internal Server Error' }, { status: 500 });
     }
 }

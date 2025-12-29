@@ -7,6 +7,7 @@ const API_KEY = process.env.API_KEY || 'secret-api-key-for-waveapp';
 
 // GET a single shipping receipt
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+  const id = parseInt(params.id, 10);
   const headersList = await headers();
   const apiKey = headersList.get('X-API-Key');
   if (apiKey !== API_KEY) {
@@ -14,7 +15,6 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
   }
 
   try {
-    const id = parseInt(params.id, 10);
     if (isNaN(id)) {
         return NextResponse.json({ message: 'Invalid receipt ID' }, { status: 400 });
     }
@@ -30,6 +30,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
 
 // UPDATE a shipping receipt (e.g., its status)
 export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
+    const id = parseInt(params.id, 10);
     const headersList = await headers();
     const apiKey = headersList.get('X-API-Key');
     if (apiKey !== API_KEY) {
@@ -37,7 +38,6 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     }
 
     try {
-        const id = parseInt(params.id, 10);
         if (isNaN(id)) {
             return NextResponse.json({ message: 'Invalid receipt ID' }, { status: 400 });
         }
@@ -50,13 +50,14 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
         await updateShippingReceiptStatus(id, status);
         return NextResponse.json({ message: 'Receipt status updated successfully' });
     } catch (error: any) {
-        console.error(`API Error updating receipt ${params.id}:`, error);
+        console.error(`API Error updating receipt ${id}:`, error);
         return NextResponse.json({ message: 'Internal Server Error' }, { status: 500 });
     }
 }
 
 // DELETE a shipping receipt
 export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+    const id = parseInt(params.id, 10);
     const headersList = await headers();
     const apiKey = headersList.get('X-API-Key');
     if (apiKey !== API_KEY) {
@@ -64,14 +65,13 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
     }
 
     try {
-        const id = parseInt(params.id, 10);
         if (isNaN(id)) {
             return NextResponse.json({ message: 'Invalid receipt ID' }, { status: 400 });
         }
         await deleteShippingReceipt(id);
         return NextResponse.json({ message: 'Receipt deleted successfully' });
     } catch (error) {
-        console.error(`API Error deleting receipt ${params.id}:`, error);
+        console.error(`API Error deleting receipt ${id}:`, error);
         return NextResponse.json({ message: 'Internal Server Error' }, { status: 500 });
     }
 }

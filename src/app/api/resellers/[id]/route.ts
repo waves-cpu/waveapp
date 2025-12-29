@@ -7,6 +7,7 @@ const API_KEY = process.env.API_KEY || 'secret-api-key-for-waveapp';
 
 // UPDATE a reseller
 export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
+    const id = parseInt(params.id, 10);
     const headersList = await headers();
     const apiKey = headersList.get('X-API-Key');
     if (apiKey !== API_KEY) {
@@ -14,7 +15,6 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     }
 
     try {
-        const id = parseInt(params.id, 10);
         if (isNaN(id)) {
             return NextResponse.json({ message: 'Invalid reseller ID' }, { status: 400 });
         }
@@ -31,6 +31,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
 
 // DELETE a reseller
 export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+    const id = parseInt(params.id, 10);
     const headersList = await headers();
     const apiKey = headersList.get('X-API-Key');
     if (apiKey !== API_KEY) {
@@ -38,7 +39,6 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
     }
 
     try {
-         const id = parseInt(params.id, 10);
         if (isNaN(id)) {
             return NextResponse.json({ message: 'Invalid reseller ID' }, { status: 400 });
         }

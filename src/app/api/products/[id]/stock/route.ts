@@ -7,6 +7,7 @@ const API_KEY = process.env.API_KEY || 'secret-api-key-for-waveapp';
 
 // ADJUST stock for a product/variant
 export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
+    const { id } = params;
     const headersList = await headers();
     const apiKey = headersList.get('X-API-Key');
     if (apiKey !== API_KEY) {
@@ -18,10 +19,10 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
         if (typeof change !== 'number' || !reason) {
             return NextResponse.json({ message: 'Invalid request body, requires "change" (number) and "reason" (string).' }, { status: 400 });
         }
-        await adjustStock(params.id, change, reason);
+        await adjustStock(id, change, reason);
         return NextResponse.json({ message: 'Stock adjusted successfully' });
     } catch (error) {
-        console.error(`API Error adjusting stock for item ${params.id}:`, error);
+        console.error(`API Error adjusting stock for item ${id}:`, error);
         return NextResponse.json({ message: 'Internal Server Error' }, { status: 500 });
     }
 }

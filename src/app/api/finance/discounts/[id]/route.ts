@@ -6,6 +6,7 @@ import { headers } from 'next/headers';
 const API_KEY = process.env.API_KEY || 'secret-api-key-for-waveapp';
 
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+    const id = parseInt(params.id, 10);
     const headersList = await headers();
     const apiKey = headersList.get('X-API-Key');
     if (apiKey !== API_KEY) {
@@ -13,7 +14,6 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     }
 
     try {
-        const id = parseInt(params.id, 10);
         if (isNaN(id)) return NextResponse.json({ message: 'Invalid ID' }, { status: 400 });
 
         const group = await getDiscountGroup(id);
@@ -28,6 +28,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
 }
 
 export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
+    const id = parseInt(params.id, 10);
     const headersList = await headers();
     const apiKey = headersList.get('X-API-Key');
     if (apiKey !== API_KEY) {
@@ -35,7 +36,6 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     }
     
     try {
-        const id = parseInt(params.id, 10);
         if (isNaN(id)) return NextResponse.json({ message: 'Invalid ID' }, { status: 400 });
 
         const body = await request.json();
@@ -48,13 +48,13 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
 }
 
 export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+    const id = parseInt(params.id, 10);
     const headersList = await headers();
     const apiKey = headersList.get('X-API-Key');
     if (apiKey !== API_KEY) {
         return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
     }
     try {
-        const id = parseInt(params.id, 10);
         if (isNaN(id)) return NextResponse.json({ message: 'Invalid ID' }, { status: 400 });
 
         await deleteDiscountGroup(id);

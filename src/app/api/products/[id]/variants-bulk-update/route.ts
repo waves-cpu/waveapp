@@ -6,6 +6,7 @@ import { headers } from 'next/headers';
 const API_KEY = process.env.API_KEY || 'secret-api-key-for-waveapp';
 
 export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
+    const productId = params.id;
     const headersList = await headers();
     const apiKey = headersList.get('X-API-Key');
     if (apiKey !== API_KEY) {
@@ -15,8 +16,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     try {
         const body = await request.json();
         const { variants, reason } = body;
-        const productId = params.id;
-
+        
         if (!Array.isArray(variants) || variants.length === 0 || !reason) {
             return NextResponse.json({ message: 'Invalid request body.' }, { status: 400 });
         }
@@ -28,7 +28,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
         }, { status: 200 });
 
     } catch (error: any) {
-        console.error(`API Error bulk updating variants for product ${params.id}:`, error);
+        console.error(`API Error bulk updating variants for product ${productId}:`, error);
         return NextResponse.json({ message: 'Internal Server Error', error: error.message }, { status: 500 });
     }
 }

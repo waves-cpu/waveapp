@@ -6,6 +6,7 @@ import { headers } from 'next/headers';
 const API_KEY = process.env.API_KEY || 'secret-api-key-for-waveapp';
 
 export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
+    const { id } = params;
     const headersList = await headers();
     const apiKey = headersList.get('X-API-Key');
     if (apiKey !== API_KEY) {
@@ -13,10 +14,10 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     }
 
     try {
-        await returnSaleTransaction(params.id);
+        await returnSaleTransaction(id);
         return NextResponse.json({ message: 'Transaction returned successfully' });
     } catch (error) {
-        console.error(`API Error returning transaction ${params.id}:`, error);
+        console.error(`API Error returning transaction ${id}:`, error);
         return NextResponse.json({ message: 'Internal Server Error' }, { status: 500 });
     }
 }
