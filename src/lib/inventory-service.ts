@@ -909,7 +909,7 @@ export async function performSale(
                 accessoryId,
                 channel, 
                 sale.quantity, 
-                sale.priceAtSale ?? sale.price, // Use priceAtSale from the sale object
+                sale.priceAtSale, // CORRECTED
                 cogsAtSale, 
                 saleDateString, 
                 saleStatus,
@@ -1687,3 +1687,6 @@ async function updateShippingReceiptStatusByAwb(awb: string, status: string) {
     const stmt = db.prepare(`UPDATE shipping_receipts SET status = ? WHERE awb = ?`);
     stmt.run(status, awb);
 }
+
+
+    
