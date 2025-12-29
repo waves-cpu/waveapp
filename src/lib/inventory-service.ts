@@ -1,4 +1,5 @@
 
+
 'use server';
 
 import { db as dbProxy } from './db';
@@ -222,7 +223,7 @@ export async function fetchShippingReceiptCounts(filters: {
         const where: string[] = [];
         const params: any[] = [];
         
-        if (dateString) { where.push(`strftime('%Y-%m-%d', date) = ?`); params.push(dateString); }
+        if (dateString) { where.push(`date(date) = ?`); params.push(dateString); }
         if (salesChannel && groupBy !== 'salesChannel') { where.push('salesChannel = ?'); params.push(salesChannel); }
         if (shippingChannel && groupBy !== 'channel') { where.push('channel = ?'); params.push(shippingChannel); }
         if (status && groupBy !== 'status') { where.push('status = ?'); params.push(status); }
@@ -239,7 +240,9 @@ export async function fetchShippingReceiptCounts(filters: {
         const results = query.all(...params) as { [key: string]: string | number }[];
         const counts: Record<string, number> = {};
         results.forEach(row => {
-            counts[row[groupBy] as string] = row.count as number;
+            if (row[groupBy]) {
+                counts[row[groupBy] as string] = row.count as number;
+            }
         });
         return counts;
     };
@@ -250,6 +253,7 @@ export async function fetchShippingReceiptCounts(filters: {
         statuses: buildCounts('status'),
     };
 }
+
 
 export async function getReceiptCountByStatus(status: string): Promise<Record<string, number>> {
     const query = db.prepare(`
@@ -909,7 +913,7 @@ export async function performSale(
                 accessoryId,
                 channel, 
                 sale.quantity, 
-                sale.priceAtSale, // CORRECTED
+                sale.priceAtSale, 
                 cogsAtSale, 
                 saleDateString, 
                 saleStatus,
