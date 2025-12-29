@@ -5,23 +5,23 @@ import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { AppLayout } from '@/app/components/app-layout';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Calendar as CalendarIcon, FileDown, Truck, Package, ListFilter, Loader2, AlertCircle, FilePlus2 } from 'lucide-react';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { Calendar as CalendarIcon, FilePlus2, Package, Loader2, AlertCircle } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-import { format, parse, isValid, parseISO } from 'date-fns';
+import { format, parse, isValid } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { useInventory } from '@/hooks/use-inventory';
-import type { ShippingReceipt, PrintedReceiptCount } from '@/types';
+import type { PrintedReceiptCount } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { useLanguage } from '@/hooks/use-language';
 import { translations } from '@/types/language';
 import { useParams, useRouter } from 'next/navigation';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { Dialog, DialogHeader, DialogTitle, DialogDescription, DialogContent } from '@/components/ui/dialog';
+import { Dialog, DialogHeader, DialogTitle, DialogDescription, DialogContent, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ProcessedReceiptsDialog } from '@/app/components/processed-receipts-dialog';
 
 function parseDateFromParams(dateArray: string[] | undefined): Date | null {
@@ -138,13 +138,13 @@ function AddPrintedReceiptDialog({
 
 export default function ReceiptPage() {
     const { 
-        loading: inventoryLoading, 
         getPendingReceiptsBeforeDate,
         addPrintedReceipts,
         fetchShippingReceiptCounts,
     } = useInventory();
     const { toast } = useToast();
-    const { t } = useLanguage();
+    const { language } = useLanguage();
+    const t = translations[language];
     const router = useRouter();
     const params = useParams();
 
@@ -275,9 +275,6 @@ export default function ReceiptPage() {
                                 </div>
                             </CardHeader>
                         </Card>
-
-                         {/* Other status cards can be added here if needed in the future */}
-
                     </div>
 
                 </main>
@@ -291,4 +288,3 @@ export default function ReceiptPage() {
         </>
     );
 }
-
