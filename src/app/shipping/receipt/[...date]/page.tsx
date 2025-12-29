@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
@@ -8,7 +7,7 @@ import { SidebarTrigger } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Calendar as CalendarIcon, FilePlus2, Package, Loader2, AlertCircle, Truck, PackageCheck, Undo2, Ban, History, CheckCircle } from 'lucide-react';
+import { Calendar as CalendarIcon, FilePlus2, Package, Loader2, AlertCircle, Truck, PackageCheck, Undo2, Ban, History, CheckCircle, ShoppingBag } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { format, parse, isValid } from 'date-fns';
@@ -25,6 +24,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ProcessedReceiptsDialog } from '@/app/components/processed-receipts-dialog';
+import { Separator } from '@/components/ui/separator';
 
 const SHIPPING_CHANNEL_OPTIONS = ['Semua Jasa Kirim', 'SPX', 'J&T', 'JNE', 'INSTANT', 'CARGO'];
 const CORE_STATUSES = ['Terproses', 'Siap Kirim', 'Selesai', 'Return', 'Dibatalkan', 'Return Selesai'];
@@ -238,6 +238,17 @@ export default function ReceiptPage() {
             return CORE_STATUSES.includes(status) || (statusCounts[status] > 0);
         });
     }, [statusCounts]);
+    
+    const groupedPrintedReceipts = useMemo(() => {
+        const groups: Record<string, { salesChannel: string; items: { shippingChannel: string, count: number }[] }> = {};
+        printedReceiptCounts.forEach(item => {
+            if (!groups[item.salesChannel]) {
+                groups[item.salesChannel] = { salesChannel: item.salesChannel, items: [] };
+            }
+            groups[item.salesChannel].items.push({ shippingChannel: item.shippingChannel, count: item.count });
+        });
+        return Object.values(groups);
+    }, [printedReceiptCounts]);
 
     return (
         <>
@@ -312,14 +323,16 @@ export default function ReceiptPage() {
                                     )}
                                     onClick={() => canClick && setSelectedStatus(status)}
                                 >
-                                    <CardContent className="flex flex-col items-center justify-center p-4 text-center">
-                                        <Icon className="h-7 w-7 text-muted-foreground mb-2" />
-                                        {countsLoading ? (
-                                            <Loader2 className="h-8 w-8 animate-spin" />
-                                        ) : (
-                                            <p className="text-3xl font-bold">{count}</p>
-                                        )}
-                                        <p className="text-xs font-medium text-muted-foreground mt-1">{status}</p>
+                                    <CardContent className="flex flex-row items-center justify-between p-4">
+                                        <div className="space-y-1">
+                                            <p className="text-xs font-medium text-muted-foreground">{status}</p>
+                                            <div className="text-2xl font-bold">
+                                                {countsLoading ? <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /> : count}
+                                            </div>
+                                        </div>
+                                        <div className="p-2 bg-muted rounded-md">
+                                            <Icon className="h-5 w-5 text-muted-foreground" />
+                                        </div>
                                     </CardContent>
                                 </Card>
                             )
@@ -332,36 +345,32 @@ export default function ReceiptPage() {
                             <CardDescription>Jumlah resi yang telah Anda input untuk dicetak hari ini.</CardDescription>
                         </CardHeader>
                         <CardContent>
-                             <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead>Kanal Penjualan</TableHead>
-                                        <TableHead>Jasa Kirim</TableHead>
-                                        <TableHead className="text-right">Jumlah</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {countsLoading ? (
-                                        <TableRow>
-                                            <TableCell colSpan={3} className="text-center h-24">Memuat data...</TableCell>
-                                        </TableRow>
-                                    ) : printedReceiptCounts.length > 0 ? (
-                                        printedReceiptCounts.map(item => (
-                                            <TableRow key={`${item.salesChannel}-${item.shippingChannel}`}>
-                                                <TableCell>{item.salesChannel}</TableCell>
-                                                <TableCell>{item.shippingChannel}</TableCell>
-                                                <TableCell className="text-right font-medium">{item.count}</TableCell>
-                                            </TableRow>
-                                        ))
-                                    ) : (
-                                        <TableRow>
-                                            <TableCell colSpan={3} className="text-center h-24 text-muted-foreground">
-                                                Belum ada data resi tercetak untuk hari ini.
-                                            </TableCell>
-                                        </TableRow>
-                                    )}
-                                </TableBody>
-                            </Table>
+                             {countsLoading ? (
+                                <div className="text-center py-10 text-muted-foreground">Memuat data...</div>
+                            ) : groupedPrintedReceipts.length > 0 ? (
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                    {groupedPrintedReceipts.map(group => (
+                                        <div key={group.salesChannel} className="border rounded-lg p-4">
+                                            <h3 className="font-semibold text-sm mb-3 flex items-center">
+                                                <ShoppingBag className="h-4 w-4 mr-2" />
+                                                {group.salesChannel}
+                                            </h3>
+                                            <div className="space-y-2">
+                                                {group.items.map(item => (
+                                                    <div key={item.shippingChannel} className="flex justify-between items-center text-sm">
+                                                        <span className="text-muted-foreground">{item.shippingChannel}</span>
+                                                        <span className="font-medium">{item.count}</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="text-center py-10 text-muted-foreground">
+                                    Belum ada data resi tercetak untuk hari ini.
+                                </div>
+                            )}
                         </CardContent>
                     </Card>
 
