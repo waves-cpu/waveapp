@@ -6,7 +6,7 @@ import { AppLayout } from '@/app/components/app-layout';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Calendar as CalendarIcon, FilePlus2, Loader2, AlertCircle, Truck, PackageCheck, Undo2, Ban, History, CheckCircle, ShoppingBag } from 'lucide-react';
+import { Calendar as CalendarIcon, FilePlus2, Loader2, AlertCircle, Truck, PackageCheck, Undo2, Ban, History, CheckCircle, ShoppingBag, Package } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { format, parse, isValid } from 'date-fns';
@@ -232,7 +232,7 @@ export default function ReceiptPage() {
         setSelectedStatus('Terproses'); 
     };
 
-     const orderedStatuses = useMemo(() => {
+    const orderedStatuses = useMemo(() => {
         return STATUS_ORDER.filter(status => {
             return CORE_STATUSES.includes(status) || (statusCounts[status] > 0);
         });
@@ -325,15 +325,15 @@ export default function ReceiptPage() {
                                             )}
                                             onClick={() => canClick && setSelectedStatus(status)}
                                         >
-                                            <CardContent className="flex flex-row items-center justify-between p-4">
+                                            <CardContent className="flex flex-row items-center justify-between p-6">
                                                 <div className="space-y-1">
-                                                    <p className="text-sm font-medium text-muted-foreground">{status}</p>
-                                                    <div className="text-2xl font-bold">
-                                                        {countsLoading ? <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /> : count}
-                                                    </div>
+                                                    <p className="text-sm font-medium text-muted-foreground flex items-center">
+                                                        <Icon className="h-4 w-4 mr-2" />
+                                                        {status}
+                                                    </p>
                                                 </div>
-                                                <div className="p-2 bg-muted rounded-md">
-                                                    <Icon className="h-5 w-5 text-muted-foreground" />
+                                                <div className="text-2xl font-bold">
+                                                    {countsLoading ? <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /> : count}
                                                 </div>
                                             </CardContent>
                                         </Card>
@@ -394,3 +394,4 @@ export default function ReceiptPage() {
         </>
     );
 }
+
