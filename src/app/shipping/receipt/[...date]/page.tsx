@@ -26,8 +26,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ProcessedReceiptsDialog } from '@/app/components/processed-receipts-dialog';
 
 const SHIPPING_CHANNEL_OPTIONS = ['Semua Jasa Kirim', 'SPX', 'J&T', 'JNE', 'INSTANT', 'CARGO'];
-const STATUS_ORDER = ['Siap Kirim', 'Selesai', 'Diantar', 'Return Selesai', 'Return', 'Dibatalkan', 'Tidak Sampai'];
-const CORE_STATUSES = ['Siap Kirim', 'Selesai', 'Return', 'Dibatalkan', 'Return Selesai'];
+const STATUS_ORDER = ['Terproses', 'Siap Kirim', 'Selesai', 'Diantar', 'Return Selesai', 'Return', 'Dibatalkan', 'Tidak Sampai'];
+const CORE_STATUSES = ['Terproses', 'Siap Kirim', 'Selesai', 'Return', 'Dibatalkan', 'Return Selesai'];
 
 
 function parseDateFromParams(dateArray: string[] | undefined): Date | null {
