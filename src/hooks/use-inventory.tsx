@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
@@ -372,8 +373,11 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
       return await apiFetch(`/api/finance/discounts/${id}`);
   }
   
-  const checkPrintedReceiptAvailability = async (salesChannel: string, shippingChannel: string, dateString: string) => {
-      const result = await apiFetch(`/api/shipping/printed-receipts/check?salesChannel=${salesChannel}&shippingChannel=${shippingChannel}&date=${dateString}`);
+  const checkPrintedReceiptAvailability = async (salesChannel: string, shippingChannel: string, date: string) => {
+      const result = await apiFetch('/api/shipping/printed-receipts/check', {
+          method: 'POST',
+          body: JSON.stringify({ salesChannel, shippingChannel, date })
+      });
       return result.isAvailable;
   }
 

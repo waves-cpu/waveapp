@@ -58,8 +58,17 @@ async function apiFetch(url: string, options: RequestInit = {}) {
         const errorData = await res.json().catch(() => ({ message: 'An unknown error occurred' }));
         throw new Error(errorData.message);
     }
-    return res.json();
-}
+
+    if (res.status === 204) { // No Content
+        return null;
+    }
+
+    if (res.headers.get('Content-Type')?.includes('application/json')) {
+        return res.json();
+    }
+    
+    return res;
+};
 
 export function useReceiptPageLogic(salesChannel: 'Shopee' | 'Tiktok' | 'Lazada') {
     const params = useParams();
