@@ -1,8 +1,9 @@
 
+
 'use client';
 
 import React, { useState } from 'react';
-import { TransactionForm, type TransactionSubmitData } from "@/app/components/transaction-form";
+import { TransactionForm, type TransactionSubmitData } from "@/app/components/stock-in-form";
 import { Button } from '@/components/ui/button';
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { useLanguage } from "@/hooks/use-language";
