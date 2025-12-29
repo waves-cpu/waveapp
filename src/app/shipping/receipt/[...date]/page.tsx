@@ -18,7 +18,7 @@ import { useLanguage } from '@/hooks/use-language';
 import { translations } from '@/types/language';
 import { useParams, useRouter } from 'next/navigation';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -195,25 +195,7 @@ export default function ReceiptPage() {
     
             setStatusCounts(statusData.statuses);
             setPrintedReceiptCounts(printedData);
-
-            // Structure processed data for easy lookup
-            const processedLookup: Record<string, Record<string, number>> = {};
-            // Assuming processedData.salesChannels and processedData.shippingChannels structure
-            // This is a simplified example; adjust based on actual API response structure
-            for (const [channel, count] of Object.entries(processedData.salesChannels)) {
-                 if (!processedLookup[channel]) {
-                    processedLookup[channel] = {};
-                 }
-            }
-             for (const [channel, count] of Object.entries(processedData.shippingChannels)) {
-                 // This part of logic is tricky without knowing the exact response shape for processed counts per channel combo
-                 // Assuming we get counts per shipping channel and need to associate them with sales channel
-                 // This part needs a proper structure from API. For now, let's assume a structure.
-                 // A better API would return: { salesChannel: { shippingChannel: count } }
-                 // Let's assume we can rebuild this from flat lists.
-            }
-            // A more direct way: the API should return counts grouped by salesChannel AND shippingChannel for status 'Terproses'
-             setProcessedCounts(processedData.salesChannels); // This is a simplification. Needs adjustment.
+            setProcessedCounts(processedData.salesChannels);
 
         } catch (error) {
              toast({ variant: 'destructive', title: "Gagal memuat jumlah status" });
@@ -267,39 +249,15 @@ export default function ReceiptPage() {
     }, [statusCounts]);
     
     const groupedPrintedReceipts = useMemo(() => {
-        const groups: Record<string, { salesChannel: string; items: { shippingChannel: string, count: number }[] }> = {};
+        const groups: Record<string, { salesChannel: string; items: { shippingChannel: string; count: number }[] }> = {};
         printedReceiptCounts.forEach(item => {
             if (!groups[item.salesChannel]) {
                 groups[item.salesChannel] = { salesChannel: item.salesChannel, items: [] };
             }
-            // The logic to subtract processed items should happen here.
-            // This is complex as `processedCounts` is not granular enough.
-            // Let's assume fetchShippingReceiptCounts can be called with more params.
-            // For now, I'll simulate the subtraction logic here based on what I have.
-            
-            // This is a placeholder. I need to get processed counts per shipping channel.
-            // Let's assume processedCounts is structured as { [salesChannel]: { [shippingChannel]: count } }
-            // Since I cannot change the API, I will have to do another fetch or modify the existing one.
-            // The current `processedCounts` is just `statusData.salesChannels` which is not enough.
-            // I will assume I can get the right data structure. If not, I need to call API again.
-            
-            // Let's re-think. `fetchAllCounts` already fetches `processedData` filtered by status 'Terproses'.
-            // `processedData.salesChannels` and `processedData.shippingChannels` are available.
-            // But they are not linked. E.g. { Shopee: 5 }, { J&T: 3 }. I don't know if those 3 J&T are from Shopee.
-            // The API needs to be more granular.
-            
-            // Given the constraints, I will do the subtraction on the frontend with the data I have,
-            // even if it's not perfect.
-
-            // The API `fetchShippingReceiptCounts` returns flat lists. Let's adjust the logic to work with that.
-            // A better way is to call the API for each group, but that's inefficient.
-            
-            // The user wants `resi tercetak` to decrease. This means `printedReceiptCounts` should be adjusted.
-            
-            const processedCount = 0; // This needs to be calculated.
+            const processedCount = processedCounts[item.salesChannel]?.[item.shippingChannel] || 0;
             const remainingCount = item.count - processedCount;
 
-            groups[item.salesChannel].items.push({ shippingChannel: item.shippingChannel, count: remainingCount });
+            groups[item.salesChannel].items.push({ shippingChannel: item.shippingChannel, count: remainingCount > 0 ? remainingCount : 0 });
         });
         return Object.values(groups);
     }, [printedReceiptCounts, processedCounts]);
@@ -364,7 +322,7 @@ export default function ReceiptPage() {
                                     </AlertDescription>
                                 </Alert>
                             )}
-                            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
+                            <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-5 gap-4">
                                 {orderedStatuses.map(status => {
                                     const Icon = statusIcons[status] || Package;
                                     const count = statusCounts[status] || 0;
@@ -410,12 +368,10 @@ export default function ReceiptPage() {
                                                     </h3>
                                                     <div className="pl-4 border-l ml-2 space-y-2">
                                                         {group.items.map(item => {
-                                                            const processed = processedCounts[group.salesChannel]?.[item.shippingChannel] || 0;
-                                                            const remaining = item.count - processed;
                                                             return (
                                                                 <div key={item.shippingChannel} className="flex justify-between items-center text-sm">
                                                                     <span className="text-muted-foreground">{item.shippingChannel}</span>
-                                                                    <span className="font-medium">{remaining}</span>
+                                                                    <span className="font-medium">{item.count}</span>
                                                                 </div>
                                                             )
                                                         })}
@@ -446,4 +402,3 @@ export default function ReceiptPage() {
         </>
     );
 }
-
