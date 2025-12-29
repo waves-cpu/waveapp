@@ -6,7 +6,8 @@ import { headers } from 'next/headers';
 const API_KEY = process.env.API_KEY || 'secret-api-key-for-waveapp';
 
 // GET a single product
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(request: NextRequest, context: { params: { id: string } }) {
+  const { params } = await context;
   const { id } = params;
   const headersList = await headers();
   const apiKey = headersList.get('X-API-Key');
@@ -26,7 +27,8 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
 }
 
 // UPDATE a product
-export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(request: NextRequest, context: { params: { id: string } }) {
+    const { params } = await context;
     const { id } = params;
     const headersList = await headers();
     const apiKey = headersList.get('X-API-Key');
@@ -45,7 +47,8 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
 }
 
 // DELETE a product
-export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(request: NextRequest, context: { params: { id: string } }) {
+    const { params } = await context;
     const { id } = params;
     const headersList = await headers();
     const apiKey = headersList.get('X-API-Key');
