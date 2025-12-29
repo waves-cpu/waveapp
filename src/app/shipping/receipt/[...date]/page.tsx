@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
@@ -9,8 +10,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Calendar as CalendarIcon, FilePlus2, Loader2, AlertCircle, Truck, PackageCheck, Undo2, Ban, History, CheckCircle, ShoppingBag, Package } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-import { format, parse, isValid } from 'date-fns';
-import { cn } from '@/lib/utils';
+import { isValid, parseISO } from 'date-fns';
+import { cn, formatToWIB } from '@/lib/utils';
 import { useInventory } from '@/hooks/use-inventory';
 import type { PrintedReceiptCount } from '@/types';
 import { useToast } from '@/hooks/use-toast';
@@ -34,7 +35,7 @@ function parseDateFromParams(dateArray: string[] | undefined): Date | null {
     if (dateArray && dateArray.length > 0) {
       if (dateArray[0] === 'semua') return null;
       const [month, day, year] = dateArray[0].split('-');
-      const parsedDate = parse(`${year}-${month}-${day}`, 'yyyy-MM-dd', new Date());
+      const parsedDate = parseISO(`${year}-${month}-${day}`);
       if (isValid(parsedDate)) {
         return parsedDate;
       }
@@ -179,9 +180,9 @@ export default function ReceiptPage() {
     
     const fetchAllCounts = useCallback(async () => {
         setCountsLoading(true);
-        const dateString = currentDate ? format(currentDate, 'yyyy-MM-dd') : undefined;
+        const dateString = currentDate ? formatToWIB(currentDate, 'yyyy-MM-dd') : undefined;
         try {
-            const [statusData, printedData, processedData] = await Promise.all([
+            const [statusData, printedData, processedData, pendingOldData] = await Promise.all([
                 fetchShippingReceiptCounts({ 
                     dateString: dateString,
                     shippingChannel: shippingChannel || undefined
@@ -190,39 +191,30 @@ export default function ReceiptPage() {
                 fetchShippingReceiptCounts({
                     dateString: dateString,
                     status: 'Terproses',
-                })
+                }),
+                currentDate ? getPendingReceiptsBeforeDate(currentDate) : Promise.resolve(0),
             ]);
     
             setStatusCounts(statusData.statuses);
             setPrintedReceiptCounts(printedData);
             setProcessedCounts(processedData.salesChannels);
+            setPendingOldReceiptsCount(pendingOldData);
 
         } catch (error) {
              toast({ variant: 'destructive', title: "Gagal memuat jumlah status" });
         } finally {
             setCountsLoading(false);
         }
-    }, [currentDate, shippingChannel, fetchShippingReceiptCounts, getPrintedReceiptCountsForDate, toast]);
+    }, [currentDate, shippingChannel, fetchShippingReceiptCounts, getPrintedReceiptCountsForDate, getPendingReceiptsBeforeDate, toast]);
 
-
-    const checkOldPendingReceipts = useCallback(async () => {
-        if (!currentDate) return;
-        try {
-            const count = await getPendingReceiptsBeforeDate(currentDate);
-            setPendingOldReceiptsCount(count);
-        } catch (error) {
-            // fail silently
-        }
-    }, [currentDate, getPendingReceiptsBeforeDate]);
 
     useEffect(() => {
-        checkOldPendingReceipts();
         fetchAllCounts();
-    }, [checkOldPendingReceipts, fetchAllCounts]);
+    }, [fetchAllCounts]);
 
     const handleDateSelect = (selectedDate: Date | undefined) => {
         if (selectedDate) {
-            const formattedDate = format(selectedDate, 'MM-dd-yyyy');
+            const formattedDate = formatToWIB(selectedDate, 'MM-dd-yyyy');
             router.push(`/shipping/receipt/${formattedDate}`);
         } else {
             router.push('/shipping/receipt/semua');
@@ -231,7 +223,7 @@ export default function ReceiptPage() {
     
     const handleAddPrintedReceipts = async (salesChannel: string, shippingChannel: string, count: number) => {
         if (!currentDate) return;
-        const dateString = format(currentDate, 'yyyy-MM-dd');
+        const dateString = formatToWIB(currentDate, 'yyyy-MM-dd');
         await addPrintedReceipts(dateString, salesChannel, shippingChannel, count);
         await fetchAllCounts();
         toast({ title: 'Berhasil', description: `${count} resi tercetak telah ditambahkan.` });
@@ -286,7 +278,7 @@ export default function ReceiptPage() {
                                     )}
                                 >
                                     <CalendarIcon className="mr-2 h-4 w-4" />
-                                    {currentDate ? format(currentDate, 'PPP') : <span>{t.shipping.receiptPage.selectDate}</span>}
+                                    {currentDate ? formatToWIB(currentDate, 'PPP') : <span>{t.shipping.receiptPage.selectDate}</span>}
                                 </Button>
                                 </PopoverTrigger>
                                 <PopoverContent className="w-auto p-0" align="end">

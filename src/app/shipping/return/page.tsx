@@ -22,7 +22,7 @@ import { Undo2, Truck, CheckCircle, Package, Trash2, Search, FileDown, Loader2 }
 import { Badge } from '@/components/ui/badge';
 import { useInventory } from '@/hooks/use-inventory';
 import type { ShippingReceipt, ReturnedItem } from '@/types';
-import { format, parseISO, startOfMonth, endOfMonth } from 'date-fns';
+import { parseISO, startOfMonth, endOfMonth } from 'date-fns';
 import { id as localeId } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
 import { Pagination } from '@/components/ui/pagination';
@@ -44,6 +44,7 @@ import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { translations } from '@/types/language';
+import { formatToWIB } from '@/lib/utils';
 
 
 const getStatusVariant = (status: string) => {
@@ -331,7 +332,7 @@ export default function ReturnPage() {
         setTimeout(() => {
             const dataToExport = filteredReturns.map(item => ({
                 'No. Resi': item.awb,
-                'Tanggal': format(parseISO(item.date), 'dd MMM yyyy HH:mm'),
+                'Tanggal': formatToWIB(parseISO(item.date), 'dd MMM yyyy HH:mm'),
                 'Kanal': item.channel,
                 'Status': item.status
             }));
@@ -340,7 +341,7 @@ export default function ReturnPage() {
             const workbook = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(workbook, worksheet, 'Data Return');
 
-            const monthName = format(new Date(selectedYear, selectedMonth), 'MMMM-yyyy', { locale: localeId });
+            const monthName = formatToWIB(new Date(selectedYear, selectedMonth), 'MMMM-yyyy', { locale: localeId });
             const fileName = `Laporan_Return_${monthName}.xlsx`;
             XLSX.writeFile(workbook, fileName);
 
@@ -380,7 +381,7 @@ export default function ReturnPage() {
                             <SelectContent>
                                 {Array.from({ length: 12 }).map((_, i) => (
                                     <SelectItem key={i} value={i.toString()}>
-                                        {format(new Date(0, i), 'MMMM', { locale: localeId })}
+                                        {formatToWIB(new Date(0, i), 'MMMM', { locale: localeId })}
                                     </SelectItem>
                                 ))}
                             </SelectContent>
@@ -463,7 +464,7 @@ export default function ReturnPage() {
                                     ) : paginatedReturns.length > 0 ? paginatedReturns.map(item => (
                                         <TableRow key={item.id}>
                                             <TableCell className="font-medium">{item.awb}</TableCell>
-                                            <TableCell>{format(new Date(item.date), 'dd MMM yyyy')}</TableCell>
+                                            <TableCell>{formatToWIB(new Date(item.date), 'dd MMM yyyy')}</TableCell>
                                             <TableCell>{item.channel}</TableCell>
                                             <TableCell>
                                                 <Badge variant={getStatusVariant(item.status)}>{item.status}</Badge>

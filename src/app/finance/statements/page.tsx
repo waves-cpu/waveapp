@@ -15,12 +15,13 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { Calendar as CalendarIcon, Package, AlertTriangle, ArrowUpRight, ArrowDownRight, DollarSign, BarChart2, Star, TrendingUp } from 'lucide-react';
 import { DateRange } from 'react-day-picker';
-import { format, subDays, startOfMonth, endOfMonth, startOfYear, endOfYear, isWithinInterval, parseISO, startOfDay, endOfDay } from 'date-fns';
+import { subDays, startOfMonth, endOfMonth, startOfYear, endOfYear, isWithinInterval, parseISO, startOfDay, endOfDay } from 'date-fns';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import Image from 'next/image';
+import { formatToWIB } from '@/lib/utils';
 
 const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('id-ID', {
@@ -240,9 +241,9 @@ export default function StatementsPage() {
                                 <CalendarIcon className="mr-2 h-4 w-4" />
                                 {date?.from ? (
                                     date.to ? (
-                                        `${format(date.from, "d LLL, y")} - ${format(date.to, "d LLL, y")}`
+                                        `${formatToWIB(date.from, "d LLL, y")} - ${formatToWIB(date.to, "d LLL, y")}`
                                     ) : (
-                                        format(date.from, "d LLL, y")
+                                        formatToWIB(date.from, "d LLL, y")
                                     )
                                 ) : (
                                     <span>{t.selectPeriod}</span>
@@ -450,6 +451,7 @@ export default function StatementsPage() {
         </AppLayout>
     );
 }
+
 
 
 

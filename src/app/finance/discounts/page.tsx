@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -11,7 +12,7 @@ import { PlusCircle, Tags, Trash2, Calendar, MoreVertical, Edit } from 'lucide-r
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { useInventory } from '@/hooks/use-inventory';
 import type { DiscountGroup } from '@/types';
-import { format, isAfter, isBefore, parseISO } from 'date-fns';
+import { isAfter, isBefore, parseISO } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
 import {
@@ -31,6 +32,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useToast } from '@/hooks/use-toast';
+import { formatToWIB } from '@/lib/utils';
 
 function getStatus(startDate: string, endDate: string): { text: string; variant: 'default' | 'secondary' | 'outline' } {
     const now = new Date();
@@ -131,7 +133,7 @@ export default function DiscountPage() {
                                 <CardContent className="flex-grow">
                                     <div className="text-sm text-muted-foreground flex items-center gap-2">
                                         <Calendar className="h-4 w-4" />
-                                        <span>{format(parseISO(group.startDate), 'dd MMM yyyy')} - {format(parseISO(group.endDate), 'dd MMM yyyy')}</span>
+                                        <span>{formatToWIB(parseISO(group.startDate), 'dd MMM yyyy')} - {formatToWIB(parseISO(group.endDate), 'dd MMM yyyy')}</span>
                                     </div>
                                     <div className="text-sm text-muted-foreground mt-2">
                                         {group.productCount || 0} produk termasuk dalam diskon ini.

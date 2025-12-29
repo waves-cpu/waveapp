@@ -10,7 +10,7 @@ import { translations } from '@/types/language';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { format, parseISO } from 'date-fns';
+import { parseISO } from 'date-fns';
 import { id as aing } from 'date-fns/locale';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -35,6 +35,7 @@ import { PosReceipt, type ReceiptData } from '@/app/components/pos-receipt';
 import { AccessoryUsageVoucher, type VoucherData } from '@/app/components/accessory-usage-voucher';
 import type { CartItem } from '@/app/components/pos-cart';
 import { useRouter } from 'next/navigation';
+import { formatToWIB } from '@/lib/utils';
 
 
 type GroupedSale = {
@@ -77,8 +78,8 @@ export default function PosHistoryPage() {
     const posSales = useMemo(() => {
         const filtered = allSales.filter(s => s.channel === 'pos');
         if (date) {
-            const selectedDateString = format(date, 'yyyy-MM-dd');
-            return filtered.filter(s => format(parseISO(s.saleDate), 'yyyy-MM-dd') === selectedDateString);
+            const selectedDateString = formatToWIB(date, 'yyyy-MM-dd');
+            return filtered.filter(s => formatToWIB(parseISO(s.saleDate), 'yyyy-MM-dd') === selectedDateString);
         }
         return filtered;
     }, [allSales, date]);
@@ -141,7 +142,7 @@ export default function PosHistoryPage() {
             await clearPosTransactions(date);
             toast({
                 title: "Riwayat Dibersihkan",
-                description: `Semua transaksi POS untuk tanggal ${format(date, 'PPP')} telah dihapus dan stok telah dikembalikan.`,
+                description: `Semua transaksi POS untuk tanggal ${formatToWIB(date, 'PPP')} telah dihapus dan stok telah dikembalikan.`,
             });
         } catch (error) {
             toast({
@@ -233,7 +234,7 @@ export default function PosHistoryPage() {
                                 className="w-[240px] justify-start text-left font-normal"
                             >
                                 <CalendarIcon className="mr-2 h-4 w-4" />
-                                {date ? format(date, 'PPP', { locale: language === 'id' ? aing : undefined }) : <span>Pilih tanggal</span>}
+                                {date ? formatToWIB(date, 'PPP', { locale: language === 'id' ? aing : undefined }) : <span>Pilih tanggal</span>}
                             </Button>
                             </PopoverTrigger>
                             <PopoverContent className="w-auto p-0" align="end">
@@ -256,7 +257,7 @@ export default function PosHistoryPage() {
                                 <AlertDialogHeader>
                                     <AlertDialogTitle>Anda yakin ingin membersihkan riwayat?</AlertDialogTitle>
                                     <AlertDialogDescription>
-                                        Tindakan ini akan menghapus semua {groupedSales.length} transaksi POS untuk tanggal {date ? format(date, 'PPP') : ''} dan mengembalikan stok. Aksi ini tidak dapat diurungkan.
+                                        Tindakan ini akan menghapus semua {groupedSales.length} transaksi POS untuk tanggal {date ? formatToWIB(date, 'PPP') : ''} dan mengembalikan stok. Aksi ini tidak dapat diurungkan.
                                     </AlertDialogDescription>
                                 </AlertDialogHeader>
                                 <AlertDialogFooter>
@@ -293,7 +294,7 @@ export default function PosHistoryPage() {
                                             <TableCell className="font-medium text-sm">
                                                 <div className="flex items-center gap-2">
                                                     {group.status === 'Pending' && <Clock className="h-4 w-4 text-muted-foreground" />}
-                                                    {format(new Date(group.saleDate), 'HH:mm:ss')}
+                                                    {formatToWIB(new Date(group.saleDate), 'HH:mm:ss')}
                                                 </div>
                                             </TableCell>
                                             <TableCell>

@@ -6,7 +6,7 @@ import { useLanguage } from '@/hooks/use-language';
 import { translations } from '@/types/language';
 import type { CartItem } from './pos-cart';
 import type { Reseller } from '@/types';
-import { format } from 'date-fns';
+import { formatToWIB } from '@/lib/utils';
 import { useInvoiceSettings } from '@/hooks/use-invoice-settings';
 import { Logo } from './logo';
 import { Table, TableBody, TableCell, TableHeader, TableRow, TableHead, TableFooter } from '@/components/ui/table';
@@ -40,7 +40,7 @@ export const ResellerInvoice = React.forwardRef<HTMLDivElement, ResellerInvoiceP
 
     React.useEffect(() => {
       // Set the date only on the client side to prevent hydration mismatch
-      setDisplayDate(format(new Date(), 'dd MMMM yyyy'));
+      setDisplayDate(formatToWIB(new Date(), 'dd MMMM yyyy'));
     }, []);
 
     return (

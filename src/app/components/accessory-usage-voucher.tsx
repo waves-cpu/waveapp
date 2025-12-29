@@ -3,7 +3,7 @@
 
 import React, { useEffect, useState } from 'react';
 import type { CartItem } from './pos-cart';
-import { format } from 'date-fns';
+import { formatToWIB } from '@/lib/utils';
 import { Logo } from './logo';
 import { Table, TableBody, TableCell, TableHeader, TableRow, TableHead, TableFooter } from '@/components/ui/table';
 
@@ -22,7 +22,7 @@ export const AccessoryUsageVoucher = React.forwardRef<HTMLDivElement, AccessoryV
     const [displayDate, setDisplayDate] = useState<string>('');
 
     useEffect(() => {
-        setDisplayDate(format(voucher.date, 'dd MMMM yyyy, HH:mm'));
+        setDisplayDate(formatToWIB(voucher.date, 'dd MMMM yyyy, HH:mm'));
     }, [voucher.date]);
 
     const totalItems = voucher.items.reduce((sum, item) => sum + item.quantity, 0);

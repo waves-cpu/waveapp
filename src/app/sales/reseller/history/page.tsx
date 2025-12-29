@@ -10,7 +10,7 @@ import { translations } from '@/types/language';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { format } from 'date-fns';
+import { parseISO } from 'date-fns';
 import { id as localeId, enUS as localeEn } from 'date-fns/locale';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -33,6 +33,7 @@ import { History as HistoryIcon } from 'lucide-react';
 import { DailySalesDetailDialog } from '@/app/components/daily-sales-detail-dialog';
 import { ResellerInvoice, type InvoiceData } from '@/app/components/reseller-invoice';
 import { useInvoicePDF } from '@/hooks/use-invoice-pdf';
+import { formatToWIB } from '@/lib/utils';
 
 
 type GroupedSale = {
@@ -70,8 +71,8 @@ export default function ResellerHistoryPage() {
     const posSales = useMemo(() => {
         const filtered = allSales.filter(s => s.channel === 'reseller');
         if (date) {
-            const selectedDateString = format(date, 'yyyy-MM-dd');
-            return filtered.filter(s => format(new Date(s.saleDate), 'yyyy-MM-dd') === selectedDateString);
+            const selectedDateString = formatToWIB(date, 'yyyy-MM-dd');
+            return filtered.filter(s => formatToWIB(new Date(s.saleDate), 'yyyy-MM-dd') === selectedDateString);
         }
         return filtered;
     }, [allSales, date]);
@@ -170,7 +171,7 @@ export default function ResellerHistoryPage() {
                                 className="w-[240px] justify-start text-left font-normal"
                             >
                                 <CalendarIcon className="mr-2 h-4 w-4" />
-                                {date ? format(date, 'PPP', { locale: language === 'id' ? localeId : localeEn }) : <span>{t.stockHistory.dateRange}</span>}
+                                {date ? formatToWIB(date, 'PPP', { locale: language === 'id' ? localeId : localeEn }) : <span>{t.stockHistory.dateRange}</span>}
                             </Button>
                             </PopoverTrigger>
                             <PopoverContent className="w-auto p-0" align="end">
@@ -207,7 +208,7 @@ export default function ResellerHistoryPage() {
                                     groupedSales.map(group => (
                                         <TableRow key={group.transactionId} className="cursor-pointer" onClick={() => handleViewDetails(group.items)}>
                                             <TableCell className="font-medium text-sm">
-                                                {format(new Date(group.saleDate), 'HH:mm:ss')}
+                                                {formatToWIB(new Date(group.saleDate), 'HH:mm:ss')}
                                             </TableCell>
                                             <TableCell>
                                                 <div className="flex items-center gap-2">

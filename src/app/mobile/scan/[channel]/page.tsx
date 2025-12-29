@@ -9,10 +9,11 @@ import { ArrowLeft, ScanLine, Camera, Truck, CheckCircle, XCircle } from 'lucide
 import { useToast } from '@/hooks/use-toast';
 import { useScanSounds } from '@/hooks/use-scan-sounds';
 import type { ShippingReceipt } from '@/types';
-import { format, parseISO } from 'date-fns';
+import { parseISO } from 'date-fns';
 import { QrScanner } from '@yudiel/react-qr-scanner';
 import { Badge } from '@/components/ui/badge';
 import { useParams, useRouter } from 'next/navigation';
+import { formatToWIB } from '@/lib/utils';
 
 interface ProcessedItem extends Partial<ShippingReceipt> {
     id: number | string;
@@ -187,7 +188,7 @@ export default function MobileScanShipmentPage() {
                                                 <p className="text-xs text-muted-foreground">{item.message}</p>
                                             </div>
                                         </div>
-                                        <p className="text-xs text-muted-foreground shrink-0">{format(parseISO(item.date), 'HH:mm:ss')}</p>
+                                        <p className="text-xs text-muted-foreground shrink-0">{formatToWIB(parseISO(item.date), 'HH:mm:ss')}</p>
                                     </li>
                                 ))}
                             </ul>

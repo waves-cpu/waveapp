@@ -21,11 +21,12 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import type { Sale } from '@/types';
 import { useMemo, useState, useEffect } from 'react';
 import { Badge } from '@/components/ui/badge';
-import { format, parseISO } from 'date-fns';
+import { parseISO } from 'date-fns';
 import { Input } from '@/components/ui/input';
 import { Search } from 'lucide-react';
 import { id as localeId } from 'date-fns/locale';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { formatToWIB } from '@/lib/utils';
 
 interface DailySalesDetailDialogProps {
   open: boolean;
@@ -78,7 +79,7 @@ export function DailySalesDetailDialog({ open, onOpenChange, sales, title, descr
         const aggregationMap = new Map<string, AggregatedSale>();
 
         sales.forEach(sale => {
-            const saleDate = format(parseISO(sale.saleDate), 'yyyy-MM-dd');
+            const saleDate = formatToWIB(parseISO(sale.saleDate), 'yyyy-MM-dd');
             const key = `${sale.sku}-${saleDate}-${sale.channel}`;
 
             const existingEntry = aggregationMap.get(key);
@@ -126,7 +127,7 @@ export function DailySalesDetailDialog({ open, onOpenChange, sales, title, descr
 
     const salesDate = useMemo(() => {
         if (sales && sales.length > 0) {
-            return format(parseISO(sales[0].saleDate), 'PPP', { locale: localeId });
+            return formatToWIB(parseISO(sales[0].saleDate), 'PPP', { locale: localeId });
         }
         return '';
     }, [sales]);

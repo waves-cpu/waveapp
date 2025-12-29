@@ -5,7 +5,7 @@ import React, { useEffect, useState } from 'react';
 import { useLanguage } from '@/hooks/use-language';
 import { translations } from '@/types/language';
 import type { CartItem } from './pos-cart';
-import { format } from 'date-fns';
+import { formatToWIB } from '@/lib/utils';
 import { useReceiptSettings, type ReceiptSettings } from '@/hooks/use-receipt-settings';
 import { cn } from '@/lib/utils';
 
@@ -62,7 +62,7 @@ export const PosReceipt = React.forwardRef<HTMLDivElement, PosReceiptProps>((pro
                 <div className="flex justify-between">
                     <span>{receiptTranslations.date}</span>
                     {/* Only render the date once it has been set on the client */}
-                    <span>{displayDate ? format(displayDate, 'dd/MM/yy HH:mm') : ''}</span>
+                    <span>{displayDate ? formatToWIB(displayDate, 'dd/MM/yy HH:mm') : ''}</span>
                 </div>
                 <div className="flex justify-between">
                     <span>{receiptTranslations.receiptNo}</span>

@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { FileDown, Truck, PackageCheck, Undo2, Ban, History, Loader2 } from 'lucide-react';
 import { useInventory } from '@/hooks/use-inventory';
 import type { ShippingReceipt } from '@/types';
-import { format, parseISO, startOfMonth, endOfMonth, eachDayOfInterval } from 'date-fns';
+import { parseISO, startOfMonth, endOfMonth, eachDayOfInterval } from 'date-fns';
 import { id as localeId } from 'date-fns/locale';
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
@@ -28,6 +28,7 @@ import {
 } from "@/components/ui/chart"
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts"
 import { useToast } from '@/hooks/use-toast';
+import { formatToWIB } from '@/lib/utils';
 
 
 type DailyCount = {
@@ -96,7 +97,7 @@ export default function ReceiptReportPage() {
 
             const daysInMonth = eachDayOfInterval({ start: firstDay, end: lastDay });
             daysInMonth.forEach(day => {
-                const dateKey = format(day, 'yyyy-MM-dd');
+                const dateKey = formatToWIB(day, 'yyyy-MM-dd');
                 dailyData[dateKey] = {
                     'Perlu Diproses': 0, 'Siap Kirim': 0, 'Selesai': 0, 'Return Selesai': 0,
                     'Dibatalkan': 0, 'Return': 0, 'Total': 0
@@ -108,7 +109,7 @@ export default function ReceiptReportPage() {
             totals.Total = 0;
 
             receipts.forEach(receipt => {
-                const dateKey = format(parseISO(receipt.date), 'yyyy-MM-dd');
+                const dateKey = formatToWIB(parseISO(receipt.date), 'yyyy-MM-dd');
                 if (dailyData[dateKey]) {
                     dailyData[dateKey][receipt.status as keyof typeof dailyData[string]]++;
                     dailyData[dateKey].Total++;
@@ -119,7 +120,7 @@ export default function ReceiptReportPage() {
             });
 
             const formattedData = Object.entries(dailyData).map(([date, counts]) => ({
-                date: format(parseISO(date), 'd MMM'),
+                date: formatToWIB(parseISO(date), 'd MMM'),
                 ...counts
             }));
 
@@ -175,13 +176,13 @@ export default function ReceiptReportPage() {
             const workbook = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(workbook, worksheet, 'Laporan Resi');
             
-            const monthName = format(new Date(selectedYear, selectedMonth), 'MMMM-yyyy', { locale: localeId });
+            const monthName = formatToWIB(new Date(selectedYear, selectedMonth), 'MMMM-yyyy', { locale: localeId });
             const fileName = `Laporan_Resi_${monthName}.xlsx`;
             XLSX.writeFile(workbook, fileName);
 
             update({
                 id,
-                title: 'Unduhan Siap',
+                title: "Unduhan Siap",
                 description: `File '${fileName}' telah diunduh. Periksa folder unduhan browser Anda.`
             });
             setIsDownloading(false);
@@ -207,7 +208,7 @@ export default function ReceiptReportPage() {
                             <SelectContent>
                                 {Array.from({ length: 12 }).map((_, i) => (
                                     <SelectItem key={i} value={i.toString()}>
-                                        {format(new Date(0, i), 'MMMM', { locale: localeId })}
+                                        {formatToWIB(new Date(0, i), 'MMMM', { locale: localeId })}
                                     </SelectItem>
                                 ))}
                             </SelectContent>

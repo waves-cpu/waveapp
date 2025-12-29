@@ -36,8 +36,7 @@ import type { InventoryItem } from '@/types';
 import { categories } from '@/types';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-import { cn } from '@/lib/utils';
-import { format } from 'date-fns';
+import { cn, formatToWIB } from '@/lib/utils';
 
 const variantSchema = z.object({
     id: z.string().optional(),
@@ -253,7 +252,7 @@ export function AddProductForm({ existingItem }: AddProductFormProps) {
                                 )}
                                 >
                                 {field.value ? (
-                                    format(field.value, "PPP")
+                                    formatToWIB(field.value, "PPP")
                                 ) : (
                                     <span>Pilih tanggal</span>
                                 )}
@@ -443,6 +442,7 @@ export function AddProductForm({ existingItem }: AddProductFormProps) {
     </Card>
   );
 }
+
 
 
 

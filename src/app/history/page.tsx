@@ -27,9 +27,9 @@ import type { InventoryItem, AdjustmentHistory, InventoryItemVariant, Sale } fro
 import { useLanguage } from '@/hooks/use-language';
 import { translations } from '@/types/language';
 import { SidebarTrigger } from '@/components/ui/sidebar';
-import { format, startOfDay, isSameDay, parseISO, isWithinInterval, startOfMonth, endOfMonth, subMonths } from 'date-fns';
+import { parseISO, isWithinInterval, startOfMonth, endOfMonth, subMonths } from 'date-fns';
 import { id as localeId } from 'date-fns/locale';
-import { cn } from '@/lib/utils';
+import { cn, formatToWIB } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import Image from 'next/image';
 import { DailySalesDetailDialog } from '@/app/components/daily-sales-detail-dialog';
@@ -146,7 +146,7 @@ export default function HistoryPage() {
             return;
         }
 
-        const key = `${format(saleDate, 'yyyy-MM-dd')}-${sale.channel}`;
+        const key = `${formatToWIB(saleDate, 'yyyy-MM-dd')}-${sale.channel}`;
         
         if (!groupedSales.has(key)) {
             groupedSales.set(key, {
@@ -280,7 +280,7 @@ export default function HistoryPage() {
   const getSaleDetailLink = (entry: AggregatedSalesEntry): string => {
       const onlineChannels = ['shopee', 'tiktok', 'lazada'];
       const historyChannels = ['pos', 'reseller'];
-      const formattedDate = format(entry.date, 'MM-dd-yyyy');
+      const formattedDate = formatToWIB(entry.date, 'MM-dd-yyyy');
       
       if (onlineChannels.includes(entry.channel)) {
           return `/sales/${entry.channel}/${formattedDate}`;
@@ -304,7 +304,7 @@ export default function HistoryPage() {
             if(entry.type === 'sales') {
                 entry.sales.forEach(sale => {
                     data.push([
-                        format(parseISO(sale.saleDate), 'yyyy-MM-dd HH:mm:ss'),
+                        formatToWIB(parseISO(sale.saleDate), 'yyyy-MM-dd HH:mm:ss'),
                         sale.productName,
                         sale.variantName || '',
                         sale.sku || sale.parentSku || '',
@@ -316,7 +316,7 @@ export default function HistoryPage() {
                 });
             } else { // 'adjustment'
                 data.push([
-                    format(entry.date, 'yyyy-MM-dd HH:mm:ss'),
+                    formatToWIB(entry.date, 'yyyy-MM-dd HH:mm:ss'),
                     entry.itemName || '',
                     entry.variantName || '',
                     entry.variantSku || '',
@@ -389,7 +389,7 @@ export default function HistoryPage() {
                             <SelectContent>
                                 {Array.from({ length: 12 }).map((_, i) => (
                                     <SelectItem key={i} value={i.toString()}>
-                                        {format(new Date(0, i), 'MMMM', { locale: localeId })}
+                                        {formatToWIB(new Date(0, i), 'MMMM', { locale: localeId })}
                                     </SelectItem>
                                 ))}
                             </SelectContent>
@@ -474,7 +474,7 @@ export default function HistoryPage() {
                                     </div>
                                 </div>
                             </TableCell>
-                            <TableCell>{format(new Date(entry.date), 'd MMM yyyy, HH:mm')}</TableCell>
+                            <TableCell>{formatToWIB(new Date(entry.date), 'd MMM yyyy, HH:mm')}</TableCell>
                             <TableCell className="text-center">
                                 <Badge variant={entry.change >= 0 ? 'default' : 'destructive'} className={cn(entry.change >= 0 ? 'bg-green-600' : 'bg-red-600', 'text-white')}>
                                 {entry.change > 0 ? `+${entry.change}` : entry.change}
@@ -501,7 +501,7 @@ export default function HistoryPage() {
                                     </div>
                                 </div>
                             </TableCell>
-                            <TableCell>{format(new Date(entry.date), 'd MMM yyyy')}</TableCell>
+                            <TableCell>{formatToWIB(new Date(entry.date), 'd MMM yyyy')}</TableCell>
                             <TableCell className="text-center">
                                 <Badge variant='destructive' className="bg-red-600 text-white">
                                     -{entry.totalItems}
@@ -591,6 +591,7 @@ export default function HistoryPage() {
     </AppLayout>
   );
 }
+
 
 
 
