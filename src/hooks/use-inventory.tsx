@@ -384,6 +384,15 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
   const fetchImportHistory = async () => {
       return await apiFetch('/api/products/bulk-add');
   }
+  
+  const fetchShippingReceiptCounts = async (filters: { dateString?: string; salesChannel?: string; shippingChannel?: string; status?: string; }) => {
+    const params = new URLSearchParams();
+    if(filters.dateString) params.append('date', filters.dateString);
+    if(filters.salesChannel) params.append('salesChannel', filters.salesChannel);
+    if(filters.shippingChannel) params.append('shippingChannel', filters.shippingChannel);
+    if(filters.status) params.append('status', filters.status);
+    return await apiFetch(`/api/shipping/receipts/counts?${params.toString()}`);
+  }
 
 
   return (
@@ -426,7 +435,7 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
         deleteShippingReceipt,
         updateShippingReceiptsStatus,
         updateShippingReceiptStatus,
-        fetchShippingReceiptCounts: async () => ({ salesChannels: {}, shippingChannels: {}, statuses: {} }),
+        fetchShippingReceiptCounts,
         getReceiptCountByStatus,
         getPendingReceiptsBeforeDate,
         addPrintedReceipts,

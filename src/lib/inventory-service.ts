@@ -237,9 +237,9 @@ export async function fetchShippingReceiptCounts(filters: {
         const params: any[] = [];
         
         if (dateString) { where.push(`date(date) = ?`); params.push(dateString); }
-        if (salesChannel && groupBy !== 'salesChannel') { where.push('salesChannel = ?'); params.push(salesChannel); }
-        if (shippingChannel && groupBy !== 'channel') { where.push('channel = ?'); params.push(shippingChannel); }
-        if (status && groupBy !== 'status') { where.push('status = ?'); params.push(status); }
+        if (salesChannel) { where.push('salesChannel = ?'); params.push(salesChannel); }
+        if (shippingChannel) { where.push('channel = ?'); params.push(shippingChannel); }
+        if (status) { where.push('status = ?'); params.push(status); }
 
         const whereClause = where.length > 0 ? `WHERE ${where.join(' AND ')}` : '';
 
