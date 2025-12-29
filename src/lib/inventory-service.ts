@@ -270,7 +270,7 @@ export async function getReceiptCountByStatus(status: string): Promise<Record<st
 
 
 export async function addShippingReceipt(receipt: Omit<ShippingReceipt, 'id'>): Promise<ShippingReceipt> {
-    const newReceipt = await db.transaction(() => {
+    const newReceipt = db.transaction(() => {
         const result = db.prepare('INSERT INTO shipping_receipts (awb, date, channel, salesChannel, status, transactionId) VALUES (@awb, @date, @channel, @salesChannel, @status, @transactionId)').run({
             ...receipt,
             transactionId: receipt.awb,
@@ -436,7 +436,7 @@ export async function addProduct(itemData: any): Promise<string> {
             name: itemData.name,
             category: itemData.category,
             sku: itemData.sku || null,
-            releaseDate: itemData.releaseDate ? itemData.releaseDate : null,
+            releaseDate: itemData.releaseDate ? new Date(itemData.releaseDate).toISOString() : null,
             imageUrl: itemData.imageUrl || 'https://placehold.co/40x40.png',
             hasVariants: hasVariants ? 1 : 0,
             stock: hasVariants ? null : itemData.stock,
@@ -646,7 +646,7 @@ export async function editProduct(itemId: string, itemData: any) {
             name: itemData.name,
             category: itemData.category,
             sku: itemData.sku || null,
-            releaseDate: itemData.releaseDate ? itemData.releaseDate : null,
+            releaseDate: itemData.releaseDate ? new Date(itemData.releaseDate).toISOString() : null,
             imageUrl: itemData.imageUrl || 'https://placehold.co/40x40.png',
             hasVariants: hasVariants ? 1 : 0,
             stock: hasVariants ? null : itemData.stock,
@@ -991,9 +991,14 @@ export async function getActiveDiscountPrice(productId: string | number, variant
 }
 
 export async function recordSaleWithReceipt(receiptData: Omit<ShippingReceipt, 'id'>, salesData: Omit<Sale, 'id'>[]) {
-    const { awb, channel: shippingChannel, salesChannel, date: dateString } = receiptData;
+    const { awb, channel: shippingChannel, salesChannel, date: dateObject } = receiptData;
 
-    const consumed = await consumePrintedReceipt(salesChannel!, shippingChannel, new Date(dateString));
+    if (!salesChannel || !shippingChannel) {
+        throw new Error('Sales channel and shipping channel are required to consume a receipt.');
+    }
+
+    const dateString = formatDate(new Date(dateObject), 'yyyy-MM-dd');
+    const consumed = await consumePrintedReceipt(salesChannel, shippingChannel, dateString);
     if (!consumed) {
         throw new Error('Jumlah resi yang dipindai melebihi jumlah yang dicetak oleh admin.');
     }
@@ -1669,6 +1674,7 @@ async function updateShippingReceiptStatusByAwb(awb: string, status: string) {
 
 
     
+
 
 
 
