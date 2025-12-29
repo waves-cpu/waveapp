@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
     // The performSale function now accepts a sales array directly
     const results = await performSale(options.channel, {
         ...options,
-        sales: sales,
+        sales: sales.map((s: any) => ({ ...s, priceAtSale: s.price })), // Ensure priceAtSale is passed
         transactionId: transactionId,
     });
 

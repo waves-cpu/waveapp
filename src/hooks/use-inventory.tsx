@@ -451,4 +451,5 @@ export const useInventory = () => {
   if (context === undefined) {
     throw new Error('useInventory must be used within an InventoryProvider');
   }
-  return context
+  return context;
+};
