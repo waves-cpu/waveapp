@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
@@ -106,9 +107,8 @@ export function RecordSaleForReceiptDialog({
         return;
     }
     
-    // Correctly determine the price, prioritizing discounts.
     const discountPrice = await getActiveDiscountPrice(item.id, itemToAddRaw.id, item.category, receipt!.salesChannel!);
-    const price = discountPrice ?? itemToAddRaw.price!;
+    const price = discountPrice ?? itemToAddRaw.price ?? 0;
 
     const itemSku = variant?.sku || item.sku;
 

@@ -965,32 +965,42 @@ export async function performSale(
 export async function getActiveDiscountPrice(productId: string | number, variantId: string | number | null, category: string, channel: string): Promise<number | null> {
     const now = new Date().toISOString();
     
-    let groups: {id: number}[] = [];
-    const getGroupStmt = db.prepare('SELECT id FROM discount_groups WHERE category = ? AND startDate <= ? AND endDate >= ? AND (channel = ? OR channel = ?)');
-    const isOnlineSale = ['shopee', 'tiktok', 'lazada'].includes(channel.toLowerCase());
+    const isOnlineSale = ['shopee', 'tiktok', 'lazada'].some(c => channel.toLowerCase().includes(c));
 
-    // 1. Check for specific channel
-    groups = getGroupStmt.all(category, now, now, channel, isOnlineSale ? 'online' : '-----') as {id: number}[];
+    let channelChecks = [channel];
+    if (isOnlineSale) {
+        channelChecks.push('online');
+    }
+    const channelPlaceholders = channelChecks.map(() => '?').join(',');
+
+    const getGroupStmt = db.prepare(`
+        SELECT id FROM discount_groups 
+        WHERE category = ? 
+        AND startDate <= ? 
+        AND endDate >= ? 
+        AND channel IN (${channelPlaceholders})
+    `);
     
+    const groups = getGroupStmt.all(category, now, now, ...channelChecks) as {id: number}[];
+
     if (groups.length === 0) return null;
 
     const groupIds = groups.map(g => g.id);
-    const placeholders = groupIds.map(() => '?').join(',');
+    const groupPlaceholders = groupIds.map(() => '?').join(',');
 
     const getDiscountStmt = db.prepare(`
-        SELECT dp.discountedPrice, dg.channel
+        SELECT dp.discountedPrice
         FROM discounted_products dp
         JOIN discount_groups dg ON dp.groupId = dg.id
-        WHERE dp.groupId IN (${placeholders})
+        WHERE dp.groupId IN (${groupPlaceholders})
           AND dp.productId = ?
           AND (dp.variantId = ? OR (dp.variantId IS NULL AND ? IS NULL))
         ORDER BY
-          CASE dg.channel
-            WHEN ? THEN 1 -- Prioritize specific channel
-            WHEN 'online' THEN 2 -- Then 'online' channel
+          CASE 
+            WHEN dg.channel = ? THEN 1 -- Prioritize specific channel
+            WHEN dg.channel = 'online' THEN 2 -- Then 'online' channel
             ELSE 3
-          END,
-          dp.variantId DESC
+          END
         LIMIT 1
     `);
     
@@ -1710,6 +1720,7 @@ async function updateShippingReceiptStatusByAwb(awb: string, status: string) {
 
 
     
+
 
 
 
