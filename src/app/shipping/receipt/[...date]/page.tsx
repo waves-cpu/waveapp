@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
@@ -18,15 +19,15 @@ import { useLanguage } from '@/hooks/use-language';
 import { translations } from '@/types/language';
 import { useParams, useRouter } from 'next/navigation';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { Dialog, DialogTrigger, DialogHeader, DialogTitle, DialogDescription, DialogContent, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogHeader, DialogTitle, DialogDescription, DialogContent, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ProcessedReceiptsDialog } from '@/app/components/processed-receipts-dialog';
 
 const SHIPPING_CHANNEL_OPTIONS = ['Semua Jasa Kirim', 'SPX', 'J&T', 'JNE', 'INSTANT', 'CARGO'];
-const STATUS_ORDER = ['Perlu Diproses', 'Terproses', 'Siap Kirim', 'Selesai', 'Diantar', 'Return Selesai', 'Return', 'Dibatalkan', 'Tidak Sampai'];
-const CORE_STATUSES = ['Perlu Diproses', 'Terproses', 'Siap Kirim', 'Selesai', 'Return', 'Dibatalkan'];
+const STATUS_ORDER = ['Terproses', 'Siap Kirim', 'Selesai', 'Diantar', 'Return Selesai', 'Return', 'Dibatalkan', 'Tidak Sampai'];
+const CORE_STATUSES = ['Terproses', 'Siap Kirim', 'Selesai', 'Return', 'Dibatalkan', 'Return Selesai'];
 
 function parseDateFromParams(dateArray: string[] | undefined): Date | null {
     if (dateArray && dateArray.length > 0) {
