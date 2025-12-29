@@ -25,8 +25,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ProcessedReceiptsDialog } from '@/app/components/processed-receipts-dialog';
 
 const SHIPPING_CHANNEL_OPTIONS = ['Semua Jasa Kirim', 'SPX', 'J&T', 'JNE', 'INSTANT', 'CARGO'];
-const STATUS_ORDER = ['Perlu Diproses', 'Siap Kirim', 'Selesai', 'Diantar', 'Return Selesai', 'Return', 'Dibatalkan', 'Tidak Sampai'];
-const CORE_STATUSES = ['Perlu Diproses', 'Siap Kirim', 'Selesai', 'Return', 'Dibatalkan'];
+const STATUS_ORDER = ['Perlu Diproses', 'Terproses', 'Siap Kirim', 'Selesai', 'Diantar', 'Return Selesai', 'Return', 'Dibatalkan', 'Tidak Sampai'];
+const CORE_STATUSES = ['Perlu Diproses', 'Terproses', 'Siap Kirim', 'Selesai', 'Return', 'Dibatalkan'];
 
 function parseDateFromParams(dateArray: string[] | undefined): Date | null {
     if (dateArray && dateArray.length > 0) {
@@ -138,6 +138,7 @@ function AddPrintedReceiptDialog({
 
 const statusIcons: { [key: string]: React.ElementType } = {
     'Perlu Diproses': Package,
+    'Terproses': Package,
     'Siap Kirim': Truck,
     'Selesai': CheckCircle,
     'Return': Undo2,
