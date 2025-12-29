@@ -837,7 +837,7 @@ export async function findProductBySku(sku: string): Promise<InventoryItem | nul
 export async function performSale(
     channel: string, 
     options: {
-        sales: { sku: string; quantity: number; price: number }[];
+        sales: { sku: string; quantity: number; price: number; priceAtSale?: number }[];
         transactionId?: string, 
         paymentMethod?: string,
         resellerName?: string,
@@ -909,7 +909,7 @@ export async function performSale(
                 accessoryId,
                 channel, 
                 sale.quantity, 
-                sale.price, // Use price from the sale object
+                sale.priceAtSale ?? sale.price, // Use priceAtSale from the sale object
                 cogsAtSale, 
                 saleDateString, 
                 saleStatus,

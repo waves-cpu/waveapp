@@ -41,15 +41,12 @@ export async function POST(request: NextRequest) {
     }
 
     const transactionId = options?.transactionId || `trans-${Date.now()}`;
-    const salePromises = sales.map((sale: any) => 
-      performSale(sale.sku, options.channel, sale.quantity, {
+    // The performSale function now accepts a sales array directly
+    const results = await performSale(options.channel, {
         ...options,
+        sales: sales,
         transactionId: transactionId,
-        priceAtSale: sale.price,
-      })
-    );
-
-    const results = await Promise.all(salePromises);
+    });
 
     return NextResponse.json({ message: 'Sale recorded successfully', data: results }, { status: 201 });
 
