@@ -226,13 +226,13 @@ export async function fetchShippingReceiptCounts(filters: {
     shippingChannel?: string;
     status?: string;
 }): Promise<{
-    salesChannels: Record<string, number>;
+    salesChannels: Record<string, Record<string, number>>;
     shippingChannels: Record<string, number>;
     statuses: Record<string, number>;
 }> {
     const { dateString, salesChannel, shippingChannel, status } = filters;
 
-    const buildCounts = (groupBy: 'salesChannel' | 'channel' | 'status') => {
+    const buildCounts = (groupBy: string, extraGroupBy?: string) => {
         const where: string[] = [];
         const params: any[] = [];
         
@@ -242,28 +242,45 @@ export async function fetchShippingReceiptCounts(filters: {
         if (status) { where.push('status = ?'); params.push(status); }
 
         const whereClause = where.length > 0 ? `WHERE ${where.join(' AND ')}` : '';
+        const selectClause = extraGroupBy ? `${groupBy}, ${extraGroupBy}` : groupBy;
 
         const query = db.prepare(`
-            SELECT ${groupBy}, COUNT(*) as count
+            SELECT ${selectClause}, COUNT(*) as count
             FROM shipping_receipts
             ${whereClause}
-            GROUP BY ${groupBy}
+            GROUP BY ${selectClause}
         `);
 
         const results = query.all(...params) as { [key: string]: string | number }[];
-        const counts: Record<string, number> = {};
-        results.forEach(row => {
-            if (row[groupBy]) {
-                counts[row[groupBy] as string] = row.count as number;
-            }
-        });
-        return counts;
+        
+        if (extraGroupBy) {
+            const nestedCounts: Record<string, Record<string, number>> = {};
+             results.forEach(row => {
+                const groupKey = row[groupBy] as string;
+                const subKey = row[extraGroupBy] as string;
+                if(groupKey && subKey) {
+                    if (!nestedCounts[groupKey]) {
+                        nestedCounts[groupKey] = {};
+                    }
+                    nestedCounts[groupKey][subKey] = row.count as number;
+                }
+            });
+            return nestedCounts;
+        } else {
+            const counts: Record<string, number> = {};
+            results.forEach(row => {
+                if (row[groupBy]) {
+                    counts[row[groupBy] as string] = row.count as number;
+                }
+            });
+            return counts;
+        }
     };
 
     return {
-        salesChannels: buildCounts('salesChannel'),
-        shippingChannels: buildCounts('channel'),
-        statuses: buildCounts('status'),
+        salesChannels: buildCounts('salesChannel', 'channel') as Record<string, Record<string, number>>,
+        shippingChannels: buildCounts('channel') as Record<string, number>,
+        statuses: buildCounts('status') as Record<string, number>,
     };
 }
 
@@ -926,7 +943,7 @@ export async function performSale(
                 accessoryId,
                 channel, 
                 sale.quantity, 
-                sale.priceAtSale, 
+                sale.priceAtSale ?? sale.price, 
                 cogsAtSale, 
                 saleDateString, 
                 saleStatus,
