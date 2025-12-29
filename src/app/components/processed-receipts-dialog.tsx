@@ -87,7 +87,6 @@ export function ProcessedReceiptsDialog({
   const [isProcessing, setIsProcessing] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [activeSalesChannel, setActiveSalesChannel] = useState<string | null>(null);
-  const [activeShippingChannel, setActiveShippingChannel] = useState<string | null>(null);
   
   const loadReceipts = useCallback(async () => {
     setLoading(true);
@@ -98,7 +97,7 @@ export function ProcessedReceiptsDialog({
             dateString: currentDate ? format(currentDate, 'yyyy-MM-dd') : undefined,
             status: initialStatusFilter ? [initialStatusFilter] : undefined,
             salesChannel: activeSalesChannel || undefined,
-            channel: activeShippingChannel || initialChannelFilter || undefined,
+            channel: initialChannelFilter || undefined,
             awb: searchTerm,
         });
         setReceipts(fetchedReceipts);
@@ -108,26 +107,24 @@ export function ProcessedReceiptsDialog({
     } finally {
         setLoading(false);
     }
-  }, [fetchShippingReceipts, toast, currentPage, itemsPerPage, currentDate, activeSalesChannel, activeShippingChannel, initialChannelFilter, searchTerm, initialStatusFilter]);
+  }, [fetchShippingReceipts, toast, currentPage, itemsPerPage, currentDate, activeSalesChannel, initialChannelFilter, searchTerm, initialStatusFilter]);
 
   useEffect(() => {
     if (open) {
-      setActiveShippingChannel(initialChannelFilter || null);
       loadReceipts();
     } else {
       // Reset state when dialog closes
       setSearchTerm('');
       setActiveSalesChannel(null);
-      setActiveShippingChannel(null);
       setSelectedIds(new Set());
       setCurrentPage(1);
     }
-  }, [open, currentPage, itemsPerPage, activeSalesChannel, activeShippingChannel, searchTerm, loadReceipts, initialChannelFilter]);
+  }, [open, currentPage, itemsPerPage, activeSalesChannel, searchTerm, loadReceipts, initialChannelFilter]);
   
   useEffect(() => {
     setCurrentPage(1);
     setSelectedIds(new Set());
-  }, [activeSalesChannel, activeShippingChannel, searchTerm]);
+  }, [activeSalesChannel, searchTerm]);
   
   const handleDataChange = async () => {
     await loadReceipts();
@@ -209,14 +206,6 @@ export function ProcessedReceiptsDialog({
                         {SALES_CHANNEL_OPTIONS.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
                     </SelectContent>
                 </Select>
-                <Select value={activeShippingChannel || 'Semua Jasa Kirim'} onValueChange={(v) => setActiveShippingChannel(v === 'Semua Jasa Kirim' ? null : v)}>
-                    <SelectTrigger className="w-full md:w-[180px]">
-                        <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                        {SHIPPING_CHANNEL_OPTIONS.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
-                    </SelectContent>
-                </Select>
             </div>
             <div className="flex items-center gap-2 w-full md:w-auto">
                 <div className="relative flex-grow">
@@ -228,7 +217,7 @@ export function ProcessedReceiptsDialog({
                         className="pl-8 h-9 w-full"
                     />
                  </div>
-                 {selectedIds.size > 0 && initialStatusFilter === 'Perlu Diproses' && (
+                 {selectedIds.size > 0 && initialStatusFilter === 'Terproses' && (
                     <Button size="sm" onClick={() => handleBulkAction('Siap Kirim')} disabled={isProcessing}>
                         <Send className="mr-2 h-4 w-4" />
                         {isProcessing ? 'Memproses...' : `Proses Kirim (${selectedIds.size})`}
@@ -271,7 +260,7 @@ export function ProcessedReceiptsDialog({
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8"><MoreVertical className="h-4 w-4" /></Button></DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            {initialStatusFilter === 'Perlu Diproses' && <DropdownMenuItem onClick={() => handleChangeStatus(item, 'Siap Kirim')}><Send className="mr-2 h-4 w-4" /> Tandai Siap Kirim</DropdownMenuItem>}
+                            {initialStatusFilter === 'Terproses' && <DropdownMenuItem onClick={() => handleChangeStatus(item, 'Siap Kirim')}><Send className="mr-2 h-4 w-4" /> Tandai Siap Kirim</DropdownMenuItem>}
                             {initialStatusFilter !== 'Dibatalkan' && <DropdownMenuItem onClick={() => handleChangeStatus(item, 'Dibatalkan')} className="text-destructive"><Ban className="mr-2 h-4 w-4" /> Batalkan</DropdownMenuItem>}
                              <AlertDialog>
                                 <AlertDialogTrigger asChild>
