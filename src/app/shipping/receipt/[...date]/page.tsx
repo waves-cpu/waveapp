@@ -297,9 +297,9 @@ export default function ReceiptPage() {
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-1 gap-6 lg:grid-cols-3 lg:gap-8">
+                     <div className="grid grid-cols-1 gap-6 lg:grid-cols-3 lg:gap-8">
                         <div className="lg:col-span-2 space-y-6">
-                            {pendingOldReceiptsCount > 0 && (
+                             {pendingOldReceiptsCount > 0 && (
                                 <Alert variant="destructive">
                                     <AlertCircle className="h-4 w-4" />
                                     <AlertTitle>Pekerjaan Tertunda</AlertTitle>
@@ -309,7 +309,6 @@ export default function ReceiptPage() {
                                     </AlertDescription>
                                 </Alert>
                             )}
-
                              <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
                                 {orderedStatuses.map(status => {
                                     const Icon = statusIcons[status] || Package;
@@ -325,22 +324,19 @@ export default function ReceiptPage() {
                                             )}
                                             onClick={() => canClick && setSelectedStatus(status)}
                                         >
-                                            <CardContent className="flex flex-col items-start gap-2 p-4">
-                                                <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-                                                    <Icon className="h-4 w-4" />
-                                                    {status}
-                                                </div>
+                                            <CardContent className="flex flex-col items-center justify-center p-6 gap-2 text-center">
+                                                <Icon className="h-6 w-6 text-muted-foreground mb-2" />
                                                 <div className="text-3xl font-bold">
                                                     {countsLoading ? <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /> : count}
                                                 </div>
+                                                <p className="text-sm font-medium text-muted-foreground">{status}</p>
                                             </CardContent>
                                         </Card>
                                     )
                                 })}
                             </div>
                         </div>
-
-                        <div className="lg:col-span-1">
+                         <div className="lg:col-span-1">
                              <Card>
                                 <CardHeader>
                                     <CardTitle className="text-base">Ringkasan Resi Tercetak</CardTitle>
@@ -377,6 +373,7 @@ export default function ReceiptPage() {
                             </Card>
                         </div>
                     </div>
+
                 </main>
             </AppLayout>
             <ProcessedReceiptsDialog
