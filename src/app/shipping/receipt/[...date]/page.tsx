@@ -26,6 +26,7 @@ import { ProcessedReceiptsDialog } from '@/app/components/processed-receipts-dia
 
 const SHIPPING_CHANNEL_OPTIONS = ['Semua Jasa Kirim', 'SPX', 'J&T', 'JNE', 'INSTANT', 'CARGO'];
 const STATUS_ORDER = ['Perlu Diproses', 'Siap Kirim', 'Selesai', 'Diantar', 'Return Selesai', 'Return', 'Dibatalkan', 'Tidak Sampai'];
+const CORE_STATUSES = ['Perlu Diproses', 'Siap Kirim', 'Selesai', 'Return', 'Dibatalkan'];
 
 function parseDateFromParams(dateArray: string[] | undefined): Date | null {
     if (dateArray && dateArray.length > 0) {
@@ -222,7 +223,10 @@ export default function ReceiptPage() {
     };
 
     const orderedStatuses = useMemo(() => {
-        return STATUS_ORDER.filter(status => statusCounts[status] > 0 || status === 'Perlu Diproses');
+        return STATUS_ORDER.filter(status => {
+            // Always show core statuses, or any status that has a count > 0
+            return CORE_STATUSES.includes(status) || (statusCounts[status] > 0);
+        });
     }, [statusCounts]);
 
     return (
