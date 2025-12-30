@@ -1174,9 +1174,9 @@ export async function fetchAllSales(): Promise<Sale[]> {
             COALESCE(p.name, a.name) as productName,
             COALESCE(p.category, a.category) as productCategory,
             p.imageUrl as parentImageUrl,
+            COALESCE(v.sku, p.sku, a.sku) as sku,
             COALESCE(p.sku, a.sku) as parentSku,
             v.name as variantName,
-            COALESCE(v.sku, p.sku, a.sku) as sku,
             s.status
         FROM sales s
         LEFT JOIN products p ON s.productId = p.id
@@ -1200,9 +1200,9 @@ export async function getSalesByTransactionId(transactionId: string): Promise<Sa
             COALESCE(p.name, a.name) as productName,
             COALESCE(p.category, a.category) as productCategory,
             p.imageUrl as parentImageUrl,
+            COALESCE(v.sku, p.sku, a.sku) as sku,
             COALESCE(p.sku, a.sku) as parentSku,
             v.name as variantName,
-            COALESCE(v.sku, p.sku, a.sku) as sku,
             s.status
         FROM sales s
         LEFT JOIN products p ON s.productId = p.id
@@ -1770,6 +1770,7 @@ export async function checkPrintedReceiptAvailability(salesChannel: string, ship
     
 
     
+
 
 
 
