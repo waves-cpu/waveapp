@@ -210,7 +210,13 @@ export async function fetchShippingReceiptCounts(filters: {
     statuses: Record<string, number>;
     shippingChannelsBySalesChannel: Record<string, Record<string, number>>;
 }> {
-    const { dateString, salesChannel, shippingChannel, status } = filters;
+    const { dateString, salesChannel, shippingChannel } = filters;
+    let status = filters.status;
+
+    // Ensure status is always an array
+    if (typeof status === 'string') {
+        status = [status];
+    }
 
     const buildCounts = (groupBy: string, extraGroupBy?: string) => {
         const where: string[] = [];
@@ -220,15 +226,10 @@ export async function fetchShippingReceiptCounts(filters: {
         if (salesChannel) { where.push('salesChannel = ?'); params.push(salesChannel); }
         if (shippingChannel) { where.push('channel = ?'); params.push(shippingChannel); }
         
-        let statusFilter = status;
-        if (typeof statusFilter === 'string') {
-            statusFilter = [statusFilter];
-        }
-
-        if (Array.isArray(statusFilter) && statusFilter.length > 0) {
-            const statusPlaceholders = statusFilter.map(() => `?`);
+        if (Array.isArray(status) && status.length > 0) {
+            const statusPlaceholders = status.map(() => `?`);
             where.push(`status IN (${statusPlaceholders.join(',')})`);
-            params.push(...statusFilter);
+            params.push(...status);
         }
 
         const whereClause = where.length > 0 ? `WHERE ${where.join(' AND ')}` : '';
@@ -268,16 +269,20 @@ export async function fetchShippingReceiptCounts(filters: {
     };
 
     const shippingChannelsBySalesChannel = () => {
-        const where: string[] = [];
+        const where: string[] = ["status IN ('Terproses', 'Siap Kirim', 'Selesai')"];
         const params: any[] = [];
-         if (dateString) { where.push(`date(date) = ?`); params.push(dateString); }
-        const whereClause = where.length > 0 ? `WHERE ${where.join(' AND ')}` : '';
+        
+        if (dateString) { 
+            where.push(`date(date) = ?`); 
+            params.push(dateString); 
+        }
+        
+        const whereClause = `WHERE ${where.join(' AND ')}`;
 
         const query = db.prepare(`
             SELECT salesChannel, channel, COUNT(*) as count
             FROM shipping_receipts
             ${whereClause}
-            AND status IN ('Terproses', 'Siap Kirim', 'Selesai')
             GROUP BY salesChannel, channel
         `);
         const results = query.all(...params) as { salesChannel: string, channel: string, count: number }[];
@@ -1743,9 +1748,29 @@ async function updateShippingReceiptStatusByAwb(awb: string, status: string) {
 }
 
 
+export async function checkPrintedReceiptAvailability(salesChannel: string, shippingChannel: string, date: string): Promise<boolean> {
+    const printedCountRow = db.prepare(`
+        SELECT SUM(count) as totalPrinted
+        FROM printed_receipt_counts
+        WHERE date = ? AND salesChannel = ? AND shippingChannel = ?
+    `).get(date, salesChannel, shippingChannel) as { totalPrinted: number | null };
+
+    const printedCount = printedCountRow?.totalPrinted || 0;
+
+    const usedCountRow = db.prepare(`
+        SELECT COUNT(*) as totalUsed
+        FROM shipping_receipts
+        WHERE date(date) = ? AND salesChannel = ? AND channel = ?
+    `).get(date, salesChannel, shippingChannel) as { totalUsed: number };
+
+    const usedCount = usedCountRow.totalUsed;
+    
+    return usedCount < printedCount;
+}
     
 
     
+
 
 
 
