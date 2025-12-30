@@ -55,8 +55,8 @@ export async function addBulkImportHistory(history: Omit<BulkImportHistory, 'id'
             fileName: history.fileName,
             date: history.date,
             status: history.status,
-            addedSkus: JSON.stringify(history.addedSkus || []),
-            skippedSkus: JSON.stringify(history.skippedSkus || []),
+            addedSkus: history.addedSkus ? JSON.stringify(history.addedSkus) : '[]',
+            skippedSkus: history.skippedSkus ? JSON.stringify(history.skippedSkus) : '[]',
         });
     const newHistory = db.prepare('SELECT * FROM bulk_import_history WHERE id = ?').get(result.lastInsertRowid) as any;
     return { ...newHistory, addedSkus: newHistory.addedSkus ? JSON.parse(newHistory.addedSkus) : [], skippedSkus: newHistory.skippedSkus ? JSON.parse(newHistory.skippedSkus) : [] };
@@ -203,7 +203,7 @@ export async function fetchShippingReceiptCounts(filters: {
     dateString?: string;
     salesChannel?: string;
     shippingChannel?: string;
-    status?: string[];
+    status?: string | string[];
 }): Promise<{
     salesChannels: Record<string, Record<string, number>>;
     shippingChannels: Record<string, number>;
@@ -219,10 +219,16 @@ export async function fetchShippingReceiptCounts(filters: {
         if (dateString) { where.push(`date(date) = ?`); params.push(dateString); }
         if (salesChannel) { where.push('salesChannel = ?'); params.push(salesChannel); }
         if (shippingChannel) { where.push('channel = ?'); params.push(shippingChannel); }
-        if (Array.isArray(status) && status.length > 0) {
-            const statusPlaceholders = status.map((s, i) => `?`);
+        
+        let statusFilter = status;
+        if (typeof statusFilter === 'string') {
+            statusFilter = [statusFilter];
+        }
+
+        if (Array.isArray(statusFilter) && statusFilter.length > 0) {
+            const statusPlaceholders = statusFilter.map(() => `?`);
             where.push(`status IN (${statusPlaceholders.join(',')})`);
-            params.push(...status);
+            params.push(...statusFilter);
         }
 
         const whereClause = where.length > 0 ? `WHERE ${where.join(' AND ')}` : '';
@@ -1740,6 +1746,7 @@ async function updateShippingReceiptStatusByAwb(awb: string, status: string) {
     
 
     
+
 
 
 
