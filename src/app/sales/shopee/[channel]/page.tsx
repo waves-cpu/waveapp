@@ -163,32 +163,27 @@ export function useReceiptPageLogic(salesChannel: 'Shopee' | 'Tiktok' | 'Lazada'
         setIsSubmitting(true);
         
         try {
-            // This now relies on the UNIQUE constraint in the DB.
-            // The service function will throw an error if it's a duplicate.
-             const newReceipt: Omit<ShippingReceipt, 'id'> = {
+            const newReceipt: Omit<ShippingReceipt, 'id'> = {
                 awb: trimmedAwb,
                 salesChannel: salesChannel,
                 channel: shippingChannel,
                 date: selectedDate.toISOString(),
-                status: 'Terproses',
+                status: 'Perlu Diproses',
                 transactionId: trimmedAwb
             };
+            await inventoryContext.addShippingReceipt(newReceipt);
             setReceiptForSale(newReceipt);
             setIsSaleDialogOpen(true);
             setAwb('');
             playSuccessSound();
         } catch (error: any) {
             playErrorSound();
-            let errorMessage = 'Gagal menyimpan resi.';
             let title = 'Input Gagal';
+            let errorMessage = 'Gagal menyimpan resi.';
 
-            if (error.message.startsWith('DUPLICATE_AWB_DATE::')) {
-                 const dateStr = error.message.split('::')[1];
+            if (error.message.includes('DUPLICATE_AWB')) {
                  title = 'Resi Duplikat';
-                 errorMessage = `Resi ini sudah discan pada ${format(parseISO(dateStr), 'dd MMM yyyy, HH:mm')}`;
-            } else if (error.message.includes('UNIQUE constraint failed')) {
-                 title = 'Resi Duplikat';
-                 errorMessage = `Resi ${trimmedAwb} sudah pernah digunakan.`;
+                 errorMessage = `Resi ${error.message.split('::')[1] || ''} sudah pernah digunakan.`;
             }
 
             toast({

@@ -103,16 +103,6 @@ export async function addPrintedReceipts(date: string, salesChannel: string, shi
     }
 }
 
-export async function checkPrintedReceiptAvailability(salesChannel: string, shippingChannel: string, date: string): Promise<boolean> {
-    const printedCountRow = db.prepare('SELECT SUM(count) as total FROM printed_receipt_counts WHERE date = ? AND salesChannel = ? AND shippingChannel = ?').get(date, salesChannel, shippingChannel) as { total: number };
-    const printedCount = printedCountRow?.total || 0;
-
-    const usedCountRow = db.prepare("SELECT COUNT(*) as total FROM shipping_receipts WHERE date(date) = ? AND salesChannel = ? AND channel = ? AND status IN ('Terproses', 'Siap Kirim', 'Selesai')").get(date, salesChannel, shippingChannel) as { total: number };
-    const usedCount = usedCountRow?.total || 0;
-    
-    return printedCount > usedCount;
-}
-
 export async function getPrintedReceiptCountsForDate(date: string): Promise<PrintedReceiptCount[]> {
     return db.prepare('SELECT * FROM printed_receipt_counts WHERE date = ?').all(date) as PrintedReceiptCount[];
 }
@@ -291,11 +281,6 @@ export async function getReceiptCountByStatus(status: string): Promise<Record<st
 
 
 export async function addShippingReceipt(receipt: Omit<ShippingReceipt, 'id'>): Promise<ShippingReceipt> {
-    const existingReceipt = db.prepare('SELECT date FROM shipping_receipts WHERE awb = ?').get(receipt.awb) as { date: string } | undefined;
-    if (existingReceipt) {
-        throw new Error(`DUPLICATE_AWB_DATE::${existingReceipt.date}`);
-    }
-
     try {
         const result = db.prepare('INSERT INTO shipping_receipts (awb, date, channel, salesChannel, status, transactionId) VALUES (@awb, @date, @channel, @salesChannel, @status, @transactionId)').run({
             ...receipt,
@@ -305,7 +290,7 @@ export async function addShippingReceipt(receipt: Omit<ShippingReceipt, 'id'>): 
         return newReceipt;
     } catch (error: any) {
         if (error.message.includes('UNIQUE constraint failed')) {
-             throw new Error(`DUPLICATE_AWB::Resi ${receipt.awb} sudah pernah digunakan.`);
+             throw new Error(`DUPLICATE_AWB::${receipt.awb}`);
         }
         throw error;
     }
@@ -1708,5 +1693,6 @@ async function updateShippingReceiptStatusByAwb(awb: string, status: string) {
     
 
     
+
 
 
