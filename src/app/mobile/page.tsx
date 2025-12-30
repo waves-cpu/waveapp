@@ -3,7 +3,7 @@
 
 import Link from 'next/link';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { Truck, PackageWarning } from 'lucide-react';
+import { Truck, AlertTriangle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { useEffect, useState } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -58,7 +58,7 @@ export default function MobileHubPage() {
                     <Card className="bg-destructive/10 border-destructive hover:bg-destructive/20 transition-colors">
                         <CardHeader className="flex flex-row items-center justify-between p-4">
                             <div className="flex items-center gap-4">
-                                <PackageWarning className="w-8 h-8 text-destructive" />
+                                <AlertTriangle className="w-8 h-8 text-destructive" />
                                 <div>
                                     <CardTitle className="text-lg text-destructive">Total Resi Tertunda</CardTitle>
                                     <p className="text-xs text-destructive/80">Lihat semua resi yang perlu diproses</p>
