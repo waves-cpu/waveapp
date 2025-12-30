@@ -65,7 +65,7 @@ export default function MobileHubPage() {
                                 {loading ? (
                                     <Skeleton className="h-6 w-20" />
                                 ) : count > 0 && (
-                                    <Badge variant="destructive">{count} Siap Kirim</Badge>
+                                    <Badge variant="destructive">{count} Resi Tertunda</Badge>
                                 )}
                                 </div>
                             </Card>

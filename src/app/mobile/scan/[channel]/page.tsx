@@ -82,7 +82,6 @@ export default function MobileScanShipmentPage() {
                 title: `Resi ${trimmedAwb}`,
                 description: errorMessage,
             });
-            // Do not add the failed scan to the list
         } finally {
             setIsSubmitting(false);
             if (isCameraOpen) {
