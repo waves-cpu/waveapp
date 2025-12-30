@@ -79,7 +79,7 @@ interface InventoryContextType {
   deleteShippingReceipt: (id: number) => Promise<void>;
   updateShippingReceiptsStatus: (ids: number[], status: string) => Promise<void>;
   updateShippingReceiptStatus: (id: number, status: string) => Promise<void>;
-  fetchShippingReceiptCounts: (filters: { dateString?: string; salesChannel?: string; shippingChannel?: string; status?: string; }) => Promise<{ salesChannels: Record<string, number>; shippingChannels: Record<string, number>; statuses: Record<string, number>; }>;
+  fetchShippingReceiptCounts: (filters: { dateString?: string; salesChannel?: string; shippingChannel?: string; status?: string; }) => Promise<{ salesChannels: Record<string, number>; shippingChannels: Record<string, number>; statuses: Record<string, number>; shippingChannelsBySalesChannel: Record<string, Record<string, number>>; }>;
   getReceiptCountByStatus: (status: string) => Promise<Record<string, number>>;
   getPendingReceiptsBeforeDate: (date: Date) => Promise<number>;
   addPrintedReceipts: (date: string, salesChannel: string, shippingChannel: string, count: number) => Promise<void>;
@@ -466,3 +466,4 @@ export const useInventory = () => {
   }
   return context;
 };
+

@@ -208,6 +208,7 @@ export async function fetchShippingReceiptCounts(filters: {
     salesChannels: Record<string, Record<string, number>>;
     shippingChannels: Record<string, number>;
     statuses: Record<string, number>;
+    shippingChannelsBySalesChannel: Record<string, Record<string, number>>;
 }> {
     const { dateString, salesChannel, shippingChannel, status } = filters;
 
@@ -256,10 +257,37 @@ export async function fetchShippingReceiptCounts(filters: {
         }
     };
 
+    const shippingChannelsBySalesChannel = () => {
+        const where: string[] = [];
+        const params: any[] = [];
+         if (dateString) { where.push(`date(date) = ?`); params.push(dateString); }
+        const whereClause = where.length > 0 ? `WHERE ${where.join(' AND ')}` : '';
+
+        const query = db.prepare(`
+            SELECT salesChannel, channel, COUNT(*) as count
+            FROM shipping_receipts
+            ${whereClause}
+            AND status IN ('Terproses', 'Siap Kirim', 'Selesai')
+            GROUP BY salesChannel, channel
+        `);
+        const results = query.all(...params) as { salesChannel: string, channel: string, count: number }[];
+        
+        const nestedCounts: Record<string, Record<string, number>> = {};
+        results.forEach(row => {
+            if (!nestedCounts[row.salesChannel]) {
+                nestedCounts[row.salesChannel] = {};
+            }
+            nestedCounts[row.salesChannel][row.channel] = row.count;
+        });
+        return nestedCounts;
+    };
+
+
     return {
         salesChannels: buildCounts('salesChannel', 'channel') as Record<string, Record<string, number>>,
         shippingChannels: buildCounts('channel') as Record<string, number>,
         statuses: buildCounts('status') as Record<string, number>,
+        shippingChannelsBySalesChannel: shippingChannelsBySalesChannel(),
     };
 }
 
@@ -299,7 +327,8 @@ export async function addShippingReceipt(receipt: Omit<ShippingReceipt, 'id'>): 
         if (error.code === 'SQLITE_CONSTRAINT_UNIQUE') {
             const conflictingReceipt = db.prepare('SELECT * FROM shipping_receipts WHERE awb = ?').get(receipt.awb) as ShippingReceipt | undefined;
             if (conflictingReceipt) {
-                throw new Error(`DUPLICATE_AWB::${receipt.awb}::${conflictingReceipt.date}::${conflictingReceipt.salesChannel}`);
+                 const formattedDate = formatToWIB(parseISO(conflictingReceipt.date), 'dd MMM yyyy, HH:mm');
+                throw new Error(`DUPLICATE_AWB::${receipt.awb}::${formattedDate}::${conflictingReceipt.salesChannel}`);
             }
             throw new Error(`DUPLICATE_AWB::${receipt.awb}::unknown::unknown`);
         }
@@ -1705,6 +1734,7 @@ async function updateShippingReceiptStatusByAwb(awb: string, status: string) {
     
 
     
+
 
 
 
