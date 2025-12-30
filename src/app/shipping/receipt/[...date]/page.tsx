@@ -241,8 +241,25 @@ export default function ReceiptPage() {
             }
             groups[item.salesChannel].items.push({ shippingChannel: item.shippingChannel, count: item.count });
         });
+        
+        const allReceiptsToday = (statusCounts['Terproses'] || 0) + (statusCounts['Siap Kirim'] || 0) + (statusCounts['Selesai'] || 0);
+
+        Object.values(groups).forEach(group => {
+            group.items.forEach(item => {
+                const used = statusCounts[item.shippingChannel] || 0;
+                // The calculation should be Total Printed - All used receipts of that type today.
+                const processedCount = statusCounts['Terproses']?.[item.shippingChannel] || 0;
+                const shippedCount = statusCounts['Siap Kirim']?.[item.shippingChannel] || 0;
+                const doneCount = statusCounts['Selesai']?.[item.shippingChannel] || 0;
+
+                const totalUsedToday = processedCount + shippedCount + doneCount;
+                
+                // item.count = item.count; // The logic will be handled in JSX display
+            });
+        });
+
         return Object.values(groups);
-    }, [printedReceiptCounts]);
+    }, [printedReceiptCounts, statusCounts]);
 
     return (
         <>
@@ -342,7 +359,8 @@ export default function ReceiptPage() {
                                         <div className="text-center py-10 text-muted-foreground">Memuat data...</div>
                                     ) : groupedPrintedReceipts.length > 0 ? (
                                         <div className="space-y-4">
-                                            {groupedPrintedReceipts.map(group => (
+                                            {groupedPrintedReceipts.map(group => {
+                                                return (
                                                 <div key={group.salesChannel}>
                                                     <h3 className="font-semibold text-sm mb-2 flex items-center">
                                                         <ShoppingBag className="h-4 w-4 mr-2" />
@@ -350,16 +368,18 @@ export default function ReceiptPage() {
                                                     </h3>
                                                     <div className="pl-4 border-l ml-2 space-y-2">
                                                         {group.items.map(item => {
+                                                             const processedCount = (statusCounts as any)[group.salesChannel]?.[item.shippingChannel] || 0;
+                                                             const remaining = item.count - processedCount;
                                                             return (
                                                                 <div key={item.shippingChannel} className="flex justify-between items-center text-sm">
                                                                     <span className="text-muted-foreground">{item.shippingChannel}</span>
-                                                                    <span className="font-medium">{item.count}</span>
+                                                                    <span className="font-medium">{item.count - (statusCounts[item.shippingChannel] || 0)} / {item.count}</span>
                                                                 </div>
                                                             )
                                                         })}
                                                     </div>
                                                 </div>
-                                            ))}
+                                            )})}
                                         </div>
                                     ) : (
                                         <div className="text-center py-10 text-muted-foreground">

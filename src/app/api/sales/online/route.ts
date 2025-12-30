@@ -1,6 +1,6 @@
 
 
-import { recordSaleWithReceipt, consumePrintedReceipt } from '@/lib/inventory-service';
+import { recordSaleWithReceipt, checkPrintedReceiptAvailability } from '@/lib/inventory-service';
 import { NextRequest, NextResponse } from 'next/server';
 import type { ShippingReceipt, Sale } from '@/types';
 import { format } from 'date-fns';
@@ -43,8 +43,9 @@ export async function POST(request: NextRequest) {
     }));
     
     const dateString = format(new Date(receiptData.date), 'yyyy-MM-dd');
-    const consumed = await consumePrintedReceipt(receiptData.salesChannel!, receiptData.channel, dateString);
-    if (!consumed) {
+    const isAvailable = await checkPrintedReceiptAvailability(receiptData.salesChannel!, receiptData.channel, dateString);
+
+    if (!isAvailable) {
         throw new Error(`Jumlah resi yang dipindai melebihi jumlah yang dicetak oleh admin untuk ${receiptData.salesChannel} - ${receiptData.channel} pada tanggal ini.`);
     }
 
