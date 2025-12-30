@@ -21,7 +21,9 @@ export async function POST(request: NextRequest) {
         });
         historyEntryId = historyEntry.id;
 
-        const { addedProducts, skippedProducts } = await bulkAddProducts(products);
+        const result = await bulkAddProducts(products);
+        const addedProducts = result.addedProducts || [];
+        const skippedProducts = result.skippedProducts || [];
 
         await updateBulkImportHistory(historyEntry.id, {
             status: 'Berhasil',

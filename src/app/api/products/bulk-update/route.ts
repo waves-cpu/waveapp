@@ -12,10 +12,15 @@ export async function POST(request: NextRequest) {
         }
         
         const result = await bulkUpdateProducts(products);
+        const updatedSkus = result.updatedSkus || [];
+        const notFoundSkus = result.notFoundSkus || [];
 
         return NextResponse.json({ 
             message: 'Bulk update successful',
-            ...result
+            updatedCount: updatedSkus.length,
+            notFoundCount: notFoundSkus.length,
+            updatedSkus: updatedSkus,
+            notFoundSkus: notFoundSkus,
         }, { status: 200 });
 
     } catch (error: any) {
