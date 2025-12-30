@@ -178,18 +178,10 @@ export function useReceiptPageLogic(salesChannel: 'Shopee' | 'Tiktok' | 'Lazada'
             playSuccessSound();
         } catch (error: any) {
             playErrorSound();
-            let title = 'Input Gagal';
-            let errorMessage = 'Gagal menyimpan resi.';
-
-            if (error.message.includes('DUPLICATE_AWB')) {
-                 title = 'Resi Duplikat';
-                 errorMessage = `Resi ${error.message.split('::')[1] || ''} sudah pernah digunakan.`;
-            }
-
             toast({
                 variant: "destructive",
-                title: title,
-                description: errorMessage
+                title: 'Input Gagal',
+                description: error.message
             });
             setAwb('');
         } finally {

@@ -281,6 +281,14 @@ export async function getReceiptCountByStatus(status: string): Promise<Record<st
 
 
 export async function addShippingReceipt(receipt: Omit<ShippingReceipt, 'id'>): Promise<ShippingReceipt> {
+    // First, check if the AWB already exists.
+    const existingReceipt = db.prepare('SELECT * FROM shipping_receipts WHERE awb = ?').get(receipt.awb) as ShippingReceipt | undefined;
+    if (existingReceipt) {
+        const formattedDate = formatDate(parseISO(existingReceipt.date), 'dd MMM yyyy, HH:mm');
+        throw new Error(`DUPLICATE_AWB::Resi ${receipt.awb} sudah diinput di kanal ${existingReceipt.salesChannel} pada ${formattedDate}`);
+    }
+    
+    // If not a duplicate, proceed with insertion.
     try {
         const result = db.prepare('INSERT INTO shipping_receipts (awb, date, channel, salesChannel, status, transactionId) VALUES (@awb, @date, @channel, @salesChannel, @status, @transactionId)').run({
             ...receipt,
@@ -289,8 +297,10 @@ export async function addShippingReceipt(receipt: Omit<ShippingReceipt, 'id'>): 
         const newReceipt = db.prepare('SELECT * FROM shipping_receipts WHERE id = ?').get(result.lastInsertRowid) as ShippingReceipt;
         return newReceipt;
     } catch (error: any) {
+        // This will now catch the UNIQUE constraint error from the database as a fallback, 
+        // though the check above should prevent it.
         if (error.message.includes('UNIQUE constraint failed')) {
-             throw new Error(`DUPLICATE_AWB::${receipt.awb}`);
+             throw new Error(`DUPLICATE_AWB::Resi ${receipt.awb} sudah pernah digunakan.`);
         }
         throw error;
     }
@@ -1693,6 +1703,7 @@ async function updateShippingReceiptStatusByAwb(awb: string, status: string) {
     
 
     
+
 
 
 
