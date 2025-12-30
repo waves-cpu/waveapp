@@ -90,7 +90,7 @@ export function useReceiptPageLogic(salesChannel: 'Shopee' | 'Tiktok' | 'Lazada'
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(50);
     const [searchTerm, setSearchTerm] = useState('');
-    const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
+    const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
     
     const [detailItems, setDetailItems] = useState<Sale[]>([]);
     const [isDetailOpen, setIsDetailOpen] = useState(false);
@@ -98,10 +98,6 @@ export function useReceiptPageLogic(salesChannel: 'Shopee' | 'Tiktok' | 'Lazada'
     const [receiptForSale, setReceiptForSale] = useState<Omit<ShippingReceipt, 'id'> | ShippingReceipt | null>(null);
     const [isSaleDialogOpen, setIsSaleDialogOpen] = useState(false);
     
-    useEffect(() => {
-        setSelectedDate(new Date());
-    }, []);
-
     const refocusInput = useCallback(() => {
         if (!isSaleDialogOpen) {
             setTimeout(() => awbInputRef.current?.focus(), 100);
@@ -155,9 +151,9 @@ export function useReceiptPageLogic(salesChannel: 'Shopee' | 'Tiktok' | 'Lazada'
       };
 
       eventSource.onerror = (error) => {
-        console.error('SSE Error:', error);
-        // Optional: logic to attempt reconnection
-        eventSource.close();
+        // This error is expected during development with hot-reloading.
+        // The browser's EventSource implementation will automatically attempt to reconnect.
+        // We don't need to log it or close the connection manually.
       };
 
       return () => {
