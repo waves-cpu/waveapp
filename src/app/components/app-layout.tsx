@@ -146,6 +146,46 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                 <Collapsible defaultOpen={true}>
                     <SidebarMenuItem>
                         <CollapsibleTrigger asChild>
+                              <SidebarMenuButton>
+                                  <Truck />
+                                  <span className="flex-grow font-semibold">{t.shipping.title}</span>
+                                  <ChevronDown className="transition-transform" />
+                              </SidebarMenuButton>
+                        </CollapsibleTrigger>
+                    </SidebarMenuItem>
+                    <CollapsibleContent>
+                       <SidebarMenu className="ml-4 mt-2 border-l border-muted-foreground/20 pl-4 mb-4">
+                           <SidebarMenuItem>
+                              <Link href="/shipping/receipt">
+                                  <SidebarMenuButton variant="ghost" size="sm" isActive={isActive('/shipping/receipt')}>
+                                      <Receipt />
+                                      {t.shipping.receipt}
+                                  </SidebarMenuButton>
+                              </Link>
+                          </SidebarMenuItem>
+                          <SidebarMenuItem>
+                              <Link href="/shipping/return">
+                                  <SidebarMenuButton variant="ghost" size="sm" isActive={isActive('/shipping/return')}>
+                                      <Undo2 />
+                                      {t.shipping.return}
+                                  </SidebarMenuButton>
+                              </Link>
+                          </SidebarMenuItem>
+                          <SidebarMenuItem>
+                              <Link href="/shipping/report">
+                                  <SidebarMenuButton variant="ghost" size="sm" isActive={isActive('/shipping/report')}>
+                                      <FileBarChart />
+                                      {t.shipping.report}
+                                  </SidebarMenuButton>
+                              </Link>
+                          </SidebarMenuItem>
+                      </SidebarMenu>
+                    </CollapsibleContent>
+                </Collapsible>
+                
+                <Collapsible defaultOpen={true}>
+                    <SidebarMenuItem>
+                        <CollapsibleTrigger asChild>
                             <SidebarMenuButton>
                                 <Warehouse />
                                 <span className="flex-grow font-semibold">{t.dashboard.inventoryMenu}</span>
@@ -239,45 +279,6 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                     </CollapsibleContent>
                 </Collapsible>
                   
-                <Collapsible defaultOpen={true}>
-                    <SidebarMenuItem>
-                        <CollapsibleTrigger asChild>
-                              <SidebarMenuButton>
-                                  <Truck />
-                                  <span className="flex-grow font-semibold">{t.shipping.title}</span>
-                                  <ChevronDown className="transition-transform" />
-                              </SidebarMenuButton>
-                        </CollapsibleTrigger>
-                    </SidebarMenuItem>
-                    <CollapsibleContent>
-                       <SidebarMenu className="ml-4 mt-2 border-l border-muted-foreground/20 pl-4 mb-4">
-                           <SidebarMenuItem>
-                              <Link href="/shipping/receipt">
-                                  <SidebarMenuButton variant="ghost" size="sm" isActive={isActive('/shipping/receipt')}>
-                                      <Receipt />
-                                      {t.shipping.receipt}
-                                  </SidebarMenuButton>
-                              </Link>
-                          </SidebarMenuItem>
-                          <SidebarMenuItem>
-                              <Link href="/shipping/return">
-                                  <SidebarMenuButton variant="ghost" size="sm" isActive={isActive('/shipping/return')}>
-                                      <Undo2 />
-                                      {t.shipping.return}
-                                  </SidebarMenuButton>
-                              </Link>
-                          </SidebarMenuItem>
-                          <SidebarMenuItem>
-                              <Link href="/shipping/report">
-                                  <SidebarMenuButton variant="ghost" size="sm" isActive={isActive('/shipping/report')}>
-                                      <FileBarChart />
-                                      {t.shipping.report}
-                                  </SidebarMenuButton>
-                              </Link>
-                          </SidebarMenuItem>
-                      </SidebarMenu>
-                    </CollapsibleContent>
-                </Collapsible>
               </SidebarMenu>
           </SidebarContent>
           <SidebarFooter>
