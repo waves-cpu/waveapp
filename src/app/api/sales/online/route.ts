@@ -3,7 +3,7 @@
 import { recordSaleWithReceipt } from '@/lib/inventory-service';
 import { NextRequest, NextResponse } from 'next/server';
 import type { ShippingReceipt, Sale } from '@/types';
-import { format } from 'date-fns';
+import { sseChannel } from '@/lib/sse-channel';
 
 // Handler for POST requests to record a new online sale with its receipt
 export async function POST(request: NextRequest) {
@@ -43,6 +43,9 @@ export async function POST(request: NextRequest) {
     }));
     
     await recordSaleWithReceipt(receiptData, salesData);
+
+    // Notify clients about the new receipt
+    sseChannel.postMessage({ type: 'new-receipt', channel: receipt.channel, salesChannel: receipt.salesChannel });
 
     return NextResponse.json({ message: 'Online sale recorded successfully', data: { receipt: receiptData, sales: salesData } }, { status: 201 });
 

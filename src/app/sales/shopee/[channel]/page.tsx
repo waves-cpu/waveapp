@@ -75,7 +75,7 @@ export function useReceiptPageLogic(salesChannel: 'Shopee' | 'Tiktok' | 'Lazada'
     const router = useRouter();
     const inventoryContext = useInventory();
     const { toast } = useToast();
-    const { playSuccessSound, playErrorSound } = useScanSounds();
+    const { playSuccessSound, playErrorSound, playSuccessSound: playNotificationSound } = useScanSounds();
     const { language } = useLanguage();
     const t = translations[language];
 
@@ -90,16 +90,15 @@ export function useReceiptPageLogic(salesChannel: 'Shopee' | 'Tiktok' | 'Lazada'
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(50);
     const [searchTerm, setSearchTerm] = useState('');
-    const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+    const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
     
     const [detailItems, setDetailItems] = useState<Sale[]>([]);
     const [isDetailOpen, setIsDetailOpen] = useState(false);
     
     const [receiptForSale, setReceiptForSale] = useState<Omit<ShippingReceipt, 'id'> | ShippingReceipt | null>(null);
     const [isSaleDialogOpen, setIsSaleDialogOpen] = useState(false);
-
+    
     useEffect(() => {
-        // Set date on client-side to avoid hydration mismatch
         setSelectedDate(new Date());
     }, []);
 
@@ -138,6 +137,33 @@ export function useReceiptPageLogic(salesChannel: 'Shopee' | 'Tiktok' | 'Lazada'
     useEffect(() => {
         loadReceipts();
     }, [loadReceipts]);
+    
+    useEffect(() => {
+      const eventSource = new EventSource('/api/stream');
+
+      eventSource.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        if (data.type === 'new-receipt' && data.channel === shippingChannel && data.salesChannel === salesChannel) {
+          playNotificationSound();
+          toast({
+            title: "Resi Baru Ditambahkan",
+            description: `Sebuah resi baru untuk ${data.salesChannel} - ${data.channel} telah ditambahkan.`,
+          });
+          // Optimistically add to the top or just reload
+          loadReceipts();
+        }
+      };
+
+      eventSource.onerror = (error) => {
+        console.error('SSE Error:', error);
+        // Optional: logic to attempt reconnection
+        eventSource.close();
+      };
+
+      return () => {
+        eventSource.close();
+      };
+    }, [shippingChannel, salesChannel, loadReceipts, playNotificationSound, toast]);
 
     useEffect(() => {
         refocusInput();
@@ -176,7 +202,7 @@ export function useReceiptPageLogic(salesChannel: 'Shopee' | 'Tiktok' | 'Lazada'
                 awb: trimmedAwb,
                 salesChannel: salesChannel,
                 channel: shippingChannel,
-                date: selectedDate.toISOString(),
+                date: new Date().toISOString(),
                 status: 'Perlu Diproses',
                 transactionId: trimmedAwb
             };
@@ -312,7 +338,7 @@ export default function ShopeeChannelPage() {
                         <Calendar
                             mode="single"
                             selected={selectedDate}
-                            onSelect={(date) => setSelectedDate(date || new Date())}
+                            onSelect={(date) => setSelectedDate(date)}
                             initialFocus
                         />
                     </PopoverContent>
@@ -323,7 +349,7 @@ export default function ShopeeChannelPage() {
             <Table>
               <TableHeader className="sticky top-0 bg-card">
                 <TableRow>
-                  <TableHead className="w-[200px]">Waktu Scan</TableHead>
+                  <TableHead className="w-[200px]">Tanggal</TableHead>
                   <TableHead>No. Resi (AWB)</TableHead>
                   <TableHead>Produk</TableHead>
                   <TableHead>Status</TableHead>
@@ -346,7 +372,7 @@ export default function ShopeeChannelPage() {
                     
                     return (
                         <TableRow key={receipt.id}>
-                          <TableCell>{format(new Date(receipt.date), 'HH:mm:ss')}</TableCell>
+                          <TableCell>{format(new Date(receipt.date), 'dd MMM yyyy, HH:mm')}</TableCell>
                           <TableCell className="font-medium">{receipt.awb}</TableCell>
                           <TableCell>
                             <Button variant="link" size="sm" className="h-auto p-0 text-xs" onClick={() => handleViewDetails(receipt)}>

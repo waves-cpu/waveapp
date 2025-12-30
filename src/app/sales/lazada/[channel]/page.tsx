@@ -92,7 +92,7 @@ export default function LazadaChannelPage() {
                         <Calendar
                             mode="single"
                             selected={selectedDate}
-                            onSelect={(date) => setSelectedDate(date || new Date())}
+                            onSelect={(date) => setSelectedDate(date)}
                             initialFocus
                         />
                     </PopoverContent>
@@ -103,7 +103,7 @@ export default function LazadaChannelPage() {
             <Table>
               <TableHeader className="sticky top-0 bg-card">
                 <TableRow>
-                  <TableHead className="w-[200px]">Waktu Scan</TableHead>
+                  <TableHead className="w-[200px]">Tanggal</TableHead>
                   <TableHead>No. Resi (AWB)</TableHead>
                   <TableHead>Produk</TableHead>
                   <TableHead>Status</TableHead>
@@ -126,7 +126,7 @@ export default function LazadaChannelPage() {
                     
                     return (
                         <TableRow key={receipt.id}>
-                          <TableCell>{format(new Date(receipt.date), 'HH:mm:ss')}</TableCell>
+                          <TableCell>{format(new Date(receipt.date), 'dd MMM yyyy, HH:mm')}</TableCell>
                           <TableCell className="font-medium">{receipt.awb}</TableCell>
                           <TableCell>
                             <Button variant="link" size="sm" className="h-auto p-0 text-xs" onClick={() => handleViewDetails(receipt)}>
