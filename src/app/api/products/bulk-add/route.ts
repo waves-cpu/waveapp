@@ -22,6 +22,7 @@ export async function POST(request: NextRequest) {
         historyEntryId = historyEntry.id;
 
         const result = await bulkAddProducts(products);
+        
         const addedProducts = result.addedProducts || [];
         const skippedProducts = result.skippedProducts || [];
 

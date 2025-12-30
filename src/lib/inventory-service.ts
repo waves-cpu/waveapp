@@ -203,7 +203,7 @@ export async function fetchShippingReceiptCounts(filters: {
     dateString?: string;
     salesChannel?: string;
     shippingChannel?: string;
-    status?: string;
+    status?: string[];
 }): Promise<{
     salesChannels: Record<string, Record<string, number>>;
     shippingChannels: Record<string, number>;
@@ -219,7 +219,11 @@ export async function fetchShippingReceiptCounts(filters: {
         if (dateString) { where.push(`date(date) = ?`); params.push(dateString); }
         if (salesChannel) { where.push('salesChannel = ?'); params.push(salesChannel); }
         if (shippingChannel) { where.push('channel = ?'); params.push(shippingChannel); }
-        if (status) { where.push('status = ?'); params.push(status); }
+        if (Array.isArray(status) && status.length > 0) {
+            const statusPlaceholders = status.map((s, i) => `?`);
+            where.push(`status IN (${statusPlaceholders.join(',')})`);
+            params.push(...status);
+        }
 
         const whereClause = where.length > 0 ? `WHERE ${where.join(' AND ')}` : '';
         const selectClause = extraGroupBy ? `${groupBy}, ${extraGroupBy}` : groupBy;
@@ -542,7 +546,7 @@ export async function addProduct(itemData: any): Promise<string> {
     return transaction();
 }
 
-export async function bulkAddProducts(data: any[]): Promise<{ addedCount: number, skippedCount: number, addedSkus: any[], skippedSkus: any[] }> {
+export async function bulkAddProducts(data: any[]): Promise<{ addedProducts: {sku: string, name: string}[], skippedProducts: {sku: string, name: string}[] }> {
     const getProductStmt = db.prepare('SELECT id, name FROM products WHERE sku = ?');
     const addProductStmt = db.prepare('INSERT INTO products (name, category, sku, imageUrl, hasVariants) VALUES (@name, @category, @sku, @imageUrl, @hasVariants)');
     const addVariantStmt = db.prepare('INSERT INTO variants (productId, name, sku, price, stock, costPrice) VALUES (@productId, @name, @sku, @price, @stock, @costPrice)');
@@ -552,7 +556,7 @@ export async function bulkAddProducts(data: any[]): Promise<{ addedCount: number
     const addedProducts: {sku: string, name: string}[] = [];
     const skippedProducts: {sku: string, name: string}[] = [];
 
-    db.transaction(() => {
+    const transaction = db.transaction(() => {
         const productGroups = new Map<string, any[]>();
 
         data.forEach(row => {
@@ -626,18 +630,20 @@ export async function bulkAddProducts(data: any[]): Promise<{ addedCount: number
                 }
             }
         }
-    })();
+    });
+
+    transaction();
     
-    return { addedCount: addedProducts.length, skippedCount: skippedProducts.length, addedSkus: addedProducts, skippedSkus: skippedProducts };
+    return { addedProducts, skippedProducts };
 }
 
-export async function bulkUpdateProducts(data: any[]): Promise<{ updatedCount: number; notFoundSkus: string[] }> {
+export async function bulkUpdateProducts(data: any[]): Promise<{ updatedSkus: string[], notFoundSkus: string[] }> {
     const getProductStmt = db.prepare('SELECT id FROM products WHERE sku = ?');
     const getVariantStmt = db.prepare('SELECT id FROM variants WHERE sku = ?');
     const updateProductStmt = db.prepare('UPDATE products SET name=@name, category=@category, imageUrl=@imageUrl, price=@price, stock=@stock, costPrice=@costPrice WHERE sku = @parent_sku');
     const updateVariantStmt = db.prepare('UPDATE variants SET name=@name, price=@price, stock=@stock, costPrice=@costPrice WHERE sku = @variant_sku');
     
-    let updatedCount = 0;
+    const updatedSkus: string[] = [];
     const notFoundSkus: string[] = [];
 
     db.transaction(() => {
@@ -654,7 +660,7 @@ export async function bulkUpdateProducts(data: any[]): Promise<{ updatedCount: n
                         stock: row.stock,
                         costPrice: row.cost_price,
                     });
-                    updatedCount++;
+                    updatedSkus.push(row.variant_sku);
                     found = true;
                 }
             } 
@@ -671,7 +677,7 @@ export async function bulkUpdateProducts(data: any[]): Promise<{ updatedCount: n
                         stock: row.stock,
                         costPrice: row.cost_price,
                     });
-                    updatedCount++;
+                    updatedSkus.push(row.parent_sku);
                     found = true;
                 }
             }
@@ -682,7 +688,7 @@ export async function bulkUpdateProducts(data: any[]): Promise<{ updatedCount: n
         });
     })();
 
-    return { updatedCount, notFoundSkus };
+    return { updatedSkus, notFoundSkus };
 }
 
 
@@ -1734,6 +1740,7 @@ async function updateShippingReceiptStatusByAwb(awb: string, status: string) {
     
 
     
+
 
 
 
