@@ -147,14 +147,12 @@ export default function StatementsPage() {
             if (sale.status === 'Cancelled' || sale.status === 'Dibatalkan') {
                 cancelled.count++;
                 cancelled.value += salePrice;
-                return; // Do not include in main calculations
+                return;
             }
              if (sale.status === 'Return' || sale.status === 'Return Selesai') {
                 returned.count++;
-                // Subtract from revenue and profit because the item was returned
-                revenue -= salePrice;
-                profit -= saleProfit;
-                return; 
+                returned.value += salePrice;
+                return;
             }
 
             // Only count 'Completed' or 'Siap Kirim' or 'Selesai' or 'Terproses for revenue and units
@@ -451,6 +449,8 @@ export default function StatementsPage() {
         </AppLayout>
     );
 }
+
+
 
 
 
