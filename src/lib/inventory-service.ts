@@ -115,14 +115,7 @@ export async function consumePrintedReceipt(salesChannel: string, shippingChanne
 
 export async function checkPrintedReceiptAvailability(salesChannel: string, shippingChannel: string, date: string): Promise<boolean> {
     const record = db.prepare('SELECT count FROM printed_receipt_counts WHERE date = ? AND salesChannel = ? AND shippingChannel = ?').get(date, salesChannel, shippingChannel) as { count: number } | undefined;
-    
-    const scannedToday = db.prepare(`
-        SELECT COUNT(*) as count 
-        FROM shipping_receipts 
-        WHERE salesChannel = ? AND channel = ? AND date(date) = ?
-    `).get(salesChannel, shippingChannel, date) as { count: number };
-
-    return (record?.count || 0) > (scannedToday?.count || 0);
+    return (record?.count || 0) > 0;
 }
 
 export async function getPrintedReceiptCountsForDate(date: string): Promise<PrintedReceiptCount[]> {
@@ -1038,6 +1031,12 @@ export async function recordSaleWithReceipt(receiptData: Omit<ShippingReceipt, '
             transactionId: awb
         });
 
+        const dateString = formatDate(new Date(dateObject), 'yyyy-MM-dd');
+        const consumed = consumePrintedReceipt(salesChannel!, shippingChannel, dateString);
+        if (!consumed) {
+            throw new Error(`Jumlah resi yang dipindai melebihi jumlah yang dicetak oleh admin untuk ${salesChannel} - ${shippingChannel} pada tanggal ini.`);
+        }
+
         salesData.forEach(sale => {
             if (!sale.sku) {
                  throw new Error(`SKU is missing for a sale item in transaction ${sale.transactionId}`);
@@ -1712,5 +1711,7 @@ async function updateShippingReceiptStatusByAwb(awb: string, status: string) {
     stmt.run(status, awb);
 }
 
+
+    
 
     

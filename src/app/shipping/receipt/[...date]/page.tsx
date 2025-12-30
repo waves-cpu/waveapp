@@ -173,8 +173,6 @@ export default function ReceiptPage() {
     const [countsLoading, setCountsLoading] = useState(true);
     const [shippingChannel, setShippingChannel] = useState<string | null>(null);
     
-    const [processedCounts, setProcessedCounts] = useState<Record<string, Record<string, number>>>({});
-
 
     const currentDate = useMemo(() => parseDateFromParams(Array.isArray(params.date) ? params.date : undefined), [params.date]);
     
@@ -182,22 +180,17 @@ export default function ReceiptPage() {
         setCountsLoading(true);
         const dateString = currentDate ? formatToWIB(currentDate, 'yyyy-MM-dd') : undefined;
         try {
-            const [statusData, printedData, processedData, pendingOldData] = await Promise.all([
+            const [statusData, printedData, pendingOldData] = await Promise.all([
                 fetchShippingReceiptCounts({ 
                     dateString: dateString,
                     shippingChannel: shippingChannel || undefined
                 }),
                 dateString ? getPrintedReceiptCountsForDate(dateString) : Promise.resolve([]),
-                fetchShippingReceiptCounts({
-                    dateString: dateString,
-                    status: 'Terproses',
-                }),
                 currentDate ? getPendingReceiptsBeforeDate(currentDate) : Promise.resolve(0),
             ]);
     
             setStatusCounts(statusData.statuses);
             setPrintedReceiptCounts(printedData);
-            setProcessedCounts(processedData.salesChannels);
             setPendingOldReceiptsCount(pendingOldData);
 
         } catch (error) {
@@ -246,13 +239,10 @@ export default function ReceiptPage() {
             if (!groups[item.salesChannel]) {
                 groups[item.salesChannel] = { salesChannel: item.salesChannel, items: [] };
             }
-            const processedCount = processedCounts[item.salesChannel]?.[item.shippingChannel] || 0;
-            const remainingCount = item.count - processedCount;
-
-            groups[item.salesChannel].items.push({ shippingChannel: item.shippingChannel, count: remainingCount > 0 ? remainingCount : 0 });
+            groups[item.salesChannel].items.push({ shippingChannel: item.shippingChannel, count: item.count });
         });
         return Object.values(groups);
-    }, [printedReceiptCounts, processedCounts]);
+    }, [printedReceiptCounts]);
 
     return (
         <>
@@ -394,3 +384,5 @@ export default function ReceiptPage() {
         </>
     );
 }
+
+    
