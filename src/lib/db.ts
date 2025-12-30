@@ -42,47 +42,8 @@ function initializeDatabase() {
 
 const runMigrations = () => {
   try {
-    const shippingReceiptsTable = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='shipping_receipts'").get();
-    if (shippingReceiptsTable) {
-        // Check for transactionId and salesChannel before attempting to recreate the table
-        const shippingReceiptColumns = db.pragma('table_info(shipping_receipts)');
-        const hasTransactionId = shippingReceiptColumns.some((col: any) => col.name === 'transactionId');
-        const hasSalesChannel = shippingReceiptColumns.some((col: any) => col.name === 'salesChannel');
-
-        // Check if awb has a unique constraint by looking at indices
-        const indices = db.pragma('index_list(shipping_receipts)') as { name: string, unique: number }[];
-        const uniqueAwbIndex = indices.find(idx => idx.name.includes('sqlite_autoindex_shipping_receipts') && idx.unique === 1);
-
-        if (!hasTransactionId || !hasSalesChannel || uniqueAwbIndex) {
-            db.exec('ALTER TABLE shipping_receipts RENAME TO shipping_receipts_old');
-            db.exec(`
-                CREATE TABLE shipping_receipts (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    awb TEXT UNIQUE,
-                    date TEXT NOT NULL,
-                    channel TEXT NOT NULL,
-                    salesChannel TEXT,
-                    status TEXT NOT NULL,
-                    transactionId TEXT
-                );
-            `);
-            // Explicitly drop the auto-index if it exists
-            if(uniqueAwbIndex) {
-               db.exec(`DROP INDEX IF EXISTS ${uniqueAwbIndex.name}`);
-            }
-            db.exec('INSERT INTO shipping_receipts (id, awb, date, channel, salesChannel, status, transactionId) SELECT id, awb, date, channel, salesChannel, status, transactionId FROM shipping_receipts_old');
-            db.exec('DROP TABLE shipping_receipts_old');
-        }
-        
-        // One-time migration to populate empty transactionId fields from AWB
-        db.exec(`
-            UPDATE shipping_receipts
-            SET transactionId = awb
-            WHERE (transactionId IS NULL OR transactionId = '') AND awb IS NOT NULL AND awb != '';
-        `);
-    }
-
-
+    db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_shipping_receipts_awb ON shipping_receipts(awb);');
+    
     db.exec("UPDATE products SET sku = SUBSTR(sku, 1, LENGTH(sku) - 2) WHERE sku LIKE '%.0'");
     db.exec("UPDATE variants SET sku = SUBSTR(sku, 1, LENGTH(sku) - 2) WHERE sku LIKE '%.0'");
 
@@ -338,7 +299,7 @@ const createSchema = () => {
 
     CREATE TABLE IF NOT EXISTS shipping_receipts (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        awb TEXT UNIQUE,
+        awb TEXT NOT NULL UNIQUE,
         date TEXT NOT NULL,
         channel TEXT NOT NULL,
         salesChannel TEXT,
@@ -434,4 +395,3 @@ const dbProxy = {
 
 // Replace direct 'db' export with the proxy
 export { dbProxy as db };
-

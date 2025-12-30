@@ -160,55 +160,47 @@ export function useReceiptPageLogic(salesChannel: 'Shopee' | 'Tiktok' | 'Lazada'
         const trimmedAwb = awb.trim();
         if (!trimmedAwb || isSubmitting || !selectedDate) return;
     
-        const existingReceipt = receipts.find(r => r.awb.toLowerCase() === trimmedAwb.toLowerCase());
-        if (existingReceipt) {
-            playErrorSound();
-            toast({
-                variant: "destructive",
-                title: "Resi Duplikat",
-                description: `Resi ini sudah discan pada ${format(parseISO(existingReceipt.date), 'dd MMM yyyy, HH:mm')}`
-            });
-            setAwb('');
-            return;
-        }
-        
         setIsSubmitting(true);
         
         try {
-            const dateString = format(selectedDate, 'yyyy-MM-dd');
-            const isAvailable = await inventoryContext.checkPrintedReceiptAvailability(salesChannel, shippingChannel, dateString);
-            if (!isAvailable) {
-                playErrorSound();
-                toast({
-                    variant: 'destructive',
-                    title: 'Kuota Resi Habis',
-                    description: 'Jumlah resi tercetak untuk hari ini sudah habis. Hubungi admin untuk menambah.',
-                });
-                setIsSubmitting(false);
-                setAwb('');
-                return;
-            }
-        } catch (error) {
-             playErrorSound();
-             toast({ variant: 'destructive', title: 'Error', description: 'Gagal memeriksa ketersediaan resi.' });
-             setIsSubmitting(false);
-             return;
-        }
+            // This now relies on the UNIQUE constraint in the DB.
+            // The service function will throw an error if it's a duplicate.
+             const newReceipt: Omit<ShippingReceipt, 'id'> = {
+                awb: trimmedAwb,
+                salesChannel: salesChannel,
+                channel: shippingChannel,
+                date: selectedDate.toISOString(),
+                status: 'Terproses',
+                transactionId: trimmedAwb
+            };
+            setReceiptForSale(newReceipt);
+            setIsSaleDialogOpen(true);
+            setAwb('');
+            playSuccessSound();
+        } catch (error: any) {
+            playErrorSound();
+            let errorMessage = 'Gagal menyimpan resi.';
+            let title = 'Input Gagal';
 
-         const newReceipt: Omit<ShippingReceipt, 'id'> = {
-            awb: trimmedAwb,
-            salesChannel: salesChannel,
-            channel: shippingChannel,
-            date: selectedDate.toISOString(),
-            status: 'Terproses',
-            transactionId: trimmedAwb
-        };
-    
-        setReceiptForSale(newReceipt);
-        setIsSaleDialogOpen(true);
-        setAwb('');
-        setIsSubmitting(false);
-        playSuccessSound();
+            if (error.message.startsWith('DUPLICATE_AWB_DATE::')) {
+                 const dateStr = error.message.split('::')[1];
+                 title = 'Resi Duplikat';
+                 errorMessage = `Resi ini sudah discan pada ${format(parseISO(dateStr), 'dd MMM yyyy, HH:mm')}`;
+            } else if (error.message.includes('UNIQUE constraint failed')) {
+                 title = 'Resi Duplikat';
+                 errorMessage = `Resi ${trimmedAwb} sudah pernah digunakan.`;
+            }
+
+            toast({
+                variant: "destructive",
+                title: title,
+                description: errorMessage
+            });
+            setAwb('');
+        } finally {
+            setIsSubmitting(false);
+            refocusInput();
+        }
     };
 
     const handleViewDetails = async (receipt: ShippingReceipt) => {
