@@ -517,11 +517,8 @@ export function InventoryTable({ onUpdateStock, isAccessoryTable = false }: Inve
                             {item.variants?.map((variant, variantIndex) => (
                                 <TableRow 
                                     key={variant.id}
-                                    className={cn(
-                                        "hover:bg-muted/50",
-                                        (variantIndex === item.variants!.length - 1) && "border-b"
-                                    )}
-                                    noBorder
+                                    className="hover:bg-muted/50"
+                                    noBorder={variantIndex !== item.variants!.length - 1}
                                 >
                                     <TableCell>
                                         <div className="flex items-center gap-4">
@@ -548,7 +545,7 @@ export function InventoryTable({ onUpdateStock, isAccessoryTable = false }: Inve
                     )
                 } else {
                     return (
-                        <TableRow key={item.id} noBorder className="border-b">
+                        <TableRow key={item.id}>
                             <TableCell>
                                 <div className="flex items-center gap-4">
                                     {isAccessoryTable ? (
@@ -678,6 +675,7 @@ export function InventoryTable({ onUpdateStock, isAccessoryTable = false }: Inve
     </>
   );
 }
+
 
 
 
