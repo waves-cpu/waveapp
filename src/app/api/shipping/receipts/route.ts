@@ -1,4 +1,5 @@
 
+
 import { fetchShippingReceipts, addShippingReceipt } from '@/lib/inventory-service';
 import { NextRequest, NextResponse } from 'next/server';
 
@@ -37,9 +38,10 @@ export async function POST(request: NextRequest) {
         });
         return NextResponse.json(newReceipt, { status: 201 });
     } catch (error: any) {
-        if (error.message.includes('UNIQUE constraint failed')) {
-            return NextResponse.json({ message: 'AWB already exists for this date.'}, { status: 409 });
+        if (error.message.includes('UNIQUE constraint failed') || error.message.includes('DUPLICATE_AWB')) {
+            return NextResponse.json({ message: `Resi ${error.message.split('::')[1] || ''} sudah pernah digunakan.`}, { status: 409 });
         }
         return NextResponse.json({ message: 'Internal Server Error' }, { status: 500 });
     }
 }
+

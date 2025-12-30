@@ -58,7 +58,7 @@ const runMigrations = () => {
             db.exec(`
                 CREATE TABLE shipping_receipts (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    awb TEXT,
+                    awb TEXT UNIQUE,
                     date TEXT NOT NULL,
                     channel TEXT NOT NULL,
                     salesChannel TEXT,
@@ -338,7 +338,7 @@ const createSchema = () => {
 
     CREATE TABLE IF NOT EXISTS shipping_receipts (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        awb TEXT,
+        awb TEXT UNIQUE,
         date TEXT NOT NULL,
         channel TEXT NOT NULL,
         salesChannel TEXT,
@@ -434,3 +434,4 @@ const dbProxy = {
 
 // Replace direct 'db' export with the proxy
 export { dbProxy as db };
+

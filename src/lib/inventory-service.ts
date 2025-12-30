@@ -291,6 +291,11 @@ export async function getReceiptCountByStatus(status: string): Promise<Record<st
 
 
 export async function addShippingReceipt(receipt: Omit<ShippingReceipt, 'id'>): Promise<ShippingReceipt> {
+    const existingReceipt = db.prepare('SELECT * FROM shipping_receipts WHERE awb = ?').get(receipt.awb);
+    if (existingReceipt) {
+        throw new Error(`DUPLICATE_AWB::Resi ${receipt.awb} sudah pernah digunakan.`);
+    }
+
     const newReceipt = db.transaction(() => {
         const result = db.prepare('INSERT INTO shipping_receipts (awb, date, channel, salesChannel, status, transactionId) VALUES (@awb, @date, @channel, @salesChannel, @status, @transactionId)').run({
             ...receipt,
@@ -1019,12 +1024,7 @@ export async function recordSaleWithReceipt(receiptData: Omit<ShippingReceipt, '
     const { awb, channel: shippingChannel, salesChannel } = receiptData;
 
     const transaction = db.transaction(() => {
-        const addReceiptStmt = db.prepare('INSERT INTO shipping_receipts (awb, date, channel, salesChannel, status, transactionId) VALUES (@awb, @date, @channel, @salesChannel, @status, @transactionId)');
-        addReceiptStmt.run({
-            ...receiptData,
-            status: 'Terproses',
-            transactionId: awb
-        });
+        addShippingReceipt(receiptData);
 
         salesData.forEach(sale => {
             if (!sale.sku) {
@@ -1704,3 +1704,4 @@ async function updateShippingReceiptStatusByAwb(awb: string, status: string) {
     
 
     
+
