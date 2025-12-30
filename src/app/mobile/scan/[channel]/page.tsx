@@ -82,7 +82,7 @@ export default function MobileScanShipmentPage() {
                 title: `Resi ${trimmedAwb}`,
                 description: errorMessage,
             });
-            setRecentlyProcessed(prev => [{ id: Date.now(), awb: trimmedAwb, success: false, message: errorMessage, date: new Date().toISOString() }, ...prev].slice(0, 20));
+            // Do not add the failed scan to the list
         } finally {
             setIsSubmitting(false);
             if (isCameraOpen) {
