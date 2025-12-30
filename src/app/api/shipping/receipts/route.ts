@@ -39,7 +39,8 @@ export async function POST(request: NextRequest) {
         return NextResponse.json(newReceipt, { status: 201 });
     } catch (error: any) {
         if (error.message.startsWith('DUPLICATE_AWB::')) {
-            return NextResponse.json({ message: error.message.split('::')[1] }, { status: 409 });
+            const message = error.message.split('::')[1];
+            return NextResponse.json({ message: message }, { status: 409 });
         }
         return NextResponse.json({ message: 'Internal Server Error' }, { status: 500 });
     }
