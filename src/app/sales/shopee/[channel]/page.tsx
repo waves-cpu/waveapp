@@ -34,7 +34,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-import { cn } from '@/lib/utils';
+import { cn, formatToWIB } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AppLayout } from '@/app/components/app-layout';
 import { useScanSounds } from '@/hooks/use-scan-sounds';
@@ -163,6 +163,15 @@ export function useReceiptPageLogic(salesChannel: 'Shopee' | 'Tiktok' | 'Lazada'
         setIsSubmitting(true);
         
         try {
+            // Step 1: Check if AWB exists
+            const existingReceipt = await inventoryContext.findShippingReceiptByAwb(trimmedAwb);
+
+            if (existingReceipt) {
+                const formattedDate = formatToWIB(parseISO(existingReceipt.date), 'dd MMM yyyy, HH:mm');
+                throw new Error(`Resi ini sudah diinput di kanal ${existingReceipt.salesChannel} pada ${formattedDate}`);
+            }
+
+            // Step 2: If not, open dialog
             const newReceipt: Omit<ShippingReceipt, 'id'> = {
                 awb: trimmedAwb,
                 salesChannel: salesChannel,
@@ -171,11 +180,12 @@ export function useReceiptPageLogic(salesChannel: 'Shopee' | 'Tiktok' | 'Lazada'
                 status: 'Perlu Diproses',
                 transactionId: trimmedAwb
             };
-            await inventoryContext.addShippingReceipt(newReceipt);
+            
             setReceiptForSale(newReceipt);
             setIsSaleDialogOpen(true);
             setAwb('');
             playSuccessSound();
+
         } catch (error: any) {
             playErrorSound();
             toast({

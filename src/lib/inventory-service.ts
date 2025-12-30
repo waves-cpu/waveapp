@@ -285,7 +285,7 @@ export async function addShippingReceipt(receipt: Omit<ShippingReceipt, 'id'>): 
     const existingReceipt = db.prepare('SELECT * FROM shipping_receipts WHERE awb = ?').get(receipt.awb) as ShippingReceipt | undefined;
     if (existingReceipt) {
         const formattedDate = formatToWIB(parseISO(existingReceipt.date), 'dd MMM yyyy, HH:mm');
-        throw new Error(`DUPLICATE_AWB::Resi ${receipt.awb} sudah diinput di kanal ${existingReceipt.salesChannel} pada ${formattedDate}`);
+        throw new Error(`DUPLICATE_AWB::${receipt.awb}::${existingReceipt.date}::${existingReceipt.salesChannel}`);
     }
     
     try {
@@ -296,13 +296,12 @@ export async function addShippingReceipt(receipt: Omit<ShippingReceipt, 'id'>): 
         const newReceipt = db.prepare('SELECT * FROM shipping_receipts WHERE id = ?').get(result.lastInsertRowid) as ShippingReceipt;
         return newReceipt;
     } catch (error: any) {
-        if (error.message.includes('UNIQUE constraint failed')) {
+        if (error.code === 'SQLITE_CONSTRAINT_UNIQUE') {
             const conflictingReceipt = db.prepare('SELECT * FROM shipping_receipts WHERE awb = ?').get(receipt.awb) as ShippingReceipt | undefined;
             if (conflictingReceipt) {
-                const formattedDate = formatToWIB(parseISO(conflictingReceipt.date), 'dd MMM yyyy, HH:mm');
-                throw new Error(`DUPLICATE_AWB::Resi ${receipt.awb} sudah diinput di kanal ${conflictingReceipt.salesChannel} pada ${formattedDate}`);
+                throw new Error(`DUPLICATE_AWB::${receipt.awb}::${conflictingReceipt.date}::${conflictingReceipt.salesChannel}`);
             }
-            throw new Error(`DUPLICATE_AWB::Resi ${receipt.awb} sudah pernah digunakan.`);
+            throw new Error(`DUPLICATE_AWB::${receipt.awb}::unknown::unknown`);
         }
         throw error;
     }
@@ -1022,9 +1021,10 @@ export async function getActiveDiscountPrice(productId: string | number, variant
 }
 
 export async function recordSaleWithReceipt(receiptData: Omit<ShippingReceipt, 'id'>, salesData: Omit<Sale, 'id'>[]) {
-    const { awb, channel: shippingChannel, salesChannel } = receiptData;
+    const { awb } = receiptData;
 
     const transaction = db.transaction(() => {
+        // This will now throw an error if the AWB is a duplicate, which is caught by the API route.
         addShippingReceipt(receiptData);
 
         salesData.forEach(sale => {
@@ -1705,6 +1705,7 @@ async function updateShippingReceiptStatusByAwb(awb: string, status: string) {
     
 
     
+
 
 
 
