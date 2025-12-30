@@ -178,9 +178,12 @@ Mengambil rekapitulasi jumlah resi berdasarkan status, kanal penjualan, atau jas
 - **Method**: `GET`
 - **Query Params (Opsional)**:
   - `status`: `Terproses`, `Siap Kirim`, dll. (Bisa digunakan untuk mendapatkan jumlah resi yang belum diproses).
+  - `shippingChannel`: `SPX`, `J&T`, `JNE`, dll. (Memfilter jumlah berdasarkan jasa kirim tertentu).
   - `date`: Tanggal dalam format `YYYY-MM-DD`
 - **Contoh URL (untuk mendapatkan jumlah semua resi yang belum diproses)**:
   `/api/shipping/receipts/counts?status=Terproses`
+- **Contoh URL (untuk jumlah resi 'Terproses' khusus J&T)**:
+  `/api/shipping/receipts/counts?status=Terproses&shippingChannel=J&T`
 - **Contoh Respon**:
 ```json
 {
