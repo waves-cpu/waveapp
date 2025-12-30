@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { MoreVertical, Search, Send, Trash2, Undo2, CheckCircle, Ban } from 'lucide-react';
+import { MoreVertical, Search, Send, Trash2, Undo2, CheckCircle, Ban, PackageCheck } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { format, parseISO } from 'date-fns';
 import { useInventory } from '@/hooks/use-inventory';
@@ -207,14 +207,14 @@ export function ProcessedReceiptsDialog({
                     </SelectContent>
                 </Select>
             </div>
-            <div className="flex items-center gap-2 w-full md:w-auto">
-                <div className="relative flex-grow">
+            <div className="flex items-center gap-2 w-full md:w-auto flex-wrap justify-end">
+                <div className="relative flex-grow md:flex-grow-0">
                     <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                     <Input
                         placeholder="Cari No. Resi..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
-                        className="pl-8 h-9 w-full"
+                        className="pl-8 h-9 w-full md:w-48"
                     />
                  </div>
                  {selectedIds.size > 0 && initialStatusFilter === 'Terproses' && (
@@ -222,6 +222,18 @@ export function ProcessedReceiptsDialog({
                         <Send className="mr-2 h-4 w-4" />
                         {isProcessing ? 'Memproses...' : `Proses Kirim (${selectedIds.size})`}
                     </Button>
+                 )}
+                 {selectedIds.size > 0 && initialStatusFilter === 'Siap Kirim' && (
+                    <>
+                        <Button size="sm" onClick={() => handleBulkAction('Selesai')} disabled={isProcessing}>
+                            <PackageCheck className="mr-2 h-4 w-4" />
+                            {isProcessing ? 'Memproses...' : `Tandai Selesai (${selectedIds.size})`}
+                        </Button>
+                         <Button size="sm" variant="destructive" onClick={() => handleBulkAction('Dibatalkan')} disabled={isProcessing}>
+                            <Ban className="mr-2 h-4 w-4" />
+                            {isProcessing ? 'Memproses...' : `Batalkan (${selectedIds.size})`}
+                        </Button>
+                    </>
                  )}
             </div>
         </div>
@@ -261,6 +273,7 @@ export function ProcessedReceiptsDialog({
                           <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8"><MoreVertical className="h-4 w-4" /></Button></DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
                             {initialStatusFilter === 'Terproses' && <DropdownMenuItem onClick={() => handleChangeStatus(item, 'Siap Kirim')}><Send className="mr-2 h-4 w-4" /> Tandai Siap Kirim</DropdownMenuItem>}
+                            {initialStatusFilter === 'Siap Kirim' && <DropdownMenuItem onClick={() => handleChangeStatus(item, 'Selesai')}><CheckCircle className="mr-2 h-4 w-4" /> Tandai Selesai</DropdownMenuItem>}
                             {initialStatusFilter !== 'Dibatalkan' && <DropdownMenuItem onClick={() => handleChangeStatus(item, 'Dibatalkan')} className="text-destructive"><Ban className="mr-2 h-4 w-4" /> Batalkan</DropdownMenuItem>}
                              <AlertDialog>
                                 <AlertDialogTrigger asChild>
