@@ -1,6 +1,6 @@
 
 
-import { recordSaleWithReceipt, checkPrintedReceiptAvailability } from '@/lib/inventory-service';
+import { recordSaleWithReceipt } from '@/lib/inventory-service';
 import { NextRequest, NextResponse } from 'next/server';
 import type { ShippingReceipt, Sale } from '@/types';
 import { format } from 'date-fns';
@@ -42,13 +42,6 @@ export async function POST(request: NextRequest) {
         variantId: sale.variantId,
     }));
     
-    const dateString = format(new Date(receiptData.date), 'yyyy-MM-dd');
-    const isAvailable = await checkPrintedReceiptAvailability(receiptData.salesChannel!, receiptData.channel, dateString);
-
-    if (!isAvailable) {
-        throw new Error(`Jumlah resi yang dipindai melebihi jumlah yang dicetak oleh admin untuk ${receiptData.salesChannel} - ${receiptData.channel} pada tanggal ini.`);
-    }
-
     await recordSaleWithReceipt(receiptData, salesData);
 
     return NextResponse.json({ message: 'Online sale recorded successfully', data: { receipt: receiptData, sales: salesData } }, { status: 201 });
@@ -68,6 +61,3 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ message: error.message || 'Internal Server Error' }, { status: 500 });
   }
 }
-
-    
-    
