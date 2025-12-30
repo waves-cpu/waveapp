@@ -59,7 +59,7 @@ export async function addBulkImportHistory(history: Omit<BulkImportHistory, 'id'
             skippedSkus: JSON.stringify(history.skippedSkus || []),
         });
     const newHistory = db.prepare('SELECT * FROM bulk_import_history WHERE id = ?').get(result.lastInsertRowid) as any;
-    return { ...newHistory, addedSkus: JSON.parse(newHistory.addedSkus), skippedSkus: JSON.parse(newHistory.skippedSkus) };
+    return { ...newHistory, addedSkus: newHistory.addedSkus ? JSON.parse(newHistory.addedSkus) : [], skippedSkus: newHistory.skippedSkus ? JSON.parse(newHistory.skippedSkus) : [] };
 }
 
 
@@ -542,7 +542,7 @@ export async function addProduct(itemData: any): Promise<string> {
     return transaction();
 }
 
-export async function bulkAddProducts(data: any[], fileName: string): Promise<{ addedCount: number, skippedCount: number, addedSkus: any[], skippedSkus: any[] }> {
+export async function bulkAddProducts(data: any[]): Promise<{ addedCount: number, skippedCount: number, addedSkus: any[], skippedSkus: any[] }> {
     const getProductStmt = db.prepare('SELECT id, name FROM products WHERE sku = ?');
     const addProductStmt = db.prepare('INSERT INTO products (name, category, sku, imageUrl, hasVariants) VALUES (@name, @category, @sku, @imageUrl, @hasVariants)');
     const addVariantStmt = db.prepare('INSERT INTO variants (productId, name, sku, price, stock, costPrice) VALUES (@productId, @name, @sku, @price, @stock, @costPrice)');
@@ -1734,6 +1734,7 @@ async function updateShippingReceiptStatusByAwb(awb: string, status: string) {
     
 
     
+
 
 
 

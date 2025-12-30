@@ -1,8 +1,11 @@
 
+
 import { bulkAddProducts, addBulkImportHistory, updateBulkImportHistory, fetchBulkImportHistory } from '@/lib/inventory-service';
 import { NextRequest, NextResponse } from 'next/server';
 
 export async function POST(request: NextRequest) {
+    let historyEntryId: number | undefined;
+
     try {
         const body = await request.json();
         const { products, fileName } = body;
@@ -16,6 +19,7 @@ export async function POST(request: NextRequest) {
             date: new Date().toISOString(),
             status: 'Memproses...',
         });
+        historyEntryId = historyEntry.id;
 
         const { addedProducts, skippedProducts } = await bulkAddProducts(products);
 
@@ -37,6 +41,14 @@ export async function POST(request: NextRequest) {
 
     } catch (error: any) {
         console.error('API Error bulk adding products:', error);
+        
+        if (historyEntryId) {
+             await updateBulkImportHistory(historyEntryId, {
+                status: 'Gagal',
+                error: error.message
+            });
+        }
+
         return NextResponse.json({ message: 'Internal Server Error', error: error.message }, { status: 500 });
     }
 }
