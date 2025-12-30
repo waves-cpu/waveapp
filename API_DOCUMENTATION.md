@@ -173,6 +173,23 @@ Mengambil daftar resi pengiriman dengan filter.
   - `awb`: Nomor resi untuk pencarian
 - **Contoh URL**: `/api/shipping/receipts?status=Terproses&salesChannel=Shopee&date=2024-05-20`
 
+#### **GET** `/api/shipping/receipts/counts`
+Mengambil rekapitulasi jumlah resi berdasarkan status, kanal penjualan, atau jasa kirim. Sangat berguna untuk dashboard atau aplikasi mobile.
+- **Method**: `GET`
+- **Query Params (Opsional)**:
+  - `status`: `Terproses`, `Siap Kirim`, dll. (Bisa digunakan untuk mendapatkan jumlah resi yang belum diproses).
+  - `date`: Tanggal dalam format `YYYY-MM-DD`
+- **Contoh URL (untuk mendapatkan jumlah semua resi yang belum diproses)**:
+  `/api/shipping/receipts/counts?status=Terproses`
+- **Contoh Respon**:
+```json
+{
+  "salesChannels": { "Shopee": 15, "Tiktok": 10 },
+  "shippingChannels": { "SPX": 8, "J&T": 12, "JNE": 5 },
+  "statuses": { "Terproses": 25 }
+}
+```
+
 #### **POST** `/api/shipping/scan`
 Memproses resi yang siap untuk dikirim (mengubah status dari 'Terproses' menjadi 'Siap Kirim').
 - **Method**: `POST`
