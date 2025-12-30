@@ -168,7 +168,10 @@ export default function ReceiptPage() {
     const [isAddPrintedOpen, setAddPrintedOpen] = useState(false);
     const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
     const [pendingOldReceiptsCount, setPendingOldReceiptsCount] = useState(0);
-    const [statusCounts, setStatusCounts] = useState<Record<string, number>>({});
+    const [statusCounts, setStatusCounts] = useState<Record<string, Record<string, number>>>({
+        statuses: {},
+        shippingChannels: {},
+    });
     const [printedReceiptCounts, setPrintedReceiptCounts] = useState<PrintedReceiptCount[]>([]);
     const [countsLoading, setCountsLoading] = useState(true);
     const [shippingChannel, setShippingChannel] = useState<string | null>(null);
@@ -189,7 +192,7 @@ export default function ReceiptPage() {
                 currentDate ? getPendingReceiptsBeforeDate(currentDate) : Promise.resolve(0),
             ]);
     
-            setStatusCounts(statusData.statuses);
+            setStatusCounts(statusData);
             setPrintedReceiptCounts(printedData);
             setPendingOldReceiptsCount(pendingOldData);
 
@@ -229,9 +232,9 @@ export default function ReceiptPage() {
 
     const orderedStatuses = useMemo(() => {
         return STATUS_ORDER.filter(status => {
-            return CORE_STATUSES.includes(status) || (statusCounts[status] > 0);
+            return CORE_STATUSES.includes(status) || (statusCounts.statuses?.[status] > 0);
         });
-    }, [statusCounts]);
+    }, [statusCounts.statuses]);
     
     const groupedPrintedReceipts = useMemo(() => {
         const groups: Record<string, { salesChannel: string; items: { shippingChannel: string; count: number }[] }> = {};
@@ -241,25 +244,9 @@ export default function ReceiptPage() {
             }
             groups[item.salesChannel].items.push({ shippingChannel: item.shippingChannel, count: item.count });
         });
-        
-        const allReceiptsToday = (statusCounts['Terproses'] || 0) + (statusCounts['Siap Kirim'] || 0) + (statusCounts['Selesai'] || 0);
-
-        Object.values(groups).forEach(group => {
-            group.items.forEach(item => {
-                const used = statusCounts[item.shippingChannel] || 0;
-                // The calculation should be Total Printed - All used receipts of that type today.
-                const processedCount = statusCounts['Terproses']?.[item.shippingChannel] || 0;
-                const shippedCount = statusCounts['Siap Kirim']?.[item.shippingChannel] || 0;
-                const doneCount = statusCounts['Selesai']?.[item.shippingChannel] || 0;
-
-                const totalUsedToday = processedCount + shippedCount + doneCount;
-                
-                // item.count = item.count; // The logic will be handled in JSX display
-            });
-        });
 
         return Object.values(groups);
-    }, [printedReceiptCounts, statusCounts]);
+    }, [printedReceiptCounts]);
 
     return (
         <>
@@ -324,7 +311,7 @@ export default function ReceiptPage() {
                             <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-5 gap-4">
                                 {orderedStatuses.map(status => {
                                     const Icon = statusIcons[status] || Package;
-                                    const count = statusCounts[status] || 0;
+                                    const count = statusCounts.statuses?.[status] || 0;
                                     const canClick = count > 0;
 
                                     return (
@@ -368,12 +355,38 @@ export default function ReceiptPage() {
                                                     </h3>
                                                     <div className="pl-4 border-l ml-2 space-y-2">
                                                         {group.items.map(item => {
-                                                             const processedCount = (statusCounts as any)[group.salesChannel]?.[item.shippingChannel] || 0;
-                                                             const remaining = item.count - processedCount;
+                                                             const usedCount = 
+                                                                (statusCounts.statuses?.['Terproses'] || 0) +
+                                                                (statusCounts.statuses?.['Siap Kirim'] || 0) +
+                                                                (statusCounts.statuses?.['Selesai'] || 0);
+                                                            
+                                                            const totalUsedForChannel = Object.values(statusCounts.salesChannels?.[group.salesChannel] || {}).reduce((a,b) => a + b, 0);
+
+                                                            const totalUsedForThisShipping = (statusCounts.shippingChannels as any)?.[item.shippingChannel] || 0;
+
+                                                            const processedByChannel = statusCounts.salesChannels?.[group.salesChannel]?.[item.shippingChannel] || 0;
+                                                            const totalByStatusForChannel = (statusCounts.statuses as any)?.[item.shippingChannel] || 0;
+
+                                                            const usedInStatuses = ['Terproses', 'Siap Kirim', 'Selesai'];
+                                                            let used = 0;
+                                                            for (const status of usedInStatuses) {
+                                                                const statusData = (statusCounts.statuses as any)[status];
+                                                                if (statusData && typeof statusData === 'object' && item.shippingChannel in statusData) {
+                                                                    used += (statusData as any)[item.shippingChannel];
+                                                                } else if (status === status) {
+                                                                    // Fallback for simple count
+                                                                    const simpleStatusCount = (statusCounts.statuses as any)[status] || 0;
+                                                                    // This part is tricky, can't directly attribute to a shipping channel
+                                                                }
+                                                            }
+                                                            
+                                                            const totalUsed = (statusCounts.shippingChannels as any)[item.shippingChannel] || 0;
+                                                            const remaining = item.count - totalUsed;
+                                                            
                                                             return (
                                                                 <div key={item.shippingChannel} className="flex justify-between items-center text-sm">
                                                                     <span className="text-muted-foreground">{item.shippingChannel}</span>
-                                                                    <span className="font-medium">{item.count - (statusCounts[item.shippingChannel] || 0)} / {item.count}</span>
+                                                                    <span className="font-medium">{remaining} / {item.count}</span>
                                                                 </div>
                                                             )
                                                         })}
@@ -404,5 +417,3 @@ export default function ReceiptPage() {
         </>
     );
 }
-
-    
