@@ -5,7 +5,7 @@ const next = require('next');
 const fs = require('fs');
 const path = require('path');
 
-// Force production mode
+// Force production mode. This is the key change.
 const dev = false;
 const app = next({ dev });
 const handle = app.getRequestHandler();
