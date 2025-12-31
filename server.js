@@ -5,8 +5,12 @@ const next = require('next');
 const fs = require('fs');
 const path = require('path');
 
-// Force production mode. This is the key change.
-const dev = false;
+// =================================================================
+// PRODUCTION SERVER CONFIGURATION
+// This server is explicitly for running the app in PRODUCTION mode.
+// =================================================================
+
+const dev = false; // Force production mode. This is the key change.
 const app = next({ dev });
 const handle = app.getRequestHandler();
 
