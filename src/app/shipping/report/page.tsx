@@ -35,7 +35,6 @@ type DailyCount = {
   date: string;
   'Terproses': number;
   'Siap Kirim': number;
-  'Diantar': number;
   'Selesai': number;
   'Return Selesai': number;
   'Dibatalkan': number;
@@ -44,12 +43,11 @@ type DailyCount = {
   'Total': number;
 };
 
-const STATUS_KEYS: (keyof Omit<DailyCount, 'date' | 'Total'>)[] = ['Terproses', 'Siap Kirim', 'Diantar', 'Selesai', 'Return Selesai', 'Dibatalkan', 'Return', 'Tidak Sampai'];
+const STATUS_KEYS: (keyof Omit<DailyCount, 'date' | 'Total'>)[] = ['Terproses', 'Siap Kirim', 'Selesai', 'Return Selesai', 'Dibatalkan', 'Return', 'Tidak Sampai'];
 
 const chartConfig = {
   'Terproses': { label: "Terproses", color: "hsl(var(--chart-1))" },
   'Siap Kirim': { label: "Siap Kirim", color: "hsl(var(--chart-2))" },
-  'Diantar': { label: "Diantar", color: "hsl(var(--chart-3))"},
   'Selesai': { label: "Selesai", color: "hsl(var(--chart-4))" },
   'Return Selesai': { label: "Return Selesai", color: "hsl(var(--chart-5))" },
   'Dibatalkan': { label: "Dibatalkan", color: "hsl(var(--destructive))" },
@@ -104,7 +102,7 @@ export default function ReceiptReportPage() {
             daysInMonth.forEach(day => {
                 const dateKey = formatToWIB(day, 'yyyy-MM-dd');
                 dailyData[dateKey] = {
-                    'Terproses': 0, 'Siap Kirim': 0, 'Diantar': 0, 'Selesai': 0, 'Return Selesai': 0,
+                    'Terproses': 0, 'Siap Kirim': 0, 'Selesai': 0, 'Return Selesai': 0,
                     'Dibatalkan': 0, 'Return': 0, 'Tidak Sampai': 0, 'Total': 0
                 };
             });
@@ -160,7 +158,6 @@ export default function ReceiptReportPage() {
                 'Tanggal': item.date,
                 'Terproses': item['Terproses'],
                 'Siap Kirim': item['Siap Kirim'],
-                'Diantar': item.Diantar,
                 'Selesai': item.Selesai,
                 'Return Selesai': item['Return Selesai'],
                 'Dibatalkan': item.Dibatalkan,
@@ -173,7 +170,6 @@ export default function ReceiptReportPage() {
                 'Tanggal': 'TOTAL',
                 'Terproses': totalCounts['Terproses'] || 0,
                 'Siap Kirim': totalCounts['Siap Kirim'] || 0,
-                'Diantar': totalCounts.Diantar || 0,
                 'Selesai': totalCounts.Selesai || 0,
                 'Return Selesai': totalCounts['Return Selesai'] || 0,
                 'Dibatalkan': totalCounts.Dibatalkan || 0,
@@ -204,7 +200,6 @@ export default function ReceiptReportPage() {
     const statusCards = [
         { key: 'Terproses', icon: Truck, color: 'text-yellow-600' },
         { key: 'Siap Kirim', icon: Truck, color: 'text-blue-600' },
-        { key: 'Diantar', icon: Truck, color: 'text-sky-600' },
         { key: 'Selesai', icon: PackageCheck, color: 'text-green-600' },
         { key: 'Return Selesai', icon: History, color: 'text-purple-600' },
         { key: 'Return', icon: Undo2, color: 'text-orange-600' },
@@ -258,7 +253,7 @@ export default function ReceiptReportPage() {
                     </div>
                 </div>
 
-                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4">
+                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
                     {statusCards.map(card => {
                         const Icon = card.icon;
                         const count = totalCounts[card.key] || 0;
