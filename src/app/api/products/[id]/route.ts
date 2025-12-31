@@ -1,5 +1,5 @@
 
-import { fetchSingleItem, editProduct, deleteProductPermanently } from '@/lib/inventory-service';
+import { fetchSingleItem, editProduct, deleteProductPermanently, archiveProduct } from '@/lib/inventory-service';
 import { NextRequest, NextResponse } from 'next/server';
 
 // GET a single product
@@ -23,6 +23,14 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
 
     try {
         const body = await request.json();
+        
+        // Handle archiving separately if 'isArchived' is in the body
+        if (typeof body.isArchived === 'boolean') {
+             await archiveProduct(id, body.isArchived);
+             return NextResponse.json({ message: 'Product archive status updated' });
+        }
+
+        // Handle full product update
         await editProduct(id, body);
         return NextResponse.json({ message: 'Product updated successfully' });
     } catch (error) {
