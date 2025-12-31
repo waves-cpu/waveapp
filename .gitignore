@@ -39,3 +39,5 @@ pnpm-debug.log*
 
 # Database
 /db
+
+certificates
