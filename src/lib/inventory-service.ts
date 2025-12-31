@@ -705,6 +705,11 @@ export async function bulkUpdateProducts(data: any[]): Promise<{ updatedSkus: st
 
 
 export async function editProduct(itemId: string, itemData: any) {
+    // If the data is for an accessory, call the specific update function
+    if (itemData.type === 'accessory') {
+        return updateAccessory(itemId, itemData);
+    }
+    
     const updateProductStmt = db.prepare(`
         UPDATE products SET name = @name, category = @category, sku = @sku, releaseDate = @releaseDate, imageUrl = @imageUrl, hasVariants = @hasVariants, stock = @stock, price = @price, size = @size, costPrice = @costPrice
         WHERE id = @id
@@ -1789,6 +1794,7 @@ export async function checkPrintedReceiptAvailability(salesChannel: string, ship
     
 
     
+
 
 
 

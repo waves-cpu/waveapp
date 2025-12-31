@@ -17,7 +17,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
   }
 }
 
-// UPDATE a product
+// UPDATE a product or accessory
 export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
     const id = params.id;
 
@@ -30,11 +30,11 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
              return NextResponse.json({ message: 'Product archive status updated' });
         }
 
-        // Handle full product update
-        await editProduct(id, body);
-        return NextResponse.json({ message: 'Product updated successfully' });
+        // Handle full product or accessory update
+        await editProduct(id, body); // This service function will handle both
+        return NextResponse.json({ message: 'Item updated successfully' });
     } catch (error) {
-        console.error(`API Error updating product ${id}:`, error);
+        console.error(`API Error updating item ${id}:`, error);
         return NextResponse.json({ message: 'Internal Server Error' }, { status: 500 });
     }
 }
