@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useForm } from 'react-hook-form';
@@ -30,7 +29,6 @@ const formSchema = z.object({
   quantity: z.coerce.number().int().min(0, "Quantity must be a non-negative number."),
 });
 
-
 interface BulkStockInDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -50,19 +48,25 @@ export function BulkStockInDialog({ open, onOpenChange, onApply }: BulkStockInDi
     },
   });
 
+  // --- PERBAIKAN DI SINI ---
+  // Kita hanya memantau 'open' dan fungsi 'form.reset'. 
+  // Jangan memasukkan objek 'form' utuh karena akan memicu loop.
   useEffect(() => {
-    if(!open) {
-        form.reset({ quantity: 0 });
-        setIsSubmitting(false);
+    if (!open) {
+      form.reset({ quantity: 0 });
+      setIsSubmitting(false);
     }
-  }, [open, form]);
-
+  }, [open, form.reset]); 
+  // -------------------------
 
   function onSubmit(values: z.infer<typeof formSchema>) {
     setIsSubmitting(true);
-    onApply(values.quantity);
-    setIsSubmitting(false);
-    onOpenChange(false);
+    try {
+      onApply(values.quantity);
+      onOpenChange(false);
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   return (
@@ -83,17 +87,28 @@ export function BulkStockInDialog({ open, onOpenChange, onApply }: BulkStockInDi
                 <FormItem>
                   <FormLabel>{t.stockInForm.quantity}</FormLabel>
                   <FormControl>
-                    <Input type="number" placeholder="e.g., 50" {...field} />
+                    <Input 
+                      type="number" 
+                      placeholder="e.g., 50" 
+                      {...field} 
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
             <DialogFooter>
-                <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} disabled={isSubmitting}>{t.common.cancel}</Button>
-                <Button type="submit" disabled={isSubmitting}>
-                    {t.common.apply}
-                </Button>
+              <Button 
+                type="button" 
+                variant="ghost" 
+                onClick={() => onOpenChange(false)} 
+                disabled={isSubmitting}
+              >
+                {t.common.cancel}
+              </Button>
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? "Processing..." : t.common.apply}
+              </Button>
             </DialogFooter>
           </form>
         </Form>
