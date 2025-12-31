@@ -74,7 +74,6 @@ export function TransactionForm({
   const TStockForm = transactionType === 'in' ? t.stockInForm : t.stockOutForm;
   const { items, categories } = useInventory();
   const router = useRouter();
-  const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
   
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -89,10 +88,6 @@ export function TransactionForm({
     name: "transactionItems"
   });
   
-  useEffect(() => {
-    inputRefs.current = inputRefs.current.slice(0, fields.length);
-  }, [fields.length]);
-
   useEffect(() => {
     setBulkSelectedIds(new Set());
   }, [fields.length, setBulkSelectedIds]);
@@ -251,20 +246,6 @@ export function TransactionForm({
     onFinalSubmit(values);
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent, currentIndex: number) => {
-    if (e.key === 'Tab' && !e.shiftKey) {
-        e.preventDefault();
-        const nextInput = inputRefs.current[currentIndex + 1];
-        if (nextInput) {
-            nextInput.focus();
-        } else {
-            // Optional: focus on the first input if at the end
-            inputRefs.current[0]?.focus();
-        }
-    }
-  };
-
-
   return (
     <>
     <Form {...form}>
@@ -337,9 +318,7 @@ export function TransactionForm({
                                                                 <Input 
                                                                     type="number" 
                                                                     placeholder="0" 
-                                                                    {...formField} 
-                                                                    ref={el => inputRefs.current[field.originalIndex] = el}
-                                                                    onKeyDown={(e) => handleKeyDown(e, field.originalIndex)}
+                                                                    {...formField}
                                                                 />
                                                             </FormControl>
                                                             <FormMessage/>
@@ -438,9 +417,7 @@ export function TransactionForm({
                                                                         <Input 
                                                                             type="number" 
                                                                             placeholder="0" 
-                                                                            {...formField} 
-                                                                            ref={el => inputRefs.current[field.originalIndex] = el}
-                                                                            onKeyDown={(e) => handleKeyDown(e, field.originalIndex)}
+                                                                            {...formField}
                                                                         />
                                                                     </FormControl>
                                                                     <FormMessage/>

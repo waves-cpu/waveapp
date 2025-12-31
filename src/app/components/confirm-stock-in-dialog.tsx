@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import { useForm } from 'react-hook-form';
@@ -79,7 +78,6 @@ export function ConfirmTransactionDialog({
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsSubmitting(true);
     await onConfirm(values.reason);
-    // isSubmitting will be reset when dialog is reopened
   }
 
   return (
