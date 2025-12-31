@@ -17,7 +17,7 @@ function initializeDatabase() {
     db = new Database(dbPath);
     db.pragma('journal_mode = WAL');
   } catch (error) {
-    if (error instanceof Error && (error.message.includes('not a database') || error.message.includes('corrupt'))) {
+    if (error instanceof Error && (error.message.includes('not a database') || error.message.includes('corrupt') || error.message.includes('disk I/O error'))) {
       console.error('Database file is corrupt or invalid. Re-initializing...');
       if(db && db.open) {
         db.close();
@@ -49,7 +49,7 @@ const runMigrations = () => {
 
     const tables = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='channel_prices'").get();
     if (tables) {
-        const channelPricesColumns = db.pragma('table_info(channel_prices)');
+        const channelPricesColumns: { name: string }[] = db.pragma('table_info(channel_prices)') as { name: string }[];
         const hasProductId = channelPricesColumns.some((col: any) => col.name === 'product_id');
         const hasVariantId = channelPricesColumns.some((col: any) => col.name === 'variant_id');
         
@@ -71,7 +71,7 @@ const runMigrations = () => {
     }
 
 
-    const salesColumns = db.pragma('table_info(sales)');
+    const salesColumns: { name: string }[] = db.pragma('table_info(sales)') as { name: string }[];
     const hasTransactionId = salesColumns.some((col: any) => col.name === 'transactionId');
     const hasPaymentMethod = salesColumns.some((col: any) => col.name === 'paymentMethod');
     const hasResellerName = salesColumns.some((col: any) => col.name === 'resellerName');
@@ -114,7 +114,7 @@ const runMigrations = () => {
         db.exec("ALTER TABLE sales ADD COLUMN parentImageUrl TEXT");
     }
 
-    const resellerColumns = db.pragma('table_info(resellers)');
+    const resellerColumns: { name: string }[] = db.pragma('table_info(resellers)') as { name: string }[];
     const hasPhone = resellerColumns.some((col: any) => col.name === 'phone');
     const hasAddress = resellerColumns.some((col: any) => col.name === 'address');
 
@@ -125,7 +125,7 @@ const runMigrations = () => {
         db.exec('ALTER TABLE resellers ADD COLUMN address TEXT');
     }
 
-    const productColumns = db.pragma('table_info(products)');
+    const productColumns: { name: string }[] = db.pragma('table_info(products)') as { name: string }[];
     if (!productColumns.some((col: any) => col.name === 'costPrice')) {
         db.exec('ALTER TABLE products ADD COLUMN costPrice REAL');
     }
@@ -137,12 +137,12 @@ const runMigrations = () => {
     }
 
 
-    const variantColumns = db.pragma('table_info(variants)');
+    const variantColumns: { name: string }[] = db.pragma('table_info(variants)') as { name: string }[];
     if (!variantColumns.some((col: any) => col.name === 'costPrice')) {
         db.exec('ALTER TABLE variants ADD COLUMN costPrice REAL');
     }
 
-    const accessoryColumns = db.pragma('table_info(accessories)');
+    const accessoryColumns: { name: string }[] = db.pragma('table_info(accessories)') as { name: string }[];
     if (accessoryColumns) {
         if (!accessoryColumns.some((col: any) => col.name === 'costPrice')) {
             db.exec('ALTER TABLE accessories ADD COLUMN costPrice REAL');
@@ -158,7 +158,7 @@ const runMigrations = () => {
         }
     }
     
-    const salesColumnsForBackfill = db.pragma('table_info(sales)');
+    const salesColumnsForBackfill: { name: string }[] = db.pragma('table_info(sales)') as { name: string }[];
     if (salesColumnsForBackfill.some((col: any) => col.name === 'parentSku')) {
         const stmt = db.prepare(`
             UPDATE sales
@@ -173,7 +173,7 @@ const runMigrations = () => {
         db.exec('DROP TABLE manual_journal_entries');
     }
 
-    const discountGroupColumns = db.pragma('table_info(discount_groups)');
+    const discountGroupColumns: { name: string }[] = db.pragma('table_info(discount_groups)') as { name: string }[];
     if (discountGroupColumns && !discountGroupColumns.some((col: any) => col.name === 'channel')) {
         db.exec('ALTER TABLE discount_groups ADD COLUMN channel TEXT');
     }

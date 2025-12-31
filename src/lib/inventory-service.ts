@@ -557,7 +557,7 @@ export async function addProduct(itemData: any): Promise<string> {
     return transaction();
 }
 
-export async function bulkAddProducts(data: any[]): Promise<{ addedProducts: {sku: string, name: string}[], skippedProducts: {sku: string, name: string}[] }> {
+export async function bulkAddProducts(data: any[], fileName: string): Promise<{ addedProducts: {sku: string, name: string}[], skippedProducts: {sku: string, name: string}[] }> {
     const getProductStmt = db.prepare('SELECT id, name FROM products WHERE sku = ?');
     const addProductStmt = db.prepare('INSERT INTO products (name, category, sku, imageUrl, hasVariants) VALUES (@name, @category, @sku, @imageUrl, @hasVariants)');
     const addVariantStmt = db.prepare('INSERT INTO variants (productId, name, sku, price, stock, costPrice) VALUES (@productId, @name, @sku, @price, @stock, @costPrice)');
@@ -648,7 +648,7 @@ export async function bulkAddProducts(data: any[]): Promise<{ addedProducts: {sk
     return { addedProducts, skippedProducts };
 }
 
-export async function bulkUpdateProducts(data: any[]): Promise<{ updatedSkus: string[], notFoundSkus: string[] }> {
+export async function bulkUpdateProducts(data: any[]): Promise<{ updatedCount: number; notFoundSkus: string[] }> {
     const getProductStmt = db.prepare('SELECT id FROM products WHERE sku = ?');
     const getVariantStmt = db.prepare('SELECT id FROM variants WHERE sku = ?');
     const updateProductStmt = db.prepare('UPDATE products SET name=@name, category=@category, imageUrl=@imageUrl, price=@price, stock=@stock, costPrice=@costPrice WHERE sku = @parent_sku');
@@ -1745,14 +1745,18 @@ export async function archiveProduct(itemId: string, isArchived: boolean) {
 
 export async function deleteProductPermanently(itemId: string) {
     db.transaction(() => {
-        const variantIds = db.prepare('SELECT id FROM variants WHERE productId = ?').all(itemId).map((v: any) => v.id);
+        const variantIds: { id: number }[] = db.prepare('SELECT id FROM variants WHERE productId = ?').all(itemId) as { id: number }[];
 
         if (variantIds.length > 0) {
-            const variantPlaceholders = variantIds.map(() => '?').join(',');
-            db.prepare(`DELETE FROM sales WHERE variantId IN (${variantPlaceholders})`).run(...variantIds);
-            db.prepare(`DELETE FROM history WHERE variantId IN (${variantPlaceholders})`).run(...variantIds);
-            db.prepare(`DELETE FROM channel_prices WHERE variant_id IN (${variantPlaceholders})`).run(...variantIds);
-            db.prepare(`DELETE FROM discounted_products WHERE variantId IN (${variantPlaceholders})`).run(...variantIds);
+            const variantIdList = variantIds.map((v: any) => v.id);
+            const variantPlaceholders = variantIdList.map(() => '?').join(',');
+
+            if (variantIdList.length > 0) {
+                db.prepare(`DELETE FROM sales WHERE variantId IN (${variantPlaceholders})`).run(...variantIdList);
+                db.prepare(`DELETE FROM history WHERE variantId IN (${variantPlaceholders})`).run(...variantIdList);
+                db.prepare(`DELETE FROM channel_prices WHERE variant_id IN (${variantPlaceholders})`).run(...variantIdList);
+                db.prepare(`DELETE FROM discounted_products WHERE variantId IN (${variantPlaceholders})`).run(...variantIdList);
+            }
         }
 
         db.prepare('DELETE FROM sales WHERE productId = ? AND variantId IS NULL').run(itemId);
@@ -1794,6 +1798,7 @@ export async function checkPrintedReceiptAvailability(salesChannel: string, ship
     
 
     
+
 
 
 

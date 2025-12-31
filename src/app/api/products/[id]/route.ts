@@ -33,7 +33,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
         // Handle full product or accessory update
         await editProduct(id, body); // This service function will handle both
         return NextResponse.json({ message: 'Item updated successfully' });
-    } catch (error) {
+    } catch (error: any) {
         console.error(`API Error updating item ${id}:`, error);
         return NextResponse.json({ message: 'Internal Server Error' }, { status: 500 });
     }
@@ -46,7 +46,7 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
     try {
         await deleteProductPermanently(id);
         return NextResponse.json({ message: 'Product deleted permanently' });
-    } catch (error) {
+    } catch (error: any) {
         console.error(`API Error deleting product ${id}:`, error);
         return NextResponse.json({ message: 'Internal Server Error' }, { status: 500 });
     }
