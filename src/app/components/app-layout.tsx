@@ -220,6 +220,14 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                                 </Link>
                               </SidebarMenuItem>
                                <SidebarMenuItem>
+                                  <Link href="/stock-in">
+                                      <SidebarMenuButton variant="ghost" size="sm" isActive={isActive('/stock-in')}>
+                                          <PackagePlus />
+                                          {t.dashboard.stockIn}
+                                      </SidebarMenuButton>
+                                  </Link>
+                              </SidebarMenuItem>
+                               <SidebarMenuItem>
                                   <Link href="/history">
                                       <SidebarMenuButton variant="ghost" size="sm" isActive={isActive('/history')}>
                                           <History />
@@ -326,3 +334,5 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     </div>
   );
 }
+
+    

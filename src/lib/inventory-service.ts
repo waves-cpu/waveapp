@@ -1,5 +1,4 @@
 
-
 'use server';
 
 import { db as dbProxy } from './db';
@@ -866,13 +865,12 @@ export async function adjustStock(itemId: string, change: number, reason: string
 }
 
 export async function bulkAdjustStock(updates: { itemId: string, quantity: number }[], reason: string) {
-    const adjustStmt = db.transaction(() => {
+    const transaction = db.transaction(() => {
         for (const update of updates) {
-            // We pass a negative quantity for stock-out
             adjustStock(update.itemId, update.quantity, reason);
         }
     });
-    adjustStmt();
+    transaction();
 }
 
 
@@ -1813,3 +1811,6 @@ export async function checkPrintedReceiptAvailability(salesChannel: string, ship
 
 
 
+
+
+    
