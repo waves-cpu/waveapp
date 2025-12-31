@@ -7,7 +7,7 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-export function formatToWIB(date: Date | string | number, formatString: string): string {
+export function formatToWIB(date: Date | string | number, formatString: string, p0?: unknown): string {
   if (!date) return '';
   const dateObj = typeof date === 'string' || typeof date === 'number' ? new Date(date) : date;
   
