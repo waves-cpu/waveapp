@@ -998,9 +998,9 @@ export async function performSale(
                     COALESCE(p.name, a.name) as productName,
                     COALESCE(p.category, a.category) as productCategory,
                     p.imageUrl as parentImageUrl,
+                    COALESCE(v.sku, p.sku, a.sku) as sku,
                     COALESCE(p.sku, a.sku) as parentSku,
                     v.name as variantName,
-                    COALESCE(v.sku, p.sku, a.sku) as sku,
                     s.status
                 FROM sales s
                 LEFT JOIN products p ON s.productId = p.id
@@ -1739,7 +1739,26 @@ export async function archiveProduct(itemId: string, isArchived: boolean) {
 }
 
 export async function deleteProductPermanently(itemId: string) {
-    db.prepare('DELETE FROM products WHERE id = ?').run(itemId);
+    db.transaction(() => {
+        const variantIds = db.prepare('SELECT id FROM variants WHERE productId = ?').all(itemId).map((v: any) => v.id);
+
+        if (variantIds.length > 0) {
+            const variantPlaceholders = variantIds.map(() => '?').join(',');
+            db.prepare(`DELETE FROM sales WHERE variantId IN (${variantPlaceholders})`).run(...variantIds);
+            db.prepare(`DELETE FROM history WHERE variantId IN (${variantPlaceholders})`).run(...variantIds);
+            db.prepare(`DELETE FROM channel_prices WHERE variant_id IN (${variantPlaceholders})`).run(...variantIds);
+            db.prepare(`DELETE FROM discounted_products WHERE variantId IN (${variantPlaceholders})`).run(...variantIds);
+        }
+
+        db.prepare('DELETE FROM sales WHERE productId = ? AND variantId IS NULL').run(itemId);
+        db.prepare('DELETE FROM history WHERE productId = ? AND variantId IS NULL').run(itemId);
+        db.prepare('DELETE FROM channel_prices WHERE product_id = ? AND variant_id IS NULL').run(itemId);
+        db.prepare('DELETE FROM discounted_products WHERE productId = ? AND variantId IS NULL').run(itemId);
+        
+        // After cleaning up dependencies, delete the product itself
+        db.prepare('DELETE FROM variants WHERE productId = ?').run(itemId);
+        db.prepare('DELETE FROM products WHERE id = ?').run(itemId);
+    })();
 }
 
 async function updateShippingReceiptStatusByAwb(awb: string, status: string) {
@@ -1770,6 +1789,7 @@ export async function checkPrintedReceiptAvailability(salesChannel: string, ship
     
 
     
+
 
 
 
