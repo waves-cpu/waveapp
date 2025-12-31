@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { FileDown, Truck, PackageCheck, Undo2, Ban, History, Loader2 } from 'lucide-react';
+import { FileDown, Truck, PackageCheck, Undo2, Ban, History, Loader2, BarChart3, List } from 'lucide-react';
 import { useInventory } from '@/hooks/use-inventory';
 import type { ShippingReceipt } from '@/types';
 import { parseISO, startOfMonth, endOfMonth, eachDayOfInterval } from 'date-fns';
@@ -42,15 +42,15 @@ type DailyCount = {
   Total: number;
 };
 
-const STATUS_KEYS = ['Perlu Diproses', 'Siap Kirim', 'Selesai', 'Return Selesai', 'Dibatalkan', 'Return'];
+const STATUS_KEYS: (keyof Omit<DailyCount, 'date' | 'Total'>)[] = ['Perlu Diproses', 'Siap Kirim', 'Selesai', 'Return Selesai', 'Dibatalkan', 'Return'];
 
 const chartConfig = {
-  PerluDiproses: { label: "Perlu Diproses", color: "hsl(var(--chart-1))" },
-  SiapKirim: { label: "Siap Kirim", color: "hsl(var(--chart-2))" },
-  Selesai: { label: "Selesai", color: "hsl(var(--chart-3))" },
-  ReturnSelesai: { label: "Return Selesai", color: "hsl(var(--chart-4))" },
-  Dibatalkan: { label: "Dibatalkan", color: "hsl(var(--chart-5))" },
-  Return: { label: "Return", color: "hsl(var(--destructive))" },
+  'Perlu Diproses': { label: "Perlu Diproses", color: "hsl(var(--chart-1))" },
+  'Siap Kirim': { label: "Siap Kirim", color: "hsl(var(--chart-2))" },
+  'Selesai': { label: "Selesai", color: "hsl(var(--chart-3))" },
+  'Return Selesai': { label: "Return Selesai", color: "hsl(var(--chart-4))" },
+  'Dibatalkan': { label: "Dibatalkan", color: "hsl(var(--chart-5))" },
+  'Return': { label: "Return", color: "hsl(var(--destructive))" },
 } satisfies ChartConfig
 
 
@@ -66,6 +66,7 @@ export default function ReceiptReportPage() {
     const [selectedMonth, setSelectedMonth] = useState<number | undefined>(undefined);
     const [selectedYear, setSelectedYear] = useState<number | undefined>(undefined);
     const [isDownloading, setIsDownloading] = useState(false);
+    const [viewMode, setViewMode] = useState<'chart' | 'table'>('chart');
 
     useEffect(() => {
         const currentDate = new Date();
@@ -105,17 +106,19 @@ export default function ReceiptReportPage() {
             });
             
             const totals: Record<string, number> = {};
-            STATUS_KEYS.forEach(key => totals[key] = 0);
-            totals.Total = 0;
+            [...STATUS_KEYS, 'Total'].forEach(key => totals[key] = 0);
 
             receipts.forEach(receipt => {
                 const dateKey = formatToWIB(parseISO(receipt.date), 'yyyy-MM-dd');
-                if (dailyData[dateKey]) {
-                    dailyData[dateKey][receipt.status as keyof typeof dailyData[string]]++;
-                    dailyData[dateKey].Total++;
-                    
-                    totals[receipt.status]++;
-                    totals.Total++;
+                if (dailyData[dateKey] && receipt.status) {
+                    const statusKey = receipt.status as keyof typeof dailyData[string];
+                    if(statusKey in dailyData[dateKey]) {
+                        dailyData[dateKey][statusKey]++;
+                        dailyData[dateKey].Total++;
+                        
+                        totals[statusKey]++;
+                        totals.Total++;
+                    }
                 }
             });
 
@@ -128,10 +131,11 @@ export default function ReceiptReportPage() {
             setTotalCounts(totals);
 
         } catch (error) {
+             toast({ variant: 'destructive', title: t.fetchError });
         } finally {
             setLoading(false);
         }
-    }, [fetchShippingReceipts, selectedMonth, selectedYear]);
+    }, [fetchShippingReceipts, selectedMonth, selectedYear, toast, t.fetchError]);
 
     useEffect(() => {
         fetchReportData();
@@ -186,8 +190,17 @@ export default function ReceiptReportPage() {
                 description: `File '${fileName}' telah diunduh. Periksa folder unduhan browser Anda.`
             });
             setIsDownloading(false);
-        }, 500); // Small delay to allow UI to update
+        }, 500);
     }, [reportData, totalCounts, selectedMonth, selectedYear, toast]);
+
+    const statusCards = [
+        { key: 'Perlu Diproses', icon: Truck, color: 'text-yellow-600' },
+        { key: 'Siap Kirim', icon: Truck, color: 'text-blue-600' },
+        { key: 'Selesai', icon: PackageCheck, color: 'text-green-600' },
+        { key: 'Return Selesai', icon: History, color: 'text-purple-600' },
+        { key: 'Return', icon: Undo2, color: 'text-orange-600' },
+        { key: 'Dibatalkan', icon: Ban, color: 'text-red-600' },
+    ];
 
     return (
         <AppLayout>
@@ -202,7 +215,7 @@ export default function ReceiptReportPage() {
                      <div className="flex items-center gap-2">
                         {selectedMonth !== undefined && (
                         <Select value={selectedMonth.toString()} onValueChange={(value) => setSelectedMonth(parseInt(value))}>
-                            <SelectTrigger className="w-[150px]">
+                            <SelectTrigger className="w-[150px] h-9">
                                 <SelectValue placeholder={t.selectMonth} />
                             </SelectTrigger>
                             <SelectContent>
@@ -216,7 +229,7 @@ export default function ReceiptReportPage() {
                         )}
                         {selectedYear !== undefined && (
                         <Select value={selectedYear.toString()} onValueChange={(value) => setSelectedYear(parseInt(value))}>
-                            <SelectTrigger className="w-[100px]">
+                            <SelectTrigger className="w-[100px] h-9">
                                 <SelectValue placeholder={t.selectYear} />
                             </SelectTrigger>
                             <SelectContent>
@@ -234,64 +247,87 @@ export default function ReceiptReportPage() {
                         </Button>
                     </div>
                 </div>
-                 <div className="grid gap-6">
-                    <Card>
-                        <CardContent className="pt-6">
-                           <Table>
-                               <TableHeader>
-                                   <TableRow>
-                                       <TableHead className="w-[100px]">{t.table.date}</TableHead>
-                                       <TableHead className="text-center">{t.table.pending}</TableHead>
-                                       <TableHead className="text-center">{t.table.shipped}</TableHead>
-                                       <TableHead className="text-center">{t.table.completed}</TableHead>
-                                       <TableHead className="text-center">{t.table.returnCompleted}</TableHead>
-                                       <TableHead className="text-center">{t.table.cancelled}</TableHead>
-                                       <TableHead className="text-center">{t.table.returned}</TableHead>
-                                       <TableHead className="text-center font-bold">{t.table.total}</TableHead>
-                                   </TableRow>
-                               </TableHeader>
-                                <TableBody>
-                                    {loading ? (
-                                        <TableRow><TableCell colSpan={8} className="h-48 text-center">Memuat data...</TableCell></TableRow>
-                                    ) : reportData.length > 0 ? reportData.map(item => (
-                                        <TableRow key={item.date}>
-                                            <TableCell className="font-medium">{item.date}</TableCell>
-                                            <TableCell className="text-center">{item['Perlu Diproses']}</TableCell>
-                                            <TableCell className="text-center">{item['Siap Kirim']}</TableCell>
-                                            <TableCell className="text-center">{item.Selesai}</TableCell>
-                                            <TableCell className="text-center">{item['Return Selesai']}</TableCell>
-                                            <TableCell className="text-center">{item.Dibatalkan}</TableCell>
-                                            <TableCell className="text-center">{item.Return}</TableCell>
-                                            <TableCell className="text-center font-bold">{item.Total}</TableCell>
-                                        </TableRow>
-                                    )) : (
-                                        <TableRow>
-                                            <TableCell colSpan={8} className="h-48 text-center">
-                                                <div className="flex flex-col items-center justify-center gap-4 text-muted-foreground">
-                                                    <History className="h-16 w-16" />
-                                                    <p className="font-semibold">{t.noDataTitle}</p>
-                                                    <p className="text-sm">{t.noDataDesc}</p>
-                                                </div>
-                                            </TableCell>
-                                        </TableRow>
-                                    )}
-                                </TableBody>
-                                 <TableFooter>
-                                    <TableRow>
-                                        <TableHead className="font-bold">TOTAL</TableHead>
-                                        <TableHead className="text-center font-bold">{totalCounts['Perlu Diproses'] || 0}</TableHead>
-                                        <TableHead className="text-center font-bold">{totalCounts['Siap Kirim'] || 0}</TableHead>
-                                        <TableHead className="text-center font-bold">{totalCounts.Selesai || 0}</TableHead>
-                                        <TableHead className="text-center font-bold">{totalCounts['Return Selesai'] || 0}</TableHead>
-                                        <TableHead className="text-center font-bold">{totalCounts.Dibatalkan || 0}</TableHead>
-                                        <TableHead className="text-center font-bold">{totalCounts.Return || 0}</TableHead>
-                                        <TableHead className="text-center font-extrabold text-lg">{totalCounts.Total || 0}</TableHead>
-                                    </TableRow>
-                                </TableFooter>
-                           </Table>
-                        </CardContent>
-                    </Card>
-                 </div>
+
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                    {statusCards.map(card => {
+                        const Icon = card.icon;
+                        const count = totalCounts[card.key] || 0;
+                        return (
+                            <Card key={card.key}>
+                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                    <CardTitle className="text-sm font-medium">{card.key}</CardTitle>
+                                    <Icon className={`h-4 w-4 ${card.color}`} />
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="text-2xl font-bold">{loading ? <Loader2 className="animate-spin" /> : count}</div>
+                                </CardContent>
+                            </Card>
+                        )
+                    })}
+                </div>
+
+                <Card>
+                    <CardHeader>
+                        <div className="flex justify-between items-center">
+                            <div>
+                                <CardTitle>Grafik Resi Harian</CardTitle>
+                                <CardDescription>Visualisasi jumlah resi per hari berdasarkan status.</CardDescription>
+                            </div>
+                            <div className="flex items-center gap-2 rounded-md bg-muted p-1">
+                                <Button variant={viewMode === 'chart' ? 'secondary' : 'ghost'} size="icon" className="h-7 w-7" onClick={() => setViewMode('chart')}>
+                                    <BarChart3 className="h-4 w-4" />
+                                </Button>
+                                <Button variant={viewMode === 'table' ? 'secondary' : 'ghost'} size="icon" className="h-7 w-7" onClick={() => setViewMode('table')}>
+                                    <List className="h-4 w-4" />
+                                </Button>
+                            </div>
+                        </div>
+                    </CardHeader>
+                    <CardContent>
+                        {loading ? (
+                            <div className="h-[400px] flex items-center justify-center text-muted-foreground">Memuat data grafik...</div>
+                        ) : viewMode === 'chart' ? (
+                            <ChartContainer config={chartConfig} className="h-[400px] w-full">
+                                <BarChart data={reportData} accessibilityLayer>
+                                <CartesianGrid vertical={false} />
+                                <XAxis
+                                    dataKey="date"
+                                    tickLine={false}
+                                    tickMargin={10}
+                                    axisLine={false}
+                                />
+                                <YAxis />
+                                <ChartTooltip content={<ChartTooltipContent />} />
+                                <ChartLegend content={<ChartLegendContent />} />
+                                {STATUS_KEYS.map(key => (
+                                    <Bar key={key} dataKey={key} stackId="a" fill={`var(--color-${key.replace(/ /g, '')})`} radius={0} />
+                                ))}
+                                </BarChart>
+                            </ChartContainer>
+                        ) : (
+                           <div className="max-h-[400px] overflow-auto">
+                               <Table>
+                                   <TableHeader className="sticky top-0 bg-background">
+                                       <TableRow>
+                                           <TableHead className="w-[100px]">{t.table.date}</TableHead>
+                                           {STATUS_KEYS.map(key => <TableHead key={key} className="text-center">{key}</TableHead>)}
+                                           <TableHead className="text-center font-bold">{t.table.total}</TableHead>
+                                       </TableRow>
+                                   </TableHeader>
+                                   <TableBody>
+                                        {reportData.map(item => (
+                                            <TableRow key={item.date}>
+                                                <TableCell className="font-medium">{item.date}</TableCell>
+                                                {STATUS_KEYS.map(key => <TableCell key={key} className="text-center">{item[key]}</TableCell>)}
+                                                <TableCell className="text-center font-bold">{item.Total}</TableCell>
+                                            </TableRow>
+                                        ))}
+                                   </TableBody>
+                               </Table>
+                           </div>
+                        )}
+                    </CardContent>
+                </Card>
             </main>
         </AppLayout>
     )
