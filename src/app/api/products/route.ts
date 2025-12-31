@@ -1,5 +1,5 @@
 
-import { fetchInventoryData, addProduct } from '@/lib/inventory-service';
+import { fetchInventoryData, addProduct, addAccessory } from '@/lib/inventory-service';
 import { NextResponse, NextRequest } from 'next/server';
 
 export async function GET() {
@@ -16,10 +16,18 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
+
+    // Check if the request is for an accessory
+    if (body.type === 'accessory') {
+        const newAccessoryId = await addAccessory(body);
+        return NextResponse.json({ id: newAccessoryId, message: 'Accessory added successfully' }, { status: 201 });
+    }
+
+    // Otherwise, treat as a product
     const newItemId = await addProduct(body);
     return NextResponse.json({ id: newItemId, message: 'Product added successfully' }, { status: 201 });
   } catch (error) {
-    console.error('API Error adding product:', error);
+    console.error('API Error adding item:', error);
     return NextResponse.json({ message: 'Internal Server Error' }, { status: 500 });
   }
 }
