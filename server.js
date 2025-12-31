@@ -4,7 +4,7 @@ const next = require('next');
 const fs = require('fs');
 const path = require('path');
 
-const dev = false; // Always run in production mode
+const dev = false;
 const app = next({ dev });
 const handle = app.getRequestHandler();
 
