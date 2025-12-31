@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { FileDown, Truck, PackageCheck, Undo2, Ban, History, Loader2, BarChart3, List } from 'lucide-react';
+import { FileDown, Truck, PackageCheck, Undo2, Ban, History, Loader2, BarChart3, List, AlertCircle } from 'lucide-react';
 import { useInventory } from '@/hooks/use-inventory';
 import type { ShippingReceipt } from '@/types';
 import { parseISO, startOfMonth, endOfMonth, eachDayOfInterval } from 'date-fns';
@@ -33,24 +33,28 @@ import { formatToWIB } from '@/lib/utils';
 
 type DailyCount = {
   date: string;
-  'Perlu Diproses': number;
+  'Terproses': number;
   'Siap Kirim': number;
-  Selesai: number;
+  'Diantar': number;
+  'Selesai': number;
   'Return Selesai': number;
-  Dibatalkan: number;
-  Return: number;
-  Total: number;
+  'Dibatalkan': number;
+  'Return': number;
+  'Tidak Sampai': number;
+  'Total': number;
 };
 
-const STATUS_KEYS: (keyof Omit<DailyCount, 'date' | 'Total'>)[] = ['Perlu Diproses', 'Siap Kirim', 'Selesai', 'Return Selesai', 'Dibatalkan', 'Return'];
+const STATUS_KEYS: (keyof Omit<DailyCount, 'date' | 'Total'>)[] = ['Terproses', 'Siap Kirim', 'Diantar', 'Selesai', 'Return Selesai', 'Dibatalkan', 'Return', 'Tidak Sampai'];
 
 const chartConfig = {
-  'Perlu Diproses': { label: "Perlu Diproses", color: "hsl(var(--chart-1))" },
+  'Terproses': { label: "Terproses", color: "hsl(var(--chart-1))" },
   'Siap Kirim': { label: "Siap Kirim", color: "hsl(var(--chart-2))" },
-  'Selesai': { label: "Selesai", color: "hsl(var(--chart-3))" },
-  'Return Selesai': { label: "Return Selesai", color: "hsl(var(--chart-4))" },
-  'Dibatalkan': { label: "Dibatalkan", color: "hsl(var(--chart-5))" },
+  'Diantar': { label: "Diantar", color: "hsl(var(--chart-3))"},
+  'Selesai': { label: "Selesai", color: "hsl(var(--chart-4))" },
+  'Return Selesai': { label: "Return Selesai", color: "hsl(var(--chart-5))" },
+  'Dibatalkan': { label: "Dibatalkan", color: "hsl(var(--destructive))" },
   'Return': { label: "Return", color: "hsl(var(--destructive))" },
+  'Tidak Sampai': { label: "Tidak Sampai", color: "hsl(var(--destructive))" },
 } satisfies ChartConfig
 
 
@@ -100,8 +104,8 @@ export default function ReceiptReportPage() {
             daysInMonth.forEach(day => {
                 const dateKey = formatToWIB(day, 'yyyy-MM-dd');
                 dailyData[dateKey] = {
-                    'Perlu Diproses': 0, 'Siap Kirim': 0, 'Selesai': 0, 'Return Selesai': 0,
-                    'Dibatalkan': 0, 'Return': 0, 'Total': 0
+                    'Terproses': 0, 'Siap Kirim': 0, 'Diantar': 0, 'Selesai': 0, 'Return Selesai': 0,
+                    'Dibatalkan': 0, 'Return': 0, 'Tidak Sampai': 0, 'Total': 0
                 };
             });
             
@@ -154,23 +158,27 @@ export default function ReceiptReportPage() {
         setTimeout(() => {
             const dataToExport = reportData.map(item => ({
                 'Tanggal': item.date,
-                'Perlu Diproses': item['Perlu Diproses'],
+                'Terproses': item['Terproses'],
                 'Siap Kirim': item['Siap Kirim'],
+                'Diantar': item.Diantar,
                 'Selesai': item.Selesai,
                 'Return Selesai': item['Return Selesai'],
                 'Dibatalkan': item.Dibatalkan,
                 'Return': item.Return,
+                'Tidak Sampai': item['Tidak Sampai'],
                 'Total': item.Total
             }));
 
             const totalsRow = {
                 'Tanggal': 'TOTAL',
-                'Perlu Diproses': totalCounts['Perlu Diproses'] || 0,
+                'Terproses': totalCounts['Terproses'] || 0,
                 'Siap Kirim': totalCounts['Siap Kirim'] || 0,
+                'Diantar': totalCounts.Diantar || 0,
                 'Selesai': totalCounts.Selesai || 0,
                 'Return Selesai': totalCounts['Return Selesai'] || 0,
                 'Dibatalkan': totalCounts.Dibatalkan || 0,
                 'Return': totalCounts.Return || 0,
+                'Tidak Sampai': totalCounts['Tidak Sampai'] || 0,
                 'Total': totalCounts.Total || 0,
             };
             
@@ -194,12 +202,14 @@ export default function ReceiptReportPage() {
     }, [reportData, totalCounts, selectedMonth, selectedYear, toast]);
 
     const statusCards = [
-        { key: 'Perlu Diproses', icon: Truck, color: 'text-yellow-600' },
+        { key: 'Terproses', icon: Truck, color: 'text-yellow-600' },
         { key: 'Siap Kirim', icon: Truck, color: 'text-blue-600' },
+        { key: 'Diantar', icon: Truck, color: 'text-sky-600' },
         { key: 'Selesai', icon: PackageCheck, color: 'text-green-600' },
         { key: 'Return Selesai', icon: History, color: 'text-purple-600' },
         { key: 'Return', icon: Undo2, color: 'text-orange-600' },
         { key: 'Dibatalkan', icon: Ban, color: 'text-red-600' },
+        { key: 'Tidak Sampai', icon: AlertCircle, color: 'text-red-800' },
     ];
 
     return (
@@ -248,7 +258,7 @@ export default function ReceiptReportPage() {
                     </div>
                 </div>
 
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4">
                     {statusCards.map(card => {
                         const Icon = card.icon;
                         const count = totalCounts[card.key] || 0;
