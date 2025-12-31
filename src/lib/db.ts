@@ -280,9 +280,9 @@ const createSchema = () => {
         cogsAtSale REAL,
         saleDate TEXT NOT NULL,
         status TEXT DEFAULT 'Completed',
-        FOREIGN KEY (productId) REFERENCES products(id),
-        FOREIGN KEY (variantId) REFERENCES variants(id),
-        FOREIGN KEY (accessoryId) REFERENCES accessories(id)
+        FOREIGN KEY (productId) REFERENCES products(id) ON DELETE CASCADE,
+        FOREIGN KEY (variantId) REFERENCES variants(id) ON DELETE CASCADE,
+        FOREIGN KEY (accessoryId) REFERENCES accessories(id) ON DELETE CASCADE
     );
 
      CREATE TABLE IF NOT EXISTS resellers (
