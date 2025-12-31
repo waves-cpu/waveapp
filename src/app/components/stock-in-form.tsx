@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState, useMemo, useEffect, useRef } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -107,7 +107,7 @@ export function TransactionForm({
                     isVariant: true
                 });
             });
-        } else if (item.stock !== undefined) {
+        } else {
              map.set(item.id, { 
                 name: item.name,
                 isVariant: false,
@@ -123,17 +123,22 @@ export function TransactionForm({
   
   const availableItems = useMemo(() => {
     return items.filter(item => {
-      if (item.isArchived) return false;
-      if (item.variants && item.variants.length > 0) {
+        if (item.isArchived) return false;
+
+        // If it's a simple product, check if it's already in the list
+        if (!item.variants || item.variants.length === 0) {
+            return !existingItemIds.has(item.id);
+        }
+
+        // If it has variants, check if at least one variant is not in the list
         return item.variants.some(v => !existingItemIds.has(v.id));
-      }
-      return item.stock !== undefined && !item.isArchived;
     }).map(item => {
-        if (item.variants) {
+        // If the item has variants, filter out the variants that are already in the list
+        if (item.variants && item.variants.length > 0) {
             return {
                 ...item,
                 variants: item.variants.filter(v => !existingItemIds.has(v.id))
-            }
+            };
         }
         return item;
     });
