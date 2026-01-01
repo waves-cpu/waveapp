@@ -144,18 +144,29 @@ export function RecordSaleForReceiptDialog({
     setSearchTerm('');
   }, [cart, toast, playErrorSound, playSuccessSound, receipt]);
   
-  const handleProductSelect = useCallback(async (productOrSku: SearchableItem | string) => {
+ const handleProductSelect = useCallback(async (productOrSku: SearchableItem | string) => {
     let product: InventoryItem | null = null;
+    let skuToSearch: string;
 
     if (typeof productOrSku === 'string') {
-        product = await findProductBySku(productOrSku);
+        skuToSearch = productOrSku;
     } else {
-        product = productOrSku as InventoryItem;
+        // If it's an object with SKU, that's our primary identifier
+        skuToSearch = productOrSku.sku || productOrSku.name;
+    }
+    
+    product = await findProductBySku(skuToSearch);
+    
+    if (!product) {
+        // If search by SKU fails, maybe it was a name search from PosSearch suggestion
+        if (typeof productOrSku !== 'string') {
+           product = inventoryItems.find(i => i.id === productOrSku.id) || null;
+        }
     }
     
     if (!product) {
         playErrorSound();
-        toast({ variant: 'destructive', title: 'Produk Tidak Ditemukan' });
+        toast({ variant: 'destructive', title: 'Produk Tidak Ditemukan', description: `Tidak ada produk yang cocok dengan '${skuToSearch}'` });
         return;
     }
 
@@ -167,7 +178,7 @@ export function RecordSaleForReceiptDialog({
         addToCart(product);
     }
     setSearchTerm('');
-  }, [findProductBySku, addToCart, playErrorSound, toast]);
+}, [findProductBySku, addToCart, playErrorSound, toast, inventoryItems]);
 
 
   const handleVariantSelect = (variant: InventoryItemVariant | null) => {
@@ -208,7 +219,7 @@ export function RecordSaleForReceiptDialog({
     setCart(currentCart => currentCart.filter(item => item.sku !== sku));
   };
 
-  const handleFinalizeSale = async () => {
+  const handleFinalizeSale = useCallback(async () => {
     if (!receipt || cart.length === 0) return;
     setIsSubmitting(true);
     
@@ -231,17 +242,19 @@ export function RecordSaleForReceiptDialog({
     } finally {
       setIsSubmitting(false);
     }
-  };
+  }, [receipt, cart, onSaleComplete]);
 
   // Keyboard shortcut to finalize sale
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Enter' && open && cart.length > 0) {
-        const activeElement = document.activeElement;
-        // Check if the focus is not on an input or button within the dialog
-        if (activeElement && (activeElement.tagName.toLowerCase() !== 'input' && activeElement.tagName.toLowerCase() !== 'button')) {
-          event.preventDefault();
-          handleFinalizeSale();
+        const activeElement = document.activeElement as HTMLElement;
+        const isSearchInput = activeElement?.matches('input[type="text"]') && (activeElement as HTMLInputElement).value === '';
+        const isNotInInput = activeElement && activeElement.tagName.toLowerCase() !== 'input' && activeElement.tagName.toLowerCase() !== 'button';
+
+        if (isSearchInput || isNotInInput) {
+            event.preventDefault();
+            handleFinalizeSale();
         }
       }
     };
@@ -256,7 +269,7 @@ export function RecordSaleForReceiptDialog({
             dialogElement.removeEventListener('keydown', handleKeyDown as any);
         }
     };
-  }, [open, cart.length, handleFinalizeSale]);
+  }, [open, cart, handleFinalizeSale]);
 
   return (
     <>
@@ -366,3 +379,5 @@ export function RecordSaleForReceiptDialog({
     </>
   );
 }
+
+    
