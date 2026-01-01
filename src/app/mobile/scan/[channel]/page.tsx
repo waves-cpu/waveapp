@@ -28,7 +28,7 @@ export default function MobileScanShipmentPage() {
     const { playSuccessSound, playErrorSound, initializeAudio } = useScanSounds();
     const router = useRouter();
     const params = useParams();
-    const channel = typeof params.channel === 'string' ? params.channel.toUpperCase() : '';
+    const channel = typeof params.channel === 'string' ? decodeURIComponent(params.channel).toUpperCase() : '';
 
 
     const [awb, setAwb] = useState('');

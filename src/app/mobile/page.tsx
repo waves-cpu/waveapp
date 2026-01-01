@@ -77,7 +77,7 @@ export default function MobileHubPage() {
                     {shippingProviders.map(provider => {
                         const count = pendingCounts[provider.name.toUpperCase()] || 0;
                         return (
-                            <Link href={`/mobile/scan/${provider.name.toLowerCase()}`} key={provider.name}>
+                            <Link href={`/mobile/scan/${encodeURIComponent(provider.name.toLowerCase())}`} key={provider.name}>
                                 <Card className="hover:bg-accent hover:border-primary transition-colors aspect-square flex flex-col items-center justify-center">
                                     <CardHeader className="flex flex-col items-center justify-center text-center gap-2 p-4">
                                         <provider.icon className="w-12 h-12 text-muted-foreground" />
