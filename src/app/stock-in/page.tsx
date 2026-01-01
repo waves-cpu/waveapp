@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -7,7 +8,7 @@ import { useLanguage } from '@/hooks/use-language';
 import { translations } from '@/types/language';
 import { TransactionForm, type TransactionSubmitData } from '@/app/components/stock-in-form';
 import { Button } from '@/components/ui/button';
-import { ListChecks } from 'lucide-react';
+import { ListChecks, PlusCircle } from 'lucide-react';
 import { ConfirmTransactionDialog } from '../components/confirm-stock-in-dialog';
 import { useInventory } from '@/hooks/use-inventory';
 import { useToast } from '@/hooks/use-toast';
@@ -21,6 +22,7 @@ export default function StockInPage() {
     const router = useRouter();
 
     const [isBulkQuantityOpen, setBulkQuantityOpen] = useState(false);
+    const [isProductSelectionOpen, setProductSelectionOpen] = useState(false);
     const [bulkSelectedIds, setBulkSelectedIds] = useState<Set<string>>(new Set());
     
     const [isConfirmOpen, setConfirmOpen] = useState(false);
@@ -84,20 +86,28 @@ export default function StockInPage() {
                             {TStockIn.title}
                         </h1>
                     </div>
-                     <Button 
-                        variant="outline" 
-                        size="sm" 
-                        onClick={() => setBulkQuantityOpen(true)} 
-                        disabled={bulkSelectedIds.size === 0}
-                    >
-                        <ListChecks className="mr-2 h-4 w-4" />
-                        {TStockIn.bulkAdd} ({bulkSelectedIds.size})
-                    </Button>
+                     <div className="flex items-center gap-2">
+                        <Button variant="outline" size="sm" onClick={() => setProductSelectionOpen(true)}>
+                            <PlusCircle className="mr-2 h-4 w-4" />
+                            {TStockIn.selectProducts}
+                        </Button>
+                        <Button 
+                            variant="outline" 
+                            size="sm" 
+                            onClick={() => setBulkQuantityOpen(true)} 
+                            disabled={bulkSelectedIds.size === 0}
+                        >
+                            <ListChecks className="mr-2 h-4 w-4" />
+                            {TStockIn.bulkAdd} ({bulkSelectedIds.size})
+                        </Button>
+                    </div>
                 </div>
                  <TransactionForm
                     transactionType="in"
                     isBulkQuantityOpen={isBulkQuantityOpen}
                     setBulkQuantityOpen={setBulkQuantityOpen}
+                    isProductSelectionOpen={isProductSelectionOpen}
+                    setProductSelectionOpen={setProductSelectionOpen}
                     bulkSelectedIds={bulkSelectedIds}
                     setBulkSelectedIds={setBulkSelectedIds}
                     onFinalSubmit={handleFormSubmit}

@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useMemo, useEffect, useRef } from 'react';
@@ -53,12 +54,13 @@ export function ProductSelectionDialog({
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(ITEMS_PER_PAGE);
+  const scrollViewportRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
       if(open) {
         setSelectedIds(new Set(initialSelectedIds));
         setSearchTerm('');
-        // Category filter is now controlled by parent
+        setCategoryFilter(null);
         setCurrentPage(1);
         setItemsPerPage(ITEMS_PER_PAGE);
       }
@@ -66,13 +68,14 @@ export function ProductSelectionDialog({
 
   const filteredItems = useMemo(() => {
     return availableItems
-      // The parent component now handles category filtering.
+      .filter(item => !initialSelectedIds.has(item.id) && (!item.variants || item.variants.every(v => !initialSelectedIds.has(v.id))))
+      .filter((item) => (categoryFilter ? item.category === categoryFilter : true))
       .filter((item) =>
         item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         item.sku?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         item.variants?.some(v => v.name.toLowerCase().includes(searchTerm.toLowerCase()) || v.sku?.toLowerCase().includes(searchTerm.toLowerCase()))
       );
-  }, [availableItems, searchTerm]);
+  }, [availableItems, categoryFilter, searchTerm, initialSelectedIds]);
 
   const totalPages = Math.ceil(filteredItems.length / itemsPerPage);
 
@@ -80,11 +83,9 @@ export function ProductSelectionDialog({
     const startIndex = (currentPage - 1) * itemsPerPage;
     const paginated = filteredItems.slice(startIndex, startIndex + itemsPerPage);
     const selectableIds = paginated.flatMap(item => {
-        // This now correctly includes simple products
         if (item.variants && item.variants.length > 0) {
             return item.variants.map(v => v.id);
         }
-        // If it's a simple product (has stock property), its own ID is selectable
         if (item.stock !== undefined) {
             return [item.id];
         }
@@ -105,7 +106,6 @@ export function ProductSelectionDialog({
 
   const handleSelectRow = (item: InventoryItem, checked: boolean) => {
     const newSelectedIds = new Set(selectedIds);
-    // Correctly get IDs for both variants and simple products
     const idsToToggle = (item.variants && item.variants.length > 0)
         ? item.variants.map(v => v.id)
         : (item.stock !== undefined ? [item.id] : []);
@@ -160,10 +160,22 @@ export function ProductSelectionDialog({
                 className="pl-10 w-full"
                 />
             </div>
-            {/* The parent component now handles category filtering. This control is no longer needed here. */}
+             <Select onValueChange={(value) => setCategoryFilter(value === 'all' ? null : value)} defaultValue="all">
+                <SelectTrigger className="w-full md:w-[220px]">
+                <SelectValue placeholder={t.productSelectionDialog.categoryPlaceholder} />
+                </SelectTrigger>
+                <SelectContent>
+                <SelectItem value="all">{t.inventoryTable.allCategories}</SelectItem>
+                {categories.map((category) => (
+                    <SelectItem key={category} value={category}>
+                    {category}
+                    </SelectItem>
+                ))}
+                </SelectContent>
+            </Select>
         </div>
         <div className="flex-grow flex flex-col overflow-hidden border rounded-md">
-           <ScrollArea className="h-full">
+           <ScrollArea className="h-full" viewportRef={scrollViewportRef}>
             <Table>
                 <TableHeader className="sticky top-0 bg-card z-10">
                 <TableRow>
@@ -284,6 +296,7 @@ export function ProductSelectionDialog({
                     totalPages={totalPages}
                     currentPage={currentPage}
                     onPageChange={setCurrentPage}
+                    scrollContainerRef={scrollViewportRef}
                 />
                  <Select
                     value={`${itemsPerPage}`}

@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useMemo, useCallback } from 'react';
@@ -18,15 +19,13 @@ import { useLanguage } from '@/hooks/use-language';
 import { translations } from '@/types/language';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Trash2, ShoppingBag, Store, Search } from 'lucide-react';
+import { Trash2, ShoppingBag, Store } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import type { InventoryItem, InventoryItemVariant, SearchableItem } from '@/types';
+import type { InventoryItem, InventoryItemVariant } from '@/types';
 import Image from 'next/image';
 import { BulkStockInDialog } from '@/app/components/bulk-stock-in-dialog';
 import { Checkbox } from '@/components/ui/checkbox';
-import { useDebounce } from '@/hooks/use-debounce';
-import { PosSearch } from './pos-search';
-import { VariantSelectionDialog } from './variant-selection-dialog';
+import { ProductSelectionDialog } from './product-selection-dialog';
 
 const transactionItemSchema = z.object({
     itemId: z.string(),
@@ -53,6 +52,8 @@ interface TransactionFormProps {
     transactionType: 'in' | 'out';
     isBulkQuantityOpen: boolean;
     setBulkQuantityOpen: (open: boolean) => void;
+    isProductSelectionOpen: boolean;
+    setProductSelectionOpen: (open: boolean) => void;
     bulkSelectedIds: Set<string>;
     setBulkSelectedIds: React.Dispatch<React.SetStateAction<Set<string>>>;
     onFinalSubmit: (data: TransactionSubmitData) => void;
@@ -62,6 +63,8 @@ export function TransactionForm({
     transactionType,
     isBulkQuantityOpen,
     setBulkQuantityOpen,
+    isProductSelectionOpen,
+    setProductSelectionOpen,
     bulkSelectedIds,
     setBulkSelectedIds,
     onFinalSubmit,
@@ -69,13 +72,9 @@ export function TransactionForm({
   const { language } = useLanguage();
   const t = translations[language];
   const TStockForm = transactionType === 'in' ? t.stockInForm : t.stockOutForm;
-  const { items } = useInventory();
+  const { items, categories } = useInventory();
   const router = useRouter();
 
-  const [searchTerm, setSearchTerm] = useState('');
-  const debouncedSearchTerm = useDebounce(searchTerm, 300);
-  const [productForVariantSelection, setProductForVariantSelection] = useState<InventoryItem | null>(null);
-  
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -91,65 +90,48 @@ export function TransactionForm({
   
   const existingItemIds = useMemo(() => new Set(fields.map(field => field.itemId)), [fields.length]);
 
-  const searchSuggestions = useMemo((): SearchableItem[] => {
-    if (debouncedSearchTerm.length < 2) return [];
-    const lowercasedTerm = debouncedSearchTerm.toLowerCase();
-    
-    return items
-        .filter(item => !item.isArchived)
-        .filter(item => {
-            const nameMatch = item.name.toLowerCase().includes(lowercasedTerm);
-            const skuMatch = item.sku && item.sku.toLowerCase().includes(lowercasedTerm);
-            const variantMatch = item.variants?.some(v => 
-                v.name.toLowerCase().includes(lowercasedTerm) || 
-                (v.sku && v.sku.toLowerCase().includes(lowercasedTerm))
-            );
-            return nameMatch || skuMatch || variantMatch;
-        })
-        .map(item => ({...item, itemType: 'product'} as SearchableItem))
-        .slice(0, 10);
-  }, [debouncedSearchTerm, items]);
+  const handleSelectItems = (selectedItemIds: string[]) => {
+    const itemsToAdd: TransactionItem[] = [];
+    selectedItemIds.forEach(selectedId => {
+      if (existingItemIds.has(selectedId)) return;
 
-
-  const handleAddItem = useCallback((itemToAdd: InventoryItem, variant?: InventoryItemVariant) => {
-    const targetItem = variant || itemToAdd;
-    const existingIndex = fields.findIndex(field => field.itemId === targetItem.id);
-
-    if (existingIndex !== -1) {
-        const currentQty = fields[existingIndex].quantity;
-        update(existingIndex, { ...fields[existingIndex], quantity: currentQty + 1 });
-    } else {
-        append({
-            itemId: targetItem.id,
-            itemName: itemToAdd.name,
+      for (const product of items) {
+        if (product.variants && product.variants.length > 0) {
+          const variant = product.variants.find(v => v.id === selectedId);
+          if (variant) {
+            itemsToAdd.push({
+              itemId: variant.id,
+              itemName: product.name,
+              quantity: 1,
+              parentName: product.name,
+              parentSku: product.sku,
+              parentImageUrl: product.imageUrl,
+              variantName: variant.name,
+              variantSku: variant.sku,
+              isVariant: true,
+            });
+            break; 
+          }
+        } else if (product.id === selectedId) {
+          itemsToAdd.push({
+            itemId: product.id,
+            itemName: product.name,
             quantity: 1,
-            parentName: itemToAdd.name,
-            parentSku: itemToAdd.sku,
-            parentImageUrl: itemToAdd.imageUrl,
-            variantName: variant?.name,
-            variantSku: variant?.sku,
-            isVariant: !!variant,
-        });
-    }
-    setSearchTerm('');
-  }, [append, fields, update]);
+            parentName: product.name,
+            parentSku: product.sku,
+            parentImageUrl: product.imageUrl,
+            variantName: undefined,
+            variantSku: undefined,
+            isVariant: false,
+          });
+          break;
+        }
+      }
+    });
 
-  const handleProductSelect = useCallback((selectedItem: SearchableItem) => {
-    const product = selectedItem as InventoryItem;
-    if (product.variants && product.variants.length > 1) {
-        setProductForVariantSelection(product);
-    } else if (product.variants && product.variants.length === 1) {
-        handleAddItem(product, product.variants[0]);
-    } else {
-        handleAddItem(product);
+    if(itemsToAdd.length > 0) {
+        append(itemsToAdd);
     }
-  }, [handleAddItem]);
-
-  const handleVariantSelect = (variant: InventoryItemVariant | null) => {
-    if (variant && productForVariantSelection) {
-        handleAddItem(productForVariantSelection, variant);
-    }
-    setProductForVariantSelection(null);
   };
   
   const applyMasterQuantity = (parentName: string) => {
@@ -238,12 +220,6 @@ export function TransactionForm({
     <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)}>
             <div className="space-y-4">
-                <PosSearch
-                    onProductSelect={handleProductSelect}
-                    searchTerm={searchTerm}
-                    setSearchTerm={setSearchTerm}
-                    suggestions={searchSuggestions}
-                />
                 <Card>
                     <CardContent className="p-0">
                         <div className="border rounded-md">
@@ -271,7 +247,7 @@ export function TransactionForm({
                                                     <ShoppingBag className="h-16 w-16" />
                                                     <div className="text-center">
                                                         <p className="font-semibold">{TStockForm.noProducts}</p>
-                                                        <p className="text-sm">Cari produk di atas untuk memulai.</p>
+                                                        <p className="text-sm">Klik "Pilih Produk" untuk memulai.</p>
                                                     </div>
                                                 </div>
                                             </TableCell>
@@ -383,19 +359,16 @@ export function TransactionForm({
         onOpenChange={setBulkQuantityOpen}
         onApply={(quantity) => handleBulkApply(quantity)}
     />
-     {productForVariantSelection && (
-        <VariantSelectionDialog
-            open={!!productForVariantSelection}
-            onOpenChange={(isOpen) => {
-                if (!isOpen) {
-                    setProductForVariantSelection(null);
-                }
-            }}
-            item={productForVariantSelection}
-            onSelect={handleVariantSelect}
-            cart={[]}
-        />
-    )}
+     <ProductSelectionDialog 
+        open={isProductSelectionOpen}
+        onOpenChange={setProductSelectionOpen}
+        onSelect={handleSelectItems}
+        availableItems={items}
+        categories={categories}
+        initialSelectedIds={existingItemIds}
+        title={TStockForm.selectProducts}
+        description={TStockForm.description}
+    />
     </>
   );
 }
