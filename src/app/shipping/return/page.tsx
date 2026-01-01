@@ -221,7 +221,9 @@ export default function ReturnPage() {
 
     const years = useMemo(() => {
         const currentYear = new Date().getFullYear();
-        return Array.from({ length: 6 }, (_, i) => currentYear - i);
+        return Array.from({ length: 5 }, (_, i) => currentYear + i).concat(
+             Array.from({ length: 6 }, (_, i) => currentYear - i)
+        ).filter((v, i, a) => a.indexOf(v) === i).sort((a,b) => b-a);
     }, []);
 
     const allReturnsForMonth = useMemo(() => {
@@ -384,7 +386,7 @@ export default function ReturnPage() {
                             <SelectContent>
                                 {Array.from({ length: 12 }).map((_, i) => (
                                     <SelectItem key={i} value={i.toString()}>
-                                        {formatToWIB(new Date(0, i), 'MMMM', { locale: localeId })}
+                                        {formatToWIB(new Date(2000, i), 'MMMM', { locale: localeId })}
                                     </SelectItem>
                                 ))}
                             </SelectContent>

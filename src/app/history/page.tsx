@@ -88,11 +88,12 @@ export default function HistoryPage() {
     if (selectedMonth === undefined || selectedYear === undefined) return [];
     if (loading) return [];
 
-    const historyList: HistoryEntry[] = [];
     // Correctly create a date in the local timezone for the start of the month
     const dateForMonth = new Date(selectedYear, selectedMonth, 1);
     const startDate = startOfMonth(dateForMonth);
     const endDate = endOfMonth(dateForMonth);
+    
+    const historyList: HistoryEntry[] = [];
 
     // Process Adjustments for the selected month
     items.forEach(item => {
@@ -175,7 +176,11 @@ export default function HistoryPage() {
   }, [items, allSales, selectedMonth, selectedYear, loading]);
 
   const years = useMemo(() => {
-    return [2028, 2027, 2026, 2025, 2024];
+    const currentYear = new Date().getFullYear();
+    // Show current year and next 4 years
+    return Array.from({ length: 5 }, (_, i) => currentYear + i).concat(
+         Array.from({ length: 6 }, (_, i) => currentYear - i)
+    ).filter((v, i, a) => a.indexOf(v) === i).sort((a,b) => b-a);
   }, []);
 
 
@@ -381,7 +386,7 @@ export default function HistoryPage() {
                             <SelectContent>
                                 {Array.from({ length: 12 }).map((_, i) => (
                                     <SelectItem key={i} value={i.toString()}>
-                                        {formatToWIB(new Date(0, i), 'MMMM', { locale: localeId })}
+                                        {formatToWIB(new Date(2000, i), 'MMMM', { locale: localeId })}
                                     </SelectItem>
                                 ))}
                             </SelectContent>
