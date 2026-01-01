@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "next dev --turbopack -p 1999 -H 0.0.0.0",
     "build": "next build",
-    "start": "next build && next start -p 1999 -H 0.0.0.0 --experimental-https",
+    "start": "next build && next start -p 1999 -H 0.0.0.0 ",
     "lint": "next lint",
     "typecheck": "tsc --noEmit"
   },

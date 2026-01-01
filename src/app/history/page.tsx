@@ -86,7 +86,7 @@ export default function HistoryPage() {
   useEffect(() => {
     const currentDate = new Date();
     setSelectedMonth(currentDate.getMonth());
-    setSelectedYear(currentDate.getFullYear());
+    setSelectedYear(2025);
   }, []);
 
 
@@ -180,11 +180,8 @@ export default function HistoryPage() {
   }, [items, allSales, selectedMonth, selectedYear, loading]);
 
   const years = useMemo(() => {
-    const allYears = new Set(allSales.map(s => parseISO(s.saleDate).getFullYear()));
-    const currentYear = new Date().getFullYear();
-    allYears.add(currentYear);
-    return Array.from(allYears).sort((a, b) => b - a);
-  }, [allSales]);
+    return [2028, 2027, 2026, 2025];
+  }, []);
 
 
   const baseFilteredHistory = useMemo(() => {
@@ -591,7 +588,4 @@ export default function HistoryPage() {
     </AppLayout>
   );
 }
-
-
-
 
