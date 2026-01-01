@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
@@ -224,9 +225,10 @@ export default function ReturnPage() {
     }, []);
 
     const allReturnsForMonth = useMemo(() => {
-        const date = new Date(selectedYear, selectedMonth);
-        const firstDay = startOfMonth(date);
-        const lastDay = endOfMonth(date);
+        // Correctly create a date in the local timezone for the start of the month
+        const dateForMonth = new Date(selectedYear, selectedMonth, 1);
+        const firstDay = startOfMonth(dateForMonth);
+        const lastDay = endOfMonth(dateForMonth);
 
         return allShippingReceipts.filter(receipt => {
             const receiptDate = parseISO(receipt.date);
@@ -546,9 +548,3 @@ export default function ReturnPage() {
         </AppLayout>
     );
 }
-
-    
-
-    
-
-    

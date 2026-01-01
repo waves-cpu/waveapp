@@ -65,16 +65,10 @@ export default function ReceiptReportPage() {
     const { toast } = useToast();
     const t = translations[language].shipping.reportPage;
     
-    const [selectedMonth, setSelectedMonth] = useState<number | undefined>(undefined);
-    const [selectedYear, setSelectedYear] = useState<number | undefined>(undefined);
+    const [selectedMonth, setSelectedMonth] = useState<number>(new Date().getMonth());
+    const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
     const [isDownloading, setIsDownloading] = useState(false);
     const [viewMode, setViewMode] = useState<'chart' | 'table'>('chart');
-
-    useEffect(() => {
-        const currentDate = new Date();
-        setSelectedMonth(currentDate.getMonth());
-        setSelectedYear(currentDate.getFullYear());
-    }, []);
 
     const years = useMemo(() => {
         const currentYear = new Date().getFullYear();
@@ -86,9 +80,10 @@ export default function ReceiptReportPage() {
         if (selectedMonth === undefined || selectedYear === undefined) return;
         setLoading(true);
         try {
-            const date = new Date(selectedYear, selectedMonth);
-            const firstDay = startOfMonth(date);
-            const lastDay = endOfMonth(date);
+            // Correctly create a date in the local timezone for the start of the month
+            const dateForMonth = new Date(selectedYear, selectedMonth, 1);
+            const firstDay = startOfMonth(dateForMonth);
+            const lastDay = endOfMonth(dateForMonth);
 
             const { receipts } = await fetchShippingReceipts({
                 page: 1,

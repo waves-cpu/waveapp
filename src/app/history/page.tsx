@@ -74,20 +74,14 @@ export default function HistoryPage() {
   
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
-  const [selectedMonth, setSelectedMonth] = useState<number | undefined>(undefined);
-  const [selectedYear, setSelectedYear] = useState<number | undefined>(undefined);
+  const [selectedMonth, setSelectedMonth] = useState<number>(new Date().getMonth());
+  const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
   const [adjustmentTypeFilter, setAdjustmentTypeFilter] = useState<'all' | 'in' | 'out'>('all');
   const [selectedSales, setSelectedSales] = useState<Sale[]>([]);
   const [isSalesDetailOpen, setSalesDetailOpen] = useState(false);
   const [itemsPerPage, setItemsPerPage] = useState(20);
   const [currentPage, setCurrentPage] = useState(1);
   const [isExporting, setIsExporting] = useState(false);
-  
-  useEffect(() => {
-    const currentDate = new Date();
-    setSelectedMonth(currentDate.getMonth());
-    setSelectedYear(2025);
-  }, []);
 
 
   const allHistoryForMonth = useMemo((): HistoryEntry[] => {
@@ -95,9 +89,10 @@ export default function HistoryPage() {
     if (loading) return [];
 
     const historyList: HistoryEntry[] = [];
-    const dateFilter = new Date(selectedYear, selectedMonth);
-    const startDate = startOfMonth(dateFilter);
-    const endDate = endOfMonth(dateFilter);
+    // Correctly create a date in the local timezone for the start of the month
+    const dateForMonth = new Date(selectedYear, selectedMonth, 1);
+    const startDate = startOfMonth(dateForMonth);
+    const endDate = endOfMonth(dateForMonth);
 
     // Process Adjustments for the selected month
     items.forEach(item => {
@@ -180,7 +175,7 @@ export default function HistoryPage() {
   }, [items, allSales, selectedMonth, selectedYear, loading]);
 
   const years = useMemo(() => {
-    return [2028, 2027, 2026, 2025];
+    return [2028, 2027, 2026, 2025, 2024];
   }, []);
 
 
@@ -588,4 +583,5 @@ export default function HistoryPage() {
     </AppLayout>
   );
 }
+
 

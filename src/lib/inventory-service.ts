@@ -139,13 +139,14 @@ export async function fetchShippingReceipts(options: {
         params.channel = channel;
     }
     if (dateString) {
-        whereClauses.push("date(date) = @dateString");
+        whereClauses.push("strftime('%Y-%m-%d', date) = @dateString");
         params.dateString = dateString;
     }
     if (date_range) {
-        whereClauses.push("date(date) BETWEEN @startDate AND @endDate");
-        params.startDate = formatDate(date_range.from, 'yyyy-MM-dd');
-        params.endDate = formatDate(date_range.to, 'yyyy-MM-dd');
+        // Use full datetime for more accurate range filtering across timezones
+        whereClauses.push("date BETWEEN @startDate AND @endDate");
+        params.startDate = date_range.from.toISOString();
+        params.endDate = date_range.to.toISOString();
     }
     
 
@@ -222,7 +223,7 @@ export async function fetchShippingReceiptCounts(filters: {
         const where: string[] = [];
         const params: any[] = [];
         
-        if (dateString) { where.push(`date(date) = ?`); params.push(dateString); }
+        if (dateString) { where.push(`strftime('%Y-%m-%d', date) = ?`); params.push(dateString); }
         if (salesChannel) { where.push('salesChannel = ?'); params.push(salesChannel); }
         if (shippingChannel) { where.push('channel = ?'); params.push(shippingChannel); }
         
@@ -273,7 +274,7 @@ export async function fetchShippingReceiptCounts(filters: {
         const params: any[] = [];
         
         if (dateString) { 
-            where.push(`date(date) = ?`); 
+            where.push(`strftime('%Y-%m-%d', date) = ?`); 
             params.push(dateString); 
         }
         
@@ -1405,7 +1406,7 @@ export async function returnSaleTransaction(transactionId: string, items?: Retur
 export async function clearPosTransactions(date: Date) {
     const dateString = formatDate(date, 'yyyy-MM-dd');
     
-    const getSalesStmt = db.prepare("SELECT * FROM sales WHERE channel = 'pos' AND date(saleDate) = ?");
+    const getSalesStmt = db.prepare("SELECT * FROM sales WHERE channel = 'pos' AND strftime('%Y-%m-%d', saleDate) = ?");
     const sales = getSalesStmt.all(dateString) as Sale[];
 
     if (!sales || sales.length === 0) {
@@ -1815,4 +1816,5 @@ export async function checkPrintedReceiptAvailability(salesChannel: string, ship
 
 
     
+
 
