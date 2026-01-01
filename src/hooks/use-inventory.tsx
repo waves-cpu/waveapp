@@ -58,6 +58,7 @@ interface InventoryContextType {
   returnSaleTransaction: (transactionId: string, items?: ReturnedItem[]) => Promise<void>;
   revertSaleItem: (transactionId: string, sku: string) => Promise<void>;
   getProductBySku: (sku: string) => Promise<InventoryItem | null>;
+  findProductBySku: (sku: string) => Promise<InventoryItem | null>;
   allSales: Sale[];
   resellers: Reseller[];
   addReseller: (name: string, phone?: string, address?: string) => Promise<void>;
@@ -260,6 +261,39 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
   const getProductBySku = async (sku: string) => {
     return await apiFetch(`/api/products?sku=${sku}`);
   };
+  
+  const findProductBySku = useCallback(async (sku: string): Promise<InventoryItem | null> => {
+    const lowerSku = sku.toLowerCase();
+
+    // First check variants, as they are more specific
+    for (const item of items) {
+        if (item.variants && item.variants.length > 0) {
+            for (const variant of item.variants) {
+                if (variant.sku && variant.sku.toLowerCase() === lowerSku) {
+                    // Found a variant, return the parent item with only this variant
+                    return {
+                        ...item,
+                        variants: [{...variant, parentName: item.name}]
+                    };
+                }
+            }
+        }
+    }
+
+    // If not found in variants, check parent products (or simple products)
+    const product = items.find(item => item.sku && item.sku.toLowerCase() === lowerSku);
+    if (product) {
+        return product;
+    }
+    
+    // If still not found, check by name
+     const productByName = items.find(item => item.name.toLowerCase() === lowerSku);
+     if(productByName) return productByName;
+
+
+    return null;
+}, [items]);
+
 
   const archiveProduct = async (itemId: string, isArchived: boolean) => {
     await apiFetch(`/api/products/${itemId}`, { method: 'PUT', body: JSON.stringify({ isArchived }) });
@@ -416,6 +450,7 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
         returnSaleTransaction,
         revertSaleItem,
         getProductBySku,
+        findProductBySku,
         allSales,
         resellers,
         addReseller,
@@ -466,4 +501,3 @@ export const useInventory = () => {
   }
   return context;
 };
-

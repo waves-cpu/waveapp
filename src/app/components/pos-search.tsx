@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useRef, useEffect, useCallback, forwardRef } from 'react';
@@ -18,21 +19,25 @@ import type { SearchableItem } from '@/types';
 
 interface PosSearchProps {
   onProductSelect: (item: SearchableItem) => void;
+  onSkuSubmit?: (sku: string) => void;
   searchTerm: string;
   setSearchTerm: (term: string) => void;
   suggestions: SearchableItem[];
 }
 
 export const PosSearch = forwardRef<HTMLInputElement, PosSearchProps>(
-    ({ onProductSelect, searchTerm, setSearchTerm, suggestions }, ref) => {
+    ({ onProductSelect, onSkuSubmit, searchTerm, setSearchTerm, suggestions }, ref) => {
     const { language } = useLanguage();
     const t = translations[language];
     const [isPopoverOpen, setIsPopoverOpen] = useState(false);
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        // If there's only one suggestion, select it. Otherwise, let user choose.
-        if (suggestions.length === 1) {
+        
+        if (onSkuSubmit) {
+            onSkuSubmit(searchTerm);
+        }
+        else if (suggestions.length === 1) {
             onProductSelect(suggestions[0]);
             setSearchTerm('');
             setIsPopoverOpen(false);

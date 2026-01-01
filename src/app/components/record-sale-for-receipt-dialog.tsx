@@ -62,7 +62,7 @@ export function RecordSaleForReceiptDialog({
   onSaleComplete,
   receipt,
 }: RecordSaleForReceiptDialogProps) {
-  const { items: inventoryItems, recordSale, recordSaleWithReceipt } = useInventory();
+  const { items: inventoryItems, findProductBySku } = useInventory();
   const [cart, setCart] = useState<CartItem[]>([]);
   const { toast } = useToast();
   const { playSuccessSound, playErrorSound } = useScanSounds();
@@ -142,9 +142,29 @@ export function RecordSaleForReceiptDialog({
     });
     setSearchTerm('');
   }, [cart, toast, playErrorSound, playSuccessSound, receipt]);
+  
+  const handleProductSelect = useCallback(async (productOrSku: InventoryItem | string) => {
+    let product: InventoryItem | null = null;
+    let preselectedVariant: InventoryItemVariant | undefined = undefined;
 
-  const handleProductSelect = useCallback((product: InventoryItem) => {
-    if (product.variants && product.variants.length > 1) {
+    if (typeof productOrSku === 'string') {
+        product = await findProductBySku(productOrSku);
+        if (product && product.variants && product.variants.length === 1 && !product.name.toLowerCase().includes(productOrSku.toLowerCase())) {
+            preselectedVariant = product.variants[0];
+        }
+    } else {
+        product = productOrSku;
+    }
+    
+    if (!product) {
+        playErrorSound();
+        toast({ variant: 'destructive', title: 'Produk Tidak Ditemukan' });
+        return;
+    }
+
+    if (preselectedVariant) {
+        addToCart(product, preselectedVariant);
+    } else if (product.variants && product.variants.length > 1) {
         setProductForVariantSelection(product);
     } else if (product.variants && product.variants.length === 1) {
         addToCart(product, product.variants[0]);
@@ -152,7 +172,8 @@ export function RecordSaleForReceiptDialog({
         addToCart(product);
     }
     setSearchTerm('');
-  }, [addToCart]);
+}, [findProductBySku, addToCart, playErrorSound, toast]);
+
 
   const handleVariantSelect = (variant: InventoryItemVariant | null) => {
     if (variant && productForVariantSelection) {
@@ -230,7 +251,8 @@ export function RecordSaleForReceiptDialog({
 
         <div className="py-4 space-y-4">
              <PosSearch 
-                onProductSelect={handleProductSelect} 
+                onProductSelect={(item) => handleProductSelect(item as InventoryItem)}
+                onSkuSubmit={handleProductSelect}
                 searchTerm={searchTerm}
                 setSearchTerm={setSearchTerm}
                 suggestions={searchSuggestions}
