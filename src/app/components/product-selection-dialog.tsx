@@ -1,5 +1,3 @@
-
-
 'use client';
 
 import { useState, useMemo, useEffect, useRef } from 'react';
@@ -55,7 +53,6 @@ export function ProductSelectionDialog({
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(ITEMS_PER_PAGE);
-  const scrollViewportRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
       if(open) {
@@ -166,7 +163,7 @@ export function ProductSelectionDialog({
             {/* The parent component now handles category filtering. This control is no longer needed here. */}
         </div>
         <div className="flex-grow flex flex-col overflow-hidden border rounded-md">
-           <ScrollArea className="h-full" viewportRef={scrollViewportRef}>
+           <ScrollArea className="h-full">
             <Table>
                 <TableHeader className="sticky top-0 bg-card z-10">
                 <TableRow>
@@ -287,7 +284,6 @@ export function ProductSelectionDialog({
                     totalPages={totalPages}
                     currentPage={currentPage}
                     onPageChange={setCurrentPage}
-                    scrollContainerRef={scrollViewportRef}
                 />
                  <Select
                     value={`${itemsPerPage}`}
