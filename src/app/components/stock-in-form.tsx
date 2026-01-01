@@ -118,7 +118,7 @@ export function TransactionForm({
     return map;
   }, [items]);
 
-  const existingItemIds = useMemo(() => new Set(fields.map(field => field.itemId)), [fields]);
+  const existingItemIds = useMemo(() => new Set(fields.map(field => field.itemId)), [fields.length]);
   
   const availableItems = useMemo(() => {
     return items.filter(item => {
