@@ -47,7 +47,10 @@ export default function StockInPage() {
         try {
             const response = await fetch('/api/products/stock-in', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'X-API-Key': process.env.NEXT_PUBLIC_API_KEY || 'secret-api-key-for-waveapp',
+                },
                 body: JSON.stringify({ items: transactionData.transactionItems, reason })
             });
 
