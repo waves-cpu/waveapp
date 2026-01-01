@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState } from 'react';
@@ -7,9 +6,8 @@ import { SidebarTrigger } from '@/components/ui/sidebar';
 import { useLanguage } from '@/hooks/use-language';
 import { translations } from '@/types/language';
 import { TransactionForm, type TransactionSubmitData } from '@/app/components/stock-in-form';
-import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { PackagePlus, FileUp, ListChecks } from 'lucide-react';
+import { ListChecks } from 'lucide-react';
 import { ConfirmTransactionDialog } from '../components/confirm-stock-in-dialog';
 import { useInventory } from '@/hooks/use-inventory';
 import { useToast } from '@/hooks/use-toast';
@@ -22,7 +20,6 @@ export default function StockInPage() {
     const { toast } = useToast();
     const router = useRouter();
 
-    const [isProductSelectionOpen, setProductSelectionOpen] = useState(false);
     const [isBulkQuantityOpen, setBulkQuantityOpen] = useState(false);
     const [bulkSelectedIds, setBulkSelectedIds] = useState<Set<string>>(new Set());
     
@@ -30,6 +27,14 @@ export default function StockInPage() {
     const [transactionData, setTransactionData] = useState<TransactionSubmitData | null>(null);
 
     const handleFormSubmit = (data: TransactionSubmitData) => {
+        if (data.transactionItems.length === 0) {
+            toast({
+                variant: 'destructive',
+                title: "Daftar Kosong",
+                description: "Silakan tambahkan setidaknya satu produk untuk dicatat.",
+            });
+            return;
+        }
         setTransactionData(data);
         setConfirmOpen(true);
     };
@@ -79,21 +84,18 @@ export default function StockInPage() {
                             {TStockIn.title}
                         </h1>
                     </div>
-                    <div className="flex items-center gap-2">
-                        <Button variant="outline" size="sm" onClick={() => setBulkQuantityOpen(true)} disabled={bulkSelectedIds.size === 0}>
-                            <ListChecks className="mr-2 h-4 w-4" />
-                            {TStockIn.bulkAdd} ({bulkSelectedIds.size})
-                        </Button>
-                        <Button size="sm" onClick={() => setProductSelectionOpen(true)}>
-                            <PackagePlus className="mr-2 h-4 w-4" />
-                            {TStockIn.selectProducts}
-                        </Button>
-                    </div>
+                     <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={() => setBulkQuantityOpen(true)} 
+                        disabled={bulkSelectedIds.size === 0}
+                    >
+                        <ListChecks className="mr-2 h-4 w-4" />
+                        {TStockIn.bulkAdd} ({bulkSelectedIds.size})
+                    </Button>
                 </div>
                  <TransactionForm
                     transactionType="in"
-                    isProductSelectionOpen={isProductSelectionOpen}
-                    setProductSelectionOpen={setProductSelectionOpen}
                     isBulkQuantityOpen={isBulkQuantityOpen}
                     setBulkQuantityOpen={setBulkQuantityOpen}
                     bulkSelectedIds={bulkSelectedIds}
@@ -115,5 +117,3 @@ export default function StockInPage() {
         </AppLayout>
     );
 }
-
-    
