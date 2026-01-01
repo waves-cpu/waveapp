@@ -34,13 +34,14 @@ export const PosSearch = forwardRef<HTMLInputElement, PosSearchProps>(
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         
-        if (onSkuSubmit) {
+        // If there are suggestions, hitting Enter should select the first one.
+        if (suggestions.length > 0) {
+            handleSelectSuggestion(suggestions[0]);
+        } 
+        // Otherwise, if an onSkuSubmit handler is provided, use it (for raw SKU scans).
+        else if (onSkuSubmit && searchTerm) {
             onSkuSubmit(searchTerm);
-        }
-        else if (suggestions.length === 1) {
-            onProductSelect(suggestions[0]);
             setSearchTerm('');
-            setIsPopoverOpen(false);
         }
     };
     
@@ -52,8 +53,8 @@ export const PosSearch = forwardRef<HTMLInputElement, PosSearchProps>(
         onProductSelect(item);
         setSearchTerm('');
         setIsPopoverOpen(false);
-        if (ref && 'current' in ref) {
-            ref.current?.focus();
+        if (ref && 'current' in ref && ref.current) {
+            ref.current.focus();
         }
     }
 

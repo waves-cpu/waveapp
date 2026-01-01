@@ -25,7 +25,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Trash2, ShoppingBag, Search } from 'lucide-react';
 import { useInventory } from '@/hooks/use-inventory';
-import type { InventoryItem, InventoryItemVariant, ShippingReceipt, Sale } from '@/types';
+import type { InventoryItem, InventoryItemVariant, ShippingReceipt, Sale, SearchableItem } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { useScanSounds } from '@/hooks/use-scan-sounds';
 import { VariantSelectionDialog } from './variant-selection-dialog';
@@ -70,6 +70,7 @@ export function RecordSaleForReceiptDialog({
   const [productForVariantSelection, setProductForVariantSelection] = useState<InventoryItem | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const debouncedSearchTerm = useDebounce(searchTerm, 300);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   const searchSuggestions = useMemo(() => {
     if (debouncedSearchTerm.length < 2) return [];
@@ -79,7 +80,7 @@ export function RecordSaleForReceiptDialog({
         (item.name.toLowerCase().includes(lowercasedTerm) ||
         (item.sku && item.sku.toLowerCase().includes(lowercasedTerm)) ||
         (item.variants && item.variants.some(v => v.sku?.toLowerCase().includes(lowercasedTerm))))
-    ).slice(0, 10);
+    ).slice(0, 10) as SearchableItem[];
 }, [debouncedSearchTerm, inventoryItems]);
 
 
@@ -143,17 +144,13 @@ export function RecordSaleForReceiptDialog({
     setSearchTerm('');
   }, [cart, toast, playErrorSound, playSuccessSound, receipt]);
   
-  const handleProductSelect = useCallback(async (productOrSku: InventoryItem | string) => {
+  const handleProductSelect = useCallback(async (productOrSku: SearchableItem | string) => {
     let product: InventoryItem | null = null;
-    let preselectedVariant: InventoryItemVariant | undefined = undefined;
 
     if (typeof productOrSku === 'string') {
         product = await findProductBySku(productOrSku);
-        if (product && product.variants && product.variants.length === 1 && !product.name.toLowerCase().includes(productOrSku.toLowerCase())) {
-            preselectedVariant = product.variants[0];
-        }
     } else {
-        product = productOrSku;
+        product = productOrSku as InventoryItem;
     }
     
     if (!product) {
@@ -162,9 +159,7 @@ export function RecordSaleForReceiptDialog({
         return;
     }
 
-    if (preselectedVariant) {
-        addToCart(product, preselectedVariant);
-    } else if (product.variants && product.variants.length > 1) {
+    if (product.variants && product.variants.length > 1) {
         setProductForVariantSelection(product);
     } else if (product.variants && product.variants.length === 1) {
         addToCart(product, product.variants[0]);
@@ -172,7 +167,7 @@ export function RecordSaleForReceiptDialog({
         addToCart(product);
     }
     setSearchTerm('');
-}, [findProductBySku, addToCart, playErrorSound, toast]);
+  }, [findProductBySku, addToCart, playErrorSound, toast]);
 
 
   const handleVariantSelect = (variant: InventoryItemVariant | null) => {
@@ -238,6 +233,31 @@ export function RecordSaleForReceiptDialog({
     }
   };
 
+  // Keyboard shortcut to finalize sale
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Enter' && open && cart.length > 0) {
+        const activeElement = document.activeElement;
+        // Check if the focus is not on an input or button within the dialog
+        if (activeElement && (activeElement.tagName.toLowerCase() !== 'input' && activeElement.tagName.toLowerCase() !== 'button')) {
+          event.preventDefault();
+          handleFinalizeSale();
+        }
+      }
+    };
+
+    const dialogElement = document.querySelector('[role="dialog"]');
+    if (dialogElement) {
+        dialogElement.addEventListener('keydown', handleKeyDown as any);
+    }
+
+    return () => {
+        if (dialogElement) {
+            dialogElement.removeEventListener('keydown', handleKeyDown as any);
+        }
+    };
+  }, [open, cart.length, handleFinalizeSale]);
+
   return (
     <>
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -251,7 +271,8 @@ export function RecordSaleForReceiptDialog({
 
         <div className="py-4 space-y-4">
              <PosSearch 
-                onProductSelect={(item) => handleProductSelect(item as InventoryItem)}
+                ref={searchInputRef}
+                onProductSelect={handleProductSelect}
                 onSkuSubmit={handleProductSelect}
                 searchTerm={searchTerm}
                 setSearchTerm={setSearchTerm}
