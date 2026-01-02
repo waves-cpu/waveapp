@@ -19,7 +19,7 @@ import type { SearchableItem } from '@/types';
 
 interface PosSearchProps {
   onProductSelect: (item: SearchableItem) => void;
-  onSkuSubmit?: (sku: string) => void;
+  onSkuSubmit: (sku: string) => void;
   searchTerm: string;
   setSearchTerm: (term: string) => void;
   suggestions: SearchableItem[];

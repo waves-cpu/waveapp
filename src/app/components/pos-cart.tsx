@@ -41,7 +41,7 @@ export type CartItem = {
 const LOCAL_STORAGE_KEY = 'posCart';
 
 export function PosCart() {
-    const { recordSale, items: inventoryItems, accessories, loading: inventoryLoading, pendingTransaction, clearPendingTransaction, cancelSaleTransaction, fetchItems } = useInventory();
+    const { recordSale, items: inventoryItems, accessories, loading: inventoryLoading, pendingTransaction, clearPendingTransaction, cancelSaleTransaction, fetchItems, findProductBySku } = useInventory();
     const { language } = useLanguage();
     const { playSuccessSound, playErrorSound } = useScanSounds();
     const t = translations[language];
@@ -264,6 +264,29 @@ export function PosCart() {
             playErrorSound();
         }
     }, [addToCart, toast, playErrorSound]);
+    
+    const handleSkuSubmit = useCallback(async (sku: string) => {
+        const productData = await findProductBySku(sku);
+
+        if (!productData) {
+            playErrorSound();
+            toast({ variant: 'destructive', title: 'Produk Tidak Ditemukan', description: `Tidak ada produk yang cocok dengan SKU '${sku}'` });
+            return;
+        }
+
+        // Case 1: The SKU belongs to a specific variant. `findProductBySku` returns the parent with ONLY that variant.
+        if (productData.variants && productData.variants.length === 1) {
+            addToCart(productData, productData.variants[0]);
+        }
+        // Case 2: The SKU belongs to a parent product with multiple variants.
+        else if (productData.variants && productData.variants.length > 1) {
+            setProductForVariantSelection(productData);
+        }
+        // Case 3: The SKU belongs to a simple product (no variants).
+        else {
+            addToCart(productData);
+        }
+    }, [findProductBySku, addToCart, playErrorSound, toast]);
 
 
     const handleVariantSelect = (variant: InventoryItemVariant | null) => {
@@ -374,6 +397,7 @@ export function PosCart() {
             <div className="lg:col-span-3 flex flex-col gap-4 h-full">
                 <PosSearch 
                     onProductSelect={handleProductSelect} 
+                    onSkuSubmit={handleSkuSubmit}
                     searchTerm={searchTerm}
                     setSearchTerm={setSearchTerm}
                     suggestions={searchSuggestions}
