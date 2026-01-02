@@ -314,16 +314,18 @@ export function PosCart() {
     };
 
     const handleSaleComplete = async (paymentMethod: string, receiptData: ReceiptData, status: 'Completed' | 'Pending' = 'Completed') => {
-        const salesPayload = cart.map(item => ({
+        const salesData = cart.map(item => ({
             sku: item.sku,
             quantity: item.quantity,
             price: item.price,
         }));
+        
+        const transactionId = pendingTransactionId || `trans-${Date.now()}`;
 
         try {
             await recordSale('pos', 0, {
-                sales: salesPayload,
-                transactionId: pendingTransactionId || `trans-${Date.now()}`,
+                sales: salesData,
+                transactionId: transactionId,
                 paymentMethod: paymentMethod,
                 status: status,
             });
@@ -337,7 +339,7 @@ export function PosCart() {
                     });
                     setVoucherToPrint({
                         items: cart,
-                        transactionId: salesPayload.options.transactionId,
+                        transactionId: transactionId,
                         date: new Date(),
                     });
                 } else {
@@ -345,7 +347,7 @@ export function PosCart() {
                         title: "Penjualan Berhasil",
                         description: "Transaksi telah berhasil dicatat."
                     });
-                    setReceiptToPrint({ ...receiptData, transactionId: salesPayload.options.transactionId });
+                    setReceiptToPrint({ ...receiptData, transactionId: transactionId });
                 }
             } else { // Pending
                 toast({
