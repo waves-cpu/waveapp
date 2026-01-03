@@ -1,8 +1,26 @@
+
 'use client';
 
 import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
-import { getSetting, saveSetting } from '@/lib/inventory-service';
 import { useToast } from './use-toast';
+
+async function apiFetch(url: string, options: RequestInit = {}) {
+    const res = await fetch(url, {
+        ...options,
+        headers: {
+            'Content-Type': 'application/json',
+            'X-API-Key': process.env.NEXT_PUBLIC_API_KEY || 'secret-api-key-for-waveapp',
+            ...options.headers,
+        },
+    });
+
+    if (!res.ok) {
+        const errorData = await res.json().catch(() => ({ message: 'An unknown error occurred' }));
+        throw new Error(errorData.message);
+    }
+    if(res.status === 204) return null;
+    return res.json();
+}
 
 export interface ReceiptSettings {
     shopName: string;
@@ -37,11 +55,12 @@ export const ReceiptSettingsProvider = ({ children }: { children: ReactNode }) =
 
     const fetchSettings = useCallback(async () => {
         try {
-            const savedSettings = await getSetting<ReceiptSettings>(SETTINGS_KEY);
+            const savedSettings = await apiFetch(`/api/settings/${SETTINGS_KEY}`);
             if (savedSettings) {
                 setSettingsState(savedSettings);
             }
         } catch (error) {
+             console.error("Failed to fetch receipt settings:", error);
         } finally {
             setIsLoaded(true);
         }
@@ -53,7 +72,10 @@ export const ReceiptSettingsProvider = ({ children }: { children: ReactNode }) =
 
     const setSettings = async (newSettings: ReceiptSettings) => {
         try {
-            await saveSetting(SETTINGS_KEY, newSettings);
+             await apiFetch('/api/settings', {
+                method: 'POST',
+                body: JSON.stringify({ key: SETTINGS_KEY, value: newSettings }),
+            });
             setSettingsState(newSettings);
              toast({
                 title: "Pengaturan Disimpan",

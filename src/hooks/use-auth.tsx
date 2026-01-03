@@ -1,8 +1,26 @@
+
 'use client';
 
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
-import { authenticateUser, addUser, fetchAllUsers, type User } from '@/lib/inventory-service';
+import type { User } from '@/types';
+import { useToast } from './use-toast';
+
+async function apiFetch(url: string, options: RequestInit = {}) {
+    const res = await fetch(url, {
+        ...options,
+        headers: {
+            'Content-Type': 'application/json',
+            'X-API-Key': process.env.NEXT_PUBLIC_API_KEY || 'secret-api-key-for-waveapp',
+            ...options.headers,
+        },
+    });
+
+    if (!res.ok) {
+        const errorData = await res.json().catch(() => ({ message: 'An unknown error occurred' }));
+        throw new Error(errorData.message);
+    }
+    return res.json();
+}
 
 
 interface AuthContextType {
@@ -21,12 +39,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const [user, setUser] = useState<User | null>(null);
     const [loading, setLoading] = useState(true);
     const [users, setUsers] = useState<User[]>([]);
+    const { toast } = useToast();
 
     const refreshUsers = useCallback(async () => {
         try {
-            const allUsers = await fetchAllUsers();
+            const allUsers = await apiFetch('/api/users');
             setUsers(allUsers);
         } catch (error) {
+            console.error("Failed to fetch users", error);
         }
     }, []);
 
@@ -51,7 +71,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     const login = async (username: string, password: string): Promise<boolean> => {
         try {
-            const authenticatedUser = await authenticateUser(username, password);
+            const authenticatedUser = await apiFetch('/api/auth/login', {
+                method: 'POST',
+                body: JSON.stringify({ username, password }),
+            });
             if (authenticatedUser) {
                 setUser(authenticatedUser);
                 sessionStorage.setItem('user', JSON.stringify(authenticatedUser));
@@ -69,7 +92,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     };
     
     const createUser = async (username: string, password: string) => {
-        const newUser = await addUser(username, password);
+        const newUser = await apiFetch('/api/users', {
+            method: 'POST',
+            body: JSON.stringify({ username, password })
+        });
         await refreshUsers();
         return newUser;
     }
