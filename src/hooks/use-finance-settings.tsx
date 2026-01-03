@@ -1,4 +1,3 @@
-
 'use client';
 
 import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
@@ -16,7 +15,7 @@ interface FinanceSettingsContextType {
 }
 
 const defaultSettings: FinanceSettings = {
-    marketplaceFee: 3.2,
+    marketplaceFee: 32,
 };
 
 const SETTINGS_KEY = 'financeSettings';
