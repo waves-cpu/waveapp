@@ -51,6 +51,7 @@ interface AggregatedProduct {
     sku?: string;
     category: string;
     imageUrl?: string;
+    releaseDate?: string;
     unitsSold: number;
     revenue: number;
     profit: number;
@@ -248,6 +249,7 @@ export default function StatementsPage() {
                             sku: sale.parentSku,
                             category: sale.productCategory,
                             imageUrl: sale.parentImageUrl,
+                            releaseDate: sale.releaseDate,
                             unitsSold: 0,
                             revenue: 0,
                             profit: 0,
@@ -334,46 +336,69 @@ export default function StatementsPage() {
 
         setTimeout(() => {
             const dataToExport = [];
-            const headers = ["Tipe", "Nama Produk/Varian", "SKU", "Kategori", "Unit Terjual", "Pendapatan", "Laba"];
+            const headers = [
+                "Nama Produk", 
+                "SKU", 
+                "Kategori", 
+                "Tanggal Rilis",
+                "Unit Terjual", 
+                "Harga Jual Rata-rata",
+                "Total Pendapatan", 
+                "Total Laba",
+                "Potongan Marketplace",
+                "Pendapatan Bersih"
+            ];
             
             bestsellers.forEach(product => {
-                // Parent Product Row
-                dataToExport.push({
-                    "Tipe": "Produk Induk",
-                    "Nama Produk/Varian": product.name,
-                    "SKU": product.sku || '-',
-                    "Kategori": product.category,
-                    "Unit Terjual": product.unitsSold,
-                    "Pendapatan": product.revenue,
-                    "Laba": product.profit,
-                });
-
-                // Variant Rows
-                product.variants.forEach(variant => {
+                if (product.variants.length > 0) {
+                     // If there are variants, export each variant as a row
+                     product.variants.forEach(variant => {
+                         dataToExport.push({
+                            "Nama Produk": `${product.name} - ${variant.name}`,
+                            "SKU": variant.sku || '-',
+                            "Kategori": product.category,
+                            "Tanggal Rilis": product.releaseDate ? formatToWIB(parseISO(product.releaseDate), "yyyy-MM-dd") : '-',
+                            "Unit Terjual": variant.units,
+                            "Harga Jual Rata-rata": variant.units > 0 ? variant.revenue / variant.units : 0,
+                            "Total Pendapatan": variant.revenue,
+                            "Total Laba": variant.profit,
+                            "Potongan Marketplace": '', // Placeholder
+                            "Pendapatan Bersih": '' // Placeholder
+                         });
+                     });
+                } else {
+                    // If no variants, export the simple product as a row
                     dataToExport.push({
-                        "Tipe": "Varian",
-                        "Nama Produk/Varian": `  ${variant.name}`, // Indent for clarity
-                        "SKU": variant.sku || '-',
+                        "Nama Produk": product.name,
+                        "SKU": product.sku || '-',
                         "Kategori": product.category,
-                        "Unit Terjual": variant.units,
-                        "Pendapatan": variant.revenue,
-                        "Laba": variant.profit,
+                        "Tanggal Rilis": product.releaseDate ? formatToWIB(parseISO(product.releaseDate), "yyyy-MM-dd") : '-',
+                        "Unit Terjual": product.unitsSold,
+                        "Harga Jual Rata-rata": product.unitsSold > 0 ? product.revenue / product.unitsSold : 0,
+                        "Total Pendapatan": product.revenue,
+                        "Total Laba": product.profit,
+                        "Potongan Marketplace": '', // Placeholder
+                        "Pendapatan Bersih": '' // Placeholder
                     });
-                });
+                }
             });
 
             const worksheet = XLSX.utils.json_to_sheet(dataToExport, { header: headers });
-             // Custom column widths
+            
+            // Set column widths
             worksheet['!cols'] = [
-                { wch: 15 }, // Tipe
-                { wch: 40 }, // Nama
+                { wch: 40 }, // Nama Produk
                 { wch: 20 }, // SKU
                 { wch: 20 }, // Kategori
-                { wch: 15 }, // Unit
-                { wch: 20 }, // Pendapatan
-                { wch: 20 }, // Laba
+                { wch: 15 }, // Tanggal Rilis
+                { wch: 15 }, // Unit Terjual
+                { wch: 20 }, // Harga Jual Rata-rata
+                { wch: 20 }, // Total Pendapatan
+                { wch: 20 }, // Total Laba
+                { wch: 20 }, // Potongan Marketplace
+                { wch: 20 }, // Pendapatan Bersih
             ];
-
+            
             const workbook = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(workbook, worksheet, 'Laporan Penjualan');
 
@@ -383,9 +408,9 @@ export default function StatementsPage() {
             const channel = channelFilter || 'semua_kanal';
 
             const fileName = `Laporan_Penjualan_${category}_${channel}_${dateFrom}_sampai_${dateTo}.xlsx`;
-            const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
-            const blob = new Blob([excelBuffer], { type: 'application/octet-stream' });
-            saveAs(blob, fileName);
+            
+            // Save the file
+            XLSX.writeFile(workbook, fileName);
             
             update({ id, title: "Unduhan Siap", description: `File '${fileName}' telah diunduh.` });
             setIsDownloading(false);
