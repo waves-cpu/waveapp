@@ -1,4 +1,5 @@
 
+
 import type { Metadata } from 'next';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster"
@@ -7,6 +8,7 @@ import { LanguageProvider } from '@/hooks/use-language';
 import { InventoryProvider } from '@/hooks/use-inventory';
 import { ReceiptSettingsProvider } from '@/hooks/use-receipt-settings';
 import { InvoiceSettingsProvider } from '@/hooks/use-invoice-settings';
+import { FinanceSettingsProvider } from '@/hooks/use-finance-settings';
 import { AuthProvider } from '@/hooks/use-auth';
 import Script from 'next/script';
 
@@ -41,7 +43,9 @@ export default function RootLayout({
               <InventoryProvider>
                   <ReceiptSettingsProvider>
                     <InvoiceSettingsProvider>
-                      {children}
+                      <FinanceSettingsProvider>
+                        {children}
+                      </FinanceSettingsProvider>
                     </InvoiceSettingsProvider>
                   </ReceiptSettingsProvider>
               </InventoryProvider>

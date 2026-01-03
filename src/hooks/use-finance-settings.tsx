@@ -1,0 +1,79 @@
+
+'use client';
+
+import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
+import { getSetting, saveSetting } from '@/lib/inventory-service';
+import { useToast } from './use-toast';
+
+export interface FinanceSettings {
+    marketplaceFee: number; // Stored as a percentage, e.g., 3.2 for 3.2%
+}
+
+interface FinanceSettingsContextType {
+    settings: FinanceSettings;
+    setSettings: (newSettings: FinanceSettings) => Promise<void>;
+    isLoaded: boolean;
+}
+
+const defaultSettings: FinanceSettings = {
+    marketplaceFee: 3.2,
+};
+
+const SETTINGS_KEY = 'financeSettings';
+
+const FinanceSettingsContext = createContext<FinanceSettingsContextType | undefined>(undefined);
+
+export const FinanceSettingsProvider = ({ children }: { children: ReactNode }) => {
+    const [settings, setSettingsState] = useState<FinanceSettings>(defaultSettings);
+    const [isLoaded, setIsLoaded] = useState(false);
+    const { toast } = useToast();
+
+    const fetchSettings = useCallback(async () => {
+        try {
+            const savedSettings = await getSetting<FinanceSettings>(SETTINGS_KEY);
+            if (savedSettings) {
+                setSettingsState(savedSettings);
+            }
+        } catch (error) {
+            console.error("Failed to fetch finance settings:", error);
+        } finally {
+            setIsLoaded(true);
+        }
+    }, []);
+
+    useEffect(() => {
+        fetchSettings();
+    }, [fetchSettings]);
+
+    const setSettings = async (newSettings: FinanceSettings) => {
+        try {
+            await saveSetting(SETTINGS_KEY, newSettings);
+            setSettingsState(newSettings);
+            toast({
+                title: "Pengaturan Disimpan",
+                description: "Pengaturan keuangan Anda telah berhasil diperbarui.",
+            });
+        } catch (error) {
+            toast({
+                variant: 'destructive',
+                title: "Gagal Menyimpan",
+                description: "Terjadi kesalahan saat menyimpan pengaturan.",
+            });
+            throw error;
+        }
+    };
+
+    return (
+        <FinanceSettingsContext.Provider value={{ settings, setSettings, isLoaded }}>
+            {children}
+        </FinanceSettingsContext.Provider>
+    );
+};
+
+export const useFinanceSettings = () => {
+    const context = useContext(FinanceSettingsContext);
+    if (!context) {
+        throw new Error('useFinanceSettings must be used within a FinanceSettingsProvider');
+    }
+    return context;
+};

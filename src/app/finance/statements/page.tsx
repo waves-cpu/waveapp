@@ -26,6 +26,7 @@ import { Pagination } from '@/components/ui/pagination';
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
 import { useToast } from '@/hooks/use-toast';
+import { useFinanceSettings } from '@/hooks/use-finance-settings';
 
 const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('id-ID', {
@@ -42,6 +43,8 @@ interface AggregatedVariant {
     units: number;
     revenue: number;
     profit: number;
+    marketplaceCut: number;
+    netProfit: number;
 }
 
 
@@ -55,6 +58,8 @@ interface AggregatedProduct {
     unitsSold: number;
     revenue: number;
     profit: number;
+    marketplaceCut: number;
+    netProfit: number;
     variants: AggregatedVariant[];
 }
 
@@ -171,6 +176,7 @@ export default function StatementsPage() {
     const { language } = useLanguage();
     const t = translations[language].finance.statementsPage;
     const { allSales, categories, loading } = useInventory();
+    const { settings: financeSettings } = useFinanceSettings();
     const { toast } = useToast();
     const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
 
@@ -188,6 +194,9 @@ export default function StatementsPage() {
     const {
         grossRevenue,
         grossProfit,
+        netRevenue,
+        netProfit,
+        totalMarketplaceCut,
         unitsSold,
         cancelledSales,
         returnedSales,
@@ -195,7 +204,7 @@ export default function StatementsPage() {
         topCategories,
         topSizes,
     } = useMemo(() => {
-        if (!date?.from) return { grossRevenue: 0, grossProfit: 0, unitsSold: 0, cancelledSales: { count: 0, value: 0 }, returnedSales: { count: 0, value: 0 }, bestsellers: [], topCategories: [], topSizes: [] };
+        if (!date?.from) return { grossRevenue: 0, grossProfit: 0, netRevenue: 0, netProfit: 0, totalMarketplaceCut: 0, unitsSold: 0, cancelledSales: { count: 0, value: 0 }, returnedSales: { count: 0, value: 0 }, bestsellers: [], topCategories: [], topSizes: [] };
         
         const toDate = date.to || date.from;
 
@@ -212,17 +221,24 @@ export default function StatementsPage() {
 
         let revenue = 0;
         let profit = 0;
+        let marketplaceCutTotal = 0;
         let units = 0;
         let cancelled = { count: 0, value: 0 };
         let returned = { count: 0, value: 0 };
         const productAggregation = new Map<string, AggregatedProduct>();
         const categoryAggregation = new Map<string, number>();
         const sizeAggregation = new Map<string, number>();
+        const isOnlineSale = (channel: string) => ['shopee', 'tiktok', 'lazada'].some(c => channel.toLowerCase().includes(c));
 
         filteredSales.forEach(sale => {
             const salePrice = sale.priceAtSale * sale.quantity;
             const cogs = (sale.cogsAtSale ?? 0) * sale.quantity;
-            const saleProfit = salePrice - cogs;
+            const saleGrossProfit = salePrice - cogs;
+            
+            const saleMarketplaceCut = isOnlineSale(sale.channel) 
+                ? salePrice * (financeSettings.marketplaceFee / 100)
+                : 0;
+            const saleNetProfit = saleGrossProfit - saleMarketplaceCut;
 
             if (sale.status === 'Cancelled' || sale.status === 'Dibatalkan') {
                 cancelled.count++;
@@ -238,7 +254,8 @@ export default function StatementsPage() {
             if (['Completed', 'Siap Kirim', 'Selesai', 'Terproses'].includes(sale.status || '')) {
                 revenue += salePrice;
                 units += sale.quantity;
-                profit += saleProfit;
+                profit += saleGrossProfit;
+                marketplaceCutTotal += saleMarketplaceCut;
 
                 const productId = sale.productId;
                 if (productId) {
@@ -253,13 +270,17 @@ export default function StatementsPage() {
                             unitsSold: 0,
                             revenue: 0,
                             profit: 0,
+                            marketplaceCut: 0,
+                            netProfit: 0,
                             variants: [],
                         });
                     }
                     const productAgg = productAggregation.get(productId)!;
                     productAgg.unitsSold += sale.quantity;
                     productAgg.revenue += salePrice;
-                    productAgg.profit += saleProfit;
+                    productAgg.profit += saleGrossProfit;
+                    productAgg.marketplaceCut += saleMarketplaceCut;
+                    productAgg.netProfit += saleNetProfit;
 
                     const variantId = sale.variantId || null;
                     let variantAgg = productAgg.variants.find(v => v.variantId === variantId);
@@ -271,12 +292,16 @@ export default function StatementsPage() {
                             units: 0,
                             revenue: 0,
                             profit: 0,
+                            marketplaceCut: 0,
+                            netProfit: 0,
                         };
                         productAgg.variants.push(variantAgg);
                     }
                     variantAgg.units += sale.quantity;
                     variantAgg.revenue += salePrice;
-                    variantAgg.profit += saleProfit;
+                    variantAgg.profit += saleGrossProfit;
+                    variantAgg.marketplaceCut += saleMarketplaceCut;
+                    variantAgg.netProfit += saleNetProfit;
                 }
 
                 if (sale.productCategory) {
@@ -299,6 +324,9 @@ export default function StatementsPage() {
         return {
             grossRevenue: revenue,
             grossProfit: profit,
+            netRevenue: revenue - marketplaceCutTotal,
+            netProfit: profit - marketplaceCutTotal,
+            totalMarketplaceCut: marketplaceCutTotal,
             unitsSold: units,
             cancelledSales: cancelled,
             returnedSales: returned,
@@ -306,7 +334,7 @@ export default function StatementsPage() {
             topCategories: sortedCategories,
             topSizes: sortedSizes,
         };
-    }, [allSales, date, categoryFilter, channelFilter]);
+    }, [allSales, date, categoryFilter, channelFilter, financeSettings.marketplaceFee]);
 
     const datePresets = [
         { label: t.today, range: { from: new Date(), to: new Date() } },
@@ -336,22 +364,9 @@ export default function StatementsPage() {
 
         setTimeout(() => {
             const dataToExport = [];
-            const headers = [
-                "Nama Produk", 
-                "SKU", 
-                "Kategori", 
-                "Tanggal Rilis",
-                "Unit Terjual", 
-                "Harga Jual Rata-rata",
-                "Total Pendapatan", 
-                "Total Laba",
-                "Potongan Marketplace",
-                "Pendapatan Bersih"
-            ];
             
             bestsellers.forEach(product => {
                 if (product.variants.length > 0) {
-                     // If there are variants, export each variant as a row
                      product.variants.forEach(variant => {
                          dataToExport.push({
                             "Nama Produk": `${product.name} - ${variant.name}`,
@@ -361,13 +376,12 @@ export default function StatementsPage() {
                             "Unit Terjual": variant.units,
                             "Harga Jual Rata-rata": variant.units > 0 ? variant.revenue / variant.units : 0,
                             "Total Pendapatan": variant.revenue,
-                            "Total Laba": variant.profit,
-                            "Potongan Marketplace": '', // Placeholder
-                            "Pendapatan Bersih": '' // Placeholder
+                            "Total Laba Kotor": variant.profit,
+                            "Potongan Marketplace": variant.marketplaceCut,
+                            "Laba Bersih": variant.netProfit
                          });
                      });
                 } else {
-                    // If no variants, export the simple product as a row
                     dataToExport.push({
                         "Nama Produk": product.name,
                         "SKU": product.sku || '-',
@@ -376,27 +390,19 @@ export default function StatementsPage() {
                         "Unit Terjual": product.unitsSold,
                         "Harga Jual Rata-rata": product.unitsSold > 0 ? product.revenue / product.unitsSold : 0,
                         "Total Pendapatan": product.revenue,
-                        "Total Laba": product.profit,
-                        "Potongan Marketplace": '', // Placeholder
-                        "Pendapatan Bersih": '' // Placeholder
+                        "Total Laba Kotor": product.profit,
+                        "Potongan Marketplace": product.marketplaceCut,
+                        "Laba Bersih": product.netProfit,
                     });
                 }
             });
 
-            const worksheet = XLSX.utils.json_to_sheet(dataToExport, { header: headers });
+            const worksheet = XLSX.utils.json_to_sheet(dataToExport);
             
-            // Set column widths
             worksheet['!cols'] = [
-                { wch: 40 }, // Nama Produk
-                { wch: 20 }, // SKU
-                { wch: 20 }, // Kategori
-                { wch: 15 }, // Tanggal Rilis
-                { wch: 15 }, // Unit Terjual
-                { wch: 20 }, // Harga Jual Rata-rata
-                { wch: 20 }, // Total Pendapatan
-                { wch: 20 }, // Total Laba
-                { wch: 20 }, // Potongan Marketplace
-                { wch: 20 }, // Pendapatan Bersih
+                { wch: 40 }, { wch: 20 }, { wch: 20 }, { wch: 15 },
+                { wch: 15 }, { wch: 20 }, { wch: 20 }, { wch: 20 },
+                { wch: 20 }, { wch: 20 } 
             ];
             
             const workbook = XLSX.utils.book_new();
@@ -409,7 +415,6 @@ export default function StatementsPage() {
 
             const fileName = `Laporan_Penjualan_${category}_${channel}_${dateFrom}_sampai_${dateTo}.xlsx`;
             
-            // Save the file
             XLSX.writeFile(workbook, fileName);
             
             update({ id, title: "Unduhan Siap", description: `File '${fileName}' telah diunduh.` });
@@ -485,7 +490,25 @@ export default function StatementsPage() {
                     </Button>
                 </div>
                 
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                     <Card>
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-sm font-medium">Pendapatan Bersih</CardTitle>
+                            <DollarSign className="h-4 w-4 text-green-600" />
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-2xl font-bold">{formatCurrency(netRevenue)}</div>
+                        </CardContent>
+                    </Card>
+                     <Card>
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-sm font-medium">Laba Bersih</CardTitle>
+                            <BarChart2 className="h-4 w-4 text-green-600" />
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-2xl font-bold">{formatCurrency(netProfit)}</div>
+                        </CardContent>
+                    </Card>
                     <Card>
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                             <CardTitle className="text-sm font-medium">{t.grossRevenue}</CardTitle>
@@ -511,6 +534,16 @@ export default function StatementsPage() {
                         </CardHeader>
                         <CardContent>
                             <div className="text-2xl font-bold">{unitsSold.toLocaleString('id-ID')}</div>
+                        </CardContent>
+                    </Card>
+                    <Card>
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-sm font-medium">Potongan Marketplace</CardTitle>
+                            <ArrowDownRight className="h-4 w-4 text-muted-foreground" />
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-2xl font-bold">{formatCurrency(totalMarketplaceCut)}</div>
+                            <p className="text-xs text-muted-foreground">{financeSettings.marketplaceFee}% dari omzet</p>
                         </CardContent>
                     </Card>
                     <Card>
