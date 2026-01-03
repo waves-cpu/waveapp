@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useForm, useFieldArray } from 'react-hook-form';
@@ -56,6 +57,7 @@ const formSchema = z.object({
   name: z.string().min(2, { message: 'Nama grup diskon minimal 2 karakter.' }),
   category: z.string().min(1, { message: 'Kategori harus dipilih.' }),
   channel: z.string().min(1, { message: 'Kanal penjualan harus dipilih.' }),
+  voucherCode: z.string().optional(),
   dateRange: z.object({
       from: z.date({ required_error: "Tanggal mulai harus diisi." }),
       to: z.date({ required_error: "Tanggal berakhir harus diisi." }),
@@ -93,6 +95,7 @@ export function DiscountGroupForm({ existingGroup }: DiscountGroupFormProps) {
       name: '',
       category: '',
       channel: '',
+      voucherCode: '',
       dateRange: { from: new Date(), to: addDays(new Date(), 7) },
       products: [],
     },
@@ -189,6 +192,7 @@ export function DiscountGroupForm({ existingGroup }: DiscountGroupFormProps) {
         name: values.name,
         category: values.category,
         channel: values.channel,
+        voucherCode: values.voucherCode,
         startDate: values.dateRange.from.toISOString(),
         endDate: values.dateRange.to.toISOString(),
         products: values.products.filter(p => p.originalPrice !== null) as DiscountedProduct[], // Filter out items with no price
@@ -220,7 +224,7 @@ export function DiscountGroupForm({ existingGroup }: DiscountGroupFormProps) {
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)}>
           <CardContent className="pt-6 space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <FormField
                 control={form.control}
                 name="name"
@@ -258,6 +262,8 @@ export function DiscountGroupForm({ existingGroup }: DiscountGroupFormProps) {
                   </FormItem>
                 )}
               />
+            </div>
+             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                <FormField
                 control={form.control}
                 name="channel"
@@ -276,6 +282,19 @@ export function DiscountGroupForm({ existingGroup }: DiscountGroupFormProps) {
                         <SelectItem value="reseller">Reseller</SelectItem>
                       </SelectContent>
                     </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+               <FormField
+                control={form.control}
+                name="voucherCode"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Kode Voucher (Opsional)</FormLabel>
+                    <FormControl>
+                      <Input placeholder="cth. LEBARAN2024" {...field} />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}

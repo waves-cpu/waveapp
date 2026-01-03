@@ -1,8 +1,9 @@
+
 'use client';
 
 import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { useInventory } from '@/hooks/use-inventory';
-import type { InventoryItem, InventoryItemVariant, Accessory, SearchableItem, Sale } from '@/types';
+import type { InventoryItem, InventoryItemVariant, Accessory, SearchableItem, Sale, DiscountGroup } from '@/types';
 import { PosSearch } from './pos-search';
 import { PosOrderSummary } from './pos-order-summary';
 import { VariantSelectionDialog } from './variant-selection-dialog';
@@ -30,6 +31,8 @@ export type CartItem = {
     sku: string;
     quantity: number;
     price: number;
+    originalPrice: number;
+    category: string;
     imageUrl?: string;
     type: 'product' | 'accessory';
     maxStock: number;
@@ -38,7 +41,12 @@ export type CartItem = {
 
 const LOCAL_STORAGE_KEY = 'posCart';
 
-export function PosCart() {
+interface PosCartProps {
+    onVoucherApplied: (voucher: DiscountGroup | null) => void;
+    activeVoucher: DiscountGroup | null;
+}
+
+export function PosCart({ onVoucherApplied, activeVoucher }: PosCartProps) {
     const { recordSale, items: inventoryItems, accessories, loading: inventoryLoading, pendingTransaction, clearPendingTransaction, cancelSaleTransaction, fetchItems, findProductBySku } = useInventory();
     const { language } = useLanguage();
     const { playSuccessSound, playErrorSound } = useScanSounds();
@@ -74,6 +82,31 @@ export function PosCart() {
         ).slice(0, 10);
     }, [debouncedSearchTerm, inventoryItems, accessories]);
 
+    // Apply voucher discounts when activeVoucher changes or cart changes
+    useEffect(() => {
+        if (activeVoucher && cart.length > 0) {
+            setCart(currentCart => {
+                return currentCart.map(item => {
+                    // Check if the item's category matches the voucher's category
+                    if (item.category === activeVoucher.category) {
+                        const discountedProduct = activeVoucher.products.find(p => 
+                            (p.variantId && p.variantId.toString() === item.id) || 
+                            (!p.variantId && p.productId.toString() === item.productId)
+                        );
+                        if (discountedProduct) {
+                            return { ...item, price: discountedProduct.discountedPrice };
+                        }
+                    }
+                    // If no discount, revert to original price
+                    return { ...item, price: item.originalPrice };
+                });
+            });
+        } else {
+            // If no active voucher, revert all prices to original
+            setCart(currentCart => currentCart.map(item => ({ ...item, price: item.originalPrice })));
+        }
+    }, [activeVoucher, cart.length]); // Re-run when cart content changes
+
 
     useEffect(() => {
         setIsClient(true);
@@ -98,6 +131,8 @@ export function PosCart() {
                             sku: saleItem.sku!,
                             quantity: saleItem.quantity,
                             price: saleItem.priceAtSale,
+                            originalPrice: saleItem.priceAtSale,
+                            category: saleItem.productCategory,
                             imageUrl: saleItem.parentImageUrl,
                             maxStock: 999 // Placeholder, should be updated if possible
                         });
@@ -181,7 +216,9 @@ export function PosCart() {
                 productId: accessory.id,
                 productName: accessory.name,
                 sku: accessory.sku!,
-                price: 0, // Accessories are tracked for usage, not for sale price
+                price: 0, 
+                originalPrice: 0,
+                category: accessory.category || 'Aksesoris',
                 quantity: 1,
                 imageUrl: '',
                 type: 'accessory',
@@ -205,6 +242,8 @@ export function PosCart() {
                 sku: itemToAddRaw.sku!,
                 quantity: 1,
                 price: price,
+                originalPrice: price,
+                category: product.category,
                 imageUrl: product.imageUrl,
                 type: 'product',
                 maxStock: itemToAddRaw.stock!,
@@ -471,6 +510,7 @@ export function PosCart() {
                     clearCart={clearCart}
                     channel="pos"
                     pendingTransactionId={pendingTransactionId}
+                    onVoucherApplied={onVoucherApplied}
                 />
             </div>
              {productForVariantSelection && (

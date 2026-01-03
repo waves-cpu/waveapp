@@ -186,6 +186,7 @@ export interface DiscountGroup {
   channel: string;
   startDate: string;
   endDate: string;
+  voucherCode?: string;
   products: DiscountedProduct[];
   productCount?: number;
 }

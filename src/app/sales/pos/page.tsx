@@ -1,6 +1,7 @@
+
 'use client';
 
-import React from 'react';
+import React, { useState, useCallback } from 'react';
 import { AppLayout } from '@/app/components/app-layout';
 import { PosCart } from '@/app/components/pos-cart';
 import { SidebarTrigger } from '@/components/ui/sidebar';
@@ -9,10 +10,17 @@ import { translations } from '@/types/language';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { History, Settings, Hourglass } from 'lucide-react';
+import type { DiscountGroup } from '@/types';
 
 export default function PosPage() {
     const { language } = useLanguage();
     const t = translations[language];
+    const [activeVoucher, setActiveVoucher] = useState<DiscountGroup | null>(null);
+
+    const handleVoucherApplied = useCallback((voucherData: DiscountGroup | null) => {
+        setActiveVoucher(voucherData);
+    }, []);
+
   return (
     <AppLayout>
       <div className="h-screen flex flex-col">
@@ -41,7 +49,7 @@ export default function PosPage() {
                 </Link>
             </div>
         </header>
-        <PosCart />
+        <PosCart onVoucherApplied={handleVoucherApplied} activeVoucher={activeVoucher} />
       </div>
     </AppLayout>
   );

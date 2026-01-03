@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useMemo, useEffect } from 'react';
@@ -7,7 +8,7 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/componen
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
-import { X, Printer, Save } from 'lucide-react';
+import { X, Printer, Save, Tag, CheckCircle } from 'lucide-react';
 import { useLanguage } from '@/hooks/use-language';
 import { translations } from '@/types/language';
 import {
@@ -26,6 +27,7 @@ import { type ReceiptData } from './pos-receipt';
 import { useInventory } from '@/hooks/use-inventory';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
+import { Badge } from '../ui/badge';
 
 interface PosOrderSummaryProps {
   cart: CartItem[];
@@ -33,17 +35,21 @@ interface PosOrderSummaryProps {
   clearCart: () => void;
   channel: 'pos' | 'reseller';
   pendingTransactionId: string | null;
+  onVoucherApplied: (voucherData: any) => void;
 }
 
 type PaymentMethod = 'Cash' | 'Qris' | 'Transfer' | 'Debit';
 
-export function PosOrderSummary({ cart, onSaleComplete, clearCart, channel, pendingTransactionId }: PosOrderSummaryProps) {
+export function PosOrderSummary({ cart, onSaleComplete, clearCart, channel, pendingTransactionId, onVoucherApplied }: PosOrderSummaryProps) {
     const { language } = useLanguage();
     const t = translations[language];
     const { cancelSaleTransaction } = useInventory();
     const { toast } = useToast();
     const router = useRouter();
     const [discount, setDiscount] = useState(0);
+    const [voucherCode, setVoucherCode] = useState('');
+    const [appliedVoucher, setAppliedVoucher] = useState<{ code: string; name: string } | null>(null);
+    const [isApplyingVoucher, setIsApplyingVoucher] = useState(false);
     const [cashReceived, setCashReceived] = useState(0);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(channel === 'reseller' ? 'Transfer' : 'Cash');
@@ -58,6 +64,8 @@ export function PosOrderSummary({ cart, onSaleComplete, clearCart, channel, pend
         if (cart.length === 0) {
             setDiscount(0);
             setCashReceived(0);
+            setVoucherCode('');
+            setAppliedVoucher(null);
         }
     }, [cart]);
 
@@ -69,8 +77,39 @@ export function PosOrderSummary({ cart, onSaleComplete, clearCart, channel, pend
         setDiscount(0);
         setCashReceived(0);
         setPaymentMethod(channel === 'reseller' ? 'Transfer' : 'Cash');
+        setVoucherCode('');
+        setAppliedVoucher(null);
         clearCart();
     }
+
+    const handleApplyVoucher = async () => {
+        if (!voucherCode.trim()) return;
+        setIsApplyingVoucher(true);
+        try {
+            const response = await fetch(`/api/finance/discounts/voucher/${voucherCode.trim()}?channel=${channel}`);
+            const data = await response.json();
+            if (!response.ok) {
+                throw new Error(data.message || 'Voucher tidak valid.');
+            }
+            onVoucherApplied(data);
+            setAppliedVoucher({ code: voucherCode.trim().toUpperCase(), name: data.name });
+            toast({
+                title: "Voucher Diterapkan",
+                description: `Diskon dari "${data.name}" telah diterapkan pada item yang sesuai.`,
+            });
+        } catch (error: any) {
+            toast({
+                variant: "destructive",
+                title: "Voucher Tidak Valid",
+                description: error.message,
+            });
+            setAppliedVoucher(null);
+        } finally {
+            setIsApplyingVoucher(false);
+            setVoucherCode('');
+        }
+    };
+
 
     const handleSale = async (status: 'Completed' | 'Pending') => {
         setIsSubmitting(true);
@@ -130,10 +169,32 @@ export function PosOrderSummary({ cart, onSaleComplete, clearCart, channel, pend
                         <span>{subtotal.toLocaleString('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0, maximumFractionDigits: 0 })}</span>
                     </div>
                     {!isAccessoryOnlyTx && (
+                        <>
                         <div className="flex justify-between items-center">
                             <Label htmlFor="discount">{t.pos.discount}</Label>
                             <Input id="discount" type="number" value={discount} onChange={(e) => setDiscount(Number(e.target.value))} className="w-32 h-8 text-sm"/>
                         </div>
+                         <div className="space-y-2">
+                             <Label htmlFor="voucher">Kode Voucher</Label>
+                             {appliedVoucher ? (
+                                 <div className="flex items-center justify-between">
+                                    <Badge>
+                                         <CheckCircle className="mr-2 h-4 w-4" />
+                                         {appliedVoucher.code}
+                                    </Badge>
+                                    <Button variant="link" size="sm" className="h-auto p-0" onClick={() => {
+                                        setAppliedVoucher(null);
+                                        onVoucherApplied(null); // Signal to reset prices
+                                    }}>Hapus</Button>
+                                 </div>
+                             ) : (
+                                <div className="flex items-center gap-2">
+                                    <Input id="voucher" type="text" placeholder="Masukkan kode voucher" value={voucherCode} onChange={(e) => setVoucherCode(e.target.value)} disabled={isApplyingVoucher}/>
+                                    <Button onClick={handleApplyVoucher} disabled={!voucherCode || isApplyingVoucher} size="sm">Terapkan</Button>
+                                </div>
+                             )}
+                         </div>
+                        </>
                     )}
                 </div>
                 <Separator />
