@@ -1549,9 +1549,18 @@ export async function deleteDiscountGroup(id: number): Promise<void> {
 
 export async function fetchDiscountGroups(): Promise<DiscountGroup[]> {
     const groups = db.prepare('SELECT * FROM discount_groups ORDER BY name').all() as DiscountGroup[];
-    
+
     const productsStmt = db.prepare(`
-        SELECT dp.groupId, dp.discountedPrice, p.id as productId, v.id as variantId, p.name as productName, v.name as variantName, COALESCE(v.sku, p.sku) as sku, p.imageUrl, COALESCE(v.price, p.price) as originalPrice
+        SELECT 
+            dp.groupId, 
+            dp.discountedPrice, 
+            p.id as productId, 
+            v.id as variantId, 
+            p.name as productName, 
+            v.name as variantName, 
+            COALESCE(v.sku, p.sku) as sku, 
+            p.imageUrl, 
+            COALESCE(v.price, p.price) as originalPrice
         FROM discounted_products dp
         JOIN products p ON dp.productId = p.id
         LEFT JOIN variants v ON dp.variantId = v.id
@@ -1562,7 +1571,7 @@ export async function fetchDiscountGroups(): Promise<DiscountGroup[]> {
         const products = productsStmt.all(group.id) as DiscountedProduct[];
         return {
             ...group,
-            products: products,
+            products,
             productCount: products.length,
         };
     });
@@ -1573,7 +1582,15 @@ export async function getDiscountGroup(id: number): Promise<DiscountGroup | null
     if (!group) return null;
 
     const products = db.prepare(`
-        SELECT dp.discountedPrice, p.id as productId, v.id as variantId, p.name as productName, v.name as variantName, COALESCE(v.sku, p.sku) as sku, p.imageUrl, COALESCE(v.price, p.price) as originalPrice
+        SELECT 
+            dp.discountedPrice, 
+            p.id as productId, 
+            v.id as variantId, 
+            p.name as productName, 
+            v.name as variantName, 
+            COALESCE(v.sku, p.sku) as sku, 
+            p.imageUrl, 
+            COALESCE(v.price, p.price) as originalPrice
         FROM discounted_products dp
         JOIN products p ON dp.productId = p.id
         LEFT JOIN variants v ON dp.variantId = v.id
@@ -1815,3 +1832,4 @@ export async function checkPrintedReceiptAvailability(salesChannel: string, ship
 
 
     
+
