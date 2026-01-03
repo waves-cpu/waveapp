@@ -1,5 +1,3 @@
-
-
 'use client';
 
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
@@ -225,6 +223,9 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
       sales: options.sales,
       options: { ...options, channel }
     };
+    if (options.status === 'Completed' && options.transactionId && options.transactionId.startsWith('trans-')) {
+        await cancelSaleTransaction(options.transactionId);
+    }
     const result = await apiFetch('/api/sales', { method: 'POST', body: JSON.stringify(salePayload) });
     await fetchAllData(); // Re-sync state
     return result;
