@@ -206,7 +206,7 @@ export function DiscountGroupForm({ existingGroup }: DiscountGroupFormProps) {
             await addDiscountGroup(groupData);
             toast({ title: "Grup Diskon Dibuat", description: `Grup diskon "${values.name}" telah berhasil dibuat.` });
         }
-        router.push('/finance/discounts');
+        router.push('/promotions/discount-groups');
     } catch (error) {
         console.error("Failed to save discount group:", error);
         toast({
@@ -475,7 +475,7 @@ export function DiscountGroupForm({ existingGroup }: DiscountGroupFormProps) {
             )}
           </CardContent>
           <CardFooter className="justify-end gap-2 pt-6 border-t">
-              <Button type="button" variant="ghost" onClick={() => router.push('/finance/discounts')} disabled={isSubmitting}>{t.common.cancel}</Button>
+              <Button type="button" variant="ghost" onClick={() => router.push('/promotions/discount-groups')} disabled={isSubmitting}>{t.common.cancel}</Button>
               <Button type="submit" disabled={isSubmitting || fields.length === 0}>
                   {isSubmitting ? t.common.saving : (isEditMode ? "Simpan Perubahan" : "Buat Grup Diskon")}
               </Button>
@@ -485,3 +485,5 @@ export function DiscountGroupForm({ existingGroup }: DiscountGroupFormProps) {
     </Card>
   );
 }
+
+    

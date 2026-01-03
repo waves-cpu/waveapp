@@ -48,7 +48,7 @@ function getStatus(startDate: string, endDate: string): { text: string; variant:
     return { text: 'Aktif', variant: 'default' };
 }
 
-export default function DiscountPage() {
+export default function DiscountGroupPage() {
     const { language } = useLanguage();
     const t = translations[language];
     const { discountGroups, fetchDiscountGroups, deleteDiscountGroup, loading } = useInventory();
@@ -85,10 +85,10 @@ export default function DiscountPage() {
                 <div className="flex items-center justify-between gap-4 mb-6">
                     <div className="flex items-center gap-4">
                         <SidebarTrigger className="md:hidden" />
-                        <h1 className="text-lg font-bold">{t.finance.discounts}</h1>
+                        <h1 className="text-lg font-bold">Grup Diskon</h1>
                     </div>
                     <Button asChild>
-                        <Link href="/finance/discounts/new">
+                        <Link href="/promotions/discount-groups/new">
                             <PlusCircle className="mr-2 h-4 w-4" />
                             Buat Grup Diskon Baru
                         </Link>
@@ -118,7 +118,7 @@ export default function DiscountPage() {
                                         </DropdownMenuTrigger>
                                         <DropdownMenuContent align="end">
                                              <DropdownMenuItem asChild>
-                                                 <Link href={`/finance/discounts/edit/${group.id}`}>
+                                                 <Link href={`/promotions/discount-groups/edit/${group.id}`}>
                                                     <Edit className="mr-2 h-4 w-4" />
                                                     Ubah
                                                  </Link>
@@ -152,7 +152,7 @@ export default function DiscountPage() {
                             <h3 className="mt-4 text-lg font-semibold">Belum Ada Grup Diskon</h3>
                             <p className="mt-1 text-sm">Buat grup diskon pertama Anda untuk memulai promosi.</p>
                              <Button asChild className="mt-4">
-                                <Link href="/finance/discounts/new">
+                                <Link href="/promotions/discount-groups/new">
                                     <PlusCircle className="mr-2 h-4 w-4" />
                                     Buat Grup Diskon Baru
                                 </Link>
@@ -181,3 +181,5 @@ export default function DiscountPage() {
         </AppLayout>
     );
 }
+
+    
