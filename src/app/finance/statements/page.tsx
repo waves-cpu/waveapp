@@ -19,9 +19,11 @@ import { subDays, startOfMonth, endOfMonth, startOfYear, endOfYear, isWithinInte
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import Image from 'next/image';
 import { cn, formatToWIB } from '@/lib/utils';
+import { Pagination } from '@/components/ui/pagination';
+
 
 const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('id-ID', {
@@ -58,6 +60,8 @@ function AllBestsellersDialog({ open, onOpenChange, products, filters }: { open:
     const { language } = useLanguage();
     const t = translations[language].finance.statementsPage;
     const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
+    const [currentPage, setCurrentPage] = useState(1);
+    const [itemsPerPage, setItemsPerPage] = useState(20);
 
     const toggleRow = (id: string) => {
         setExpandedRows(prev => {
@@ -70,6 +74,20 @@ function AllBestsellersDialog({ open, onOpenChange, products, filters }: { open:
             return newSet;
         });
     };
+    
+    useEffect(() => {
+        if (!open) {
+            setExpandedRows(new Set());
+            setCurrentPage(1);
+        }
+    }, [open]);
+
+    const totalPages = Math.ceil(products.length / itemsPerPage);
+    const paginatedProducts = useMemo(() => {
+        const startIndex = (currentPage - 1) * itemsPerPage;
+        return products.slice(startIndex, startIndex + itemsPerPage);
+    }, [products, currentPage, itemsPerPage]);
+
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
@@ -77,59 +95,70 @@ function AllBestsellersDialog({ open, onOpenChange, products, filters }: { open:
                 <DialogHeader>
                     <DialogTitle>{t.allBestsellers}</DialogTitle>
                     <DialogDescription>
-                        {/* You can add a description of the filters here */}
+                        Menampilkan semua produk terlaris untuk periode yang dipilih.
                     </DialogDescription>
                 </DialogHeader>
-                <ScrollArea className="flex-grow">
-                    <Table>
-                        <TableHeader className="sticky top-0 bg-background">
-                            <TableRow>
-                                <TableHead className="w-[50%]">{t.product}</TableHead>
-                                <TableHead className="text-right">{t.units}</TableHead>
-                                <TableHead className="text-right">{t.revenue}</TableHead>
-                                <TableHead className="text-right">{t.profit}</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {products.map(p => (
-                                <React.Fragment key={p.productId}>
-                                <TableRow onClick={() => p.variants.length > 0 && toggleRow(p.productId)} className={cn(p.variants.length > 0 && "cursor-pointer", expandedRows.has(p.productId) && "bg-muted/50")}>
-                                    <TableCell>
-                                        <div className="flex items-center gap-3">
-                                             <div className="w-4 shrink-0">
-                                                {p.variants.length > 0 && (
-                                                    <ChevronDown className={cn("h-4 w-4 transition-transform", expandedRows.has(p.productId) && "rotate-180")} />
-                                                )}
-                                            </div>
-                                            <Image src={p.imageUrl || 'https://placehold.co/40x40.png'} alt={p.name} width={32} height={32} className="rounded-sm" data-ai-hint="product image" />
-                                            <div>
-                                                <p className="font-medium text-sm">{p.name}</p>
-                                                <p className="text-xs text-muted-foreground">SKU: {p.sku || '-'}</p>
-                                            </div>
-                                        </div>
-                                    </TableCell>
-                                    <TableCell className="text-right">{p.unitsSold.toLocaleString('id-ID')}</TableCell>
-                                    <TableCell className="text-right">{formatCurrency(p.revenue)}</TableCell>
-                                    <TableCell className="text-right">{formatCurrency(p.profit)}</TableCell>
+                <div className="flex-grow overflow-hidden flex flex-col">
+                    <ScrollArea className="flex-grow">
+                        <Table>
+                            <TableHeader className="sticky top-0 bg-background">
+                                <TableRow>
+                                    <TableHead className="w-[50%]">{t.product}</TableHead>
+                                    <TableHead className="text-right">{t.units}</TableHead>
+                                    <TableHead className="text-right">{t.revenue}</TableHead>
+                                    <TableHead className="text-right">{t.profit}</TableHead>
                                 </TableRow>
-                                {expandedRows.has(p.productId) && p.variants.map(v => (
-                                     <TableRow key={v.variantId || p.productId}>
-                                         <TableCell className="pl-16 py-2">
-                                             <div>
-                                                 <p className="font-medium text-sm">{v.name}</p>
-                                                 <p className="text-xs text-muted-foreground">SKU: {v.sku || 'N/A'}</p>
-                                             </div>
-                                         </TableCell>
-                                         <TableCell className="text-right py-2">{v.units.toLocaleString('id-ID')}</TableCell>
-                                         <TableCell className="text-right py-2">{formatCurrency(v.revenue)}</TableCell>
-                                         <TableCell className="text-right py-2">{formatCurrency(v.profit)}</TableCell>
-                                     </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {paginatedProducts.map(p => (
+                                    <React.Fragment key={p.productId}>
+                                    <TableRow onClick={() => p.variants.length > 0 && toggleRow(p.productId)} className={cn(p.variants.length > 0 && "cursor-pointer", expandedRows.has(p.productId) && "bg-muted/50")}>
+                                        <TableCell>
+                                            <div className="flex items-center gap-3">
+                                                 <div className="w-4 shrink-0">
+                                                    {p.variants.length > 0 && (
+                                                        <ChevronDown className={cn("h-4 w-4 transition-transform", expandedRows.has(p.productId) && "rotate-180")} />
+                                                    )}
+                                                </div>
+                                                <Image src={p.imageUrl || 'https://placehold.co/40x40.png'} alt={p.name} width={32} height={32} className="rounded-sm" data-ai-hint="product image" />
+                                                <div>
+                                                    <p className="font-medium text-sm">{p.name}</p>
+                                                    <p className="text-xs text-muted-foreground">SKU: {p.sku || '-'}</p>
+                                                </div>
+                                            </div>
+                                        </TableCell>
+                                        <TableCell className="text-right">{p.unitsSold.toLocaleString('id-ID')}</TableCell>
+                                        <TableCell className="text-right">{formatCurrency(p.revenue)}</TableCell>
+                                        <TableCell className="text-right">{formatCurrency(p.profit)}</TableCell>
+                                    </TableRow>
+                                    {expandedRows.has(p.productId) && p.variants.map(v => (
+                                         <TableRow key={v.variantId || p.productId}>
+                                             <TableCell className="pl-16 py-2">
+                                                 <div>
+                                                     <p className="font-medium text-sm">{v.name}</p>
+                                                     <p className="text-xs text-muted-foreground">SKU: {v.sku || 'N/A'}</p>
+                                                 </div>
+                                             </TableCell>
+                                             <TableCell className="text-right py-2">{v.units.toLocaleString('id-ID')}</TableCell>
+                                             <TableCell className="text-right py-2">{formatCurrency(v.revenue)}</TableCell>
+                                             <TableCell className="text-right py-2">{formatCurrency(v.profit)}</TableCell>
+                                         </TableRow>
+                                    ))}
+                                </React.Fragment>
                                 ))}
-                            </React.Fragment>
-                            ))}
-                        </TableBody>
-                    </Table>
-                </ScrollArea>
+                            </TableBody>
+                        </Table>
+                    </ScrollArea>
+                </div>
+                {totalPages > 1 && (
+                     <DialogFooter className="pt-4 border-t">
+                        <Pagination 
+                            totalPages={totalPages}
+                            currentPage={currentPage}
+                            onPageChange={setCurrentPage}
+                        />
+                    </DialogFooter>
+                )}
             </DialogContent>
         </Dialog>
     );
