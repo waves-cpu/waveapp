@@ -27,7 +27,7 @@ import { type ReceiptData } from './pos-receipt';
 import { useInventory } from '@/hooks/use-inventory';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
-import { Badge } from '../ui/badge';
+import { Badge } from '@/components/ui/badge';
 
 interface PosOrderSummaryProps {
   cart: CartItem[];
