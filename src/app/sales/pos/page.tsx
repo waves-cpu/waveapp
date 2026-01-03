@@ -1,5 +1,3 @@
-
-
 'use client';
 
 import React from 'react';
@@ -10,7 +8,7 @@ import { useLanguage } from '@/hooks/use-language';
 import { translations } from '@/types/language';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { History, Settings } from 'lucide-react';
+import { History, Settings, Hourglass } from 'lucide-react';
 
 export default function PosPage() {
     const { language } = useLanguage();
@@ -27,6 +25,12 @@ export default function PosPage() {
                 <Link href="/sales/settings">
                     <Button variant="outline" size="icon">
                         <Settings className="h-4 w-4" />
+                    </Button>
+                </Link>
+                <Link href="/sales/pos/pending">
+                    <Button variant="outline">
+                        <Hourglass className="mr-2 h-4 w-4" />
+                        Transaksi Tertunda
                     </Button>
                 </Link>
                 <Link href="/sales/pos/history">

@@ -25,6 +25,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { type ReceiptData } from './pos-receipt';
 import { useInventory } from '@/hooks/use-inventory';
 import { useToast } from '@/hooks/use-toast';
+import { useRouter } from 'next/navigation';
 
 interface PosOrderSummaryProps {
   cart: CartItem[];
@@ -41,6 +42,7 @@ export function PosOrderSummary({ cart, onSaleComplete, clearCart, channel, pend
     const t = translations[language];
     const { cancelSaleTransaction } = useInventory();
     const { toast } = useToast();
+    const router = useRouter();
     const [discount, setDiscount] = useState(0);
     const [cashReceived, setCashReceived] = useState(0);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -86,6 +88,9 @@ export function PosOrderSummary({ cart, onSaleComplete, clearCart, channel, pend
         try {
             await onSaleComplete(paymentMethod, receiptData, status);
             resetForm();
+            if(status === 'Pending') {
+                router.push('/sales/pos/pending');
+            }
         } catch (error) {
             console.error("Sale failed, not resetting form.", error);
         } finally {
