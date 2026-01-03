@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
@@ -27,6 +26,7 @@ import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
 import { useToast } from '@/hooks/use-toast';
 import { useFinanceSettings } from '@/hooks/use-finance-settings';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('id-ID', {
