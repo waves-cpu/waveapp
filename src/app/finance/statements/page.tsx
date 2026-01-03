@@ -13,7 +13,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-import { Calendar as CalendarIcon, Package, AlertTriangle, ArrowUpRight, ArrowDownRight, DollarSign, BarChart2, Star, TrendingUp } from 'lucide-react';
+import { Calendar as CalendarIcon, Package, AlertTriangle, ArrowUpRight, ArrowDownRight, DollarSign, BarChart2, Star, TrendingUp, Eye, ChevronDown } from 'lucide-react';
 import { DateRange } from 'react-day-picker';
 import { subDays, startOfMonth, endOfMonth, startOfYear, endOfYear, isWithinInterval, parseISO, startOfDay, endOfDay } from 'date-fns';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -21,7 +21,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import Image from 'next/image';
-import { formatToWIB } from '@/lib/utils';
+import { cn, formatToWIB } from '@/lib/utils';
 
 const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('id-ID', {
@@ -31,20 +31,45 @@ const formatCurrency = (amount: number) => {
     }).format(amount);
 };
 
+interface AggregatedVariant {
+    variantId: string | null;
+    name: string;
+    sku?: string;
+    units: number;
+    revenue: number;
+    profit: number;
+}
+
+
 interface AggregatedProduct {
     productId: string;
     name: string;
     sku?: string;
     category: string;
     imageUrl?: string;
-    units: number;
+    unitsSold: number;
     revenue: number;
     profit: number;
+    variants: AggregatedVariant[];
 }
+
 
 function AllBestsellersDialog({ open, onOpenChange, products, filters }: { open: boolean, onOpenChange: (open: boolean) => void, products: AggregatedProduct[], filters: any }) {
     const { language } = useLanguage();
     const t = translations[language].finance.statementsPage;
+    const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
+
+    const toggleRow = (id: string) => {
+        setExpandedRows(prev => {
+            const newSet = new Set(prev);
+            if (newSet.has(id)) {
+                newSet.delete(id);
+            } else {
+                newSet.add(id);
+            }
+            return newSet;
+        });
+    };
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
@@ -59,9 +84,7 @@ function AllBestsellersDialog({ open, onOpenChange, products, filters }: { open:
                     <Table>
                         <TableHeader className="sticky top-0 bg-background">
                             <TableRow>
-                                <TableHead>{t.product}</TableHead>
-                                <TableHead>{t.sku}</TableHead>
-                                <TableHead>{t.category}</TableHead>
+                                <TableHead className="w-[50%]">{t.product}</TableHead>
                                 <TableHead className="text-right">{t.units}</TableHead>
                                 <TableHead className="text-right">{t.revenue}</TableHead>
                                 <TableHead className="text-right">{t.profit}</TableHead>
@@ -69,19 +92,40 @@ function AllBestsellersDialog({ open, onOpenChange, products, filters }: { open:
                         </TableHeader>
                         <TableBody>
                             {products.map(p => (
-                                <TableRow key={p.productId}>
+                                <React.Fragment key={p.productId}>
+                                <TableRow onClick={() => p.variants.length > 0 && toggleRow(p.productId)} className={cn(p.variants.length > 0 && "cursor-pointer", expandedRows.has(p.productId) && "bg-muted/50")}>
                                     <TableCell>
                                         <div className="flex items-center gap-3">
+                                             <div className="w-4 shrink-0">
+                                                {p.variants.length > 0 && (
+                                                    <ChevronDown className={cn("h-4 w-4 transition-transform", expandedRows.has(p.productId) && "rotate-180")} />
+                                                )}
+                                            </div>
                                             <Image src={p.imageUrl || 'https://placehold.co/40x40.png'} alt={p.name} width={32} height={32} className="rounded-sm" data-ai-hint="product image" />
-                                            <span className="font-medium text-sm">{p.name}</span>
+                                            <div>
+                                                <p className="font-medium text-sm">{p.name}</p>
+                                                <p className="text-xs text-muted-foreground">SKU: {p.sku || '-'}</p>
+                                            </div>
                                         </div>
                                     </TableCell>
-                                    <TableCell>{p.sku || '-'}</TableCell>
-                                    <TableCell>{p.category}</TableCell>
-                                    <TableCell className="text-right">{p.units.toLocaleString('id-ID')}</TableCell>
+                                    <TableCell className="text-right">{p.unitsSold.toLocaleString('id-ID')}</TableCell>
                                     <TableCell className="text-right">{formatCurrency(p.revenue)}</TableCell>
                                     <TableCell className="text-right">{formatCurrency(p.profit)}</TableCell>
                                 </TableRow>
+                                {expandedRows.has(p.productId) && p.variants.map(v => (
+                                     <TableRow key={v.variantId || p.productId}>
+                                         <TableCell className="pl-16 py-2">
+                                             <div>
+                                                 <p className="font-medium text-sm">{v.name}</p>
+                                                 <p className="text-xs text-muted-foreground">SKU: {v.sku || 'N/A'}</p>
+                                             </div>
+                                         </TableCell>
+                                         <TableCell className="text-right py-2">{v.units.toLocaleString('id-ID')}</TableCell>
+                                         <TableCell className="text-right py-2">{formatCurrency(v.revenue)}</TableCell>
+                                         <TableCell className="text-right py-2">{formatCurrency(v.profit)}</TableCell>
+                                     </TableRow>
+                                ))}
+                            </React.Fragment>
                             ))}
                         </TableBody>
                     </Table>
@@ -95,6 +139,7 @@ export default function StatementsPage() {
     const { language } = useLanguage();
     const t = translations[language].finance.statementsPage;
     const { allSales, categories, loading } = useInventory();
+    const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
 
     const [date, setDate] = useState<DateRange | undefined>(undefined);
     const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
@@ -155,46 +200,63 @@ export default function StatementsPage() {
                 return;
             }
 
-            // Only count 'Completed' or 'Siap Kirim' or 'Selesai' or 'Terproses for revenue and units
             if (['Completed', 'Siap Kirim', 'Selesai', 'Terproses'].includes(sale.status || '')) {
                 revenue += salePrice;
                 units += sale.quantity;
                 profit += saleProfit;
 
-                // Aggregate by product
-                const saleKey = sale.productId;
-                if (saleKey) {
-                    if (!productAggregation.has(saleKey)) {
-                        productAggregation.set(saleKey, {
-                            productId: sale.productId!,
+                const productId = sale.productId;
+                if (productId) {
+                    if (!productAggregation.has(productId)) {
+                        productAggregation.set(productId, {
+                            productId: productId,
                             name: sale.productName,
                             sku: sale.parentSku,
                             category: sale.productCategory,
                             imageUrl: sale.parentImageUrl,
-                            units: 0,
+                            unitsSold: 0,
                             revenue: 0,
-                            profit: 0
+                            profit: 0,
+                            variants: [],
                         });
                     }
-                    const agg = productAggregation.get(saleKey)!;
-                    agg.units += sale.quantity;
-                    agg.revenue += salePrice;
-                    agg.profit += saleProfit;
+                    const productAgg = productAggregation.get(productId)!;
+                    productAgg.unitsSold += sale.quantity;
+                    productAgg.revenue += salePrice;
+                    productAgg.profit += saleProfit;
+
+                    const variantId = sale.variantId || null;
+                    let variantAgg = productAgg.variants.find(v => v.variantId === variantId);
+                    if (!variantAgg) {
+                        variantAgg = {
+                            variantId,
+                            name: sale.variantName || sale.productName,
+                            sku: sale.sku,
+                            units: 0,
+                            revenue: 0,
+                            profit: 0,
+                        };
+                        productAgg.variants.push(variantAgg);
+                    }
+                    variantAgg.units += sale.quantity;
+                    variantAgg.revenue += salePrice;
+                    variantAgg.profit += saleProfit;
                 }
 
-                // Aggregate by category
                 if (sale.productCategory) {
                     categoryAggregation.set(sale.productCategory, (categoryAggregation.get(sale.productCategory) || 0) + sale.quantity);
                 }
 
-                // Aggregate by size (variant name)
                 if (sale.variantName) {
                     sizeAggregation.set(sale.variantName, (sizeAggregation.get(sale.variantName) || 0) + sale.quantity);
                 }
             }
         });
         
-        const sortedBestsellers = Array.from(productAggregation.values()).sort((a, b) => b.units - a.units);
+        productAggregation.forEach(p => {
+            p.variants.sort((a,b) => b.units - a.units);
+        });
+        const sortedBestsellers = Array.from(productAggregation.values()).sort((a, b) => b.unitsSold - a.unitsSold);
         const sortedCategories = Array.from(categoryAggregation.entries()).map(([name, units]) => ({ name, units })).sort((a,b) => b.units - a.units);
         const sortedSizes = Array.from(sizeAggregation.entries()).map(([name, units]) => ({ name, units })).sort((a,b) => b.units - a.units);
 
@@ -219,6 +281,18 @@ export default function StatementsPage() {
     ];
     
     const salesChannels = [...new Set(allSales.map(s => s.channel))];
+
+    const toggleRow = (productId: string) => {
+        setExpandedRows(prev => {
+            const newSet = new Set(prev);
+            if (newSet.has(productId)) {
+                newSet.delete(productId);
+            } else {
+                newSet.add(productId);
+            }
+            return newSet;
+        });
+    };
 
     return (
         <AppLayout>
@@ -347,8 +421,7 @@ export default function StatementsPage() {
                                 <Table>
                                     <TableHeader>
                                         <TableRow>
-                                            <TableHead>{t.product}</TableHead>
-                                            <TableHead>{t.sku}</TableHead>
+                                            <TableHead className="w-[50%]">{t.product}</TableHead>
                                             <TableHead className="text-right">{t.units}</TableHead>
                                             <TableHead className="text-right">{t.revenue}</TableHead>
                                             <TableHead className="text-right">{t.profit}</TableHead>
@@ -356,18 +429,40 @@ export default function StatementsPage() {
                                     </TableHeader>
                                     <TableBody>
                                         {bestsellers.slice(0, 5).map(p => (
-                                            <TableRow key={p.productId}>
-                                                <TableCell>
-                                                    <div className="flex items-center gap-3">
-                                                        <Image src={p.imageUrl || 'https://placehold.co/40x40.png'} alt={p.name} width={32} height={32} className="rounded-sm" data-ai-hint="product image" />
-                                                        <span className="font-medium text-sm">{p.name}</span>
-                                                    </div>
-                                                </TableCell>
-                                                <TableCell>{p.sku || '-'}</TableCell>
-                                                <TableCell className="text-right">{p.units.toLocaleString('id-ID')}</TableCell>
-                                                <TableCell className="text-right">{formatCurrency(p.revenue)}</TableCell>
-                                                <TableCell className="text-right">{formatCurrency(p.profit)}</TableCell>
-                                            </TableRow>
+                                            <React.Fragment key={p.productId}>
+                                                <TableRow onClick={() => p.variants.length > 0 && toggleRow(p.productId)} className={cn(p.variants.length > 0 && "cursor-pointer", expandedRows.has(p.productId) && "bg-muted/50")}>
+                                                    <TableCell>
+                                                        <div className="flex items-center gap-3">
+                                                            <div className="w-4 shrink-0">
+                                                                {p.variants.length > 0 && (
+                                                                    <ChevronDown className={cn("h-4 w-4 transition-transform", expandedRows.has(p.productId) && "rotate-180")} />
+                                                                )}
+                                                            </div>
+                                                            <Image src={p.imageUrl || 'https://placehold.co/40x40.png'} alt={p.name} width={32} height={32} className="rounded-sm" data-ai-hint="product image" />
+                                                            <div>
+                                                                <p className="font-medium text-sm">{p.name}</p>
+                                                                <p className="text-xs text-muted-foreground">SKU: {p.sku || '-'}</p>
+                                                            </div>
+                                                        </div>
+                                                    </TableCell>
+                                                    <TableCell className="text-right">{p.unitsSold.toLocaleString('id-ID')}</TableCell>
+                                                    <TableCell className="text-right">{formatCurrency(p.revenue)}</TableCell>
+                                                    <TableCell className="text-right">{formatCurrency(p.profit)}</TableCell>
+                                                </TableRow>
+                                                {expandedRows.has(p.productId) && p.variants.map(v => (
+                                                     <TableRow key={v.variantId || p.productId}>
+                                                         <TableCell className="pl-16 py-2">
+                                                             <div>
+                                                                 <p className="font-medium text-sm">{v.name}</p>
+                                                                 <p className="text-xs text-muted-foreground">SKU: {v.sku || 'N/A'}</p>
+                                                             </div>
+                                                         </TableCell>
+                                                         <TableCell className="text-right py-2">{v.units.toLocaleString('id-ID')}</TableCell>
+                                                         <TableCell className="text-right py-2">{formatCurrency(v.revenue)}</TableCell>
+                                                         <TableCell className="text-right py-2">{formatCurrency(v.profit)}</TableCell>
+                                                     </TableRow>
+                                                ))}
+                                            </React.Fragment>
                                         ))}
                                     </TableBody>
                                 </Table>
@@ -449,10 +544,3 @@ export default function StatementsPage() {
         </AppLayout>
     );
 }
-
-
-
-
-
-
-
