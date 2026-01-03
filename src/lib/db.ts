@@ -43,8 +43,12 @@ const runMigrations = () => {
   try {
     const userColumns: { name: string }[] = db.pragma('table_info(users)') as { name: string }[];
     if (!userColumns.some((col: any) => col.name === 'password')) {
-        db.exec('ALTER TABLE users ADD COLUMN password TEXT');
+        db.exec('ALTER TABLE users ADD COLUMN password TEXT NOT NULL DEFAULT \'\'');
     }
+    if (!userColumns.some((col: any) => col.name === 'role')) {
+        db.exec('ALTER TABLE users ADD COLUMN role TEXT NOT NULL DEFAULT \'user\'');
+    }
+
 
     db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_shipping_receipts_awb ON shipping_receipts(awb);');
     

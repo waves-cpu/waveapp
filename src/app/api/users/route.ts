@@ -1,4 +1,5 @@
 
+
 import { fetchAllUsers, addUser } from '@/lib/inventory-service';
 import { NextRequest, NextResponse } from 'next/server';
 
@@ -7,6 +8,7 @@ export async function GET() {
         const users = await fetchAllUsers();
         return NextResponse.json(users);
     } catch (error) {
+        console.error("API Error fetching users:", error);
         return NextResponse.json({ message: 'Internal Server Error' }, { status: 500 });
     }
 }
@@ -26,3 +28,4 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ message: 'Internal Server Error' }, { status: 500 });
     }
 }
+
