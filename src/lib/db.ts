@@ -1,5 +1,4 @@
 
-
 import Database from 'better-sqlite3';
 import path from 'path';
 import fs from 'fs';
@@ -171,13 +170,16 @@ const runMigrations = () => {
     }
 
     const discountGroupColumns: { name: string }[] = db.pragma('table_info(discount_groups)') as { name: string }[];
-    if (discountGroupColumns && !discountGroupColumns.some((col: any) => col.name === 'channel')) {
-        db.exec('ALTER TABLE discount_groups ADD COLUMN channel TEXT');
+    if (discountGroupColumns) {
+        if (!discountGroupColumns.some((col: any) => col.name === 'channel')) {
+            db.exec('ALTER TABLE discount_groups ADD COLUMN channel TEXT');
+        }
+        if (!discountGroupColumns.some((col: any) => col.name === 'voucherCode')) {
+            db.exec('ALTER TABLE discount_groups ADD COLUMN voucherCode TEXT');
+            db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_discount_groups_voucher_code ON discount_groups(voucherCode);');
+        }
     }
-    if (discountGroupColumns && !discountGroupColumns.some((col: any) => col.name === 'voucherCode')) {
-        db.exec('ALTER TABLE discount_groups ADD COLUMN voucherCode TEXT');
-        db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_discount_groups_voucher_code ON discount_groups(voucherCode);');
-    }
+
 
   } catch (error) {
   }

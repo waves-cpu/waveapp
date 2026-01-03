@@ -1,7 +1,4 @@
 
-
-'use server';
-
 import { db as dbProxy } from './db';
 const db = dbProxy;
 import type { InventoryItem, AdjustmentHistory, InventoryItemVariant, Sale, Reseller, ChannelPrice, Accessory, ShippingReceipt, BulkImportHistory, User, ReturnedItem, DiscountGroup, DiscountedProduct, PrintedReceiptCount } from '@/types';
@@ -877,24 +874,28 @@ export async function bulkAdjustStock(updates: { itemId: string, quantity: numbe
 
 
 export async function findProductBySku(sku: string): Promise<InventoryItem | null> {
+    const lowerSku = sku.toLowerCase();
+
+    // First check variants, as they are more specific
     const getVariantBySkuStmt = db.prepare('SELECT * FROM variants WHERE sku = ?');
-    const getProductBySkuStmt = db.prepare('SELECT * FROM products WHERE sku = ?');
     const getProductByIdStmt = db.prepare('SELECT * FROM products WHERE id = ?');
+    const getProductBySkuStmt = db.prepare('SELECT * FROM products WHERE sku = ?');
     const getVariantsByProductIdStmt = db.prepare('SELECT * FROM variants WHERE productId = ?');
 
-    // 1. Try to find an exact match in variants
-    const variantResult: any = getVariantBySkuStmt.get(sku);
+    const variantResult: any = getVariantBySkuStmt.get(lowerSku);
     if (variantResult) {
         const parent = getProductByIdStmt.get(variantResult.productId) as any;
-        return {
-            ...parent,
-            id: parent.id.toString(),
-            variants: [{...variantResult, id: variantResult.id.toString(), parentName: parent.name}] 
-        };
+        if (parent) {
+            return {
+                ...parent,
+                id: parent.id.toString(),
+                variants: [{...variantResult, id: variantResult.id.toString(), parentName: parent.name}] 
+            };
+        }
     }
 
-    // 2. If not found in variants, try to find in products (could be a simple product or a parent)
-    const productResult: any = getProductBySkuStmt.get(sku);
+    // If not found in variants, check parent products (or simple products)
+    const productResult: any = getProductBySkuStmt.get(lowerSku);
     if (productResult) {
         if (productResult.hasVariants) {
             const variants = getVariantsByProductIdStmt.all(productResult.id) as any[];
@@ -907,6 +908,21 @@ export async function findProductBySku(sku: string): Promise<InventoryItem | nul
         // It's a simple product
         return { ...productResult, id: productResult.id.toString() };
     }
+    
+    // If still not found, check by name
+     const productByName: any = db.prepare('SELECT * FROM products WHERE name = ?').get(sku);
+     if(productByName) {
+        if (productByName.hasVariants) {
+            const variants = getVariantsByProductIdStmt.all(productByName.id) as any[];
+            return {
+                 ...productByName,
+                 id: productByName.id.toString(),
+                 variants: variants.map(v => ({ ...v, id: v.id.toString() }))
+            };
+        }
+        return { ...productByName, id: productByName.id.toString() };
+     }
+
 
     return null;
 }
@@ -931,7 +947,15 @@ export async function performSale(
     
     const transaction = db.transaction(() => {
         const results: { newSale: Sale, updatedItem?: InventoryItem, updatedAccessory?: Accessory }[] = [];
-
+        
+        // If it's an existing pending transaction, first delete it.
+        if (saleOptions.transactionId && saleOptions.transactionId.startsWith('trans-')) {
+            const existingSales = db.prepare('SELECT * FROM sales WHERE transactionId = ? AND status = ?').all(saleOptions.transactionId, 'Pending');
+            if (existingSales.length > 0) {
+                 db.prepare('DELETE FROM sales WHERE transactionId = ?').run(saleOptions.transactionId);
+            }
+        }
+        
         sales.forEach(sale => {
             let updatedItem: InventoryItem | undefined = undefined;
             let updatedAccessory: Accessory | undefined = undefined;
@@ -1518,7 +1542,7 @@ export async function resetAllPrices() {
 // Discount Group Functions
 export async function addDiscountGroup(group: Omit<DiscountGroup, 'id' | 'productCount'>): Promise<void> {
     const transaction = db.transaction(() => {
-        const addGroupStmt = db.prepare('INSERT INTO discount_groups (name, category, channel, startDate, endDate) VALUES (@name, @category, @channel, @startDate, @endDate)');
+        const addGroupStmt = db.prepare('INSERT INTO discount_groups (name, category, channel, startDate, endDate, voucherCode) VALUES (@name, @category, @channel, @startDate, @endDate, @voucherCode)');
         const addProductStmt = db.prepare('INSERT INTO discounted_products (groupId, productId, variantId, discountedPrice) VALUES (@groupId, @productId, @variantId, @discountedPrice)');
         
         const groupResult = addGroupStmt.run({
@@ -1527,6 +1551,7 @@ export async function addDiscountGroup(group: Omit<DiscountGroup, 'id' | 'produc
             channel: group.channel,
             startDate: group.startDate,
             endDate: group.endDate,
+            voucherCode: group.voucherCode || null
         });
 
         const groupId = groupResult.lastInsertRowid;
@@ -1545,7 +1570,7 @@ export async function addDiscountGroup(group: Omit<DiscountGroup, 'id' | 'produc
 
 export async function editDiscountGroup(id: number, group: Omit<DiscountGroup, 'id' | 'productCount'>): Promise<void> {
     const transaction = db.transaction(() => {
-        const updateGroupStmt = db.prepare('UPDATE discount_groups SET name = @name, category = @category, channel = @channel, startDate = @startDate, endDate = @endDate WHERE id = @id');
+        const updateGroupStmt = db.prepare('UPDATE discount_groups SET name = @name, category = @category, channel = @channel, startDate = @startDate, endDate = @endDate, voucherCode = @voucherCode WHERE id = @id');
         const deleteProductsStmt = db.prepare('DELETE FROM discounted_products WHERE groupId = ?');
         const addProductStmt = db.prepare('INSERT INTO discounted_products (groupId, productId, variantId, discountedPrice) VALUES (@groupId, @productId, @variantId, @discountedPrice)');
 
@@ -1556,6 +1581,7 @@ export async function editDiscountGroup(id: number, group: Omit<DiscountGroup, '
             channel: group.channel,
             startDate: group.startDate,
             endDate: group.endDate,
+            voucherCode: group.voucherCode || null
         });
 
         deleteProductsStmt.run(id);
@@ -1608,6 +1634,26 @@ export async function getDiscountGroup(id: number): Promise<DiscountGroup | null
         LEFT JOIN variants v ON dp.variantId = v.id
         WHERE dp.groupId = ?
     `).all(id) as DiscountedProduct[];
+
+    return { ...group, products, productCount: products.length };
+}
+
+export async function findDiscountGroupByVoucherCode(voucherCode: string, channel: string): Promise<DiscountGroup | null> {
+    const now = new Date().toISOString();
+    const group = db.prepare(`
+        SELECT * FROM discount_groups 
+        WHERE lower(voucherCode) = lower(?) AND lower(channel) = lower(?) AND startDate <= ? AND endDate >= ?
+    `).get(voucherCode, channel, now, now) as DiscountGroup | undefined;
+    
+    if (!group) return null;
+
+    const products = db.prepare(`
+        SELECT dp.discountedPrice, p.id as productId, v.id as variantId, p.name as productName, v.name as variantName, COALESCE(v.sku, p.sku) as sku, p.imageUrl, COALESCE(v.price, p.price) as originalPrice
+        FROM discounted_products dp
+        JOIN products p ON dp.productId = p.id
+        LEFT JOIN variants v ON dp.variantId = v.id
+        WHERE dp.groupId = ?
+    `).all(group.id) as DiscountedProduct[];
 
     return { ...group, products, productCount: products.length };
 }
@@ -1816,5 +1862,6 @@ export async function checkPrintedReceiptAvailability(salesChannel: string, ship
 
 
     
+
 
 
