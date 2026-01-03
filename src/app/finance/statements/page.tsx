@@ -176,7 +176,7 @@ export default function StatementsPage() {
     const { language } = useLanguage();
     const t = translations[language].finance.statementsPage;
     const { allSales, categories, loading } = useInventory();
-    const { settings: financeSettings } = useFinanceSettings();
+    const { settings: financeSettings, isLoaded: financeSettingsLoaded } = useFinanceSettings();
     const { toast } = useToast();
     const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
 
@@ -204,7 +204,7 @@ export default function StatementsPage() {
         topCategories,
         topSizes,
     } = useMemo(() => {
-        if (!date?.from) return { grossRevenue: 0, grossProfit: 0, netRevenue: 0, netProfit: 0, totalMarketplaceCut: 0, unitsSold: 0, cancelledSales: { count: 0, value: 0 }, returnedSales: { count: 0, value: 0 }, bestsellers: [], topCategories: [], topSizes: [] };
+        if (!date?.from || !financeSettingsLoaded) return { grossRevenue: 0, grossProfit: 0, netRevenue: 0, netProfit: 0, totalMarketplaceCut: 0, unitsSold: 0, cancelledSales: { count: 0, value: 0 }, returnedSales: { count: 0, value: 0 }, bestsellers: [], topCategories: [], topSizes: [] };
         
         const toDate = date.to || date.from;
 
@@ -334,7 +334,7 @@ export default function StatementsPage() {
             topCategories: sortedCategories,
             topSizes: sortedSizes,
         };
-    }, [allSales, date, categoryFilter, channelFilter, financeSettings.marketplaceFee]);
+    }, [allSales, date, categoryFilter, channelFilter, financeSettings.marketplaceFee, financeSettingsLoaded]);
 
     const datePresets = [
         { label: t.today, range: { from: new Date(), to: new Date() } },
@@ -543,7 +543,11 @@ export default function StatementsPage() {
                         </CardHeader>
                         <CardContent>
                             <div className="text-2xl font-bold">{formatCurrency(totalMarketplaceCut)}</div>
-                            <p className="text-xs text-muted-foreground">{financeSettings.marketplaceFee}% dari omzet</p>
+                            {financeSettingsLoaded ? (
+                                <p className="text-xs text-muted-foreground">{financeSettings.marketplaceFee}% dari omzet</p>
+                            ) : (
+                                <Skeleton className="h-4 w-20 mt-1" />
+                            )}
                         </CardContent>
                     </Card>
                     <Card>
