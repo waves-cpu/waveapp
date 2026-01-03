@@ -25,8 +25,8 @@ export async function addUser(username: string, password: string): Promise<User>
     return newUser;
 }
 
-export async function fetchAllUsers(): Promise<User[]> {
-    const users = db.prepare('SELECT id, username, role FROM users').all() as User[];
+export async function fetchAllUsers(): Promise<Omit<User, 'password'>[]> {
+    const users = db.prepare('SELECT id, username, role FROM users').all() as Omit<User, 'password'>[];
     return users;
 }
 
@@ -1812,3 +1812,6 @@ export async function checkPrintedReceiptAvailability(salesChannel: string, ship
 
 
 
+
+
+    

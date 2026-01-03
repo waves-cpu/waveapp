@@ -41,6 +41,11 @@ function initializeDatabase() {
 
 const runMigrations = () => {
   try {
+    const userColumns: { name: string }[] = db.pragma('table_info(users)') as { name: string }[];
+    if (!userColumns.some((col: any) => col.name === 'password')) {
+        db.exec('ALTER TABLE users ADD COLUMN password TEXT');
+    }
+
     db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_shipping_receipts_awb ON shipping_receipts(awb);');
     
     db.exec("UPDATE products SET sku = SUBSTR(sku, 1, LENGTH(sku) - 2) WHERE sku LIKE '%.0'");
@@ -400,3 +405,6 @@ const dbProxy = {
 
 // Replace direct 'db' export with the proxy
 export { dbProxy as db };
+
+
+    
