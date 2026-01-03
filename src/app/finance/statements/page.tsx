@@ -2,7 +2,7 @@
 
 'use client';
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { AppLayout } from '@/app/components/app-layout';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { useInventory } from '@/hooks/use-inventory';
@@ -13,7 +13,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-import { Calendar as CalendarIcon, Package, AlertTriangle, ArrowUpRight, ArrowDownRight, DollarSign, BarChart2, Star, TrendingUp, Eye, ChevronDown } from 'lucide-react';
+import { Calendar as CalendarIcon, Package, ArrowDownRight, DollarSign, BarChart2, Star, TrendingUp, Eye, ChevronDown, FileDown, Loader2 } from 'lucide-react';
 import { DateRange } from 'react-day-picker';
 import { subDays, startOfMonth, endOfMonth, startOfYear, endOfYear, isWithinInterval, parseISO, startOfDay, endOfDay } from 'date-fns';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -23,7 +23,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import Image from 'next/image';
 import { cn, formatToWIB } from '@/lib/utils';
 import { Pagination } from '@/components/ui/pagination';
-
+import * as XLSX from 'xlsx';
+import { saveAs } from 'file-saver';
+import { useToast } from '@/hooks/use-toast';
 
 const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('id-ID', {
@@ -168,12 +170,15 @@ export default function StatementsPage() {
     const { language } = useLanguage();
     const t = translations[language].finance.statementsPage;
     const { allSales, categories, loading } = useInventory();
+    const { toast } = useToast();
     const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
 
     const [date, setDate] = useState<DateRange | undefined>(undefined);
     const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
     const [channelFilter, setChannelFilter] = useState<string | null>(null);
     const [isBestsellerDialogOpen, setBestsellerDialogOpen] = useState(false);
+    const [isDownloading, setIsDownloading] = useState(false);
+
 
     useEffect(() => {
         setDate({ from: startOfMonth(new Date()), to: endOfMonth(new Date()) });
@@ -322,6 +327,70 @@ export default function StatementsPage() {
             return newSet;
         });
     };
+    
+    const downloadExcel = useCallback(() => {
+        setIsDownloading(true);
+        const { id, update } = toast({ title: 'Memulai unduhan', description: 'Laporan penjualan Excel sedang disiapkan...' });
+
+        setTimeout(() => {
+            const dataToExport = [];
+            const headers = ["Tipe", "Nama Produk/Varian", "SKU", "Kategori", "Unit Terjual", "Pendapatan", "Laba"];
+            
+            bestsellers.forEach(product => {
+                // Parent Product Row
+                dataToExport.push({
+                    "Tipe": "Produk Induk",
+                    "Nama Produk/Varian": product.name,
+                    "SKU": product.sku || '-',
+                    "Kategori": product.category,
+                    "Unit Terjual": product.unitsSold,
+                    "Pendapatan": product.revenue,
+                    "Laba": product.profit,
+                });
+
+                // Variant Rows
+                product.variants.forEach(variant => {
+                    dataToExport.push({
+                        "Tipe": "Varian",
+                        "Nama Produk/Varian": `  ${variant.name}`, // Indent for clarity
+                        "SKU": variant.sku || '-',
+                        "Kategori": product.category,
+                        "Unit Terjual": variant.units,
+                        "Pendapatan": variant.revenue,
+                        "Laba": variant.profit,
+                    });
+                });
+            });
+
+            const worksheet = XLSX.utils.json_to_sheet(dataToExport, { header: headers });
+             // Custom column widths
+            worksheet['!cols'] = [
+                { wch: 15 }, // Tipe
+                { wch: 40 }, // Nama
+                { wch: 20 }, // SKU
+                { wch: 20 }, // Kategori
+                { wch: 15 }, // Unit
+                { wch: 20 }, // Pendapatan
+                { wch: 20 }, // Laba
+            ];
+
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, 'Laporan Penjualan');
+
+            const dateFrom = date?.from ? formatToWIB(date.from, 'dd-MM-yy') : 'start';
+            const dateTo = date?.to ? formatToWIB(date.to, 'dd-MM-yy') : 'end';
+            const category = categoryFilter || 'semua_kategori';
+            const channel = channelFilter || 'semua_kanal';
+
+            const fileName = `Laporan_Penjualan_${category}_${channel}_${dateFrom}_sampai_${dateTo}.xlsx`;
+            const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+            const blob = new Blob([excelBuffer], { type: 'application/octet-stream' });
+            saveAs(blob, fileName);
+            
+            update({ id, title: "Unduhan Siap", description: `File '${fileName}' telah diunduh.` });
+            setIsDownloading(false);
+        }, 500);
+    }, [bestsellers, date, categoryFilter, channelFilter, toast]);
 
     return (
         <AppLayout>
@@ -385,6 +454,10 @@ export default function StatementsPage() {
                             {salesChannels.map(chan => <SelectItem key={chan} value={chan}>{chan}</SelectItem>)}
                         </SelectContent>
                     </Select>
+                    <Button onClick={downloadExcel} variant="outline" disabled={isDownloading}>
+                        {isDownloading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileDown className="mr-2 h-4 w-4" />}
+                        {isDownloading ? "Mengekspor..." : "Ekspor Excel"}
+                    </Button>
                 </div>
                 
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
