@@ -45,6 +45,7 @@ import {
   FileClock,
   Tags,
   BadgePercent,
+  Ticket,
 } from 'lucide-react';
 import { Logo } from './logo';
 import { Separator } from '@/components/ui/separator';
@@ -269,14 +270,22 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                     </SidebarMenuItem>
                      <CollapsibleContent>
                          <SidebarMenu className="ml-4 mt-2 border-l border-muted-foreground/20 pl-4 mb-4">
-                               <SidebarMenuItem>
-                                <Link href="/promotions/discount-groups">
-                                    <SidebarMenuButton variant="ghost" size="sm" isActive={isActive('/promotions/discount-groups')}>
-                                        <Tags />
-                                        Grup Diskon
-                                    </SidebarMenuButton>
-                                </Link>
-                              </SidebarMenuItem>
+                                <SidebarMenuItem>
+                                    <Link href="/promotions/vouchers">
+                                        <SidebarMenuButton variant="ghost" size="sm" isActive={isActive('/promotions/vouchers')}>
+                                            <Ticket />
+                                            Voucher
+                                        </SidebarMenuButton>
+                                    </Link>
+                                </SidebarMenuItem>
+                                <SidebarMenuItem>
+                                    <Link href="/promotions/discount-groups">
+                                        <SidebarMenuButton variant="ghost" size="sm" isActive={isActive('/promotions/discount-groups')}>
+                                            <Tags />
+                                            Grup Diskon
+                                        </SidebarMenuButton>
+                                    </Link>
+                                </SidebarMenuItem>
                         </SidebarMenu>
                     </CollapsibleContent>
                 </Collapsible>
@@ -360,7 +369,3 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     </div>
   );
 }
-
-    
-
-    

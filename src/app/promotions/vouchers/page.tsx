@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -8,7 +7,7 @@ import { SidebarTrigger } from '@/components/ui/sidebar';
 import { useLanguage } from '@/hooks/use-language';
 import { translations } from '@/types/language';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Tags, Trash2, Calendar, MoreVertical, Edit } from 'lucide-react';
+import { PlusCircle, Ticket, Trash2, Calendar, MoreVertical, Edit } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { useInventory } from '@/hooks/use-inventory';
 import type { DiscountGroup } from '@/types';
@@ -48,7 +47,7 @@ function getStatus(startDate: string, endDate: string): { text: string; variant:
     return { text: 'Aktif', variant: 'default' };
 }
 
-export default function DiscountGroupPage() {
+export default function VouchersPage() {
     const { language } = useLanguage();
     const t = translations[language];
     const { discountGroups, fetchDiscountGroups, deleteDiscountGroup, loading } = useInventory();
@@ -59,20 +58,20 @@ export default function DiscountGroupPage() {
         fetchDiscountGroups();
     }, [fetchDiscountGroups]);
 
-    const filteredDiscountGroups = discountGroups.filter(g => !g.voucherCode);
-    
+    const voucherGroups = discountGroups.filter(g => g.voucherCode);
+
     const handleDelete = async () => {
         if (!groupToDelete) return;
         try {
             await deleteDiscountGroup(groupToDelete.id);
             toast({
-                title: 'Grup Diskon Dihapus',
-                description: `Grup "${groupToDelete.name}" telah berhasil dihapus.`,
+                title: 'Voucher Dihapus',
+                description: `Voucher "${groupToDelete.name}" telah berhasil dihapus.`,
             });
         } catch (error) {
             toast({
                 title: 'Gagal Menghapus',
-                description: 'Terjadi kesalahan saat menghapus grup diskon.',
+                description: 'Terjadi kesalahan saat menghapus voucher.',
                 variant: 'destructive',
             });
         } finally {
@@ -80,32 +79,31 @@ export default function DiscountGroupPage() {
         }
     };
 
-
     return (
         <AppLayout>
             <main className="flex-1 p-4 md:p-10">
                 <div className="flex items-center justify-between gap-4 mb-6">
                     <div className="flex items-center gap-4">
                         <SidebarTrigger className="md:hidden" />
-                        <h1 className="text-lg font-bold">Grup Diskon Otomatis</h1>
+                        <h1 className="text-lg font-bold">Voucher Diskon</h1>
                     </div>
                     <Button asChild>
                         <Link href="/promotions/discount-groups/new">
                             <PlusCircle className="mr-2 h-4 w-4" />
-                            Buat Grup Diskon Baru
+                            Buat Voucher Baru
                         </Link>
                     </Button>
                 </div>
                 
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                    {filteredDiscountGroups.map(group => {
+                    {voucherGroups.map(group => {
                         const status = getStatus(group.startDate, group.endDate);
                         return (
                             <Card key={group.id} className="flex flex-col">
                                 <CardHeader className="flex-row items-start justify-between gap-4">
                                     <div>
                                         <CardTitle className="flex items-center gap-2 text-base">
-                                            <Tags className="h-5 w-5 text-primary" />
+                                            <Ticket className="h-5 w-5 text-primary" />
                                             {group.name}
                                         </CardTitle>
                                         <CardDescription>
@@ -133,6 +131,9 @@ export default function DiscountGroupPage() {
                                     </DropdownMenu>
                                 </CardHeader>
                                 <CardContent className="flex-grow">
+                                    <div className="font-mono text-center bg-muted rounded-md p-2 border border-dashed mb-4">
+                                        {group.voucherCode}
+                                    </div>
                                     <div className="text-sm text-muted-foreground flex items-center gap-2">
                                         <Calendar className="h-4 w-4" />
                                         <span>{formatToWIB(parseISO(group.startDate), 'dd MMM yyyy')} - {formatToWIB(parseISO(group.endDate), 'dd MMM yyyy')}</span>
@@ -148,15 +149,15 @@ export default function DiscountGroupPage() {
                         )
                     })}
 
-                    {!loading && filteredDiscountGroups.length === 0 && (
+                    {!loading && voucherGroups.length === 0 && (
                          <div className="col-span-full text-center py-12 text-muted-foreground border-2 border-dashed rounded-lg">
-                            <Tags className="mx-auto h-12 w-12" />
-                            <h3 className="mt-4 text-lg font-semibold">Belum Ada Grup Diskon</h3>
-                            <p className="mt-1 text-sm">Buat grup diskon pertama Anda untuk memulai promosi otomatis.</p>
+                            <Ticket className="mx-auto h-12 w-12" />
+                            <h3 className="mt-4 text-lg font-semibold">Belum Ada Voucher</h3>
+                            <p className="mt-1 text-sm">Buat voucher pertama Anda untuk memulai promosi.</p>
                              <Button asChild className="mt-4">
                                 <Link href="/promotions/discount-groups/new">
                                     <PlusCircle className="mr-2 h-4 w-4" />
-                                    Buat Grup Diskon Baru
+                                    Buat Voucher Baru
                                 </Link>
                             </Button>
                         </div>
@@ -167,9 +168,9 @@ export default function DiscountGroupPage() {
              <AlertDialog open={!!groupToDelete} onOpenChange={(open) => !open && setGroupToDelete(null)}>
                 <AlertDialogContent>
                     <AlertDialogHeader>
-                        <AlertDialogTitle>Anda yakin ingin menghapus grup ini?</AlertDialogTitle>
+                        <AlertDialogTitle>Anda yakin ingin menghapus voucher ini?</AlertDialogTitle>
                         <AlertDialogDescription>
-                            Tindakan ini akan menghapus grup diskon "{groupToDelete?.name}" secara permanen. Aksi ini tidak bisa dibatalkan.
+                            Tindakan ini akan menghapus voucher "{groupToDelete?.name}" secara permanen. Aksi ini tidak bisa dibatalkan.
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
