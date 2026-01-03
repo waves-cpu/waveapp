@@ -33,7 +33,6 @@ import { useLanguage } from '@/hooks/use-language';
 import { translations } from '@/types/language';
 import { PosSearch } from './pos-search';
 import { useDebounce } from '@/hooks/use-debounce';
-import { getActiveDiscountPrice } from '@/lib/inventory-service';
 
 
 interface CartItem {
@@ -62,7 +61,7 @@ export function RecordSaleForReceiptDialog({
   onSaleComplete,
   receipt,
 }: RecordSaleForReceiptDialogProps) {
-  const { items: inventoryItems, findProductBySku } = useInventory();
+  const { items: inventoryItems, findProductBySku, getActiveDiscountPrice } = useInventory();
   const [cart, setCart] = useState<CartItem[]>([]);
   const { toast } = useToast();
   const { playSuccessSound, playErrorSound } = useScanSounds();
@@ -142,7 +141,7 @@ export function RecordSaleForReceiptDialog({
       return [...currentCart, itemToAdd];
     });
     setSearchTerm('');
-  }, [cart, toast, playErrorSound, playSuccessSound, receipt]);
+  }, [cart, toast, playErrorSound, playSuccessSound, receipt, getActiveDiscountPrice]);
   
  const handleProductSelect = useCallback(async (productOrSku: SearchableItem | string) => {
     let product: InventoryItem | null = null;
@@ -379,5 +378,3 @@ export function RecordSaleForReceiptDialog({
     </>
   );
 }
-
-    

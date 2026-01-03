@@ -697,7 +697,7 @@ export async function bulkUpdateProducts(data: any[]): Promise<{ updatedCount: n
         });
     })();
 
-    return { updatedSkus, notFoundSkus };
+    return { updatedCount: 0, notFoundSkus };
 }
 
 
@@ -870,61 +870,6 @@ export async function bulkAdjustStock(updates: { itemId: string, quantity: numbe
         }
     });
     transaction();
-}
-
-
-export async function findProductBySku(sku: string): Promise<InventoryItem | null> {
-    const lowerSku = sku.toLowerCase();
-
-    // First check variants, as they are more specific
-    const getVariantBySkuStmt = db.prepare('SELECT * FROM variants WHERE sku = ?');
-    const getProductByIdStmt = db.prepare('SELECT * FROM products WHERE id = ?');
-    const getProductBySkuStmt = db.prepare('SELECT * FROM products WHERE sku = ?');
-    const getVariantsByProductIdStmt = db.prepare('SELECT * FROM variants WHERE productId = ?');
-
-    const variantResult: any = getVariantBySkuStmt.get(lowerSku);
-    if (variantResult) {
-        const parent = getProductByIdStmt.get(variantResult.productId) as any;
-        if (parent) {
-            return {
-                ...parent,
-                id: parent.id.toString(),
-                variants: [{...variantResult, id: variantResult.id.toString(), parentName: parent.name}] 
-            };
-        }
-    }
-
-    // If not found in variants, check parent products (or simple products)
-    const productResult: any = getProductBySkuStmt.get(lowerSku);
-    if (productResult) {
-        if (productResult.hasVariants) {
-            const variants = getVariantsByProductIdStmt.all(productResult.id) as any[];
-            return {
-                 ...productResult,
-                 id: productResult.id.toString(),
-                 variants: variants.map(v => ({ ...v, id: v.id.toString() }))
-            };
-        }
-        // It's a simple product
-        return { ...productResult, id: productResult.id.toString() };
-    }
-    
-    // If still not found, check by name
-     const productByName: any = db.prepare('SELECT * FROM products WHERE name = ?').get(sku);
-     if(productByName) {
-        if (productByName.hasVariants) {
-            const variants = getVariantsByProductIdStmt.all(productByName.id) as any[];
-            return {
-                 ...productByName,
-                 id: productByName.id.toString(),
-                 variants: variants.map(v => ({ ...v, id: v.id.toString() }))
-            };
-        }
-        return { ...productByName, id: productByName.id.toString() };
-     }
-
-
-    return null;
 }
 
 
@@ -1862,6 +1807,8 @@ export async function checkPrintedReceiptAvailability(salesChannel: string, ship
 
 
     
+
+
 
 
 

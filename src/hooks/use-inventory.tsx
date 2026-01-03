@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
@@ -55,7 +56,6 @@ interface InventoryContextType {
   cancelSaleTransaction: (transactionId: string) => Promise<void>;
   returnSaleTransaction: (transactionId: string, items?: ReturnedItem[]) => Promise<void>;
   revertSaleItem: (transactionId: string, sku: string) => Promise<void>;
-  getProductBySku: (sku: string) => Promise<InventoryItem | null>;
   findProductBySku: (sku: string) => Promise<InventoryItem | null>;
   allSales: Sale[];
   resellers: Reseller[];
@@ -72,13 +72,13 @@ interface InventoryContextType {
   adjustAccessoryStock: (accessoryId: string, change: number, reason: string) => Promise<void>;
   // Shipping
   allShippingReceipts: ShippingReceipt[];
-  fetchShippingReceipts: (options: { page: number; limit: number; salesChannel?: string; channel?: string; dateString?: string; status?: string[]; awb?: string; }) => Promise<{ receipts: ShippingReceipt[]; total: number; }>;
+  fetchShippingReceipts: (options: { page: number; limit: number; salesChannel?: string; channel?: string; dateString?: string; date_range?: { from: Date; to: Date }; status?: string[]; awb?: string; }) => Promise<{ receipts: ShippingReceipt[]; total: number; }>;
   findShippingReceiptByAwb: (awb: string) => Promise<ShippingReceipt | null>;
   addShippingReceipt: (receipt: Omit<ShippingReceipt, 'id'>) => Promise<ShippingReceipt>;
   deleteShippingReceipt: (id: number) => Promise<void>;
   updateShippingReceiptsStatus: (ids: number[], status: string) => Promise<void>;
   updateShippingReceiptStatus: (id: number, status: string) => Promise<void>;
-  fetchShippingReceiptCounts: (filters: { dateString?: string; salesChannel?: string; shippingChannel?: string; status?: string; }) => Promise<{ salesChannels: Record<string, number>; shippingChannels: Record<string, number>; statuses: Record<string, number>; shippingChannelsBySalesChannel: Record<string, Record<string, number>>; }>;
+  fetchShippingReceiptCounts: (filters: { dateString?: string; salesChannel?: string; shippingChannel?: string; status?: string[]; }) => Promise<{ salesChannels: Record<string, Record<string, number>>; shippingChannels: Record<string, number>; statuses: Record<string, number>; shippingChannelsBySalesChannel: Record<string, Record<string, number>>; }>;
   getReceiptCountByStatus: (status: string) => Promise<Record<string, number>>;
   getPendingReceiptsBeforeDate: (date: Date) => Promise<number>;
   addPrintedReceipts: (date: string, salesChannel: string, shippingChannel: string, count: number) => Promise<void>;
@@ -99,6 +99,7 @@ interface InventoryContextType {
   editDiscountGroup: (id: number, group: Omit<DiscountGroup, 'id' | 'productCount'>) => Promise<void>;
   getDiscountGroup: (id: number) => Promise<DiscountGroup | null>;
   deleteDiscountGroup: (id: number) => Promise<void>;
+  getActiveDiscountPrice: (productId: string | number, variantId: string | number | null, category: string, channel: string) => Promise<number | null>;
 }
 
 const InventoryContext = createContext<InventoryContextType | undefined>(undefined);
@@ -258,10 +259,6 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
     await apiFetch(`/api/sales/transaction/${transactionId}/revert`, { method: 'POST', body: JSON.stringify({ sku }) });
     await fetchAllData();
   }
-
-  const getProductBySku = async (sku: string) => {
-    return await apiFetch(`/api/products?sku=${sku}`);
-  };
   
   const findProductBySku = useCallback(async (sku: string): Promise<InventoryItem | null> => {
     const lowerSku = sku.toLowerCase();
@@ -326,7 +323,7 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
     return result?.receipts?.[0] || null;
   };
   
-  const fetchShippingReceipts = async (options: { page: number; limit: number; channel?: string; salesChannel?: string; dateString?: string; status?: string[]; awb?: string; }) => {
+  const fetchShippingReceipts = async (options: { page: number; limit: number; channel?: string; salesChannel?: string; dateString?: string; date_range?: { from: Date, to: Date }; status?: string[]; awb?: string; }) => {
     const params = new URLSearchParams({
         page: options.page.toString(),
         limit: options.limit.toString(),
@@ -334,8 +331,12 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
     if (options.salesChannel) params.append('salesChannel', options.salesChannel);
     if (options.channel) params.append('channel', options.channel);
     if (options.awb) params.append('awb', options.awb);
-    if (options.status) params.append('status', options.status.join(','));
+    if (options.status && options.status.length > 0) params.append('status', options.status.join(','));
     if (options.dateString) params.append('date', options.dateString);
+    if (options.date_range) {
+        params.append('startDate', options.date_range.from.toISOString());
+        params.append('endDate', options.date_range.to.toISOString());
+    }
 
     return await apiFetch(`/api/shipping/receipts?${params.toString()}`);
   };
@@ -374,7 +375,7 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
   }
 
   const getReceiptCountByStatus = async (status: string) => {
-    return await apiFetch(`/api/shipping/counts?status=${status}`);
+    return await apiFetch(`/api/shipping/receipts/counts?status=${status}`);
   }
   
   const getPendingReceiptsBeforeDate = async (date: Date) => {
@@ -408,6 +409,14 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
       return await apiFetch(`/api/finance/discounts/${id}`);
   }
   
+  const getActiveDiscountPrice = async (productId: string | number, variantId: string | number | null, category: string, channel: string): Promise<number | null> => {
+      const response = await apiFetch('/api/finance/discounts/get-active-price', {
+          method: 'POST',
+          body: JSON.stringify({ productId, variantId, category, channel }),
+      });
+      return response.price;
+  };
+  
   const checkPrintedReceiptAvailability = async (salesChannel: string, shippingChannel: string, date: string) => {
       const result = await apiFetch('/api/shipping/printed-receipts/check', {
           method: 'POST',
@@ -420,12 +429,12 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
       return await apiFetch('/api/products/bulk-add');
   }
   
-  const fetchShippingReceiptCounts = async (filters: { dateString?: string; salesChannel?: string; shippingChannel?: string; status?: string; }) => {
+  const fetchShippingReceiptCounts = async (filters: { dateString?: string; salesChannel?: string; shippingChannel?: string; status?: string[]; }) => {
     const params = new URLSearchParams();
     if(filters.dateString) params.append('date', filters.dateString);
     if(filters.salesChannel) params.append('salesChannel', filters.salesChannel);
     if(filters.shippingChannel) params.append('shippingChannel', filters.shippingChannel);
-    if(filters.status) params.append('status', filters.status);
+    if(filters.status && filters.status.length > 0) params.append('status', filters.status.join(','));
     return await apiFetch(`/api/shipping/receipts/counts?${params.toString()}`);
   }
 
@@ -450,7 +459,6 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
         cancelSaleTransaction,
         returnSaleTransaction,
         revertSaleItem,
-        getProductBySku,
         findProductBySku,
         allSales,
         resellers,
@@ -489,6 +497,7 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
         editDiscountGroup,
         getDiscountGroup,
         deleteDiscountGroup,
+        getActiveDiscountPrice,
       }}>
       {children}
     </InventoryContext.Provider>
