@@ -64,13 +64,12 @@ export function PosOrderSummary({ cart, onSaleComplete, clearCart, channel, pend
 
     const { subtotal, totalDiscount, finalTotal } = useMemo(() => {
         const subtotal = cart.reduce((acc, item) => acc + (item.originalPrice * item.quantity), 0);
-        
-        // Discount from "Grup Diskon" is already reflected in item.price vs item.originalPrice
-        const groupDiscount = cart.reduce((acc, item) => {
-            const discountPerItem = item.originalPrice - item.price;
-            return acc + (discountPerItem * item.quantity);
-        }, 0);
 
+        const groupDiscount = cart.reduce((acc, item) => {
+            const discountPerItem = item.originalPrice > item.price ? (item.originalPrice - item.price) * item.quantity : 0;
+            return acc + discountPerItem;
+        }, 0);
+        
         let voucherDiscount = 0;
         if (activeVoucher) {
             voucherDiscount = cart.reduce((acc, item) => {
@@ -89,9 +88,9 @@ export function PosOrderSummary({ cart, onSaleComplete, clearCart, channel, pend
             }, 0);
         }
 
-        const totalDiscount = activeVoucher ? (groupDiscount + voucherDiscount) : (groupDiscount + manualDiscount);
+        const totalDiscount = groupDiscount + (activeVoucher ? voucherDiscount : manualDiscount);
         const finalTotal = subtotal - totalDiscount;
-        
+
         return { subtotal, totalDiscount, finalTotal };
     }, [cart, manualDiscount, activeVoucher]);
 
@@ -152,7 +151,7 @@ export function PosOrderSummary({ cart, onSaleComplete, clearCart, channel, pend
             discount: totalDiscount,
             total: finalTotal,
             paymentMethod,
-            cashReceived: paymentMethod === 'Cash' ? cashReceived : total,
+            cashReceived: paymentMethod === 'Cash' ? cashReceived : finalTotal,
             change: paymentMethod === 'Cash' ? change : 0,
             transactionId: `trans-${Date.now()}` // This is a placeholder, real ID is set in parent
         };
