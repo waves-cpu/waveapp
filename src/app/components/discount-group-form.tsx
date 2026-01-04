@@ -63,10 +63,19 @@ const formSchema = z.object({
       to: z.date({ required_error: "Tanggal berakhir harus diisi." }),
   }),
   products: z.array(discountedProductSchema).optional(),
-  discountType: z.enum(['fixed', 'percentage']),
-  discountValue: z.coerce.number().min(0, "Nilai diskon harus diisi."),
+  discountType: z.enum(['fixed', 'percentage']).optional(),
+  discountValue: z.coerce.number().min(0, "Nilai diskon harus diisi.").optional(),
   maxUses: z.coerce.number().optional(),
   minPurchase: z.coerce.number().optional(),
+}).refine(data => {
+    // Make discountType and discountValue required only for vouchers
+    if (data.voucherCode) {
+        return !!data.discountType && data.discountValue !== undefined;
+    }
+    return true;
+}, {
+    message: "Jenis dan nilai diskon harus diisi untuk voucher.",
+    path: ["discountType"],
 });
 
 interface DiscountGroupFormProps {
@@ -91,7 +100,7 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm = false }: Disc
             from: new Date(existingGroup.startDate),
             to: new Date(existingGroup.endDate),
         },
-        discountType: existingGroup.discountType || 'fixed',
+        discountType: existingGroup.discountType || undefined,
         discountValue: existingGroup.discountValue || undefined,
     } : {
       name: '',
@@ -100,7 +109,7 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm = false }: Disc
       voucherCode: '',
       dateRange: { from: new Date(), to: addDays(new Date(), 7) },
       products: [],
-      discountType: 'fixed',
+      discountType: undefined,
       discountValue: undefined
     },
   });
@@ -285,86 +294,88 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm = false }: Disc
                     <FormControl>
                       <Input placeholder="cth. LEBARAN2024" {...field} disabled={isEditMode} />
                     </FormControl>
-                    <FormDescription>Kode voucher harus unik.</FormDescription>
+                     {isVoucherForm && <FormDescription>Kode voucher harus unik.</FormDescription>}
                     <FormMessage />
                   </FormItem>
                 )}
               />}
             </div>
             
-            <Card>
-                <CardHeader>
-                    <CardTitle className="text-base">Pengaturan Diskon</CardTitle>
-                    <CardDescription>
-                      Atur jenis dan besaran diskon yang akan diterapkan.
-                    </CardDescription>
-                </CardHeader>
-                <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <FormField
-                        control={form.control}
-                        name="discountType"
-                        render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Jenis Diskon</FormLabel>
-                            <Select onValueChange={field.onChange} defaultValue={field.value}>
-                            <FormControl>
-                                <SelectTrigger>
-                                <SelectValue placeholder="Pilih jenis diskon" />
-                                </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                                <SelectItem value="percentage">Potongan Persen (%)</SelectItem>
-                                <SelectItem value="fixed">Potongan Harga Tetap (Rp)</SelectItem>
-                            </SelectContent>
-                            </Select>
-                            <FormMessage />
-                        </FormItem>
-                        )}
-                    />
-                    <FormField
-                        control={form.control}
-                        name="discountValue"
-                        render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Nilai Diskon</FormLabel>
-                            <FormControl>
-                                <Input type="number" placeholder="cth. 10 atau 15000" {...field} value={field.value ?? ''} />
-                            </FormControl>
-                            <FormMessage />
-                        </FormItem>
-                        )}
-                    />
-                    <FormField
-                        control={form.control}
-                        name="minPurchase"
-                        render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Pembelian Minimum (Opsional)</FormLabel>
-                            <FormControl>
-                                <Input type="number" placeholder="cth. 100000" {...field} value={field.value ?? ''} />
-                            </FormControl>
-                            <FormMessage />
-                        </FormItem>
-                        )}
-                    />
-                      <FormField
-                        control={form.control}
-                        name="maxUses"
-                        render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Batas Penggunaan (Opsional)</FormLabel>
-                            <FormControl>
-                                <Input type="number" placeholder="cth. 100" {...field} value={field.value ?? ''} />
-                            </FormControl>
-                             <FormDescription>
-                                Kosongkan untuk penggunaan tanpa batas.
-                            </FormDescription>
-                            <FormMessage />
-                        </FormItem>
-                        )}
-                    />
-                </CardContent>
-            </Card>
+            {isVoucherForm && (
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="text-base">Pengaturan Diskon</CardTitle>
+                        <CardDescription>
+                        Atur jenis dan besaran diskon yang akan diterapkan.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <FormField
+                            control={form.control}
+                            name="discountType"
+                            render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Jenis Diskon</FormLabel>
+                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                <FormControl>
+                                    <SelectTrigger>
+                                    <SelectValue placeholder="Pilih jenis diskon" />
+                                    </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                    <SelectItem value="percentage">Potongan Persen (%)</SelectItem>
+                                    <SelectItem value="fixed">Potongan Harga Tetap (Rp)</SelectItem>
+                                </SelectContent>
+                                </Select>
+                                <FormMessage />
+                            </FormItem>
+                            )}
+                        />
+                        <FormField
+                            control={form.control}
+                            name="discountValue"
+                            render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Nilai Diskon</FormLabel>
+                                <FormControl>
+                                    <Input type="number" placeholder="cth. 10 atau 15000" {...field} value={field.value ?? ''} />
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                            )}
+                        />
+                        <FormField
+                            control={form.control}
+                            name="minPurchase"
+                            render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Pembelian Minimum (Opsional)</FormLabel>
+                                <FormControl>
+                                    <Input type="number" placeholder="cth. 100000" {...field} value={field.value ?? ''} />
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                            )}
+                        />
+                        <FormField
+                            control={form.control}
+                            name="maxUses"
+                            render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Batas Penggunaan (Opsional)</FormLabel>
+                                <FormControl>
+                                    <Input type="number" placeholder="cth. 100" {...field} value={field.value ?? ''} />
+                                </FormControl>
+                                <FormDescription>
+                                    Kosongkan untuk penggunaan tanpa batas.
+                                </FormDescription>
+                                <FormMessage />
+                            </FormItem>
+                            )}
+                        />
+                    </CardContent>
+                </Card>
+            )}
 
             <FormField
                 control={form.control}
