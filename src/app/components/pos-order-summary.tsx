@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useMemo, useEffect } from 'react';
@@ -77,11 +78,13 @@ export function PosOrderSummary({ cart, onSaleComplete, clearCart, channel, pend
                 const categoryMatch = item.category === activeVoucher.category;
                 
                 if (appliesToAll || categoryMatch) {
+                     const priceToApplyDiscountOn = item.price; // Apply voucher on top of group discount price
                     if (activeVoucher.discountType === 'percentage') {
-                        // Apply voucher discount on the ORIGINAL price.
-                        return acc + (item.originalPrice * (activeVoucher.discountValue! / 100)) * item.quantity;
+                        return acc + (priceToApplyDiscountOn * (activeVoucher.discountValue! / 100)) * item.quantity;
                     } else if (activeVoucher.discountType === 'fixed') {
-                        return acc + activeVoucher.discountValue! * item.quantity;
+                        // Ensure fixed discount doesn't make price negative
+                        const discountValue = Math.min(priceToApplyDiscountOn, activeVoucher.discountValue!);
+                        return acc + discountValue * item.quantity;
                     }
                 }
                 return acc;
@@ -145,6 +148,28 @@ export function PosOrderSummary({ cart, onSaleComplete, clearCart, channel, pend
 
     const handleSale = async (status: 'Completed' | 'Pending') => {
         setIsSubmitting(true);
+        
+        // Calculate the final price for each item, including the voucher discount
+        const salesData = cart.map(item => {
+            let finalPrice = item.price; // Starts with group discount price
+            if (activeVoucher) {
+                const appliesToAll = activeVoucher.category === 'Semua Kategori';
+                const categoryMatch = item.category === activeVoucher.category;
+                if (appliesToAll || categoryMatch) {
+                    if (activeVoucher.discountType === 'percentage') {
+                        finalPrice = finalPrice * (1 - (activeVoucher.discountValue! / 100));
+                    } else if (activeVoucher.discountType === 'fixed') {
+                        finalPrice = Math.max(0, finalPrice - activeVoucher.discountValue!);
+                    }
+                }
+            }
+            return {
+                sku: item.sku,
+                quantity: item.quantity,
+                price: finalPrice, // This is the final priceAtSale
+            };
+        });
+        
         const receiptData: ReceiptData = {
             items: cart.map(item => ({...item, name: item.productName, originalPrice: item.originalPrice })),
             subtotal: subtotal,
@@ -156,6 +181,8 @@ export function PosOrderSummary({ cart, onSaleComplete, clearCart, channel, pend
             transactionId: `trans-${Date.now()}` // This is a placeholder, real ID is set in parent
         };
         
+        const transactionId = pendingTransactionId || `trans-${Date.now()}`;
+
         try {
             await onSaleComplete(paymentMethod, receiptData, status);
             resetForm();
