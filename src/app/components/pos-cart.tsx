@@ -47,7 +47,7 @@ interface PosCartProps {
 }
 
 export function PosCart({ onVoucherApplied, activeVoucher }: PosCartProps) {
-    const { recordSale, items: inventoryItems, accessories, loading: inventoryLoading, pendingTransaction, clearPendingTransaction, cancelSaleTransaction, fetchItems, findProductBySku } = useInventory();
+    const { recordSale, items: inventoryItems, accessories, loading: inventoryLoading, pendingTransaction, clearPendingTransaction, cancelSaleTransaction, fetchItems, findProductBySku, getActiveDiscountPrice } = useInventory();
     const { language } = useLanguage();
     const { playSuccessSound, playErrorSound } = useScanSounds();
     const t = translations[language];
@@ -162,15 +162,7 @@ export function PosCart({ onVoucherApplied, activeVoucher }: PosCartProps) {
     }, [cart.length, productForVariantSelection]);
 
 
-    const getPriceForChannel = (item: InventoryItem | InventoryItemVariant | Accessory, channel: string): number => {
-        if ('channelPrices' in item && item.channelPrices) {
-             const channelPrice = item.channelPrices?.find(p => p.channel === channel)?.price;
-             return channelPrice ?? item.price!;
-        }
-        return item.price ?? 0;
-    };
-
-    const addToCart = useCallback((item: InventoryItem | Accessory, variant?: InventoryItemVariant) => {
+    const addToCart = useCallback(async (item: InventoryItem | Accessory, variant?: InventoryItemVariant) => {
         let itemToAdd: CartItem;
 
         if (item.hasOwnProperty('itemType') && (item as any).itemType === 'accessory') {
@@ -206,7 +198,9 @@ export function PosCart({ onVoucherApplied, activeVoucher }: PosCartProps) {
                 playErrorSound();
                 return;
             }
-            const price = getPriceForChannel(itemToAddRaw, 'pos');
+            
+            const originalPrice = itemToAddRaw.price || 0;
+            const discountedPrice = await getActiveDiscountPrice(product.id, variant?.id || null, product.category, 'pos');
             
             itemToAdd = {
                 id: itemToAddRaw.id,
@@ -215,8 +209,8 @@ export function PosCart({ onVoucherApplied, activeVoucher }: PosCartProps) {
                 variantName: variant?.name,
                 sku: itemToAddRaw.sku!,
                 quantity: 1,
-                price: price,
-                originalPrice: price,
+                price: discountedPrice ?? originalPrice,
+                originalPrice: originalPrice,
                 category: product.category,
                 imageUrl: product.imageUrl,
                 type: 'product',
@@ -249,7 +243,7 @@ export function PosCart({ onVoucherApplied, activeVoucher }: PosCartProps) {
             }
             return [...currentCart, itemToAdd];
         });
-    }, [cart, toast, playSuccessSound, playErrorSound]);
+    }, [cart, toast, playSuccessSound, playErrorSound, getActiveDiscountPrice]);
 
     const handleProductSelect = useCallback(async (item: SearchableItem) => {
         try {
