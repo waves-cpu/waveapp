@@ -178,14 +178,17 @@ const runMigrations = () => {
         db.exec('DROP TABLE manual_journal_entries');
     }
 
-    const discountGroupColumns: { name: string }[] = db.pragma('table_info(discount_groups)') as { name: string }[];
-    if (discountGroupColumns) {
-        if (!discountGroupColumns.some((col: any) => col.name === 'channel')) {
-            db.exec('ALTER TABLE discount_groups ADD COLUMN channel TEXT');
-        }
-        if (!discountGroupColumns.some((col: any) => col.name === 'voucherCode')) {
-            db.exec('ALTER TABLE discount_groups ADD COLUMN voucherCode TEXT');
-            db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_discount_groups_voucher_code ON discount_groups(voucherCode);');
+    const discountGroupTable = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='discount_groups'").get();
+    if (discountGroupTable) {
+        const discountGroupColumns: { name: string }[] = db.pragma('table_info(discount_groups)') as { name: string }[];
+        if (discountGroupColumns) {
+            if (!discountGroupColumns.some((col: any) => col.name === 'channel')) {
+                db.exec('ALTER TABLE discount_groups ADD COLUMN channel TEXT');
+            }
+            if (!discountGroupColumns.some((col: any) => col.name === 'voucherCode')) {
+                db.exec('ALTER TABLE discount_groups ADD COLUMN voucherCode TEXT');
+                db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_discount_groups_voucher_code ON discount_groups(voucherCode);');
+            }
         }
     }
 
@@ -412,3 +415,4 @@ export { dbProxy as db };
 
 
     
+
