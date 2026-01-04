@@ -65,13 +65,10 @@ export function PosOrderSummary({ cart, onSaleComplete, clearCart, channel, pend
 
     const { subtotal, totalDiscount, finalTotal } = useMemo(() => {
         const subtotalCalc = cart.reduce((acc, item) => acc + (item.originalPrice * item.quantity), 0);
-
-        const groupDiscount = cart.reduce((acc, item) => {
-            const discountPerItem = item.originalPrice > item.price ? (item.originalPrice - item.price) * item.quantity : 0;
-            return acc + discountPerItem;
-        }, 0);
         
-        const voucherDiscount = cart.reduce((acc, item) => {
+        const groupDiscount = cart.reduce((acc, item) => acc + (item.originalPrice - item.price) * item.quantity, 0);
+
+        const voucherDiscountValue = cart.reduce((acc, item) => {
             if (!activeVoucher) return acc;
             
             const appliesToAll = activeVoucher.category === 'Semua Kategori';
@@ -92,7 +89,7 @@ export function PosOrderSummary({ cart, onSaleComplete, clearCart, channel, pend
         }, 0);
 
         const finalManualDiscount = activeVoucher ? 0 : manualDiscount;
-        const totalDiscountCalc = groupDiscount + voucherDiscount + finalManualDiscount;
+        const totalDiscountCalc = groupDiscount + voucherDiscountValue + finalManualDiscount;
         const finalTotalCalc = subtotalCalc - totalDiscountCalc;
 
         return { subtotal: subtotalCalc, totalDiscount: totalDiscountCalc, finalTotal: finalTotalCalc };
@@ -152,14 +149,17 @@ export function PosOrderSummary({ cart, onSaleComplete, clearCart, channel, pend
         setIsSubmitting(true);
         
         const salesData = cart.map(item => {
-            let finalPrice = item.price; // Price after group discount
+            let finalPrice = item.price; // This price is already after group discounts.
+
             if (activeVoucher) {
                 const appliesToAll = activeVoucher.category === 'Semua Kategori';
                 const categoryMatch = item.category === activeVoucher.category;
+
                 if (appliesToAll || categoryMatch) {
                     if (activeVoucher.discountType === 'percentage') {
                         finalPrice = finalPrice * (1 - (activeVoucher.discountValue! / 100));
                     } else if (activeVoucher.discountType === 'fixed') {
+                        // Apply fixed discount per item, ensuring price doesn't go below zero
                         finalPrice = Math.max(0, finalPrice - activeVoucher.discountValue!);
                     }
                 }
@@ -167,7 +167,7 @@ export function PosOrderSummary({ cart, onSaleComplete, clearCart, channel, pend
             return {
                 sku: item.sku,
                 quantity: item.quantity,
-                price: finalPrice, 
+                price: finalPrice, // The final, final price per item
             };
         });
         
@@ -364,3 +364,4 @@ export function PosOrderSummary({ cart, onSaleComplete, clearCart, channel, pend
         </Card>
     );
 }
+
