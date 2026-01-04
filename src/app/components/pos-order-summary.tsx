@@ -37,17 +37,18 @@ interface PosOrderSummaryProps {
   channel: 'pos' | 'reseller';
   pendingTransactionId: string | null;
   onVoucherApplied: (voucherData: any) => void;
+  activeVoucher: any;
 }
 
 type PaymentMethod = 'Cash' | 'Qris' | 'Transfer' | 'Debit';
 
-export function PosOrderSummary({ cart, onSaleComplete, clearCart, channel, pendingTransactionId, onVoucherApplied }: PosOrderSummaryProps) {
+export function PosOrderSummary({ cart, onSaleComplete, clearCart, channel, pendingTransactionId, onVoucherApplied, activeVoucher }: PosOrderSummaryProps) {
     const { language } = useLanguage();
     const t = translations[language];
     const { cancelSaleTransaction } = useInventory();
     const { toast } = useToast();
     const router = useRouter();
-    const [discount, setDiscount] = useState(0);
+    const [manualDiscount, setManualDiscount] = useState(0);
     const [voucherCode, setVoucherCode] = useState('');
     const [appliedVoucher, setAppliedVoucher] = useState<{ code: string; name: string } | null>(null);
     const [isApplyingVoucher, setIsApplyingVoucher] = useState(false);
@@ -61,27 +62,41 @@ export function PosOrderSummary({ cart, onSaleComplete, clearCart, channel, pend
         setPaymentMethod(channel === 'reseller' ? 'Transfer' : 'Cash');
     }, [channel]);
 
+    const { subtotal, totalDiscount } = useMemo(() => {
+        let sub = 0;
+        let discount = 0;
+        cart.forEach(item => {
+            sub += item.originalPrice * item.quantity;
+            discount += (item.originalPrice - item.price) * item.quantity;
+        });
+        return { subtotal: sub, totalDiscount: discount };
+    }, [cart]);
+    
+    const finalDiscount = activeVoucher ? totalDiscount : manualDiscount;
+    const total = useMemo(() => subtotal - finalDiscount, [subtotal, finalDiscount]);
+    const change = useMemo(() => cashReceived - total, [cashReceived, total]);
+
+
     useEffect(() => {
         if (cart.length === 0) {
-            setDiscount(0);
+            setManualDiscount(0);
             setCashReceived(0);
             setVoucherCode('');
             setAppliedVoucher(null);
+            onVoucherApplied(null);
         }
-    }, [cart]);
-
-    const subtotal = useMemo(() => cart.reduce((acc, item) => acc + item.price * item.quantity, 0), [cart]);
-    const total = useMemo(() => subtotal - discount, [subtotal, discount]);
-    const change = useMemo(() => cashReceived - total, [cashReceived, total]);
-
+    }, [cart, onVoucherApplied]);
+    
     const resetForm = () => {
-        setDiscount(0);
+        setManualDiscount(0);
         setCashReceived(0);
         setPaymentMethod(channel === 'reseller' ? 'Transfer' : 'Cash');
         setVoucherCode('');
         setAppliedVoucher(null);
+        onVoucherApplied(null);
         clearCart();
     }
+
 
     const handleApplyVoucher = async () => {
         if (!voucherCode.trim()) return;
@@ -90,6 +105,7 @@ export function PosOrderSummary({ cart, onSaleComplete, clearCart, channel, pend
             const data = await apiFetch(`/api/finance/discounts/voucher/${voucherCode.trim()}?channel=${channel}`);
             onVoucherApplied(data);
             setAppliedVoucher({ code: voucherCode.trim().toUpperCase(), name: data.name });
+            setManualDiscount(0); // Reset manual discount
             toast({
                 title: "Voucher Diterapkan",
                 description: `Diskon dari "${data.name}" telah diterapkan pada item yang sesuai.`,
@@ -100,20 +116,27 @@ export function PosOrderSummary({ cart, onSaleComplete, clearCart, channel, pend
                 title: "Voucher Tidak Valid",
                 description: error.message,
             });
+            onVoucherApplied(null);
             setAppliedVoucher(null);
         } finally {
             setIsApplyingVoucher(false);
             setVoucherCode('');
         }
     };
+    
+    const handleRemoveVoucher = () => {
+        setAppliedVoucher(null);
+        onVoucherApplied(null);
+        toast({ title: 'Voucher Dihapus', description: 'Harga telah kembali normal.' });
+    };
 
 
     const handleSale = async (status: 'Completed' | 'Pending') => {
         setIsSubmitting(true);
         const receiptData: ReceiptData = {
-            items: cart.map(item => ({...item, name: item.productName})),
+            items: cart.map(item => ({...item, name: item.productName, originalPrice: item.originalPrice })),
             subtotal,
-            discount,
+            discount: finalDiscount,
             total,
             paymentMethod,
             cashReceived: paymentMethod === 'Cash' ? cashReceived : total,
@@ -169,7 +192,7 @@ export function PosOrderSummary({ cart, onSaleComplete, clearCart, channel, pend
                         <>
                         <div className="flex justify-between items-center">
                             <Label htmlFor="discount">{t.pos.discount}</Label>
-                            <Input id="discount" type="number" value={discount} onChange={(e) => setDiscount(Number(e.target.value))} className="w-32 h-8 text-sm"/>
+                            <Input id="discount" type="number" value={finalDiscount} onChange={(e) => setManualDiscount(Number(e.target.value))} className="w-32 h-8 text-sm" disabled={!!activeVoucher}/>
                         </div>
                          <div className="space-y-2">
                              <Label htmlFor="voucher">Kode Voucher</Label>
@@ -179,10 +202,7 @@ export function PosOrderSummary({ cart, onSaleComplete, clearCart, channel, pend
                                          <CheckCircle className="mr-2 h-4 w-4" />
                                          {appliedVoucher.code}
                                     </Badge>
-                                    <Button variant="link" size="sm" className="h-auto p-0" onClick={() => {
-                                        setAppliedVoucher(null);
-                                        onVoucherApplied(null); // Signal to reset prices
-                                    }}>Hapus</Button>
+                                    <Button variant="link" size="sm" className="h-auto p-0" onClick={handleRemoveVoucher}>Hapus</Button>
                                  </div>
                              ) : (
                                 <div className="flex items-center gap-2">

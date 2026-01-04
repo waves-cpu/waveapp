@@ -10,7 +10,7 @@ import { useReceiptSettings, type ReceiptSettings } from '@/hooks/use-receipt-se
 import { cn } from '@/lib/utils';
 
 export type ReceiptData = {
-    items: (CartItem & { productName: string, variantName?: string })[];
+    items: (CartItem & { productName: string, variantName?: string, originalPrice: number })[];
     subtotal: number;
     discount: number;
     total: number;
@@ -79,15 +79,19 @@ export const PosReceipt = React.forwardRef<HTMLDivElement, PosReceiptProps>((pro
             <section>
                 {receipt.items.map(item => {
                     const isVariant = !!item.variantName;
+                    const hasDiscount = item.originalPrice > item.price;
                     return (
                         <div key={item.id} className="mb-1">
-                            <p className="font-bold">{item.productName}</p>
+                            <p className="font-bold">{item.productName}{isVariant ? ` - ${item.variantName}`: ''}</p>
                              <div className="flex justify-between items-center">
                                 <span>
-                                    {isVariant ? `${item.variantName} ` : ''}{item.quantity} x {formatCurrency(item.price)}
+                                    {item.quantity} x {formatCurrency(item.price)}
                                 </span>
                                 <span className="text-right">{formatCurrency(item.quantity * item.price)}</span>
                             </div>
+                            {hasDiscount && (
+                                <p className="text-[0.8em] pl-4">Harga Asli: {formatCurrency(item.originalPrice)}</p>
+                            )}
                         </div>
                     );
                 })}
