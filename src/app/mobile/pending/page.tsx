@@ -11,6 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { ShippingReceipt } from '@/types';
 import { format, parseISO } from 'date-fns';
+import { apiFetch } from '@/lib/api';
 
 interface GroupedReceipts {
     [key: string]: ShippingReceipt[];
@@ -25,15 +26,7 @@ export default function PendingReceiptsPage() {
         async function fetchPendingReceipts() {
             setLoading(true);
             try {
-                const response = await fetch('/api/shipping/receipts?status=Terproses&limit=2000', {
-                     headers: {
-                        'X-API-Key': process.env.NEXT_PUBLIC_API_KEY || 'secret-api-key-for-waveapp'
-                    }
-                });
-                if (!response.ok) {
-                    throw new Error('Failed to fetch pending receipts');
-                }
-                const data = await response.json();
+                const data = await apiFetch('/api/shipping/receipts?status=Terproses&limit=2000');
                 setReceipts(data.receipts || []);
             } catch (error) {
                 console.error("Error fetching pending receipts:", error);
@@ -126,4 +119,3 @@ export default function PendingReceiptsPage() {
         </div>
     );
 }
-

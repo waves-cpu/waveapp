@@ -28,6 +28,7 @@ import { useInventory } from '@/hooks/use-inventory';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import { Badge } from '@/components/ui/badge';
+import { apiFetch } from '@/lib/api';
 
 interface PosOrderSummaryProps {
   cart: CartItem[];
@@ -86,11 +87,7 @@ export function PosOrderSummary({ cart, onSaleComplete, clearCart, channel, pend
         if (!voucherCode.trim()) return;
         setIsApplyingVoucher(true);
         try {
-            const response = await fetch(`/api/finance/discounts/voucher/${voucherCode.trim()}?channel=${channel}`);
-            const data = await response.json();
-            if (!response.ok) {
-                throw new Error(data.message || 'Voucher tidak valid.');
-            }
+            const data = await apiFetch(`/api/finance/discounts/voucher/${voucherCode.trim()}?channel=${channel}`);
             onVoucherApplied(data);
             setAppliedVoucher({ code: voucherCode.trim().toUpperCase(), name: data.name });
             toast({

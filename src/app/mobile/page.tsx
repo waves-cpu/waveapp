@@ -7,6 +7,7 @@ import { Truck, AlertTriangle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { useEffect, useState } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
+import { apiFetch } from '@/lib/api';
 
 const shippingProviders = [
     { name: 'SPX', icon: Truck },
@@ -23,15 +24,7 @@ export default function MobileHubPage() {
     useEffect(() => {
         async function fetchCounts() {
             try {
-                const response = await fetch('/api/shipping/receipts/counts?status=Terproses', {
-                    headers: {
-                        'X-API-Key': process.env.NEXT_PUBLIC_API_KEY || 'secret-api-key-for-waveapp'
-                    }
-                });
-                if (!response.ok) {
-                    throw new Error('Failed to fetch counts');
-                }
-                const data = await response.json();
+                const data = await apiFetch('/api/shipping/receipts/counts?status=Terproses');
                 if(data && data.shippingChannels) {
                     setPendingCounts(data.shippingChannels);
                 } else {

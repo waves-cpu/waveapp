@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
@@ -43,32 +42,8 @@ import { Pagination } from '@/components/ui/pagination';
 import { DailySalesDetailDialog } from '@/app/components/daily-sales-detail-dialog';
 import { Badge } from '@/components/ui/badge';
 import { RecordSaleForReceiptDialog } from '@/app/components/record-sale-for-receipt-dialog';
+import { apiFetch } from '@/lib/api';
 
-async function apiFetch(url: string, options: RequestInit = {}) {
-    const res = await fetch(url, {
-        ...options,
-        headers: {
-            'Content-Type': 'application/json',
-            'X-API-Key': process.env.NEXT_PUBLIC_API_KEY || 'secret-api-key-for-waveapp',
-            ...options.headers,
-        },
-    });
-
-    if (!res.ok) {
-        const errorData = await res.json().catch(() => ({ message: 'An unknown error occurred' }));
-        throw new Error(errorData.message);
-    }
-
-    if (res.status === 204) { // No Content
-        return null;
-    }
-
-    if (res.headers.get('Content-Type')?.includes('application/json')) {
-        return res.json();
-    }
-    
-    return res;
-};
 
 export function useReceiptPageLogic(salesChannel: 'Shopee' | 'Tiktok' | 'Lazada') {
     const params = useParams();

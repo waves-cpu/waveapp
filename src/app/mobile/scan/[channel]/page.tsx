@@ -14,6 +14,7 @@ import { QrScanner } from '@yudiel/react-qr-scanner';
 import { Badge } from '@/components/ui/badge';
 import { useParams, useRouter } from 'next/navigation';
 import { formatToWIB } from '@/lib/utils';
+import { apiFetch } from '@/lib/api';
 
 interface ProcessedItem extends Partial<ShippingReceipt> {
     id: number | string;
@@ -55,20 +56,10 @@ export default function MobileScanShipmentPage() {
         setIsSubmitting(true);
         
         try {
-            const response = await fetch('/api/shipping/scan', {
+            const result = await apiFetch('/api/shipping/scan', {
                 method: 'POST',
-                headers: { 
-                    'Content-Type': 'application/json',
-                    'X-API-Key': process.env.NEXT_PUBLIC_API_KEY || 'secret-api-key-for-waveapp'
-                },
                 body: JSON.stringify({ awb: trimmedAwb, channel }),
             });
-
-            const result = await response.json();
-
-            if (!response.ok) {
-                throw new Error(result.message || 'Terjadi kesalahan.');
-            }
             
             playSuccessSound();
             toast({ title: `Resi ${trimmedAwb}`, description: result.message });

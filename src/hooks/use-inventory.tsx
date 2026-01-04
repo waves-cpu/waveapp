@@ -6,35 +6,7 @@ import type { InventoryItem, AdjustmentHistory, InventoryItemVariant, Sale, Rese
 import { categories as allCategories } from '@/types';
 import { useToast } from './use-toast';
 import { format as formatDate, parseISO, startOfDay, endOfDay } from 'date-fns';
-
-
-const API_KEY = process.env.NEXT_PUBLIC_API_KEY || 'secret-api-key-for-waveapp';
-
-const apiFetch = async (url: string, options: RequestInit = {}) => {
-    const res = await fetch(url, {
-        ...options,
-        headers: {
-            'Content-Type': 'application/json',
-            'X-API-Key': API_KEY,
-            ...options.headers,
-        },
-    });
-
-    if (!res.ok) {
-        const errorData = await res.json().catch(() => ({ message: 'An unknown error occurred' }));
-        throw new Error(errorData.message);
-    }
-
-    if (res.status === 204) { // No Content
-        return null;
-    }
-
-    if (res.headers.get('Content-Type')?.includes('application/json')) {
-        return res.json();
-    }
-    
-    return res;
-};
+import { apiFetch } from '@/lib/api';
 
 
 interface InventoryContextType {
