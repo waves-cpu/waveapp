@@ -28,15 +28,18 @@ import { useToast } from '@/hooks/use-toast';
 import { useLanguage } from '@/hooks/use-language';
 import { translations } from '@/types/language';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
-import { CalendarIcon } from 'lucide-react';
+import { CalendarIcon, Edit, Eye, Store, Trash2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
-import type { DiscountGroup, DiscountedProduct } from '@/types';
+import type { DiscountGroup, DiscountedProduct, InventoryItem, InventoryItemVariant } from '@/types';
 import { categories } from '@/types';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-import { cn } from '@/lib/utils';
+import { cn, formatToWIB } from '@/lib/utils';
 import { format, addDays } from 'date-fns';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import Image from 'next/image';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 const discountedProductSchema = z.object({
   productId: z.number(),
@@ -59,9 +62,9 @@ const formSchema = z.object({
       from: z.date({ required_error: "Tanggal mulai harus diisi." }),
       to: z.date({ required_error: "Tanggal berakhir harus diisi." }),
   }),
-  products: z.array(discountedProductSchema).optional(), // Now optional
+  products: z.array(discountedProductSchema).optional(),
   discountType: z.enum(['fixed', 'percentage']),
-  discountValue: z.coerce.number().min(1, "Nilai diskon harus diisi."),
+  discountValue: z.coerce.number().min(0, "Nilai diskon harus diisi."),
   maxUses: z.coerce.number().optional(),
   minPurchase: z.coerce.number().optional(),
 });
@@ -89,6 +92,7 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm = false }: Disc
             to: new Date(existingGroup.endDate),
         },
         discountType: existingGroup.discountType || 'fixed',
+        discountValue: existingGroup.discountValue || undefined,
     } : {
       name: '',
       category: '',
@@ -97,13 +101,19 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm = false }: Disc
       dateRange: { from: new Date(), to: addDays(new Date(), 7) },
       products: [],
       discountType: 'fixed',
+      discountValue: undefined
     },
+  });
+  
+  const { fields, replace } = useFieldArray({
+      control: form.control,
+      name: "products"
   });
   
   const selectedCategory = form.watch('category');
 
   useEffect(() => {
-    if (!isVoucherForm && selectedCategory) {
+    if (!isVoucherForm && selectedCategory && selectedCategory !== 'Semua Kategori') {
         const productsInCategory = items.filter(item => item.category === selectedCategory && !item.isArchived);
         const discountedProducts: DiscountedProduct[] = [];
         
@@ -135,17 +145,16 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm = false }: Disc
                 });
             }
         });
-        form.setValue('products', discountedProducts);
+        replace(discountedProducts);
     } else {
-        form.setValue('products', []);
+        replace([]);
     }
-}, [selectedCategory, items, form, isVoucherForm, existingGroup]);
+  }, [selectedCategory, items, replace, isVoucherForm, existingGroup]);
 
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsSubmitting(true);
     
-    // For vouchers, products array will be empty. For automatic discounts, it will be populated.
     const productsPayload = (isVoucherForm || values.category === 'Semua Kategori') ? [] : values.products?.filter(p => p.originalPrice !== null);
 
     if (!isVoucherForm && values.category !== 'Semua Kategori' && (!productsPayload || productsPayload.length === 0)) {
@@ -319,7 +328,7 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm = false }: Disc
                         <FormItem>
                             <FormLabel>Nilai Diskon</FormLabel>
                             <FormControl>
-                                <Input type="number" placeholder="cth. 10 atau 15000" {...field} />
+                                <Input type="number" placeholder="cth. 10 atau 15000" {...field} value={field.value ?? ''} />
                             </FormControl>
                             <FormMessage />
                         </FormItem>
@@ -332,7 +341,7 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm = false }: Disc
                         <FormItem>
                             <FormLabel>Pembelian Minimum (Opsional)</FormLabel>
                             <FormControl>
-                                <Input type="number" placeholder="cth. 100000" {...field} />
+                                <Input type="number" placeholder="cth. 100000" {...field} value={field.value ?? ''} />
                             </FormControl>
                             <FormMessage />
                         </FormItem>
@@ -345,7 +354,7 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm = false }: Disc
                         <FormItem>
                             <FormLabel>Batas Penggunaan (Opsional)</FormLabel>
                             <FormControl>
-                                <Input type="number" placeholder="cth. 100" {...field} />
+                                <Input type="number" placeholder="cth. 100" {...field} value={field.value ?? ''} />
                             </FormControl>
                              <FormDescription>
                                 Kosongkan untuk penggunaan tanpa batas.
@@ -405,6 +414,67 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm = false }: Disc
                 </FormItem>
                 )}
             />
+            
+            {!isVoucherForm && selectedCategory && selectedCategory !== 'Semua Kategori' && (
+                 <Card>
+                    <CardHeader>
+                        <CardTitle>Produk Diskon</CardTitle>
+                        <CardDescription>Atur harga diskon untuk setiap produk dalam kategori '{selectedCategory}'.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                       <ScrollArea className="h-96 border rounded-md">
+                        <Table>
+                            <TableHeader className="sticky top-0 bg-background">
+                                <TableRow>
+                                    <TableHead className="w-[50%]">Produk</TableHead>
+                                    <TableHead>Harga Asli</TableHead>
+                                    <TableHead>Harga Diskon</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {fields.length > 0 ? fields.map((field, index) => (
+                                    <TableRow key={field.id}>
+                                        <TableCell>
+                                            <div className="flex items-center gap-3">
+                                                 <Image src={field.imageUrl || 'https://placehold.co/40x40.png'} alt={field.productName} width={32} height={32} className="rounded-sm" />
+                                                 <div>
+                                                    <p className="font-medium text-sm">{field.productName}</p>
+                                                    <p className="text-xs text-muted-foreground">{field.variantName || 'Produk utama'}</p>
+                                                 </div>
+                                            </div>
+                                        </TableCell>
+                                        <TableCell>
+                                            <p className="text-sm text-muted-foreground line-through">
+                                                {field.originalPrice ? new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(field.originalPrice) : 'N/A'}
+                                            </p>
+                                        </TableCell>
+                                        <TableCell>
+                                            <FormField
+                                                control={form.control}
+                                                name={`products.${index}.discountedPrice`}
+                                                render={({ field }) => (
+                                                    <FormItem>
+                                                    <FormControl>
+                                                        <Input type="number" {...field} className="h-8" />
+                                                    </FormControl>
+                                                    <FormMessage />
+                                                    </FormItem>
+                                                )}
+                                                />
+                                        </TableCell>
+                                    </TableRow>
+                                )) : (
+                                    <TableRow>
+                                        <TableCell colSpan={3} className="h-24 text-center">Tidak ada produk dalam kategori ini.</TableCell>
+                                    </TableRow>
+                                )}
+                            </TableBody>
+                        </Table>
+                       </ScrollArea>
+                    </CardContent>
+                </Card>
+            )}
+
           </CardContent>
           <CardFooter className="justify-end gap-2 pt-6 border-t">
               <Button type="button" variant="ghost" onClick={() => router.push(isVoucherForm ? '/promotions/vouchers' : '/promotions/discount-groups')} disabled={isSubmitting}>{t.common.cancel}</Button>

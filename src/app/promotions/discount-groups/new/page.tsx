@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { AppLayout } from "@/app/components/app-layout";
@@ -18,8 +19,8 @@ export default function NewDiscountGroupPage() {
                     <SidebarTrigger className="md:hidden" />
                     <h1 className="text-lg font-bold">Buat Grup Diskon Baru</h1>
                 </div>
-                 <div className="max-w-6xl mx-auto">
-                    <DiscountGroupForm />
+                 <div className="max-w-7xl mx-auto">
+                    <DiscountGroupForm isVoucherForm={false} />
                 </div>
             </main>
         </AppLayout>
