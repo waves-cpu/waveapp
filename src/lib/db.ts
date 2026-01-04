@@ -21,7 +21,6 @@ function initializeDatabase() {
       if(db && db.open) {
         db.close();
       }
-      // Delete the corrupt file and its directory to ensure a clean start
       if (fs.existsSync(dbDir)) {
         fs.rmSync(dbDir, { recursive: true, force: true });
       }
@@ -29,174 +28,14 @@ function initializeDatabase() {
       db = new Database(dbPath);
       db.pragma('journal_mode = WAL');
     } else {
-      throw error; // Re-throw other errors
+      throw error;
     }
   }
 
   createSchema();
-  runMigrations();
+  runMigrations(); // Run migrations after ensuring base tables exist
   seedData();
 }
-
-
-const runMigrations = () => {
-  try {
-    const userColumns: { name: string }[] = db.pragma('table_info(users)') as { name: string }[];
-    if (!userColumns.some((col: any) => col.name === 'password')) {
-        db.exec('ALTER TABLE users ADD COLUMN password TEXT NOT NULL DEFAULT \'\'');
-    }
-    if (!userColumns.some((col: any) => col.name === 'role')) {
-        db.exec('ALTER TABLE users ADD COLUMN role TEXT NOT NULL DEFAULT \'user\'');
-    }
-
-
-    db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_shipping_receipts_awb ON shipping_receipts(awb);');
-    
-    db.exec("UPDATE products SET sku = SUBSTR(sku, 1, LENGTH(sku) - 2) WHERE sku LIKE '%.0'");
-    db.exec("UPDATE variants SET sku = SUBSTR(sku, 1, LENGTH(sku) - 2) WHERE sku LIKE '%.0'");
-
-    const tables = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='channel_prices'").get();
-    if (tables) {
-        const channelPricesColumns: { name: string }[] = db.pragma('table_info(channel_prices)') as { name: string }[];
-        const hasProductId = channelPricesColumns.some((col: any) => col.name === 'product_id');
-        const hasVariantId = channelPricesColumns.some((col: any) => col.name === 'variant_id');
-        
-        if (!hasProductId || !hasVariantId) {
-            db.exec('DROP TABLE IF EXISTS channel_prices');
-            db.exec(`
-                 CREATE TABLE channel_prices (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    product_id INTEGER,
-                    variant_id INTEGER,
-                    channel TEXT NOT NULL,
-                    price REAL NOT NULL,
-                    FOREIGN KEY (product_id) REFERENCES products (id) ON DELETE CASCADE,
-                    FOREIGN KEY (variant_id) REFERENCES variants (id) ON DELETE CASCADE,
-                    UNIQUE (product_id, variant_id, channel)
-                );
-            `);
-        }
-    }
-
-
-    const salesColumns: { name: string }[] = db.pragma('table_info(sales)') as { name: string }[];
-    const hasTransactionId = salesColumns.some((col: any) => col.name === 'transactionId');
-    const hasPaymentMethod = salesColumns.some((col: any) => col.name === 'paymentMethod');
-    const hasResellerName = salesColumns.some((col: any) => col.name === 'resellerName');
-    const hasCogs = salesColumns.some((col: any) => col.name === 'cogsAtSale');
-    const hasParentSku = salesColumns.some((col: any) => col.name === 'parentSku');
-    const hasStatus = salesColumns.some((col: any) => col.name === 'status');
-    const hasProductCategory = salesColumns.some((col: any) => col.name === 'productCategory');
-    const hasParentImageUrl = salesColumns.some((col: any) => col.name === 'parentImageUrl');
-
-
-    if (!hasTransactionId) {
-      db.exec('ALTER TABLE sales ADD COLUMN transactionId TEXT');
-    }
-    
-    if (!hasPaymentMethod) {
-      db.exec('ALTER TABLE sales ADD COLUMN paymentMethod TEXT');
-    }
-    
-    if (!hasResellerName) {
-        db.exec('ALTER TABLE sales ADD COLUMN resellerName TEXT');
-    }
-    
-    if (!hasCogs) {
-        db.exec('ALTER TABLE sales ADD COLUMN cogsAtSale REAL');
-    }
-    
-    if (!hasParentSku) {
-        db.exec('ALTER TABLE sales ADD COLUMN parentSku TEXT');
-    }
-    
-    if (!hasStatus) {
-        db.exec("ALTER TABLE sales ADD COLUMN status TEXT DEFAULT 'Completed'");
-    }
-
-    if (!hasProductCategory) {
-        db.exec("ALTER TABLE sales ADD COLUMN productCategory TEXT");
-    }
-
-    if (!hasParentImageUrl) {
-        db.exec("ALTER TABLE sales ADD COLUMN parentImageUrl TEXT");
-    }
-
-    const resellerColumns: { name: string }[] = db.pragma('table_info(resellers)') as { name: string }[];
-    const hasPhone = resellerColumns.some((col: any) => col.name === 'phone');
-    const hasAddress = resellerColumns.some((col: any) => col.name === 'address');
-
-    if(!hasPhone) {
-        db.exec('ALTER TABLE resellers ADD COLUMN phone TEXT');
-    }
-    if(!hasAddress) {
-        db.exec('ALTER TABLE resellers ADD COLUMN address TEXT');
-    }
-
-    const productColumns: { name: string }[] = db.pragma('table_info(products)') as { name: string }[];
-    if (!productColumns.some((col: any) => col.name === 'costPrice')) {
-        db.exec('ALTER TABLE products ADD COLUMN costPrice REAL');
-    }
-     if (!productColumns.some((col: any) => col.name === 'isArchived')) {
-        db.exec('ALTER TABLE products ADD COLUMN isArchived INTEGER DEFAULT 0');
-    }
-    if (!productColumns.some((col: any) => col.name === 'releaseDate')) {
-        db.exec('ALTER TABLE products ADD COLUMN releaseDate TEXT');
-    }
-
-
-    const variantColumns: { name: string }[] = db.pragma('table_info(variants)') as { name: string }[];
-    if (!variantColumns.some((col: any) => col.name === 'costPrice')) {
-        db.exec('ALTER TABLE variants ADD COLUMN costPrice REAL');
-    }
-
-    const accessoryColumns: { name: string }[] = db.pragma('table_info(accessories)') as { name: string }[];
-    if (accessoryColumns) {
-        if (!accessoryColumns.some((col: any) => col.name === 'category')) {
-            db.exec('ALTER TABLE accessories ADD COLUMN category TEXT');
-        }
-         if (!accessoryColumns.some((col: any) => col.name === 'unit')) {
-            db.exec('ALTER TABLE accessories ADD COLUMN unit TEXT');
-        }
-        if (!accessoryColumns.some((col: any) => col.name === 'quantityPerUnit')) {
-            db.exec('ALTER TABLE accessories ADD COLUMN quantityPerUnit INTEGER');
-        }
-    }
-    
-    const salesColumnsForBackfill: { name: string }[] = db.pragma('table_info(sales)') as { name: string }[];
-    if (salesColumnsForBackfill.some((col: any) => col.name === 'parentSku')) {
-        const stmt = db.prepare(`
-            UPDATE sales
-            SET parentSku = (SELECT sku FROM products WHERE products.id = sales.productId)
-            WHERE parentSku IS NULL AND productId IS NOT NULL
-        `);
-        stmt.run();
-    }
-    
-    const journalTable = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='manual_journal_entries'").get();
-    if (journalTable) {
-        db.exec('DROP TABLE manual_journal_entries');
-    }
-
-    const discountGroupTable = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='discount_groups'").get();
-    if (discountGroupTable) {
-        const discountGroupColumns: { name: string }[] = db.pragma('table_info(discount_groups)') as { name: string }[];
-        if (discountGroupColumns) {
-            if (!discountGroupColumns.some((col: any) => col.name === 'channel')) {
-                db.exec('ALTER TABLE discount_groups ADD COLUMN channel TEXT');
-            }
-            if (!discountGroupColumns.some((col: any) => col.name === 'voucherCode')) {
-                db.exec('ALTER TABLE discount_groups ADD COLUMN voucherCode TEXT');
-                db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_discount_groups_voucher_code ON discount_groups(voucherCode);');
-            }
-        }
-    }
-
-
-  } catch (error) {
-  }
-};
-
 
 const createSchema = () => {
   db.exec(`
@@ -351,7 +190,8 @@ const createSchema = () => {
         endDate TEXT NOT NULL,
         voucherCode TEXT
     );
-     CREATE UNIQUE INDEX IF NOT EXISTS idx_discount_groups_voucher_code ON discount_groups(voucherCode);
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_discount_groups_voucher_code_unique ON discount_groups(voucherCode) WHERE voucherCode IS NOT NULL;
+
 
     CREATE TABLE IF NOT EXISTS discounted_products (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -366,18 +206,71 @@ const createSchema = () => {
   `);
 };
 
+const runMigrations = () => {
+    try {
+        // --- USERS TABLE MIGRATIONS ---
+        const userColumns = db.prepare("PRAGMA table_info(users)").all() as { name: string }[];
+        if (!userColumns.some(col => col.name === 'password')) {
+            db.exec("ALTER TABLE users ADD COLUMN password TEXT NOT NULL DEFAULT ''");
+        }
+        if (!userColumns.some(col => col.name === 'role')) {
+            db.exec("ALTER TABLE users ADD COLUMN role TEXT NOT NULL DEFAULT 'user'");
+        }
+
+        // --- SALES TABLE MIGRATIONS ---
+        const salesColumns = db.prepare("PRAGMA table_info(sales)").all() as { name: string }[];
+        if (!salesColumns.some(col => col.name === 'transactionId')) db.exec('ALTER TABLE sales ADD COLUMN transactionId TEXT');
+        if (!salesColumns.some(col => col.name === 'paymentMethod')) db.exec('ALTER TABLE sales ADD COLUMN paymentMethod TEXT');
+        if (!salesColumns.some(col => col.name === 'resellerName')) db.exec('ALTER TABLE sales ADD COLUMN resellerName TEXT');
+        if (!salesColumns.some(col => col.name === 'cogsAtSale')) db.exec('ALTER TABLE sales ADD COLUMN cogsAtSale REAL');
+        if (!salesColumns.some(col => col.name === 'parentSku')) db.exec('ALTER TABLE sales ADD COLUMN parentSku TEXT');
+        if (!salesColumns.some(col => col.name === 'status')) db.exec("ALTER TABLE sales ADD COLUMN status TEXT DEFAULT 'Completed'");
+        if (!salesColumns.some(col => col.name === 'productCategory')) db.exec("ALTER TABLE sales ADD COLUMN productCategory TEXT");
+        if (!salesColumns.some(col => col.name === 'parentImageUrl')) db.exec("ALTER TABLE sales ADD COLUMN parentImageUrl TEXT");
+
+        // --- RESELLERS TABLE MIGRATIONS ---
+        const resellerColumns = db.prepare("PRAGMA table_info(resellers)").all() as { name: string }[];
+        if (!resellerColumns.some(col => col.name === 'phone')) db.exec('ALTER TABLE resellers ADD COLUMN phone TEXT');
+        if (!resellerColumns.some(col => col.name === 'address')) db.exec('ALTER TABLE resellers ADD COLUMN address TEXT');
+        
+        // --- PRODUCTS TABLE MIGRATIONS ---
+        const productColumns = db.prepare("PRAGMA table_info(products)").all() as { name: string }[];
+        if (!productColumns.some(col => col.name === 'costPrice')) db.exec('ALTER TABLE products ADD COLUMN costPrice REAL');
+        if (!productColumns.some(col => col.name === 'isArchived')) db.exec('ALTER TABLE products ADD COLUMN isArchived INTEGER DEFAULT 0');
+        if (!productColumns.some(col => col.name === 'releaseDate')) db.exec('ALTER TABLE products ADD COLUMN releaseDate TEXT');
+        
+        // --- VARIANTS TABLE MIGRATIONS ---
+        const variantColumns = db.prepare("PRAGMA table_info(variants)").all() as { name: string }[];
+        if (!variantColumns.some(col => col.name === 'costPrice')) db.exec('ALTER TABLE variants ADD COLUMN costPrice REAL');
+        
+        // --- ACCESSORIES TABLE MIGRATIONS ---
+        const accessoryColumns = db.prepare("PRAGMA table_info(accessories)").all() as { name: string }[];
+        if (!accessoryColumns.some(col => col.name === 'category')) db.exec('ALTER TABLE accessories ADD COLUMN category TEXT');
+        if (!accessoryColumns.some(col => col.name === 'unit')) db.exec("ALTER TABLE accessories ADD COLUMN unit TEXT NOT NULL DEFAULT 'Pcs'");
+        if (!accessoryColumns.some(col => col.name === 'quantityPerUnit')) db.exec('ALTER TABLE accessories ADD COLUMN quantityPerUnit INTEGER');
+        
+        // --- DISCOUNT_GROUPS TABLE MIGRATIONS ---
+        const discountGroupColumns = db.prepare("PRAGMA table_info(discount_groups)").all() as { name: string }[];
+        if (!discountGroupColumns.some(col => col.name === 'channel')) db.exec('ALTER TABLE discount_groups ADD COLUMN channel TEXT');
+        if (!discountGroupColumns.some(col => col.name === 'voucherCode')) {
+            db.exec('ALTER TABLE discount_groups ADD COLUMN voucherCode TEXT');
+        }
+
+    } catch (error) {
+        console.error("Error running migrations:", error);
+    }
+};
 
 const seedData = () => {
     try {
         const userCount = db.prepare('SELECT COUNT(*) as count FROM users').get() as { count: number };
         if (userCount.count === 0) {
-            // NOTE: Storing plain text passwords is a major security risk.
-            // This is for demonstration purposes only. Use a hashing library like bcrypt in production.
             db.prepare('INSERT INTO users (username, password, role) VALUES (?, ?, ?)')
               .run('admin', 'admin123', 'admin');
         }
 
     } catch (e) {
+        // Seeding might fail if table doesn't exist yet, which is fine.
     }
 };
 
@@ -386,11 +279,6 @@ function getDb() {
     initializeDatabase();
   }
   return db;
-}
-
-
-function executeQuery<T>(query: (db: Database.Database) => T): T {
-    return query(getDb());
 }
 
 const dbProxy = {
@@ -409,10 +297,4 @@ const dbProxy = {
   pragma: (sql: string) => getDb().pragma(sql),
 };
 
-
-// Replace direct 'db' export with the proxy
 export { dbProxy as db };
-
-
-    
-
