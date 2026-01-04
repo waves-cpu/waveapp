@@ -62,35 +62,17 @@ export function PosOrderSummary({ cart, onSaleComplete, clearCart, channel, pend
         setPaymentMethod(channel === 'reseller' ? 'Transfer' : 'Cash');
     }, [channel]);
 
-    const { subtotal, totalDiscount, discountedCart } = useMemo(() => {
-        let sub = 0;
-        let discount = 0;
-        const newCart = cart.map(item => {
-            sub += item.originalPrice * item.quantity;
-            let currentPrice = item.originalPrice;
-
-            if (activeVoucher && item.type === 'product') {
-                 const isCategoryMatch = activeVoucher.category === 'Semua Kategori' || item.category === activeVoucher.category;
-                 if (isCategoryMatch) {
-                    if (activeVoucher.discountType === 'percentage' && activeVoucher.discountValue) {
-                        currentPrice = item.originalPrice - (item.originalPrice * (activeVoucher.discountValue / 100));
-                    } else if (activeVoucher.discountType === 'fixed' && activeVoucher.discountValue) {
-                        currentPrice = item.originalPrice - activeVoucher.discountValue;
-                    }
-                 }
-            }
-            
-            discount += (item.originalPrice - Math.max(0, currentPrice)) * item.quantity;
-            return { ...item, price: Math.max(0, currentPrice) };
-        });
-        
-        return { subtotal: sub, totalDiscount: discount, discountedCart: newCart };
-    }, [cart, activeVoucher]);
+    const { subtotal, total } = useMemo(() => {
+        return cart.reduce((acc, item) => {
+            acc.subtotal += item.originalPrice * item.quantity;
+            acc.total += item.price * item.quantity;
+            return acc;
+        }, { subtotal: 0, total: 0 });
+    }, [cart]);
     
-    const finalDiscount = activeVoucher ? totalDiscount : manualDiscount;
-    const total = useMemo(() => subtotal - finalDiscount, [subtotal, finalDiscount]);
-    const change = useMemo(() => cashReceived - total, [cashReceived, total]);
-
+    const finalDiscount = activeVoucher ? (subtotal - total) : manualDiscount;
+    const finalTotal = subtotal - finalDiscount;
+    const change = useMemo(() => cashReceived - finalTotal, [cashReceived, finalTotal]);
 
     useEffect(() => {
         if (cart.length === 0) {
@@ -111,7 +93,6 @@ export function PosOrderSummary({ cart, onSaleComplete, clearCart, channel, pend
         onVoucherApplied(null);
         clearCart();
     }
-
 
     const handleApplyVoucher = async () => {
         if (!voucherCode.trim()) return;
@@ -145,14 +126,13 @@ export function PosOrderSummary({ cart, onSaleComplete, clearCart, channel, pend
         toast({ title: 'Voucher Dihapus', description: 'Harga telah kembali normal.' });
     };
 
-
     const handleSale = async (status: 'Completed' | 'Pending') => {
         setIsSubmitting(true);
         const receiptData: ReceiptData = {
-            items: discountedCart.map(item => ({...item, name: item.productName, originalPrice: item.originalPrice })),
+            items: cart.map(item => ({...item, name: item.productName, originalPrice: item.originalPrice })),
             subtotal,
             discount: finalDiscount,
-            total,
+            total: finalTotal,
             paymentMethod,
             cashReceived: paymentMethod === 'Cash' ? cashReceived : total,
             change: paymentMethod === 'Cash' ? change : 0,
@@ -160,8 +140,7 @@ export function PosOrderSummary({ cart, onSaleComplete, clearCart, channel, pend
         };
         
         try {
-            // Pass the cart with discounted prices to onSaleComplete
-            await onSaleComplete(paymentMethod, { ...receiptData, items: discountedCart }, status);
+            await onSaleComplete(paymentMethod, receiptData, status);
             resetForm();
             if(status === 'Pending') {
                 router.push('/sales/pos/pending');
@@ -283,7 +262,7 @@ export function PosOrderSummary({ cart, onSaleComplete, clearCart, channel, pend
                     <div className="w-full space-y-2 text-base font-bold mb-4 p-4 bg-muted rounded-md">
                         <div className="flex justify-between">
                             <span>{t.pos.total}</span>
-                            <span className="text-primary">{total.toLocaleString('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0, maximumFractionDigits: 0 })}</span>
+                            <span className="text-primary">{finalTotal.toLocaleString('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0, maximumFractionDigits: 0 })}</span>
                         </div>
                         {paymentMethod === 'Cash' && channel !== 'reseller' && (
                             <div className="flex justify-between text-sm">
