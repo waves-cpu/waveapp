@@ -64,7 +64,7 @@ export function PosOrderSummary({ cart, onSaleComplete, clearCart, channel, pend
     }, [channel]);
 
     const { subtotal, totalDiscount, finalTotal } = useMemo(() => {
-        const subtotal = cart.reduce((acc, item) => acc + (item.originalPrice * item.quantity), 0);
+        const subtotalCalc = cart.reduce((acc, item) => acc + (item.originalPrice * item.quantity), 0);
 
         const groupDiscount = cart.reduce((acc, item) => {
             const discountPerItem = item.originalPrice > item.price ? (item.originalPrice - item.price) * item.quantity : 0;
@@ -78,11 +78,13 @@ export function PosOrderSummary({ cart, onSaleComplete, clearCart, channel, pend
             const categoryMatch = item.category === activeVoucher.category;
             
             if (appliesToAll || categoryMatch) {
-                const priceToApplyDiscountOn = item.price; // Start with group discount price
+                // Voucher discount applies to the price AFTER group discount
+                const priceAfterGroupDiscount = item.price;
                 if (activeVoucher.discountType === 'percentage') {
-                    return acc + (priceToApplyDiscountOn * (activeVoucher.discountValue! / 100)) * item.quantity;
+                    return acc + (priceAfterGroupDiscount * (activeVoucher.discountValue! / 100)) * item.quantity;
                 } else if (activeVoucher.discountType === 'fixed') {
-                    const discountValue = Math.min(priceToApplyDiscountOn, activeVoucher.discountValue!);
+                    // Make sure discount is not more than the item's price
+                    const discountValue = Math.min(priceAfterGroupDiscount, activeVoucher.discountValue!);
                     return acc + discountValue * item.quantity;
                 }
             }
@@ -90,10 +92,10 @@ export function PosOrderSummary({ cart, onSaleComplete, clearCart, channel, pend
         }, 0);
 
         const finalManualDiscount = activeVoucher ? 0 : manualDiscount;
-        const totalDiscount = groupDiscount + voucherDiscount + finalManualDiscount;
-        const finalTotal = subtotal - totalDiscount;
+        const totalDiscountCalc = groupDiscount + voucherDiscount + finalManualDiscount;
+        const finalTotalCalc = subtotalCalc - totalDiscountCalc;
 
-        return { subtotal, totalDiscount, finalTotal };
+        return { subtotal: subtotalCalc, totalDiscount: totalDiscountCalc, finalTotal: finalTotalCalc };
     }, [cart, manualDiscount, activeVoucher]);
 
 
@@ -170,7 +172,7 @@ export function PosOrderSummary({ cart, onSaleComplete, clearCart, channel, pend
         });
         
         const receiptData: ReceiptData = {
-            items: cart.map(item => ({...item, name: item.productName, originalPrice: item.originalPrice })),
+            items: cart.map(item => ({...item, productName: item.productName, originalPrice: item.originalPrice })),
             subtotal: subtotal,
             discount: totalDiscount,
             total: finalTotal,
