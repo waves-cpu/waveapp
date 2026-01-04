@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
@@ -84,28 +83,32 @@ export function PosCart({ onVoucherApplied, activeVoucher }: PosCartProps) {
 
     // Apply voucher discounts when activeVoucher changes or cart changes
     useEffect(() => {
-        if (activeVoucher && cart.length > 0) {
-            setCart(currentCart => {
-                return currentCart.map(item => {
-                    // Check if the item's category matches the voucher's category
-                    if (item.category === activeVoucher.category) {
-                        const discountedProduct = activeVoucher.products.find(p => 
-                            (p.variantId && p.variantId.toString() === item.id) || 
-                            (!p.variantId && p.productId.toString() === item.productId)
-                        );
-                        if (discountedProduct) {
-                            return { ...item, price: discountedProduct.discountedPrice };
-                        }
-                    }
-                    // If no discount, revert to original price
+        setCart(currentCart => {
+            return currentCart.map(item => {
+                if (!activeVoucher || item.type !== 'product') {
+                    // Revert to original price if no voucher or it's an accessory
                     return { ...item, price: item.originalPrice };
-                });
+                }
+
+                const isCategoryMatch = activeVoucher.category === 'Semua Kategori' || item.category === activeVoucher.category;
+                
+                if (!isCategoryMatch) {
+                    // Revert if category doesn't match
+                    return { ...item, price: item.originalPrice };
+                }
+                
+                // Calculate discounted price based on voucher type
+                let discountedPrice = item.originalPrice;
+                if (activeVoucher.discountType === 'percentage' && activeVoucher.discountValue) {
+                    discountedPrice = item.originalPrice - (item.originalPrice * (activeVoucher.discountValue / 100));
+                } else if (activeVoucher.discountType === 'fixed' && activeVoucher.discountValue) {
+                    discountedPrice = item.originalPrice - activeVoucher.discountValue;
+                }
+
+                return { ...item, price: Math.max(0, discountedPrice) }; // Ensure price doesn't go below zero
             });
-        } else {
-            // If no active voucher, revert all prices to original
-            setCart(currentCart => currentCart.map(item => ({ ...item, price: item.originalPrice })));
-        }
-    }, [activeVoucher, cart.length]); // Re-run when cart content changes
+        });
+    }, [activeVoucher]);
 
 
     useEffect(() => {
