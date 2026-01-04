@@ -88,7 +88,7 @@ export default function VouchersPage() {
                         <h1 className="text-lg font-bold">Voucher Diskon</h1>
                     </div>
                     <Button asChild>
-                        <Link href="/promotions/discount-groups/new">
+                        <Link href="/promotions/vouchers/new">
                             <PlusCircle className="mr-2 h-4 w-4" />
                             Buat Voucher Baru
                         </Link>
@@ -155,7 +155,7 @@ export default function VouchersPage() {
                             <h3 className="mt-4 text-lg font-semibold">Belum Ada Voucher</h3>
                             <p className="mt-1 text-sm">Buat voucher pertama Anda untuk memulai promosi.</p>
                              <Button asChild className="mt-4">
-                                <Link href="/promotions/discount-groups/new">
+                                <Link href="/promotions/vouchers/new">
                                     <PlusCircle className="mr-2 h-4 w-4" />
                                     Buat Voucher Baru
                                 </Link>
@@ -184,3 +184,5 @@ export default function VouchersPage() {
         </AppLayout>
     );
 }
+
+    

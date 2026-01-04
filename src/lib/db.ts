@@ -188,7 +188,11 @@ const createSchema = () => {
         channel TEXT NOT NULL,
         startDate TEXT NOT NULL,
         endDate TEXT NOT NULL,
-        voucherCode TEXT
+        voucherCode TEXT,
+        discountType TEXT,
+        discountValue REAL,
+        maxUses INTEGER,
+        minPurchase REAL
     );
     CREATE UNIQUE INDEX IF NOT EXISTS idx_discount_groups_voucher_code_unique ON discount_groups(voucherCode) WHERE voucherCode IS NOT NULL;
 
@@ -208,7 +212,6 @@ const createSchema = () => {
 
 const runMigrations = () => {
     try {
-        // --- USERS TABLE MIGRATIONS ---
         const userColumns = db.prepare("PRAGMA table_info(users)").all() as { name: string }[];
         if (!userColumns.some(col => col.name === 'password')) {
             db.exec("ALTER TABLE users ADD COLUMN password TEXT NOT NULL DEFAULT ''");
@@ -217,7 +220,6 @@ const runMigrations = () => {
             db.exec("ALTER TABLE users ADD COLUMN role TEXT NOT NULL DEFAULT 'user'");
         }
 
-        // --- SALES TABLE MIGRATIONS ---
         const salesColumns = db.prepare("PRAGMA table_info(sales)").all() as { name: string }[];
         if (!salesColumns.some(col => col.name === 'transactionId')) db.exec('ALTER TABLE sales ADD COLUMN transactionId TEXT');
         if (!salesColumns.some(col => col.name === 'paymentMethod')) db.exec('ALTER TABLE sales ADD COLUMN paymentMethod TEXT');
@@ -228,34 +230,30 @@ const runMigrations = () => {
         if (!salesColumns.some(col => col.name === 'productCategory')) db.exec("ALTER TABLE sales ADD COLUMN productCategory TEXT");
         if (!salesColumns.some(col => col.name === 'parentImageUrl')) db.exec("ALTER TABLE sales ADD COLUMN parentImageUrl TEXT");
 
-        // --- RESELLERS TABLE MIGRATIONS ---
         const resellerColumns = db.prepare("PRAGMA table_info(resellers)").all() as { name: string }[];
         if (!resellerColumns.some(col => col.name === 'phone')) db.exec('ALTER TABLE resellers ADD COLUMN phone TEXT');
         if (!resellerColumns.some(col => col.name === 'address')) db.exec('ALTER TABLE resellers ADD COLUMN address TEXT');
         
-        // --- PRODUCTS TABLE MIGRATIONS ---
         const productColumns = db.prepare("PRAGMA table_info(products)").all() as { name: string }[];
         if (!productColumns.some(col => col.name === 'costPrice')) db.exec('ALTER TABLE products ADD COLUMN costPrice REAL');
         if (!productColumns.some(col => col.name === 'isArchived')) db.exec('ALTER TABLE products ADD COLUMN isArchived INTEGER DEFAULT 0');
         if (!productColumns.some(col => col.name === 'releaseDate')) db.exec('ALTER TABLE products ADD COLUMN releaseDate TEXT');
         
-        // --- VARIANTS TABLE MIGRATIONS ---
         const variantColumns = db.prepare("PRAGMA table_info(variants)").all() as { name: string }[];
         if (!variantColumns.some(col => col.name === 'costPrice')) db.exec('ALTER TABLE variants ADD COLUMN costPrice REAL');
         
-        // --- ACCESSORIES TABLE MIGRATIONS ---
         const accessoryColumns = db.prepare("PRAGMA table_info(accessories)").all() as { name: string }[];
         if (!accessoryColumns.some(col => col.name === 'category')) db.exec('ALTER TABLE accessories ADD COLUMN category TEXT');
         if (!accessoryColumns.some(col => col.name === 'unit')) db.exec("ALTER TABLE accessories ADD COLUMN unit TEXT NOT NULL DEFAULT 'Pcs'");
         if (!accessoryColumns.some(col => col.name === 'quantityPerUnit')) db.exec('ALTER TABLE accessories ADD COLUMN quantityPerUnit INTEGER');
         
-        // --- DISCOUNT_GROUPS TABLE MIGRATIONS ---
         const discountGroupColumns = db.prepare("PRAGMA table_info(discount_groups)").all() as { name: string }[];
         if (!discountGroupColumns.some(col => col.name === 'channel')) db.exec('ALTER TABLE discount_groups ADD COLUMN channel TEXT');
-        if (!discountGroupColumns.some(col => col.name === 'voucherCode')) {
-            db.exec('ALTER TABLE discount_groups ADD COLUMN voucherCode TEXT');
-        }
-
+        if (!discountGroupColumns.some(col => col.name === 'voucherCode')) db.exec('ALTER TABLE discount_groups ADD COLUMN voucherCode TEXT');
+        if (!discountGroupColumns.some(col => col.name === 'discountType')) db.exec('ALTER TABLE discount_groups ADD COLUMN discountType TEXT');
+        if (!discountGroupColumns.some(col => col.name === 'discountValue')) db.exec('ALTER TABLE discount_groups ADD COLUMN discountValue REAL');
+        if (!discountGroupColumns.some(col => col.name === 'maxUses')) db.exec('ALTER TABLE discount_groups ADD COLUMN maxUses INTEGER');
+        if (!discountGroupColumns.some(col => col.name === 'minPurchase')) db.exec('ALTER TABLE discount_groups ADD COLUMN minPurchase REAL');
     } catch (error) {
         console.error("Error running migrations:", error);
     }
@@ -298,3 +296,5 @@ const dbProxy = {
 };
 
 export { dbProxy as db };
+
+    
