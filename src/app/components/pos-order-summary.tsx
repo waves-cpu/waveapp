@@ -65,6 +65,7 @@ export function PosOrderSummary({ cart, onSaleComplete, clearCart, channel, pend
     const { subtotal, totalDiscount, finalTotal } = useMemo(() => {
         const subtotal = cart.reduce((acc, item) => acc + (item.originalPrice * item.quantity), 0);
         
+        // Discount from "Grup Diskon" is already reflected in item.price vs item.originalPrice
         const groupDiscount = cart.reduce((acc, item) => {
             const discountPerItem = item.originalPrice - item.price;
             return acc + (discountPerItem * item.quantity);
@@ -78,16 +79,17 @@ export function PosOrderSummary({ cart, onSaleComplete, clearCart, channel, pend
                 
                 if (appliesToAll || categoryMatch) {
                     if (activeVoucher.discountType === 'percentage') {
-                        return acc + (item.originalPrice * (activeVoucher.discountValue / 100)) * item.quantity;
+                        // Apply voucher discount on the ORIGINAL price.
+                        return acc + (item.originalPrice * (activeVoucher.discountValue! / 100)) * item.quantity;
                     } else if (activeVoucher.discountType === 'fixed') {
-                        return acc + activeVoucher.discountValue * item.quantity;
+                        return acc + activeVoucher.discountValue! * item.quantity;
                     }
                 }
                 return acc;
             }, 0);
         }
 
-        const totalDiscount = activeVoucher ? voucherDiscount : groupDiscount + manualDiscount;
+        const totalDiscount = activeVoucher ? (groupDiscount + voucherDiscount) : (groupDiscount + manualDiscount);
         const finalTotal = subtotal - totalDiscount;
         
         return { subtotal, totalDiscount, finalTotal };
