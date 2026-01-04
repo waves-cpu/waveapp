@@ -62,15 +62,30 @@ export function PosOrderSummary({ cart, onSaleComplete, clearCart, channel, pend
         setPaymentMethod(channel === 'reseller' ? 'Transfer' : 'Cash');
     }, [channel]);
 
-    const { subtotal, totalDiscount } = useMemo(() => {
+    const { subtotal, totalDiscount, discountedCart } = useMemo(() => {
         let sub = 0;
         let discount = 0;
-        cart.forEach(item => {
+        const newCart = cart.map(item => {
             sub += item.originalPrice * item.quantity;
-            discount += (item.originalPrice - item.price) * item.quantity;
+            let currentPrice = item.originalPrice;
+
+            if (activeVoucher && item.type === 'product') {
+                 const isCategoryMatch = activeVoucher.category === 'Semua Kategori' || item.category === activeVoucher.category;
+                 if (isCategoryMatch) {
+                    if (activeVoucher.discountType === 'percentage' && activeVoucher.discountValue) {
+                        currentPrice = item.originalPrice - (item.originalPrice * (activeVoucher.discountValue / 100));
+                    } else if (activeVoucher.discountType === 'fixed' && activeVoucher.discountValue) {
+                        currentPrice = item.originalPrice - activeVoucher.discountValue;
+                    }
+                 }
+            }
+            
+            discount += (item.originalPrice - Math.max(0, currentPrice)) * item.quantity;
+            return { ...item, price: Math.max(0, currentPrice) };
         });
-        return { subtotal: sub, totalDiscount: discount };
-    }, [cart]);
+        
+        return { subtotal: sub, totalDiscount: discount, discountedCart: newCart };
+    }, [cart, activeVoucher]);
     
     const finalDiscount = activeVoucher ? totalDiscount : manualDiscount;
     const total = useMemo(() => subtotal - finalDiscount, [subtotal, finalDiscount]);
@@ -134,7 +149,7 @@ export function PosOrderSummary({ cart, onSaleComplete, clearCart, channel, pend
     const handleSale = async (status: 'Completed' | 'Pending') => {
         setIsSubmitting(true);
         const receiptData: ReceiptData = {
-            items: cart.map(item => ({...item, name: item.productName, originalPrice: item.originalPrice })),
+            items: discountedCart.map(item => ({...item, name: item.productName, originalPrice: item.originalPrice })),
             subtotal,
             discount: finalDiscount,
             total,
@@ -145,7 +160,8 @@ export function PosOrderSummary({ cart, onSaleComplete, clearCart, channel, pend
         };
         
         try {
-            await onSaleComplete(paymentMethod, receiptData, status);
+            // Pass the cart with discounted prices to onSaleComplete
+            await onSaleComplete(paymentMethod, { ...receiptData, items: discountedCart }, status);
             resetForm();
             if(status === 'Pending') {
                 router.push('/sales/pos/pending');
@@ -192,7 +208,7 @@ export function PosOrderSummary({ cart, onSaleComplete, clearCart, channel, pend
                         <>
                         <div className="flex justify-between items-center">
                             <Label htmlFor="discount">{t.pos.discount}</Label>
-                            <Input id="discount" type="number" value={finalDiscount} onChange={(e) => setManualDiscount(Number(e.target.value))} className="w-32 h-8 text-sm" disabled={!!activeVoucher}/>
+                            <Input id="discount" type="number" value={manualDiscount} onChange={(e) => setManualDiscount(Number(e.target.value))} className="w-32 h-8 text-sm" disabled={!!activeVoucher}/>
                         </div>
                          <div className="space-y-2">
                              <Label htmlFor="voucher">Kode Voucher</Label>

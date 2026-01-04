@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
@@ -81,36 +82,6 @@ export function PosCart({ onVoucherApplied, activeVoucher }: PosCartProps) {
         ).slice(0, 10);
     }, [debouncedSearchTerm, inventoryItems, accessories]);
 
-    // Apply voucher discounts when activeVoucher changes or cart changes
-    useEffect(() => {
-        setCart(currentCart => {
-            return currentCart.map(item => {
-                if (!activeVoucher || item.type !== 'product') {
-                    // Revert to original price if no voucher or it's an accessory
-                    return { ...item, price: item.originalPrice };
-                }
-
-                const isCategoryMatch = activeVoucher.category === 'Semua Kategori' || item.category === activeVoucher.category;
-                
-                if (!isCategoryMatch) {
-                    // Revert if category doesn't match
-                    return { ...item, price: item.originalPrice };
-                }
-                
-                // Calculate discounted price based on voucher type
-                let discountedPrice = item.originalPrice;
-                if (activeVoucher.discountType === 'percentage' && activeVoucher.discountValue) {
-                    discountedPrice = item.originalPrice - (item.originalPrice * (activeVoucher.discountValue / 100));
-                } else if (activeVoucher.discountType === 'fixed' && activeVoucher.discountValue) {
-                    discountedPrice = item.originalPrice - activeVoucher.discountValue;
-                }
-
-                return { ...item, price: Math.max(0, discountedPrice) }; // Ensure price doesn't go below zero
-            });
-        });
-    }, [activeVoucher]);
-
-
     useEffect(() => {
         setIsClient(true);
         try {
@@ -134,7 +105,7 @@ export function PosCart({ onVoucherApplied, activeVoucher }: PosCartProps) {
                             sku: saleItem.sku!,
                             quantity: saleItem.quantity,
                             price: saleItem.priceAtSale,
-                            originalPrice: saleItem.priceAtSale,
+                            originalPrice: saleItem.priceAtSale, // Assume originalPrice is priceAtSale on resume
                             category: saleItem.productCategory,
                             imageUrl: saleItem.parentImageUrl,
                             maxStock: 999 // Placeholder, should be updated if possible
@@ -380,7 +351,7 @@ export function PosCart({ onVoucherApplied, activeVoucher }: PosCartProps) {
         const salesData = cart.map(item => ({
             sku: item.sku,
             quantity: item.quantity,
-            price: item.price,
+            price: item.price, // Use the current price from cart, which might be discounted
         }));
         
         const transactionId = pendingTransactionId || `trans-${Date.now()}`;
@@ -514,6 +485,7 @@ export function PosCart({ onVoucherApplied, activeVoucher }: PosCartProps) {
                     channel="pos"
                     pendingTransactionId={pendingTransactionId}
                     onVoucherApplied={onVoucherApplied}
+                    activeVoucher={activeVoucher}
                 />
             </div>
              {productForVariantSelection && (
