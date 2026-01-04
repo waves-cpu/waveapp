@@ -62,17 +62,25 @@ export function PosOrderSummary({ cart, onSaleComplete, clearCart, channel, pend
         setPaymentMethod(channel === 'reseller' ? 'Transfer' : 'Cash');
     }, [channel]);
 
-    const { subtotal, total } = useMemo(() => {
-        return cart.reduce((acc, item) => {
-            acc.subtotal += item.originalPrice * item.quantity;
-            acc.total += item.price * item.quantity;
-            return acc;
-        }, { subtotal: 0, total: 0 });
-    }, [cart]);
+    const { subtotal, total, totalDiscount } = useMemo(() => {
+        const baseSubtotal = cart.reduce((acc, item) => {
+            return acc + (item.price * item.quantity);
+        }, 0);
+
+        const originalSubtotal = cart.reduce((acc, item) => {
+            return acc + (item.originalPrice * item.quantity);
+        }, 0);
+        
+        const calculatedDiscount = originalSubtotal - baseSubtotal;
+
+        return { subtotal: baseSubtotal, total: baseSubtotal - manualDiscount, totalDiscount: calculatedDiscount };
+    }, [cart, manualDiscount]);
     
-    const finalDiscount = activeVoucher ? (subtotal - total) : manualDiscount;
-    const finalTotal = subtotal - finalDiscount;
+    
+    const finalDiscount = totalDiscount > 0 ? totalDiscount : manualDiscount;
+    const finalTotal = subtotal - (totalDiscount > 0 ? 0 : manualDiscount); // If discount comes from groups, subtotal is already discounted
     const change = useMemo(() => cashReceived - finalTotal, [cashReceived, finalTotal]);
+
 
     useEffect(() => {
         if (cart.length === 0) {
@@ -130,7 +138,7 @@ export function PosOrderSummary({ cart, onSaleComplete, clearCart, channel, pend
         setIsSubmitting(true);
         const receiptData: ReceiptData = {
             items: cart.map(item => ({...item, name: item.productName, originalPrice: item.originalPrice })),
-            subtotal,
+            subtotal: subtotal,
             discount: finalDiscount,
             total: finalTotal,
             paymentMethod,
@@ -187,7 +195,7 @@ export function PosOrderSummary({ cart, onSaleComplete, clearCart, channel, pend
                         <>
                         <div className="flex justify-between items-center">
                             <Label htmlFor="discount">{t.pos.discount}</Label>
-                            <Input id="discount" type="number" value={manualDiscount} onChange={(e) => setManualDiscount(Number(e.target.value))} className="w-32 h-8 text-sm" disabled={!!activeVoucher}/>
+                            <Input id="discount" type="number" value={manualDiscount} onChange={(e) => setManualDiscount(Number(e.target.value))} className="w-32 h-8 text-sm" disabled={!!activeVoucher || totalDiscount > 0}/>
                         </div>
                          <div className="space-y-2">
                              <Label htmlFor="voucher">Kode Voucher</Label>
