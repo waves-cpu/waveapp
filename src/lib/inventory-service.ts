@@ -877,7 +877,7 @@ export async function bulkAdjustStock(updates: { itemId: string, quantity: numbe
 export async function performSale(
     channel: string, 
     options: {
-        sales: { sku: string; quantity: number; price: number; priceAtSale?: number }[];
+        sales: { sku: string; quantity: number; priceAtSale: number }[];
         transactionId?: string, 
         paymentMethod?: string,
         resellerName?: string,
@@ -957,7 +957,7 @@ export async function performSale(
                 accessoryId,
                 channel, 
                 sale.quantity, 
-                sale.priceAtSale ?? sale.price, 
+                sale.priceAtSale, 
                 cogsAtSale, 
                 saleDateString, 
                 saleStatus,
@@ -1855,3 +1855,6 @@ export async function checkPrintedReceiptAvailability(salesChannel: string, ship
     
 
 
+
+
+    

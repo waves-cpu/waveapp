@@ -64,34 +64,28 @@ export function PosOrderSummary({ cart, onSaleComplete, clearCart, channel, pend
     }, [channel]);
     
     const { subtotal, totalDiscount, finalTotal } = useMemo(() => {
-        const subtotalCalc = cart.reduce((acc, item) => acc + (item.originalPrice * item.quantity), 0);
+        const subtotalCalc = cart.reduce((acc, item) => acc + (item.price * item.quantity), 0);
 
         let totalDiscountCalc = 0;
-
-        // Calculate discount from groups (difference between original and current price)
-        const groupDiscount = cart.reduce((acc, item) => acc + (item.originalPrice - item.price) * item.quantity, 0);
-        totalDiscountCalc += groupDiscount;
-
-        // Calculate discount from voucher
+        
         if (activeVoucher) {
             const voucherDiscount = cart.reduce((acc, item) => {
                 const appliesToAll = activeVoucher.category === 'Semua Kategori';
                 const categoryMatch = item.category === activeVoucher.category;
                 
                 if (appliesToAll || categoryMatch) {
-                    const priceAfterGroupDiscount = item.price; // Base price for voucher is after group discount
+                    const priceForItem = item.price;
                     if (activeVoucher.discountType === 'percentage') {
-                        return acc + (priceAfterGroupDiscount * (activeVoucher.discountValue! / 100)) * item.quantity;
+                        return acc + (priceForItem * (activeVoucher.discountValue! / 100)) * item.quantity;
                     } else if (activeVoucher.discountType === 'fixed') {
-                        return acc + Math.min(priceAfterGroupDiscount, activeVoucher.discountValue!) * item.quantity;
+                        return acc + Math.min(priceForItem, activeVoucher.discountValue!) * item.quantity;
                     }
                 }
                 return acc;
             }, 0);
-            totalDiscountCalc += voucherDiscount;
+            totalDiscountCalc = voucherDiscount;
         } else {
-            // Apply manual discount only if no voucher is active
-            totalDiscountCalc += manualDiscount;
+            totalDiscountCalc = manualDiscount;
         }
 
         const finalTotalCalc = subtotalCalc - totalDiscountCalc;
@@ -163,15 +157,15 @@ export function PosOrderSummary({ cart, onSaleComplete, clearCart, channel, pend
                     if (activeVoucher.discountType === 'percentage') {
                         finalPrice = finalPrice * (1 - (activeVoucher.discountValue! / 100));
                     } else if (activeVoucher.discountType === 'fixed') {
-                        // Apply fixed discount per item, ensuring price doesn't go below zero
                         finalPrice = Math.max(0, finalPrice - activeVoucher.discountValue!);
                     }
                 }
             }
+            
             return {
                 sku: item.sku,
                 quantity: item.quantity,
-                price: finalPrice, // The final, final price per item
+                priceAtSale: finalPrice, 
             };
         });
         
@@ -368,5 +362,7 @@ export function PosOrderSummary({ cart, onSaleComplete, clearCart, channel, pend
         </Card>
     );
 }
+
+    
 
     
