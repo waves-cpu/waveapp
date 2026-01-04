@@ -314,7 +314,7 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm = false }: Disc
                   <FormItem>
                     <FormLabel>Kode Voucher</FormLabel>
                     <FormControl>
-                      <Input placeholder="cth. LEBARAN2024" {...field} disabled={isVoucherForm && !isEditMode} />
+                      <Input placeholder="cth. LEBARAN2024" {...field} disabled={isEditMode} />
                     </FormControl>
                     {isVoucherForm && <FormDescription>Kode voucher harus unik.</FormDescription>}
                     <FormMessage />
