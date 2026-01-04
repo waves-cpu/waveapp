@@ -1,3 +1,4 @@
+
 'use client'
 
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
@@ -9,7 +10,7 @@ import { translations } from '@/types/language';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { parseISO } from 'date-fns';
+import { parseISO, startOfDay, endOfDay, isWithinInterval } from 'date-fns';
 import { id as aing } from 'date-fns/locale';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -78,8 +79,12 @@ export default function PosHistoryPage() {
     const posSales = useMemo(() => {
         const filtered = allSales.filter(s => s.channel === 'pos' && s.status !== 'Pending');
         if (date) {
-            const selectedDateString = formatToWIB(date, 'yyyy-MM-dd');
-            return filtered.filter(s => formatToWIB(parseISO(s.saleDate), 'yyyy-MM-dd') === selectedDateString);
+            const startDate = startOfDay(date);
+            const endDate = endOfDay(date);
+            return filtered.filter(s => {
+                const saleDate = parseISO(s.saleDate);
+                return isWithinInterval(saleDate, { start: startDate, end: endDate });
+            });
         }
         return filtered;
     }, [allSales, date]);
@@ -172,6 +177,8 @@ export default function PosHistoryPage() {
             sku: item.sku!,
             quantity: item.quantity,
             price: item.priceAtSale,
+            originalPrice: item.priceAtSale, // Reprint doesn't have original price context
+            category: item.productCategory,
             imageUrl: item.parentImageUrl,
             type: item.accessoryId ? 'accessory' : 'product',
             maxStock: 0, // Not relevant for reprint
@@ -187,7 +194,7 @@ export default function PosHistoryPage() {
              const receiptData: ReceiptData = {
                 items: cartItems,
                 subtotal: group.totalAmount,
-                discount: 0, // Assuming no discount data is stored for reprint
+                discount: 0, // Reprint doesn't have discount context
                 total: group.totalAmount,
                 paymentMethod: group.paymentMethod || 'N/A',
                 cashReceived: group.totalAmount, // For non-cash, cash received equals total
@@ -370,3 +377,5 @@ export default function PosHistoryPage() {
         </>
     );
 }
+
+    
