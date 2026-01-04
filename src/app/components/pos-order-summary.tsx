@@ -29,6 +29,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import { Badge } from '@/components/ui/badge';
 import { apiFetch } from '@/lib/api';
+import type { DiscountGroup } from '@/types';
 
 interface PosOrderSummaryProps {
   cart: CartItem[];
@@ -36,8 +37,8 @@ interface PosOrderSummaryProps {
   clearCart: () => void;
   channel: 'pos' | 'reseller';
   pendingTransactionId: string | null;
-  onVoucherApplied: (voucherData: any) => void;
-  activeVoucher: any;
+  onVoucherApplied: (voucherData: DiscountGroup | null) => void;
+  activeVoucher: DiscountGroup | null;
 }
 
 type PaymentMethod = 'Cash' | 'Qris' | 'Transfer' | 'Debit';
@@ -50,7 +51,6 @@ export function PosOrderSummary({ cart, onSaleComplete, clearCart, channel, pend
     const router = useRouter();
     const [manualDiscount, setManualDiscount] = useState(0);
     const [voucherCode, setVoucherCode] = useState('');
-    const [appliedVoucher, setAppliedVoucher] = useState<{ code: string; name: string } | null>(null);
     const [isApplyingVoucher, setIsApplyingVoucher] = useState(false);
     const [cashReceived, setCashReceived] = useState(0);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -62,32 +62,44 @@ export function PosOrderSummary({ cart, onSaleComplete, clearCart, channel, pend
         setPaymentMethod(channel === 'reseller' ? 'Transfer' : 'Cash');
     }, [channel]);
 
-    const { subtotal, total, totalDiscount } = useMemo(() => {
-        const baseSubtotal = cart.reduce((acc, item) => {
-            return acc + (item.price * item.quantity);
-        }, 0);
-
-        const originalSubtotal = cart.reduce((acc, item) => {
-            return acc + (item.originalPrice * item.quantity);
-        }, 0);
+    const { subtotal, totalDiscount, finalTotal } = useMemo(() => {
+        const subtotal = cart.reduce((acc, item) => acc + (item.originalPrice * item.quantity), 0);
         
-        const calculatedDiscount = originalSubtotal - baseSubtotal;
+        const groupDiscount = cart.reduce((acc, item) => {
+            const discountPerItem = item.originalPrice - item.price;
+            return acc + (discountPerItem * item.quantity);
+        }, 0);
 
-        return { subtotal: baseSubtotal, total: baseSubtotal - manualDiscount, totalDiscount: calculatedDiscount };
-    }, [cart, manualDiscount]);
-    
-    
-    const finalDiscount = totalDiscount > 0 ? totalDiscount : manualDiscount;
-    const finalTotal = subtotal - (totalDiscount > 0 ? 0 : manualDiscount); // If discount comes from groups, subtotal is already discounted
+        let voucherDiscount = 0;
+        if (activeVoucher) {
+            voucherDiscount = cart.reduce((acc, item) => {
+                const appliesToAll = activeVoucher.category === 'Semua Kategori';
+                const categoryMatch = item.category === activeVoucher.category;
+                
+                if (appliesToAll || categoryMatch) {
+                    if (activeVoucher.discountType === 'percentage') {
+                        return acc + (item.originalPrice * (activeVoucher.discountValue / 100)) * item.quantity;
+                    } else if (activeVoucher.discountType === 'fixed') {
+                        return acc + activeVoucher.discountValue * item.quantity;
+                    }
+                }
+                return acc;
+            }, 0);
+        }
+
+        const totalDiscount = activeVoucher ? voucherDiscount : groupDiscount + manualDiscount;
+        const finalTotal = subtotal - totalDiscount;
+        
+        return { subtotal, totalDiscount, finalTotal };
+    }, [cart, manualDiscount, activeVoucher]);
+
     const change = useMemo(() => cashReceived - finalTotal, [cashReceived, finalTotal]);
-
 
     useEffect(() => {
         if (cart.length === 0) {
             setManualDiscount(0);
             setCashReceived(0);
             setVoucherCode('');
-            setAppliedVoucher(null);
             onVoucherApplied(null);
         }
     }, [cart, onVoucherApplied]);
@@ -97,7 +109,6 @@ export function PosOrderSummary({ cart, onSaleComplete, clearCart, channel, pend
         setCashReceived(0);
         setPaymentMethod(channel === 'reseller' ? 'Transfer' : 'Cash');
         setVoucherCode('');
-        setAppliedVoucher(null);
         onVoucherApplied(null);
         clearCart();
     }
@@ -108,7 +119,6 @@ export function PosOrderSummary({ cart, onSaleComplete, clearCart, channel, pend
         try {
             const data = await apiFetch(`/api/finance/discounts/voucher/${voucherCode.trim()}?channel=${channel}`);
             onVoucherApplied(data);
-            setAppliedVoucher({ code: voucherCode.trim().toUpperCase(), name: data.name });
             setManualDiscount(0); // Reset manual discount
             toast({
                 title: "Voucher Diterapkan",
@@ -121,7 +131,6 @@ export function PosOrderSummary({ cart, onSaleComplete, clearCart, channel, pend
                 description: error.message,
             });
             onVoucherApplied(null);
-            setAppliedVoucher(null);
         } finally {
             setIsApplyingVoucher(false);
             setVoucherCode('');
@@ -129,7 +138,6 @@ export function PosOrderSummary({ cart, onSaleComplete, clearCart, channel, pend
     };
     
     const handleRemoveVoucher = () => {
-        setAppliedVoucher(null);
         onVoucherApplied(null);
         toast({ title: 'Voucher Dihapus', description: 'Harga telah kembali normal.' });
     };
@@ -139,7 +147,7 @@ export function PosOrderSummary({ cart, onSaleComplete, clearCart, channel, pend
         const receiptData: ReceiptData = {
             items: cart.map(item => ({...item, name: item.productName, originalPrice: item.originalPrice })),
             subtotal: subtotal,
-            discount: finalDiscount,
+            discount: totalDiscount,
             total: finalTotal,
             paymentMethod,
             cashReceived: paymentMethod === 'Cash' ? cashReceived : total,
@@ -195,15 +203,15 @@ export function PosOrderSummary({ cart, onSaleComplete, clearCart, channel, pend
                         <>
                         <div className="flex justify-between items-center">
                             <Label htmlFor="discount">{t.pos.discount}</Label>
-                            <Input id="discount" type="number" value={manualDiscount} onChange={(e) => setManualDiscount(Number(e.target.value))} className="w-32 h-8 text-sm" disabled={!!activeVoucher || totalDiscount > 0}/>
+                            <Input id="discount" type="number" value={manualDiscount} onChange={(e) => setManualDiscount(Number(e.target.value))} className="w-32 h-8 text-sm" disabled={!!activeVoucher}/>
                         </div>
                          <div className="space-y-2">
                              <Label htmlFor="voucher">Kode Voucher</Label>
-                             {appliedVoucher ? (
+                             {activeVoucher ? (
                                  <div className="flex items-center justify-between">
                                     <Badge>
                                          <CheckCircle className="mr-2 h-4 w-4" />
-                                         {appliedVoucher.code}
+                                         {activeVoucher.voucherCode}
                                     </Badge>
                                     <Button variant="link" size="sm" className="h-auto p-0" onClick={handleRemoveVoucher}>Hapus</Button>
                                  </div>
@@ -267,20 +275,31 @@ export function PosOrderSummary({ cart, onSaleComplete, clearCart, channel, pend
             </CardContent>
             <CardFooter className="flex-col !p-4 mt-auto">
                  {!isAccessoryOnlyTx && (
-                    <div className="w-full space-y-2 text-base font-bold mb-4 p-4 bg-muted rounded-md">
-                        <div className="flex justify-between">
+                    <div className="w-full space-y-2 p-4 bg-muted rounded-md">
+                        <div className="flex justify-between text-sm">
+                            <span>{t.pos.subtotal}</span>
+                            <span>{subtotal.toLocaleString('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 })}</span>
+                        </div>
+                         <div className="flex justify-between text-sm">
+                            <span>{t.pos.discount}</span>
+                            <span className="text-destructive">
+                                -{totalDiscount.toLocaleString('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 })}
+                            </span>
+                        </div>
+                        <Separator className="my-2" />
+                        <div className="flex justify-between text-base font-bold">
                             <span>{t.pos.total}</span>
-                            <span className="text-primary">{finalTotal.toLocaleString('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0, maximumFractionDigits: 0 })}</span>
+                            <span className="text-primary">{finalTotal.toLocaleString('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 })}</span>
                         </div>
                         {paymentMethod === 'Cash' && channel !== 'reseller' && (
                             <div className="flex justify-between text-sm">
                                 <span>{t.pos.change}</span>
-                                <span>{change >= 0 ? change.toLocaleString('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0, maximumFractionDigits: 0 }) : '-'}</span>
+                                <span>{change >= 0 ? change.toLocaleString('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }) : '-'}</span>
                             </div>
                         )}
                     </div>
                  )}
-                <div className="w-full grid grid-cols-1 gap-2">
+                <div className="w-full grid grid-cols-1 gap-2 mt-4">
                     <Button size="lg" onClick={() => handleSale('Completed')} disabled={cart.length === 0 || (paymentMethod === 'Cash' && change < 0 && !isAccessoryOnlyTx) || isSubmitting}>
                         <Printer className="mr-2 h-4 w-4" />
                         {isSubmitting ? 'Memproses...' : (isAccessoryOnlyTx ? 'Cetak Voucher' : 'Proses Pembayaran')}
