@@ -91,10 +91,10 @@ export function PosOrderSummary({ cart, onSaleComplete, clearCart, channel, pend
             }, 0);
         }
 
-        const totalDiscount = groupDiscount + (activeVoucher ? voucherDiscount : manualDiscount);
-        const finalTotal = subtotal - totalDiscount;
+        const finalDiscount = activeVoucher ? voucherDiscount : manualDiscount;
+        const finalTotal = subtotal - groupDiscount - finalDiscount;
 
-        return { subtotal, totalDiscount, finalTotal };
+        return { subtotal, totalDiscount: groupDiscount + finalDiscount, finalTotal };
     }, [cart, manualDiscount, activeVoucher]);
 
     const change = useMemo(() => cashReceived - finalTotal, [cashReceived, finalTotal]);
