@@ -138,7 +138,7 @@ export default function DiscountGroupPage() {
                                         <span>{formatToWIB(parseISO(group.startDate), 'dd MMM yyyy')} - {formatToWIB(parseISO(group.endDate), 'dd MMM yyyy')}</span>
                                     </div>
                                     <div className="text-sm text-muted-foreground mt-2">
-                                        {group.productCount || 0} produk termasuk dalam diskon ini.
+                                        Otomatis berlaku untuk produk dalam kategori yang dipilih.
                                     </div>
                                 </CardContent>
                                 <CardFooter>

@@ -1,4 +1,5 @@
 
+
 import { db as dbProxy } from './db';
 const db = dbProxy;
 import type { InventoryItem, AdjustmentHistory, InventoryItemVariant, Sale, Reseller, ChannelPrice, Accessory, ShippingReceipt, BulkImportHistory, User, ReturnedItem, DiscountGroup, DiscountedProduct, PrintedReceiptCount } from '@/types';
@@ -1487,7 +1488,10 @@ export async function resetAllPrices() {
 // Discount Group Functions
 export async function addDiscountGroup(group: Omit<DiscountGroup, 'id' | 'productCount'>): Promise<void> {
     const transaction = db.transaction(() => {
-        const addGroupStmt = db.prepare('INSERT INTO discount_groups (name, category, channel, startDate, endDate, voucherCode) VALUES (@name, @category, @channel, @startDate, @endDate, @voucherCode)');
+        const addGroupStmt = db.prepare(`
+            INSERT INTO discount_groups (name, category, channel, startDate, endDate, voucherCode, discountType, discountValue, maxUses, minPurchase) 
+            VALUES (@name, @category, @channel, @startDate, @endDate, @voucherCode, @discountType, @discountValue, @maxUses, @minPurchase)
+        `);
         const addProductStmt = db.prepare('INSERT INTO discounted_products (groupId, productId, variantId, discountedPrice) VALUES (@groupId, @productId, @variantId, @discountedPrice)');
         
         const groupResult = addGroupStmt.run({
@@ -1496,26 +1500,37 @@ export async function addDiscountGroup(group: Omit<DiscountGroup, 'id' | 'produc
             channel: group.channel,
             startDate: group.startDate,
             endDate: group.endDate,
-            voucherCode: group.voucherCode || null
+            voucherCode: group.voucherCode || null,
+            discountType: group.discountType || null,
+            discountValue: group.discountValue || null,
+            maxUses: group.maxUses || null,
+            minPurchase: group.minPurchase || null,
         });
 
         const groupId = groupResult.lastInsertRowid;
-
-        group.products.forEach(product => {
-            addProductStmt.run({
-                groupId,
-                productId: product.productId,
-                variantId: product.variantId || null,
-                discountedPrice: product.discountedPrice,
+        
+        if (group.products && group.products.length > 0) {
+            group.products.forEach(product => {
+                addProductStmt.run({
+                    groupId,
+                    productId: product.productId,
+                    variantId: product.variantId || null,
+                    discountedPrice: product.discountedPrice,
+                });
             });
-        });
+        }
     });
     return transaction();
 }
 
 export async function editDiscountGroup(id: number, group: Omit<DiscountGroup, 'id' | 'productCount'>): Promise<void> {
     const transaction = db.transaction(() => {
-        const updateGroupStmt = db.prepare('UPDATE discount_groups SET name = @name, category = @category, channel = @channel, startDate = @startDate, endDate = @endDate, voucherCode = @voucherCode WHERE id = @id');
+        const updateGroupStmt = db.prepare(`
+            UPDATE discount_groups SET 
+            name = @name, category = @category, channel = @channel, startDate = @startDate, endDate = @endDate, 
+            voucherCode = @voucherCode, discountType = @discountType, discountValue = @discountValue, maxUses = @maxUses, minPurchase = @minPurchase
+            WHERE id = @id
+        `);
         const deleteProductsStmt = db.prepare('DELETE FROM discounted_products WHERE groupId = ?');
         const addProductStmt = db.prepare('INSERT INTO discounted_products (groupId, productId, variantId, discountedPrice) VALUES (@groupId, @productId, @variantId, @discountedPrice)');
 
@@ -1526,19 +1541,25 @@ export async function editDiscountGroup(id: number, group: Omit<DiscountGroup, '
             channel: group.channel,
             startDate: group.startDate,
             endDate: group.endDate,
-            voucherCode: group.voucherCode || null
+            voucherCode: group.voucherCode || null,
+            discountType: group.discountType || null,
+            discountValue: group.discountValue || null,
+            maxUses: group.maxUses || null,
+            minPurchase: group.minPurchase || null,
         });
 
         deleteProductsStmt.run(id);
 
-        group.products.forEach(product => {
-            addProductStmt.run({
-                groupId: id,
-                productId: product.productId,
-                variantId: product.variantId || null,
-                discountedPrice: product.discountedPrice,
+        if (group.products && group.products.length > 0) {
+            group.products.forEach(product => {
+                addProductStmt.run({
+                    groupId: id,
+                    productId: product.productId,
+                    variantId: product.variantId || null,
+                    discountedPrice: product.discountedPrice,
+                });
             });
-        });
+        }
     });
     return transaction();
 }
@@ -1568,7 +1589,7 @@ export async function fetchDiscountGroups(): Promise<DiscountGroup[]> {
     `);
 
     return groups.map(group => {
-        const products = productsStmt.all(group.id) as DiscountedProduct[];
+        const products = group.voucherCode ? [] : productsStmt.all(group.id) as DiscountedProduct[];
         return {
             ...group,
             products,
@@ -1832,4 +1853,5 @@ export async function checkPrintedReceiptAvailability(salesChannel: string, ship
 
 
     
+
 

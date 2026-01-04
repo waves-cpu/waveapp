@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -139,7 +140,10 @@ export default function VouchersPage() {
                                         <span>{formatToWIB(parseISO(group.startDate), 'dd MMM yyyy')} - {formatToWIB(parseISO(group.endDate), 'dd MMM yyyy')}</span>
                                     </div>
                                     <div className="text-sm text-muted-foreground mt-2">
-                                        {group.productCount || 0} produk termasuk dalam diskon ini.
+                                        {group.discountType === 'percentage'
+                                            ? `Diskon ${group.discountValue}%`
+                                            : `Potongan Rp${(group.discountValue || 0).toLocaleString('id-ID')}`
+                                        }
                                     </div>
                                 </CardContent>
                                 <CardFooter>
@@ -184,5 +188,3 @@ export default function VouchersPage() {
         </AppLayout>
     );
 }
-
-    
