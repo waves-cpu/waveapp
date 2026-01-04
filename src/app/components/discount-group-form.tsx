@@ -69,7 +69,7 @@ const formSchema = z.object({
   minPurchase: z.coerce.number().optional(),
 }).refine(data => {
     // Make discountType and discountValue required only for vouchers
-    if (data.voucherCode) {
+    if (data.voucherCode && data.isVoucherForm) {
         return !!data.discountType && data.discountValue !== undefined;
     }
     return true;
@@ -91,11 +91,14 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm = false }: Disc
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const isEditMode = !!existingGroup;
+  const [bulkPrice, setBulkPrice] = useState<number | ''>('');
 
-  const form = useForm<z.infer<typeof formSchema>>({
+
+  const form = useForm<z.infer<typeof formSchema> & { isVoucherForm: boolean }>({
     resolver: zodResolver(formSchema),
     defaultValues: isEditMode ? {
         ...existingGroup,
+        isVoucherForm: isVoucherForm,
         dateRange: {
             from: new Date(existingGroup.startDate),
             to: new Date(existingGroup.endDate),
@@ -107,6 +110,7 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm = false }: Disc
       category: '',
       channel: '',
       voucherCode: '',
+      isVoucherForm: isVoucherForm,
       dateRange: { from: new Date(), to: addDays(new Date(), 7) },
       products: [],
       discountType: undefined,
@@ -211,6 +215,24 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm = false }: Disc
     }
   }
 
+  const applyBulkPrice = () => {
+    if (typeof bulkPrice === 'number' && bulkPrice >= 0) {
+        fields.forEach((field, index) => {
+            form.setValue(`products.${index}.discountedPrice`, bulkPrice);
+        });
+        toast({
+            title: 'Harga Diterapkan',
+            description: `Harga diskon massal ${bulkPrice.toLocaleString('id-ID')} telah diterapkan ke semua produk.`,
+        });
+    } else {
+        toast({
+            variant: 'destructive',
+            title: 'Harga Tidak Valid',
+            description: 'Silakan masukkan angka yang valid untuk harga.',
+        });
+    }
+  };
+
   return (
     <Card>
       <Form {...form}>
@@ -292,7 +314,7 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm = false }: Disc
                   <FormItem>
                     <FormLabel>Kode Voucher</FormLabel>
                     <FormControl>
-                      <Input placeholder="cth. LEBARAN2024" {...field} disabled={isEditMode} />
+                       <Input placeholder="cth. LEBARAN2024" {...field} disabled={isEditMode} />
                     </FormControl>
                      {isVoucherForm && <FormDescription>Kode voucher harus unik.</FormDescription>}
                     <FormMessage />
@@ -433,6 +455,18 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm = false }: Disc
                         <CardDescription>Atur harga diskon untuk setiap produk dalam kategori '{selectedCategory}'.</CardDescription>
                     </CardHeader>
                     <CardContent>
+                       <div className="flex items-center gap-2 mb-4">
+                            <Input
+                                type="number"
+                                placeholder="Masukkan harga massal"
+                                value={bulkPrice}
+                                onChange={(e) => setBulkPrice(e.target.value === '' ? '' : Number(e.target.value))}
+                                className="h-9"
+                            />
+                            <Button type="button" variant="outline" onClick={applyBulkPrice}>
+                                Terapkan ke Semua
+                            </Button>
+                        </div>
                        <ScrollArea className="h-96 border rounded-md">
                         <Table>
                             <TableHeader className="sticky top-0 bg-background">
