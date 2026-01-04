@@ -63,13 +63,26 @@ const formSchema = z.object({
       to: z.date({ required_error: "Tanggal berakhir harus diisi." }),
   }),
   products: z.array(discountedProductSchema).nonempty({ message: 'Harus ada setidaknya satu produk dalam grup diskon.' }),
+  discountType: z.enum(['fixed', 'percentage']).optional(),
+  discountValue: z.coerce.number().optional(),
+  maxUses: z.coerce.number().optional(),
+  minPurchase: z.coerce.number().optional(),
+}).refine(data => {
+    if (data.voucherCode) {
+        return data.discountType && (data.discountValue !== undefined && data.discountValue > 0);
+    }
+    return true;
+}, {
+    message: "Jenis dan nilai diskon harus diisi untuk voucher.",
+    path: ["discountValue"],
 });
 
 interface DiscountGroupFormProps {
     existingGroup?: DiscountGroup;
+    isVoucherForm?: boolean;
 }
 
-export function DiscountGroupForm({ existingGroup }: DiscountGroupFormProps) {
+export function DiscountGroupForm({ existingGroup, isVoucherForm = false }: DiscountGroupFormProps) {
   const { language } = useLanguage();
   const t = translations[language];
   const { items, addDiscountGroup, editDiscountGroup } = useInventory();
@@ -91,6 +104,7 @@ export function DiscountGroupForm({ existingGroup }: DiscountGroupFormProps) {
             from: new Date(existingGroup.startDate),
             to: new Date(existingGroup.endDate),
         },
+        discountType: existingGroup.discountType || 'fixed',
     } : {
       name: '',
       category: '',
@@ -98,6 +112,7 @@ export function DiscountGroupForm({ existingGroup }: DiscountGroupFormProps) {
       voucherCode: '',
       dateRange: { from: new Date(), to: addDays(new Date(), 7) },
       products: [],
+      discountType: 'fixed',
     },
   });
 
@@ -107,6 +122,7 @@ export function DiscountGroupForm({ existingGroup }: DiscountGroupFormProps) {
   });
   
   const selectedCategory = form.watch('category');
+  const showVoucherFields = isVoucherForm || !!form.watch('voucherCode');
 
   useEffect(() => {
     setCurrentPage(1); // Reset page when category changes
@@ -196,6 +212,10 @@ export function DiscountGroupForm({ existingGroup }: DiscountGroupFormProps) {
         startDate: values.dateRange.from.toISOString(),
         endDate: values.dateRange.to.toISOString(),
         products: values.products.filter(p => p.originalPrice !== null) as DiscountedProduct[], // Filter out items with no price
+        discountType: values.discountType,
+        discountValue: values.discountValue,
+        maxUses: values.maxUses,
+        minPurchase: values.minPurchase,
     };
 
     try {
@@ -206,7 +226,7 @@ export function DiscountGroupForm({ existingGroup }: DiscountGroupFormProps) {
             await addDiscountGroup(groupData);
             toast({ title: "Grup Diskon Dibuat", description: `Grup diskon "${values.name}" telah berhasil dibuat.` });
         }
-        router.push('/promotions/discount-groups');
+        router.push(isVoucherForm ? '/promotions/vouchers' : '/promotions/discount-groups');
     } catch (error) {
         console.error("Failed to save discount group:", error);
         toast({
@@ -230,9 +250,9 @@ export function DiscountGroupForm({ existingGroup }: DiscountGroupFormProps) {
                 name="name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Nama Grup Diskon</FormLabel>
+                    <FormLabel>Nama {isVoucherForm ? 'Voucher' : 'Grup Diskon'}</FormLabel>
                     <FormControl>
-                      <Input placeholder="cth. Diskon Kilat Lebaran" {...field} />
+                      <Input placeholder={isVoucherForm ? "cth. Voucher Gajian" : "cth. Diskon Kilat Lebaran"} {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -291,21 +311,96 @@ export function DiscountGroupForm({ existingGroup }: DiscountGroupFormProps) {
                 name="voucherCode"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Kode Voucher (Opsional)</FormLabel>
+                    <FormLabel>Kode Voucher</FormLabel>
                     <FormControl>
-                      <Input placeholder="cth. LEBARAN2024" {...field} />
+                      <Input placeholder="cth. LEBARAN2024" {...field} disabled={isVoucherForm && !isEditMode} />
                     </FormControl>
+                    {isVoucherForm && <FormDescription>Kode voucher harus unik.</FormDescription>}
                     <FormMessage />
                   </FormItem>
                 )}
               />
             </div>
+
+            {showVoucherFields && (
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="text-base">Pengaturan Diskon Voucher</CardTitle>
+                    </CardHeader>
+                    <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <FormField
+                                control={form.control}
+                                name="discountType"
+                                render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Jenis Diskon</FormLabel>
+                                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                    <FormControl>
+                                        <SelectTrigger>
+                                        <SelectValue placeholder="Pilih jenis diskon" />
+                                        </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                        <SelectItem value="percentage">Potongan Persen (%)</SelectItem>
+                                        <SelectItem value="fixed">Potongan Harga Tetap (Rp)</SelectItem>
+                                    </SelectContent>
+                                    </Select>
+                                    <FormMessage />
+                                </FormItem>
+                                )}
+                            />
+                            <FormField
+                                control={form.control}
+                                name="discountValue"
+                                render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Nilai Diskon</FormLabel>
+                                    <FormControl>
+                                        <Input type="number" placeholder="cth. 10 atau 15000" {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                                )}
+                            />
+                        </div>
+                        <FormField
+                            control={form.control}
+                            name="minPurchase"
+                            render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Pembelian Minimum (Opsional)</FormLabel>
+                                <FormControl>
+                                    <Input type="number" placeholder="cth. 100000" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                            )}
+                        />
+                         <FormField
+                            control={form.control}
+                            name="maxUses"
+                            render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Batas Penggunaan (Opsional)</FormLabel>
+                                <FormControl>
+                                    <Input type="number" placeholder="cth. 100" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                            )}
+                        />
+                    </CardContent>
+                </Card>
+            )}
+
+
             <FormField
                 control={form.control}
                 name="dateRange"
                 render={({ field }) => (
                 <FormItem className="flex flex-col">
-                    <FormLabel>Durasi Diskon</FormLabel>
+                    <FormLabel>Durasi {isVoucherForm ? 'Voucher' : 'Diskon'}</FormLabel>
                     <Popover>
                         <PopoverTrigger asChild>
                         <FormControl>
@@ -475,9 +570,9 @@ export function DiscountGroupForm({ existingGroup }: DiscountGroupFormProps) {
             )}
           </CardContent>
           <CardFooter className="justify-end gap-2 pt-6 border-t">
-              <Button type="button" variant="ghost" onClick={() => router.push('/promotions/discount-groups')} disabled={isSubmitting}>{t.common.cancel}</Button>
+              <Button type="button" variant="ghost" onClick={() => router.push(isVoucherForm ? '/promotions/vouchers' : '/promotions/discount-groups')} disabled={isSubmitting}>{t.common.cancel}</Button>
               <Button type="submit" disabled={isSubmitting || fields.length === 0}>
-                  {isSubmitting ? t.common.saving : (isEditMode ? "Simpan Perubahan" : "Buat Grup Diskon")}
+                  {isSubmitting ? t.common.saving : (isEditMode ? "Simpan Perubahan" : (isVoucherForm ? "Buat Voucher" : "Buat Grup Diskon"))}
               </Button>
           </CardFooter>
         </form>
@@ -485,5 +580,3 @@ export function DiscountGroupForm({ existingGroup }: DiscountGroupFormProps) {
     </Card>
   );
 }
-
-    
