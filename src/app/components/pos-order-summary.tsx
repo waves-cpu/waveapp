@@ -62,34 +62,38 @@ export function PosOrderSummary({ cart, onSaleComplete, clearCart, channel, pend
     useEffect(() => {
         setPaymentMethod(channel === 'reseller' ? 'Transfer' : 'Cash');
     }, [channel]);
-
+    
     const { subtotal, totalDiscount, finalTotal } = useMemo(() => {
         const subtotalCalc = cart.reduce((acc, item) => acc + (item.originalPrice * item.quantity), 0);
-        
+
+        let totalDiscountCalc = 0;
+
+        // Calculate discount from groups (difference between original and current price)
         const groupDiscount = cart.reduce((acc, item) => acc + (item.originalPrice - item.price) * item.quantity, 0);
+        totalDiscountCalc += groupDiscount;
 
-        const voucherDiscountValue = cart.reduce((acc, item) => {
-            if (!activeVoucher) return acc;
-            
-            const appliesToAll = activeVoucher.category === 'Semua Kategori';
-            const categoryMatch = item.category === activeVoucher.category;
-            
-            if (appliesToAll || categoryMatch) {
-                // Voucher discount applies to the price AFTER group discount
-                const priceAfterGroupDiscount = item.price;
-                if (activeVoucher.discountType === 'percentage') {
-                    return acc + (priceAfterGroupDiscount * (activeVoucher.discountValue! / 100)) * item.quantity;
-                } else if (activeVoucher.discountType === 'fixed') {
-                    // Make sure discount is not more than the item's price
-                    const discountValue = Math.min(priceAfterGroupDiscount, activeVoucher.discountValue!);
-                    return acc + discountValue * item.quantity;
+        // Calculate discount from voucher
+        if (activeVoucher) {
+            const voucherDiscount = cart.reduce((acc, item) => {
+                const appliesToAll = activeVoucher.category === 'Semua Kategori';
+                const categoryMatch = item.category === activeVoucher.category;
+                
+                if (appliesToAll || categoryMatch) {
+                    const priceAfterGroupDiscount = item.price; // Base price for voucher is after group discount
+                    if (activeVoucher.discountType === 'percentage') {
+                        return acc + (priceAfterGroupDiscount * (activeVoucher.discountValue! / 100)) * item.quantity;
+                    } else if (activeVoucher.discountType === 'fixed') {
+                        return acc + Math.min(priceAfterGroupDiscount, activeVoucher.discountValue!) * item.quantity;
+                    }
                 }
-            }
-            return acc;
-        }, 0);
+                return acc;
+            }, 0);
+            totalDiscountCalc += voucherDiscount;
+        } else {
+            // Apply manual discount only if no voucher is active
+            totalDiscountCalc += manualDiscount;
+        }
 
-        const finalManualDiscount = activeVoucher ? 0 : manualDiscount;
-        const totalDiscountCalc = groupDiscount + voucherDiscountValue + finalManualDiscount;
         const finalTotalCalc = subtotalCalc - totalDiscountCalc;
 
         return { subtotal: subtotalCalc, totalDiscount: totalDiscountCalc, finalTotal: finalTotalCalc };
@@ -365,3 +369,4 @@ export function PosOrderSummary({ cart, onSaleComplete, clearCart, channel, pend
     );
 }
 
+    
