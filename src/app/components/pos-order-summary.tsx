@@ -63,7 +63,7 @@ export function PosOrderSummary({ cart, onSaleComplete, clearCart, channel, pend
         setPaymentMethod(channel === 'reseller' ? 'Transfer' : 'Cash');
     }, [channel]);
 
-    const { subtotal, groupDiscount, voucherDiscount, totalDiscount, finalTotal } = useMemo(() => {
+    const { subtotal, totalDiscount, finalTotal } = useMemo(() => {
         const subtotal = cart.reduce((acc, item) => acc + (item.originalPrice * item.quantity), 0);
 
         const groupDiscount = cart.reduce((acc, item) => {
@@ -71,31 +71,31 @@ export function PosOrderSummary({ cart, onSaleComplete, clearCart, channel, pend
             return acc + discountPerItem;
         }, 0);
         
-        let voucherDiscount = 0;
-        if (activeVoucher) {
-            voucherDiscount = cart.reduce((acc, item) => {
-                const appliesToAll = activeVoucher.category === 'Semua Kategori';
-                const categoryMatch = item.category === activeVoucher.category;
-                
-                if (appliesToAll || categoryMatch) {
-                    const priceToApplyDiscountOn = item.price; // Apply voucher on top of group discount price
-                    if (activeVoucher.discountType === 'percentage') {
-                        return acc + (priceToApplyDiscountOn * (activeVoucher.discountValue! / 100)) * item.quantity;
-                    } else if (activeVoucher.discountType === 'fixed') {
-                        const discountValue = Math.min(priceToApplyDiscountOn, activeVoucher.discountValue!);
-                        return acc + discountValue * item.quantity;
-                    }
+        const voucherDiscount = cart.reduce((acc, item) => {
+            if (!activeVoucher) return acc;
+            
+            const appliesToAll = activeVoucher.category === 'Semua Kategori';
+            const categoryMatch = item.category === activeVoucher.category;
+            
+            if (appliesToAll || categoryMatch) {
+                const priceToApplyDiscountOn = item.price; // Start with group discount price
+                if (activeVoucher.discountType === 'percentage') {
+                    return acc + (priceToApplyDiscountOn * (activeVoucher.discountValue! / 100)) * item.quantity;
+                } else if (activeVoucher.discountType === 'fixed') {
+                    const discountValue = Math.min(priceToApplyDiscountOn, activeVoucher.discountValue!);
+                    return acc + discountValue * item.quantity;
                 }
-                return acc;
-            }, 0);
-        }
+            }
+            return acc;
+        }, 0);
 
         const finalManualDiscount = activeVoucher ? 0 : manualDiscount;
         const totalDiscount = groupDiscount + voucherDiscount + finalManualDiscount;
         const finalTotal = subtotal - totalDiscount;
 
-        return { subtotal, groupDiscount, voucherDiscount, totalDiscount, finalTotal };
+        return { subtotal, totalDiscount, finalTotal };
     }, [cart, manualDiscount, activeVoucher]);
+
 
     const change = useMemo(() => cashReceived - finalTotal, [cashReceived, finalTotal]);
 
@@ -149,9 +149,8 @@ export function PosOrderSummary({ cart, onSaleComplete, clearCart, channel, pend
     const handleSale = async (status: 'Completed' | 'Pending') => {
         setIsSubmitting(true);
         
-        // Calculate the final price for each item, including the voucher discount
         const salesData = cart.map(item => {
-            let finalPrice = item.price; // This is the price after group discounts
+            let finalPrice = item.price; // Price after group discount
             if (activeVoucher) {
                 const appliesToAll = activeVoucher.category === 'Semua Kategori';
                 const categoryMatch = item.category === activeVoucher.category;
@@ -166,7 +165,7 @@ export function PosOrderSummary({ cart, onSaleComplete, clearCart, channel, pend
             return {
                 sku: item.sku,
                 quantity: item.quantity,
-                price: finalPrice, // This is the final priceAtSale
+                price: finalPrice, 
             };
         });
         
