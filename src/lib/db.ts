@@ -15,6 +15,11 @@ function initializeDatabase() {
     }
     db = new Database(dbPath);
     db.pragma('journal_mode = WAL');
+
+    createSchema();
+    runMigrations();
+    seedData();
+
   } catch (error) {
     if (error instanceof Error && (error.message.includes('not a database') || error.message.includes('corrupt') || error.message.includes('disk I/O error'))) {
       console.error('Database file is corrupt or invalid. Re-initializing...');
@@ -27,14 +32,14 @@ function initializeDatabase() {
       fs.mkdirSync(dbDir, { recursive: true });
       db = new Database(dbPath);
       db.pragma('journal_mode = WAL');
+      createSchema();
+      runMigrations();
+      seedData();
     } else {
+      console.error("Failed to initialize database:", error);
       throw error;
     }
   }
-
-  createSchema();
-  runMigrations(); // Run migrations after ensuring base tables exist
-  seedData();
 }
 
 const createSchema = () => {
@@ -194,9 +199,7 @@ const createSchema = () => {
         maxUses INTEGER,
         minPurchase REAL
     );
-    CREATE UNIQUE INDEX IF NOT EXISTS idx_discount_groups_voucher_code_unique ON discount_groups(voucherCode) WHERE voucherCode IS NOT NULL;
-
-
+    
     CREATE TABLE IF NOT EXISTS discounted_products (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         groupId INTEGER NOT NULL,
@@ -211,53 +214,64 @@ const createSchema = () => {
 };
 
 const runMigrations = () => {
+    
+    const addColumn = (tableName: string, columnName: string, columnDef: string) => {
+        try {
+            const columns = db.prepare(`PRAGMA table_info(${tableName})`).all() as { name: string }[];
+            if (!columns.some(col => col.name === columnName)) {
+                db.exec(`ALTER TABLE ${tableName} ADD COLUMN ${columnName} ${columnDef}`);
+            }
+        } catch (error) {
+            console.error(`Failed to add column ${columnName} to ${tableName}:`, error);
+        }
+    };
+    
+    // User Migrations
+    addColumn('users', 'password', "TEXT NOT NULL DEFAULT ''");
+    addColumn('users', 'role', "TEXT NOT NULL DEFAULT 'user'");
+
+    // Sales Migrations
+    addColumn('sales', 'transactionId', 'TEXT');
+    addColumn('sales', 'paymentMethod', 'TEXT');
+    addColumn('sales', 'resellerName', 'TEXT');
+    addColumn('sales', 'cogsAtSale', 'REAL');
+    addColumn('sales', 'parentSku', 'TEXT');
+    addColumn('sales', 'status', "TEXT DEFAULT 'Completed'");
+    addColumn('sales', 'productCategory', 'TEXT');
+    addColumn('sales', 'parentImageUrl', 'TEXT');
+
+    // Reseller Migrations
+    addColumn('resellers', 'phone', 'TEXT');
+    addColumn('resellers', 'address', 'TEXT');
+
+    // Product Migrations
+    addColumn('products', 'costPrice', 'REAL');
+    addColumn('products', 'isArchived', 'INTEGER DEFAULT 0');
+    addColumn('products', 'releaseDate', 'TEXT');
+
+    // Variant Migrations
+    addColumn('variants', 'costPrice', 'REAL');
+
+    // Accessory Migrations
+    addColumn('accessories', 'category', 'TEXT');
+    addColumn('accessories', 'unit', "TEXT NOT NULL DEFAULT 'Pcs'");
+    addColumn('accessories', 'quantityPerUnit', 'INTEGER');
+
+    // Discount Group Migrations
+    addColumn('discount_groups', 'channel', 'TEXT');
+    addColumn('discount_groups', 'voucherCode', 'TEXT');
+    addColumn('discount_groups', 'discountType', 'TEXT');
+    addColumn('discount_groups', 'discountValue', 'REAL');
+    addColumn('discount_groups', 'maxUses', 'INTEGER');
+    addColumn('discount_groups', 'minPurchase', 'REAL');
+    
     try {
-        const userColumns = db.prepare("PRAGMA table_info(users)").all() as { name: string }[];
-        if (!userColumns.some(col => col.name === 'password')) {
-            db.exec("ALTER TABLE users ADD COLUMN password TEXT NOT NULL DEFAULT ''");
-        }
-        if (!userColumns.some(col => col.name === 'role')) {
-            db.exec("ALTER TABLE users ADD COLUMN role TEXT NOT NULL DEFAULT 'user'");
-        }
-
-        const salesColumns = db.prepare("PRAGMA table_info(sales)").all() as { name: string }[];
-        if (!salesColumns.some(col => col.name === 'transactionId')) db.exec('ALTER TABLE sales ADD COLUMN transactionId TEXT');
-        if (!salesColumns.some(col => col.name === 'paymentMethod')) db.exec('ALTER TABLE sales ADD COLUMN paymentMethod TEXT');
-        if (!salesColumns.some(col => col.name === 'resellerName')) db.exec('ALTER TABLE sales ADD COLUMN resellerName TEXT');
-        if (!salesColumns.some(col => col.name === 'cogsAtSale')) db.exec('ALTER TABLE sales ADD COLUMN cogsAtSale REAL');
-        if (!salesColumns.some(col => col.name === 'parentSku')) db.exec('ALTER TABLE sales ADD COLUMN parentSku TEXT');
-        if (!salesColumns.some(col => col.name === 'status')) db.exec("ALTER TABLE sales ADD COLUMN status TEXT DEFAULT 'Completed'");
-        if (!salesColumns.some(col => col.name === 'productCategory')) db.exec("ALTER TABLE sales ADD COLUMN productCategory TEXT");
-        if (!salesColumns.some(col => col.name === 'parentImageUrl')) db.exec("ALTER TABLE sales ADD COLUMN parentImageUrl TEXT");
-
-        const resellerColumns = db.prepare("PRAGMA table_info(resellers)").all() as { name: string }[];
-        if (!resellerColumns.some(col => col.name === 'phone')) db.exec('ALTER TABLE resellers ADD COLUMN phone TEXT');
-        if (!resellerColumns.some(col => col.name === 'address')) db.exec('ALTER TABLE resellers ADD COLUMN address TEXT');
-        
-        const productColumns = db.prepare("PRAGMA table_info(products)").all() as { name: string }[];
-        if (!productColumns.some(col => col.name === 'costPrice')) db.exec('ALTER TABLE products ADD COLUMN costPrice REAL');
-        if (!productColumns.some(col => col.name === 'isArchived')) db.exec('ALTER TABLE products ADD COLUMN isArchived INTEGER DEFAULT 0');
-        if (!productColumns.some(col => col.name === 'releaseDate')) db.exec('ALTER TABLE products ADD COLUMN releaseDate TEXT');
-        
-        const variantColumns = db.prepare("PRAGMA table_info(variants)").all() as { name: string }[];
-        if (!variantColumns.some(col => col.name === 'costPrice')) db.exec('ALTER TABLE variants ADD COLUMN costPrice REAL');
-        
-        const accessoryColumns = db.prepare("PRAGMA table_info(accessories)").all() as { name: string }[];
-        if (!accessoryColumns.some(col => col.name === 'category')) db.exec('ALTER TABLE accessories ADD COLUMN category TEXT');
-        if (!accessoryColumns.some(col => col.name === 'unit')) db.exec("ALTER TABLE accessories ADD COLUMN unit TEXT NOT NULL DEFAULT 'Pcs'");
-        if (!accessoryColumns.some(col => col.name === 'quantityPerUnit')) db.exec('ALTER TABLE accessories ADD COLUMN quantityPerUnit INTEGER');
-        
-        const discountGroupColumns = db.prepare("PRAGMA table_info(discount_groups)").all() as { name: string }[];
-        if (!discountGroupColumns.some(col => col.name === 'channel')) db.exec('ALTER TABLE discount_groups ADD COLUMN channel TEXT');
-        if (!discountGroupColumns.some(col => col.name === 'voucherCode')) db.exec('ALTER TABLE discount_groups ADD COLUMN voucherCode TEXT');
-        if (!discountGroupColumns.some(col => col.name === 'discountType')) db.exec('ALTER TABLE discount_groups ADD COLUMN discountType TEXT');
-        if (!discountGroupColumns.some(col => col.name === 'discountValue')) db.exec('ALTER TABLE discount_groups ADD COLUMN discountValue REAL');
-        if (!discountGroupColumns.some(col => col.name === 'maxUses')) db.exec('ALTER TABLE discount_groups ADD COLUMN maxUses INTEGER');
-        if (!discountGroupColumns.some(col => col.name === 'minPurchase')) db.exec('ALTER TABLE discount_groups ADD COLUMN minPurchase REAL');
-    } catch (error) {
-        console.error("Error running migrations:", error);
+        db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_discount_groups_voucher_code_unique ON discount_groups(voucherCode) WHERE voucherCode IS NOT NULL;');
+    } catch(e) {
+        console.error("Failed to create unique index on discount_groups", e);
     }
 };
+
 
 const seedData = () => {
     try {
@@ -296,5 +310,3 @@ const dbProxy = {
 };
 
 export { dbProxy as db };
-
-    
