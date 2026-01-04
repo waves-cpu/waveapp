@@ -119,7 +119,7 @@ export default function VouchersPage() {
                                         </DropdownMenuTrigger>
                                         <DropdownMenuContent align="end">
                                              <DropdownMenuItem asChild>
-                                                 <Link href={`/promotions/discount-groups/edit/${group.id}`}>
+                                                 <Link href={`/promotions/vouchers/edit/${group.id}`}>
                                                     <Edit className="mr-2 h-4 w-4" />
                                                     Ubah
                                                  </Link>
