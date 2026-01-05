@@ -30,7 +30,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import { Badge } from '@/components/ui/badge';
 import { apiFetch } from '@/lib/api';
-import type { DiscountGroup, Voucher } from '@/types';
+import type { Voucher } from '@/types';
 
 interface PosOrderSummaryProps {
   cart: CartItem[];
@@ -78,13 +78,14 @@ export function PosOrderSummary({ cart, onSaleComplete, clearCart, channel, pend
                 const categoryMatch = item.category === activeVoucher.category;
                 
                 if (appliesToAll || categoryMatch) {
-                    const priceForItem = item.originalPrice;
+                    // Apply voucher to the price *after* group discount
+                    const priceForItem = item.price; 
                     if (activeVoucher.discountType === 'percentage') {
                         return acc + (priceForItem * (activeVoucher.discountValue / 100)) * item.quantity;
                     } else if (activeVoucher.discountType === 'fixed') {
                         const totalDiscountForThisItem = activeVoucher.discountValue! * item.quantity;
-                        const itemOriginalTotal = priceForItem * item.quantity;
-                        return acc + Math.min(totalDiscountForThisItem, itemOriginalTotal);
+                        const itemTotalAfterGroupDiscount = priceForItem * item.quantity;
+                        return acc + Math.min(totalDiscountForThisItem, itemTotalAfterGroupDiscount);
                     }
                 }
                 return acc;
@@ -160,21 +161,24 @@ export function PosOrderSummary({ cart, onSaleComplete, clearCart, channel, pend
         setIsSubmitting(true);
         
         const salesData = cart.map(item => {
-            let finalPrice = item.price; // Start with group-discounted price
+            // Start with the price after group discounts
+            let finalPrice = item.price;
             
+            // Apply voucher discount if applicable
             if (activeVoucher) {
                 const appliesToAll = activeVoucher.category === 'Semua Kategori';
                 const categoryMatch = item.category === activeVoucher.category;
                 
                 if (appliesToAll || categoryMatch) {
                     if (activeVoucher.discountType === 'percentage') {
-                        finalPrice -= item.originalPrice * (activeVoucher.discountValue / 100);
+                        finalPrice -= (item.price * (activeVoucher.discountValue / 100));
                     } else if (activeVoucher.discountType === 'fixed') {
                         finalPrice -= activeVoucher.discountValue;
                     }
                 }
             }
             
+            // Ensure price doesn't go below zero
             finalPrice = Math.max(0, finalPrice);
 
             return {
