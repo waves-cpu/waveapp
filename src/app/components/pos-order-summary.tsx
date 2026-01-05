@@ -63,34 +63,46 @@ export function PosOrderSummary({ cart, onSaleComplete, clearCart, channel, pend
         setPaymentMethod(channel === 'reseller' ? 'Transfer' : 'Cash');
     }, [channel]);
     
-    const { subtotal, totalDiscount, finalTotal } = useMemo(() => {
-        const subtotalCalc = cart.reduce((acc, item) => acc + (item.price * item.quantity), 0);
-
-        let totalDiscountCalc = 0;
+     const { subtotal, totalDiscount, finalTotal, groupDiscount, voucherDiscount } = useMemo(() => {
+        const subtotalCalc = cart.reduce((acc, item) => acc + (item.originalPrice * item.quantity), 0);
         
+        const groupDiscountCalc = cart.reduce((acc, item) => {
+             const discountPerItem = item.originalPrice - item.price;
+             return acc + (discountPerItem * item.quantity);
+        }, 0);
+
+        let voucherDiscountCalc = 0;
         if (activeVoucher) {
-            const voucherDiscount = cart.reduce((acc, item) => {
+            voucherDiscountCalc = cart.reduce((acc, item) => {
                 const appliesToAll = activeVoucher.category === 'Semua Kategori';
                 const categoryMatch = item.category === activeVoucher.category;
                 
                 if (appliesToAll || categoryMatch) {
-                    const priceForItem = item.price;
+                    const priceForItem = item.originalPrice; // Apply voucher on original price
                     if (activeVoucher.discountType === 'percentage') {
                         return acc + (priceForItem * (activeVoucher.discountValue! / 100)) * item.quantity;
                     } else if (activeVoucher.discountType === 'fixed') {
-                        return acc + Math.min(priceForItem, activeVoucher.discountValue!) * item.quantity;
+                        // Apply fixed discount, but don't let price go below 0
+                        const totalDiscountForThisItem = activeVoucher.discountValue! * item.quantity;
+                        const itemOriginalTotal = priceForItem * item.quantity;
+                        // The discount cannot be more than the item's total price
+                        return acc + Math.min(totalDiscountForThisItem, itemOriginalTotal);
                     }
                 }
                 return acc;
             }, 0);
-            totalDiscountCalc = voucherDiscount;
-        } else {
-            totalDiscountCalc = manualDiscount;
         }
 
+        const totalDiscountCalc = groupDiscountCalc + voucherDiscountCalc + manualDiscount;
         const finalTotalCalc = subtotalCalc - totalDiscountCalc;
 
-        return { subtotal: subtotalCalc, totalDiscount: totalDiscountCalc, finalTotal: finalTotalCalc };
+        return { 
+            subtotal: subtotalCalc, 
+            totalDiscount: totalDiscountCalc, 
+            finalTotal: finalTotalCalc,
+            groupDiscount: groupDiscountCalc,
+            voucherDiscount: voucherDiscountCalc 
+        };
     }, [cart, manualDiscount, activeVoucher]);
 
 
@@ -147,21 +159,29 @@ export function PosOrderSummary({ cart, onSaleComplete, clearCart, channel, pend
         setIsSubmitting(true);
         
         const salesData = cart.map(item => {
-            let finalPrice = item.price; // This price is already after group discounts.
-
+            // Start with the price already discounted by the group
+            let finalPrice = item.price;
+            const originalPrice = item.originalPrice;
+            
+            // If there's an active voucher, apply its discount
             if (activeVoucher) {
                 const appliesToAll = activeVoucher.category === 'Semua Kategori';
                 const categoryMatch = item.category === activeVoucher.category;
-
+                
                 if (appliesToAll || categoryMatch) {
                     if (activeVoucher.discountType === 'percentage') {
-                        finalPrice = finalPrice * (1 - (activeVoucher.discountValue! / 100));
+                        // Apply percentage discount on the *original* price
+                        finalPrice -= originalPrice * (activeVoucher.discountValue! / 100);
                     } else if (activeVoucher.discountType === 'fixed') {
-                        finalPrice = Math.max(0, finalPrice - activeVoucher.discountValue!);
+                        // Apply fixed discount
+                        finalPrice -= activeVoucher.discountValue!;
                     }
                 }
             }
             
+            // Ensure price doesn't go below zero
+            finalPrice = Math.max(0, finalPrice);
+
             return {
                 sku: item.sku,
                 quantity: item.quantity,
