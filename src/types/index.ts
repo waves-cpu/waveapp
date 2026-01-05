@@ -189,4 +189,14 @@ export interface DiscountGroup {
   voucherCode?: string;
   products: DiscountedProduct[];
   productCount?: number;
+  discountType?: 'fixed' | 'percentage';
+  discountValue?: number;
+  maxUses?: number;
+  minPurchase?: number;
+}
+
+export interface Voucher extends DiscountGroup {
+    voucherCode: string;
+    discountType: 'fixed' | 'percentage';
+    discountValue: number;
 }

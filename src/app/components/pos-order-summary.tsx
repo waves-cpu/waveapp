@@ -30,7 +30,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import { Badge } from '@/components/ui/badge';
 import { apiFetch } from '@/lib/api';
-import type { DiscountGroup } from '@/types';
+import type { DiscountGroup, Voucher } from '@/types';
 
 interface PosOrderSummaryProps {
   cart: CartItem[];
@@ -38,8 +38,8 @@ interface PosOrderSummaryProps {
   clearCart: () => void;
   channel: 'pos' | 'reseller';
   pendingTransactionId: string | null;
-  onVoucherApplied: (voucherData: DiscountGroup | null) => void;
-  activeVoucher: DiscountGroup | null;
+  onVoucherApplied: (voucherData: Voucher | null) => void;
+  activeVoucher: Voucher | null;
 }
 
 type PaymentMethod = 'Cash' | 'Qris' | 'Transfer' | 'Debit';
@@ -63,12 +63,12 @@ export function PosOrderSummary({ cart, onSaleComplete, clearCart, channel, pend
         setPaymentMethod(channel === 'reseller' ? 'Transfer' : 'Cash');
     }, [channel]);
     
-     const { subtotal, totalDiscount, finalTotal, groupDiscount, voucherDiscount } = useMemo(() => {
+    const { subtotal, totalDiscount, finalTotal, groupDiscount, voucherDiscount } = useMemo(() => {
         const subtotalCalc = cart.reduce((acc, item) => acc + (item.originalPrice * item.quantity), 0);
         
         const groupDiscountCalc = cart.reduce((acc, item) => {
-             const discountPerItem = item.originalPrice - item.price;
-             return acc + (discountPerItem * item.quantity);
+            const discountPerItem = item.originalPrice - item.price;
+            return acc + (discountPerItem * item.quantity);
         }, 0);
 
         let voucherDiscountCalc = 0;
@@ -78,14 +78,12 @@ export function PosOrderSummary({ cart, onSaleComplete, clearCart, channel, pend
                 const categoryMatch = item.category === activeVoucher.category;
                 
                 if (appliesToAll || categoryMatch) {
-                    const priceForItem = item.originalPrice; // Apply voucher on original price
+                    const priceForItem = item.originalPrice;
                     if (activeVoucher.discountType === 'percentage') {
-                        return acc + (priceForItem * (activeVoucher.discountValue! / 100)) * item.quantity;
+                        return acc + (priceForItem * (activeVoucher.discountValue / 100)) * item.quantity;
                     } else if (activeVoucher.discountType === 'fixed') {
-                        // Apply fixed discount, but don't let price go below 0
                         const totalDiscountForThisItem = activeVoucher.discountValue! * item.quantity;
                         const itemOriginalTotal = priceForItem * item.quantity;
-                        // The discount cannot be more than the item's total price
                         return acc + Math.min(totalDiscountForThisItem, itemOriginalTotal);
                     }
                 }
@@ -130,7 +128,10 @@ export function PosOrderSummary({ cart, onSaleComplete, clearCart, channel, pend
         if (!voucherCode.trim()) return;
         setIsApplyingVoucher(true);
         try {
-            const data = await apiFetch(`/api/finance/discounts/voucher/${voucherCode.trim()}?channel=${channel}`);
+            const data: Voucher = await apiFetch(`/api/finance/discounts/voucher/${voucherCode.trim()}?channel=${channel}`);
+            if (!data.voucherCode || !data.discountType || data.discountValue === undefined) {
+              throw new Error("Data voucher tidak lengkap dari server.");
+            }
             onVoucherApplied(data);
             setManualDiscount(0); // Reset manual discount
             toast({
@@ -159,27 +160,21 @@ export function PosOrderSummary({ cart, onSaleComplete, clearCart, channel, pend
         setIsSubmitting(true);
         
         const salesData = cart.map(item => {
-            // Start with the price already discounted by the group
-            let finalPrice = item.price;
-            const originalPrice = item.originalPrice;
+            let finalPrice = item.price; // Start with group-discounted price
             
-            // If there's an active voucher, apply its discount
             if (activeVoucher) {
                 const appliesToAll = activeVoucher.category === 'Semua Kategori';
                 const categoryMatch = item.category === activeVoucher.category;
                 
                 if (appliesToAll || categoryMatch) {
                     if (activeVoucher.discountType === 'percentage') {
-                        // Apply percentage discount on the *original* price
-                        finalPrice -= originalPrice * (activeVoucher.discountValue! / 100);
+                        finalPrice -= item.originalPrice * (activeVoucher.discountValue / 100);
                     } else if (activeVoucher.discountType === 'fixed') {
-                        // Apply fixed discount
-                        finalPrice -= activeVoucher.discountValue!;
+                        finalPrice -= activeVoucher.discountValue;
                     }
                 }
             }
             
-            // Ensure price doesn't go below zero
             finalPrice = Math.max(0, finalPrice);
 
             return {

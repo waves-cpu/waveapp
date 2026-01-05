@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useCallback } from 'react';
@@ -10,14 +11,14 @@ import { translations } from '@/types/language';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { History, Settings, Hourglass } from 'lucide-react';
-import type { DiscountGroup } from '@/types';
+import type { Voucher } from '@/types';
 
 export default function PosPage() {
     const { language } = useLanguage();
     const t = translations[language];
-    const [activeVoucher, setActiveVoucher] = useState<DiscountGroup | null>(null);
+    const [activeVoucher, setActiveVoucher] = useState<Voucher | null>(null);
 
-    const handleVoucherApplied = useCallback((voucherData: DiscountGroup | null) => {
+    const handleVoucherApplied = useCallback((voucherData: Voucher | null) => {
         setActiveVoucher(voucherData);
     }, []);
 
