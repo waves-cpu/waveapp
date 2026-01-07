@@ -139,8 +139,7 @@ export async function fetchShippingReceipts(options: {
     if (dateString) {
         whereClauses.push("strftime('%Y-%m-%d', date) = @dateString");
         params.dateString = dateString;
-    }
-    if (date_range) {
+    } else if (date_range) {
         // Use full datetime for more accurate range filtering across timezones
         whereClauses.push("date BETWEEN @startDate AND @endDate");
         params.startDate = date_range.from.toISOString();

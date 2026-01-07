@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
         channel: searchParams.get('channel') || undefined,
         awb: searchParams.get('awb') || undefined,
         status: searchParams.get('status')?.split(','),
-        dateString: searchParams.get('date') || undefined,
+        dateString: searchParams.get('dateString') || undefined,
     };
 
     try {
