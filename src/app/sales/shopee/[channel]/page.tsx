@@ -45,6 +45,47 @@ import { RecordSaleForReceiptDialog } from '@/app/components/record-sale-for-rec
 import { apiFetch } from '@/lib/api';
 
 
+function DatePickerClient({
+  selectedDate,
+  onDateChange,
+}: {
+  selectedDate: Date | undefined,
+  onDateChange: (date: Date | undefined) => void,
+}) {
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button
+          id="date"
+          variant={'outline'}
+          className={cn(
+            'w-full sm:w-[240px] justify-start text-left font-normal',
+            !selectedDate && 'text-muted-foreground'
+          )}
+        >
+          <CalendarIcon className="mr-2 h-4 w-4" />
+          {isClient && selectedDate ? format(selectedDate, 'PPP') : <span>Pilih tanggal</span>}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-auto p-0" align="end">
+        <Calendar
+          mode="single"
+          selected={selectedDate}
+          onSelect={onDateChange}
+          initialFocus
+        />
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+
 export function useReceiptPageLogic(salesChannel: 'Shopee' | 'Tiktok' | 'Lazada') {
     const params = useParams();
     const router = useRouter();
@@ -294,26 +335,7 @@ export default function ShopeeChannelPage() {
                         className="pl-10 w-full sm:w-64"
                     />
                 </div>
-                <Popover>
-                    <PopoverTrigger asChild>
-                        <Button
-                            id="date"
-                            variant={'outline'}
-                            className={cn('w-full sm:w-[240px] justify-start text-left font-normal', !selectedDate && 'text-muted-foreground')}
-                        >
-                            <CalendarIcon className="mr-2 h-4 w-4" />
-                            {selectedDate ? format(selectedDate, 'PPP') : <span>Pilih tanggal</span>}
-                        </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="end">
-                        <Calendar
-                            mode="single"
-                            selected={selectedDate}
-                            onSelect={(date) => setSelectedDate(date)}
-                            initialFocus
-                        />
-                    </PopoverContent>
-                </Popover>
+                <DatePickerClient selectedDate={selectedDate} onDateChange={setSelectedDate} />
               </div>
           </div>
           <div className="flex-grow overflow-auto">
