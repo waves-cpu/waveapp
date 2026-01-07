@@ -1,10 +1,12 @@
 
+
 'use client';
 
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
 import type { User } from '@/types';
 import { useToast } from './use-toast';
 import { apiFetch } from '@/lib/api';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 interface AuthContextType {
     isAuthenticated: boolean;
@@ -19,22 +21,18 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
+    const queryClient = useQueryClient();
     const [user, setUser] = useState<User | null>(null);
-    const [loading, setLoading] = useState(true);
-    const [users, setUsers] = useState<User[]>([]);
+    const [authLoading, setAuthLoading] = useState(true);
     const { toast } = useToast();
 
-    const refreshUsers = useCallback(async () => {
-        try {
-            const allUsers = await apiFetch('/api/users');
-            setUsers(allUsers);
-        } catch (error) {
-            console.error("Failed to fetch users", error);
-        }
-    }, []);
+    const { data: users = [], isLoading: isUsersLoading } = useQuery<User[]>({
+        queryKey: ['users'],
+        queryFn: () => apiFetch('/api/users'),
+    });
 
     useEffect(() => {
-        const initializeAuth = async () => {
+        const initializeAuth = () => {
             try {
                 const storedUser = sessionStorage.getItem('user');
                 if (storedUser) {
@@ -43,48 +41,83 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             } catch (error) {
                 sessionStorage.removeItem('user');
             } finally {
-                setLoading(false);
+                setAuthLoading(false);
             }
         };
-        
         initializeAuth();
-        refreshUsers();
+    }, []);
 
-    }, [refreshUsers]);
+    const loginMutation = useMutation({
+        mutationFn: (credentials: {username: string, password: string}) => apiFetch<User>('/api/auth/login', {
+            method: 'POST',
+            body: credentials,
+        }),
+        onSuccess: (authenticatedUser) => {
+            setUser(authenticatedUser);
+            sessionStorage.setItem('user', JSON.stringify(authenticatedUser));
+            toast({ title: 'Login Successful', description: 'Welcome back!' });
+        },
+        onError: () => {
+             toast({
+                variant: 'destructive',
+                title: 'Login Failed',
+                description: 'Invalid username or password.',
+            });
+        }
+    });
+
+    const createUserMutation = useMutation({
+        mutationFn: (credentials: {username: string, password: string}) => apiFetch<User>('/api/users', {
+            method: 'POST',
+            body: credentials,
+        }),
+        onSuccess: (newUser) => {
+            queryClient.invalidateQueries({ queryKey: ['users'] });
+            toast({
+                title: 'User Added',
+                description: `User '${newUser.username}' has been created successfully.`,
+            });
+        },
+        onError: (error: any) => {
+             toast({
+                variant: 'destructive',
+                title: 'Failed to Add User',
+                description: error.message || 'An unexpected error occurred.',
+            });
+            throw error;
+        }
+    });
 
     const login = async (username: string, password: string): Promise<boolean> => {
         try {
-            const authenticatedUser = await apiFetch('/api/auth/login', {
-                method: 'POST',
-                body: JSON.stringify({ username, password }),
-            });
-            if (authenticatedUser) {
-                setUser(authenticatedUser);
-                sessionStorage.setItem('user', JSON.stringify(authenticatedUser));
-                return true;
-            }
-            return false;
-        } catch(error) {
+            await loginMutation.mutateAsync({ username, password });
+            return true;
+        } catch (error) {
             return false;
         }
     };
-
+    
     const logout = () => {
         setUser(null);
         sessionStorage.removeItem('user');
+        queryClient.clear();
+        router.push('/login');
     };
     
-    const createUser = async (username: string, password: string) => {
-        const newUser = await apiFetch('/api/users', {
-            method: 'POST',
-            body: JSON.stringify({ username, password })
-        });
-        await refreshUsers();
-        return newUser;
+    const createUser = (username: string, password: string) => {
+        return createUserMutation.mutateAsync({ username, password });
     }
 
     return (
-        <AuthContext.Provider value={{ isAuthenticated: !!user, user, loading, login, logout, users, createUser }}>
+        <AuthContext.Provider value={{ 
+            isAuthenticated: !!user, 
+            user, 
+            loading: authLoading || isUsersLoading, 
+            login, 
+            logout, 
+            users, 
+            createUser 
+        }}>
             {children}
         </AuthContext.Provider>
     );

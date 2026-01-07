@@ -5,12 +5,8 @@ import './globals.css';
 import { Toaster } from "@/components/ui/toaster"
 import { ThemeProvider } from './components/theme-provider';
 import { LanguageProvider } from '@/hooks/use-language';
-import { InventoryProvider } from '@/hooks/use-inventory';
-import { ReceiptSettingsProvider } from '@/hooks/use-receipt-settings';
-import { InvoiceSettingsProvider } from '@/hooks/use-invoice-settings';
-import { FinanceSettingsProvider } from '@/hooks/use-finance-settings';
 import { AuthProvider } from '@/hooks/use-auth';
-import Script from 'next/script';
+import { AppProviders } from '@/components/providers';
 
 export const metadata: Metadata = {
   title: 'Waveblast',
@@ -38,19 +34,13 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <LanguageProvider>
-            <AuthProvider>
-              <InventoryProvider>
-                  <ReceiptSettingsProvider>
-                    <InvoiceSettingsProvider>
-                      <FinanceSettingsProvider>
+            <LanguageProvider>
+                <AppProviders>
+                    <AuthProvider>
                         {children}
-                      </FinanceSettingsProvider>
-                    </InvoiceSettingsProvider>
-                  </ReceiptSettingsProvider>
-              </InventoryProvider>
-            </AuthProvider>
-          </LanguageProvider>
+                    </AuthProvider>
+                </AppProviders>
+            </LanguageProvider>
         </ThemeProvider>
         <Toaster />
       </body>
