@@ -10,10 +10,16 @@ export async function POST(request: NextRequest) {
         }
         const user = await authenticateUser(username, password);
         if (user) {
-            return NextResponse.json(user);
+            // Important: Do not send the password back to the client
+            const { password, ...userWithoutPassword } = user as any;
+            return NextResponse.json(userWithoutPassword);
         }
         return NextResponse.json({ message: 'Invalid credentials' }, { status: 401 });
-    } catch (error) {
-        return NextResponse.json({ message: 'Internal Server Error' }, { status: 500 });
+    } catch (error: any) {
+        if (error instanceof SyntaxError) {
+            return NextResponse.json({ message: 'Invalid JSON body' }, { status: 400 });
+        }
+        console.error("Login API Error:", error);
+        return NextResponse.json({ message: error.message || 'Internal Server Error' }, { status: 500 });
     }
 }

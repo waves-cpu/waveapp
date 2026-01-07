@@ -7,8 +7,9 @@ export async function GET() {
     try {
         const resellers = await getResellers();
         return NextResponse.json(resellers);
-    } catch (error) {
-        return NextResponse.json({ message: 'Internal Server Error' }, { status: 500 });
+    } catch (error: any) {
+        console.error("API Error fetching resellers:", error);
+        return NextResponse.json({ message: error.message || 'Internal Server Error' }, { status: 500 });
     }
 }
 
@@ -25,6 +26,10 @@ export async function POST(request: NextRequest) {
         if (error.message.includes('UNIQUE constraint failed')) {
             return NextResponse.json({ message: 'Reseller with this name already exists.' }, { status: 409 });
         }
-        return NextResponse.json({ message: 'Internal Server Error' }, { status: 500 });
+        if (error instanceof SyntaxError) {
+            return NextResponse.json({ message: 'Invalid JSON body' }, { status: 400 });
+        }
+        console.error("API Error adding reseller:", error);
+        return NextResponse.json({ message: error.message || 'Internal Server Error' }, { status: 500 });
     }
 }

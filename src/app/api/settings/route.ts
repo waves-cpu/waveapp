@@ -10,7 +10,11 @@ export async function POST(request: NextRequest) {
         }
         await saveSetting(key, value);
         return NextResponse.json({ message: 'Setting saved' }, { status: 200 });
-    } catch (error) {
-        return NextResponse.json({ message: 'Internal Server Error' }, { status: 500 });
+    } catch (error: any) {
+         if (error instanceof SyntaxError) {
+            return NextResponse.json({ message: 'Invalid JSON body' }, { status: 400 });
+        }
+        console.error("API Error saving setting:", error);
+        return NextResponse.json({ message: error.message || 'Internal Server Error' }, { status: 500 });
     }
 }
