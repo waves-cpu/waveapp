@@ -43,6 +43,7 @@ const variantSchema = z.object({
     name: z.string().min(1, "Variant name is required."),
     sku: z.string().optional(),
     price: z.coerce.number().min(0, "Price must be non-negative."),
+    costPrice: z.coerce.number().optional(),
     stock: z.coerce.number().int().min(0, "Stock must be a non-negative integer."),
 });
 
@@ -56,6 +57,7 @@ const formSchema = z.object({
   hasVariants: z.boolean().default(false),
   // Fields for items without variants
   price: z.coerce.number().optional(),
+  costPrice: z.coerce.number().optional(),
   stock: z.coerce.number().int().optional(),
   size: z.string().optional(),
   variants: z.array(variantSchema).optional(),
@@ -102,6 +104,7 @@ export function AddProductForm({ existingItem }: AddProductFormProps) {
             hasVariants: false,
             variants: [],
             price: undefined,
+            costPrice: undefined,
             stock: undefined,
             size: '',
         };
@@ -116,9 +119,10 @@ export function AddProductForm({ existingItem }: AddProductFormProps) {
         imageUrl: existingItem.imageUrl || '',
         hasVariants: hasVariants,
         price: hasVariants ? undefined : (existingItem.price ?? ''),
+        costPrice: hasVariants ? undefined : (existingItem.costPrice ?? ''),
         stock: hasVariants ? undefined : (existingItem.stock ?? ''),
         size: hasVariants ? undefined : (existingItem.size || ''),
-        variants: hasVariants ? existingItem.variants.map(v => ({ ...v, id: v.id.toString() })) : [],
+        variants: hasVariants ? existingItem.variants.map(v => ({ ...v, id: v.id.toString(), costPrice: v.costPrice ?? undefined })) : [],
     };
   }, [existingItem]);
   
@@ -141,9 +145,9 @@ export function AddProductForm({ existingItem }: AddProductFormProps) {
   useEffect(() => {
     if (hasVariants && fields.length === 0 && !isEditMode) {
       append([
-        { name: '', sku: '', price: 0, stock: 0 },
-        { name: '', sku: '', price: 0, stock: 0 },
-        { name: '', sku: '', price: 0, stock: 0 }
+        { name: '', sku: '', price: 0, costPrice: 0, stock: 0 },
+        { name: '', sku: '', price: 0, costPrice: 0, stock: 0 },
+        { name: '', sku: '', price: 0, costPrice: 0, stock: 0 }
       ]);
     }
   }, [hasVariants, fields.length, append, isEditMode]);
@@ -316,7 +320,8 @@ export function AddProductForm({ existingItem }: AddProductFormProps) {
                                 <TableRow>
                                     <TableHead className="w-[20%] border-r">{t.inventoryTable.name}</TableHead>
                                     <TableHead className="w-[25%] border-r">SKU</TableHead>
-                                    <TableHead className="w-[25%] border-r">{t.inventoryTable.price}</TableHead>
+                                    <TableHead className="w-[20%] border-r">Harga Jual</TableHead>
+                                    <TableHead className="w-[20%] border-r">Harga Modal</TableHead>
                                     <TableHead className="w-[15%] border-r">Stok</TableHead>
                                     <TableHead className="w-[10%]"></TableHead>
                                 </TableRow>
@@ -363,6 +368,18 @@ export function AddProductForm({ existingItem }: AddProductFormProps) {
                                         <TableCell className="p-1 border-r">
                                             <FormField
                                                 control={form.control}
+                                                name={`variants.${index}.costPrice`}
+                                                render={({ field }) => (
+                                                    <FormItem>
+                                                        <FormControl><Input type="number" placeholder="25000" {...field} className="border-none focus-visible:ring-1 text-xs" value={field.value ?? ''}/></FormControl>
+                                                        <FormMessage className="px-2 py-1 text-xs"/>
+                                                    </FormItem>
+                                                )}
+                                            />
+                                        </TableCell>
+                                        <TableCell className="p-1 border-r">
+                                            <FormField
+                                                control={form.control}
                                                 name={`variants.${index}.stock`}
                                                 render={({ field }) => (
                                                     <FormItem>
@@ -381,14 +398,14 @@ export function AddProductForm({ existingItem }: AddProductFormProps) {
                                 ))}
                             </TableBody>
                          </Table>
-                         <Button type="button" size="sm" variant="outline" className="mt-4" onClick={() => append({ name: '', sku: '', price: 0, stock: 0 })}>
+                         <Button type="button" size="sm" variant="outline" className="mt-4" onClick={() => append({ name: '', sku: '', price: 0, costPrice: 0, stock: 0 })}>
                             <PlusCircle className="mr-2 h-4 w-4" />
                             {t.bulkStockInDialog.addVariant}
                         </Button>
                          <FormMessage>{form.formState.errors.variants?.message}</FormMessage>
                     </div>
                 ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                         <FormField
                         control={form.control}
                         name="size"
@@ -407,9 +424,22 @@ export function AddProductForm({ existingItem }: AddProductFormProps) {
                         name="price"
                         render={({ field }) => (
                             <FormItem>
-                            <FormLabel>{t.addItemDialog.price}</FormLabel>
+                            <FormLabel>Harga Jual</FormLabel>
                             <FormControl>
                                 <Input type="number" placeholder={t.addItemDialog.pricePlaceholder} {...field} value={field.value ?? ''} />
+                            </FormControl>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                        />
+                         <FormField
+                        control={form.control}
+                        name="costPrice"
+                        render={({ field }) => (
+                            <FormItem>
+                            <FormLabel>Harga Modal</FormLabel>
+                            <FormControl>
+                                <Input type="number" placeholder="25000" {...field} value={field.value ?? ''} />
                             </FormControl>
                             <FormMessage />
                             </FormItem>
@@ -442,6 +472,7 @@ export function AddProductForm({ existingItem }: AddProductFormProps) {
     </Card>
   );
 }
+
 
 
 
