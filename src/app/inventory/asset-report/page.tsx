@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import React, { useMemo, useState, useCallback, useEffect } from 'react';
@@ -312,8 +311,19 @@ export default function AssetReportPage() {
     const [selectedPerfItem, setSelectedPerfItem] = useState<ProductPerformance | null>(null);
     const [isBulkEditDialogOpen, setBulkEditDialogOpen] = useState(false);
 
-    const productPerformanceData = useMemo(() => {
-        if (loading) return null;
+    const { 
+        bestSellers, 
+        normalMovers, 
+        slowMovers,
+        bestSellersAssetValue,
+        normalMoversAssetValue,
+        slowMoversAssetValue,
+        totalAssetValue,
+    } = useMemo(() => {
+        if (loading) return { 
+            bestSellers: [], normalMovers: [], slowMovers: [],
+            bestSellersAssetValue: 0, normalMoversAssetValue: 0, slowMoversAssetValue: 0, totalAssetValue: 0
+        };
 
         const dateFrom = subDays(new Date(), daysFilter);
         const salesInDateRange = allSales.filter(sale => isAfter(parseISO(sale.saleDate), dateFrom));
@@ -375,8 +385,18 @@ export default function AssetReportPage() {
         const bestSellers = allProducts.filter(p => p.unitsSold > threshold).sort((a,b) => b.unitsSold - a.unitsSold);
         const normalMovers = allProducts.filter(p => p.unitsSold > 0 && p.unitsSold <= threshold).sort((a,b) => b.unitsSold - a.unitsSold);
         const slowMovers = allProducts.filter(p => p.unitsSold === 0).sort((a,b) => b.totalAssetValue - a.totalAssetValue);
+        
+        const bestSellersAssetValue = bestSellers.reduce((sum, p) => sum + p.totalAssetValue, 0);
+        const normalMoversAssetValue = normalMovers.reduce((sum, p) => sum + p.totalAssetValue, 0);
+        const slowMoversAssetValue = slowMovers.reduce((sum, p) => sum + p.totalAssetValue, 0);
 
-        return { bestSellers, normalMovers, slowMovers };
+        return { 
+            bestSellers, normalMovers, slowMovers,
+            bestSellersAssetValue,
+            normalMoversAssetValue,
+            slowMoversAssetValue,
+            totalAssetValue: bestSellersAssetValue + normalMoversAssetValue + slowMoversAssetValue
+        };
 
     }, [items, allSales, loading, daysFilter, categoryFilter]);
 
@@ -385,13 +405,14 @@ export default function AssetReportPage() {
         setIsDialogOpen(true);
     };
 
-    if (loading || !productPerformanceData) {
+    if (loading) {
         return (
              <AppLayout>
                 <main className="flex-1 p-4 md:p-10 space-y-6">
                      <div className="flex items-center justify-between mb-6">
                         <h1 className="text-lg font-bold">Laporan Aset Produk</h1>
                     </div>
+                    <Skeleton className="h-24 w-full" />
                     <Skeleton className="h-64 w-full" />
                     <Skeleton className="h-64 w-full" />
                     <Skeleton className="h-64 w-full" />
@@ -399,8 +420,7 @@ export default function AssetReportPage() {
             </AppLayout>
         )
     }
-
-    const { bestSellers, normalMovers, slowMovers } = productPerformanceData;
+    
     const bestSellerTitle = `Best Seller (> ${Math.round(BEST_SELLER_THRESHOLD * (daysFilter/30))} Terjual)`;
     const normalMoversTitle = "Penjualan Normal";
     const slowMoversTitle = "Slow Moving (Tidak Terjual)";
@@ -437,6 +457,44 @@ export default function AssetReportPage() {
                     </div>
                 </div>
 
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                    <Card>
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-sm font-medium">Total Nilai Aset</CardTitle>
+                            <DollarSign className="h-4 w-4 text-muted-foreground" />
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-2xl font-bold">{formatCurrency(totalAssetValue)}</div>
+                        </CardContent>
+                    </Card>
+                     <Card>
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-sm font-medium">Aset Best Seller</CardTitle>
+                            <Flame className="h-4 w-4 text-red-500" />
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-2xl font-bold">{formatCurrency(bestSellersAssetValue)}</div>
+                        </CardContent>
+                    </Card>
+                     <Card>
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-sm font-medium">Aset Penjualan Normal</CardTitle>
+                            <TrendingUp className="h-4 w-4 text-green-500" />
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-2xl font-bold">{formatCurrency(normalMoversAssetValue)}</div>
+                        </CardContent>
+                    </Card>
+                     <Card>
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-sm font-medium">Aset Tidak Terjual</CardTitle>
+                            <Anchor className="h-4 w-4 text-blue-500" />
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-2xl font-bold">{formatCurrency(slowMoversAssetValue)}</div>
+                        </CardContent>
+                    </Card>
+                </div>
 
                 <div className="space-y-6">
                     <PerformanceTable 
@@ -468,3 +526,5 @@ export default function AssetReportPage() {
         </AppLayout>
     );
 }
+
+    
