@@ -116,20 +116,38 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
 
     const loading = isInventoryLoading || isSalesLoading || isResellersLoading || isReceiptsLoading || isDiscountsLoading;
 
-    const mutation = useMutation({
-        onSuccess: (data, variables: any) => {
-            // Invalidate all queries to refetch data after any mutation
-            return queryClient.invalidateQueries();
-        },
-        onError: (error: any) => {
-            toast({
-                variant: 'destructive',
-                title: 'Operation Failed',
-                description: error.message || 'An unexpected error occurred.',
-            });
-            throw error; // Re-throw to allow individual components to handle it
-        },
-    });
+    const useApiMutation = <TData, TVariables>(
+        mutationFn: (variables: TVariables) => Promise<TData>,
+        options: {
+            toastSuccessMessage?: string;
+            toastErrorMessage?: string;
+            invalidateQueries?: (string | number)[][];
+        } = {}
+    ) => {
+        return useMutation<TData, Error, TVariables>({
+            mutationFn,
+            onSuccess: () => {
+                const keysToInvalidate: (string | number)[][] = [
+                    ['inventory'], ['sales'], ['resellers'], 
+                    ['shippingReceipts'], ['discountGroups'], 
+                    ...(options.invalidateQueries || [])
+                ];
+                keysToInvalidate.forEach(key => queryClient.invalidateQueries({ queryKey: key }));
+                
+                if (options.toastSuccessMessage) {
+                    toast({ title: 'Success', description: options.toastSuccessMessage });
+                }
+            },
+            onError: (error: any) => {
+                toast({
+                    variant: 'destructive',
+                    title: options.toastErrorMessage || 'Operation Failed',
+                    description: error.message || 'An unexpected error occurred.',
+                });
+                throw error;
+            }
+        });
+    };
 
     const categories = useMemo(() => [...new Set((inventoryData?.products || []).map(item => item.category))].sort(), [inventoryData]);
 
@@ -158,60 +176,35 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
         setPendingTransaction(null);
     };
 
-    const mutationWrapper = (mutationFn: (vars: any) => Promise<any>, invalidateKeys: string[][] = []) => {
-        return useMutation({
-            mutationFn,
-            onSuccess: () => {
-                const keysToInvalidate = [['inventory'], ['sales'], ['resellers'], ['shippingReceipts'], ['discountGroups'], ...invalidateKeys];
-                keysToInvalidate.forEach(key => queryClient.invalidateQueries({ queryKey: key }));
-            },
-            onError: (error: any) => {
-                toast({
-                    variant: 'destructive',
-                    title: 'Operation Failed',
-                    description: error.message || 'An unexpected error occurred.',
-                });
-                throw error;
-            }
-        });
-    };
-
-    const addReseller = mutationWrapper((vars: { name: string, phone?: string, address?: string }) => apiFetch('/api/resellers', { method: 'POST', body: vars }));
-    const editReseller = mutationWrapper((vars: { id: number, data: Omit<Reseller, 'id'> }) => apiFetch(`/api/resellers/${vars.id}`, { method: 'PUT', body: vars.data }));
-    const deleteReseller = mutationWrapper((id: number) => apiFetch(`/api/resellers/${id}`, { method: 'DELETE' }));
-    
-    const addItem = mutationWrapper((itemData: any) => apiFetch('/api/products', { method: 'POST', body: itemData }));
-    const bulkAddProducts = mutationWrapper((vars: { products: any[], fileName: string }) => apiFetch('/api/products/bulk-add', { method: 'POST', body: vars }));
-    const bulkUpdateProducts = mutationWrapper((vars: { products: any[] }) => apiFetch('/api/products/bulk-update', { method: 'POST', body: vars }));
-    const updateItem = mutationWrapper((vars: { itemId: string, itemData: any }) => apiFetch(`/api/products/${vars.itemId}`, { method: 'PUT', body: vars.itemData }));
-    const bulkUpdateVariants = mutationWrapper((vars: { itemId: string, variants: InventoryItemVariant[], reason: string }) => apiFetch(`/api/products/${vars.itemId}/variants-bulk-update`, { method: 'POST', body: { variants: vars.variants, reason: vars.reason } }));
-    
-    const updateStock = mutationWrapper((vars: { itemId: string, change: number, reason: string }) => apiFetch(`/api/products/${vars.itemId}/stock`, { method: 'POST', body: vars }));
-    const archiveProduct = mutationWrapper((vars: { itemId: string, isArchived: boolean }) => apiFetch(`/api/products/${vars.itemId}`, { method: 'PUT', body: { isArchived: vars.isArchived } }));
-    const deleteProductPermanently = mutationWrapper((itemId: string) => apiFetch(`/api/products/${itemId}`, { method: 'DELETE' }));
-
-    const addAccessory = mutationWrapper((accessory: Omit<Accessory, 'id' | 'history'>) => apiFetch('/api/products', { method: 'POST', body: { ...accessory, type: 'accessory' } }));
-    const updateAccessory = mutationWrapper((vars: { accessoryId: string, accessoryData: any }) => apiFetch(`/api/products/${vars.accessoryId}`, { method: 'PUT', body: { ...vars.accessoryData, type: 'accessory' } }));
-    const adjustAccessoryStock = mutationWrapper((vars: { accessoryId: string, change: number, reason: string }) => apiFetch(`/api/products/${vars.accessoryId}/stock`, { method: 'POST', body: { ...vars, type: 'accessory' } }));
-    
-    const recordSale = mutationWrapper((vars: any) => apiFetch('/api/sales', { method: 'POST', body: vars }));
-    const recordSaleWithReceipt = mutationWrapper((vars: any) => apiFetch('/api/sales/online', { method: 'POST', body: vars }));
-    const cancelSaleTransaction = mutationWrapper((transactionId: string) => apiFetch(`/api/sales/transaction/${transactionId}`, { method: 'DELETE' }));
-    const returnSaleTransaction = mutationWrapper((vars: { transactionId: string, items?: ReturnedItem[] }) => apiFetch(`/api/sales/transaction/${vars.transactionId}/return`, { method: 'POST', body: { items: vars.items || [] } }));
-    const revertSaleItem = mutationWrapper((vars: { transactionId: string, sku: string }) => apiFetch(`/api/sales/transaction/${vars.transactionId}/revert`, { method: 'POST', body: { sku: vars.sku } }));
-    const clearPosTransactions = mutationWrapper((date: Date) => apiFetch(`/api/sales/pos-history?date=${date.toISOString()}`, { method: 'DELETE' }));
-    
-    const addShippingReceipt = mutationWrapper((receipt: Omit<ShippingReceipt, 'id'>) => apiFetch('/api/shipping/receipts', { method: 'POST', body: receipt }));
-    const deleteShippingReceipt = mutationWrapper((id: number) => apiFetch(`/api/shipping/receipts/${id}`, { method: 'DELETE' }));
-    const updateShippingReceiptsStatus = mutationWrapper((vars: { ids: number[], status: string }) => apiFetch('/api/shipping/receipts/status', { method: 'PUT', body: vars }));
-    const updateShippingReceiptStatus = mutationWrapper((vars: { id: number, status: string }) => apiFetch(`/api/shipping/receipts/${vars.id}`, { method: 'PUT', body: { status: vars.status } }));
-    const addPrintedReceipts = mutationWrapper((vars: { date: string, salesChannel: string, shippingChannel: string, count: number }) => apiFetch('/api/shipping/printed-receipts', { method: 'POST', body: vars }));
-    
-    const deleteImportHistory = mutationWrapper((id: number) => apiFetch(`/api/products/bulk-add/${id}`, { method: 'DELETE' }), [['bulkImportHistory']]);
-    
-    const addDiscountGroup = mutationWrapper((group: any) => apiFetch('/api/finance/discounts', { method: 'POST', body: group }));
-    const editDiscountGroup = mutationWrapper((vars: { id: number, group: any }) => apiFetch(`/api/finance/discounts/${vars.id}`, { method: 'PUT', body: vars.group }));
-    const deleteDiscountGroup = mutationWrapper((id: number) => apiFetch(`/api/finance/discounts/${id}`, { method: 'DELETE' }));
+    const addItemMutation = useApiMutation((itemData: any) => apiFetch('/api/products', { method: 'POST', body: itemData }));
+    const bulkAddProductsMutation = useApiMutation((vars: { products: any[], fileName: string }) => apiFetch('/api/products/bulk-add', { method: 'POST', body: vars }));
+    const bulkUpdateProductsMutation = useApiMutation((vars: { products: any[] }) => apiFetch('/api/products/bulk-update', { method: 'POST', body: vars }));
+    const updateItemMutation = useApiMutation((vars: { itemId: string, itemData: any }) => apiFetch(`/api/products/${vars.itemId}`, { method: 'PUT', body: vars.itemData }));
+    const bulkUpdateVariantsMutation = useApiMutation((vars: { itemId: string, variants: InventoryItemVariant[], reason: string }) => apiFetch(`/api/products/${vars.itemId}/variants-bulk-update`, { method: 'POST', body: { variants: vars.variants, reason: vars.reason } }));
+    const updateStockMutation = useApiMutation((vars: { itemId: string, change: number, reason: string }) => apiFetch(`/api/products/${vars.itemId}/stock`, { method: 'POST', body: vars }));
+    const archiveProductMutation = useApiMutation((vars: { itemId: string, isArchived: boolean }) => apiFetch(`/api/products/${vars.itemId}`, { method: 'PUT', body: { isArchived: vars.isArchived } }));
+    const deleteProductPermanentlyMutation = useApiMutation((itemId: string) => apiFetch(`/api/products/${itemId}`, { method: 'DELETE' }));
+    const addAccessoryMutation = useApiMutation((accessory: Omit<Accessory, 'id' | 'history'>) => apiFetch('/api/products', { method: 'POST', body: { ...accessory, type: 'accessory' } }));
+    const updateAccessoryMutation = useApiMutation((vars: { accessoryId: string, accessoryData: any }) => apiFetch(`/api/products/${vars.accessoryId}`, { method: 'PUT', body: { ...vars.accessoryData, type: 'accessory' } }));
+    const adjustAccessoryStockMutation = useApiMutation((vars: { accessoryId: string, change: number, reason: string }) => apiFetch(`/api/products/${vars.accessoryId}/stock`, { method: 'POST', body: { ...vars, type: 'accessory' } }));
+    const recordSaleMutation = useApiMutation((vars: any) => apiFetch('/api/sales', { method: 'POST', body: vars }));
+    const recordSaleWithReceiptMutation = useApiMutation((vars: any) => apiFetch('/api/sales/online', { method: 'POST', body: vars }));
+    const cancelSaleTransactionMutation = useApiMutation((transactionId: string) => apiFetch(`/api/sales/transaction/${transactionId}`, { method: 'DELETE' }));
+    const returnSaleTransactionMutation = useApiMutation((vars: { transactionId: string, items?: ReturnedItem[] }) => apiFetch(`/api/sales/transaction/${vars.transactionId}/return`, { method: 'POST', body: { items: vars.items || [] } }));
+    const revertSaleItemMutation = useApiMutation((vars: { transactionId: string, sku: string }) => apiFetch(`/api/sales/transaction/${vars.transactionId}/revert`, { method: 'POST', body: { sku: vars.sku } }));
+    const clearPosTransactionsMutation = useApiMutation((date: Date) => apiFetch(`/api/sales/pos-history?date=${date.toISOString()}`, { method: 'DELETE' }));
+    const addShippingReceiptMutation = useApiMutation((receipt: Omit<ShippingReceipt, 'id'>) => apiFetch('/api/shipping/receipts', { method: 'POST', body: receipt }));
+    const deleteShippingReceiptMutation = useApiMutation((id: number) => apiFetch(`/api/shipping/receipts/${id}`, { method: 'DELETE' }));
+    const updateShippingReceiptsStatusMutation = useApiMutation((vars: { ids: number[], status: string }) => apiFetch('/api/shipping/receipts/status', { method: 'PUT', body: vars }));
+    const updateShippingReceiptStatusMutation = useApiMutation((vars: { id: number, status: string }) => apiFetch(`/api/shipping/receipts/${vars.id}`, { method: 'PUT', body: { status: vars.status } }));
+    const addPrintedReceiptsMutation = useApiMutation((vars: { date: string, salesChannel: string, shippingChannel: string, count: number }) => apiFetch('/api/shipping/printed-receipts', { method: 'POST', body: vars }));
+    const addResellerMutation = useApiMutation((vars: { name: string, phone?: string, address?: string }) => apiFetch('/api/resellers', { method: 'POST', body: vars }));
+    const editResellerMutation = useApiMutation((vars: { id: number, data: Omit<Reseller, 'id'> }) => apiFetch(`/api/resellers/${vars.id}`, { method: 'PUT', body: vars.data }));
+    const deleteResellerMutation = useApiMutation((id: number) => apiFetch(`/api/resellers/${id}`, { method: 'DELETE' }));
+    const deleteImportHistoryMutation = useApiMutation((id: number) => apiFetch(`/api/products/bulk-add/${id}`, { method: 'DELETE' }), { invalidateQueries: [['bulkImportHistory']] });
+    const addDiscountGroupMutation = useApiMutation((group: any) => apiFetch('/api/finance/discounts', { method: 'POST', body: group }));
+    const editDiscountGroupMutation = useApiMutation((vars: { id: number, group: any }) => apiFetch(`/api/finance/discounts/${vars.id}`, { method: 'PUT', body: vars.group }));
+    const deleteDiscountGroupMutation = useApiMutation((id: number) => apiFetch(`/api/finance/discounts/${id}`, { method: 'DELETE' }));
     
   return (
     <InventoryContext.Provider value={{ 
@@ -226,36 +219,36 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
         pendingTransaction, loadPendingTransaction, clearPendingTransaction, findProductBySku,
         fetchItems: () => queryClient.invalidateQueries({ queryKey: ['inventory'] }),
         // Mutations
-        addItem: (vars: any) => addItem.mutateAsync(vars),
-        bulkAddProducts: (products: any[], fileName: string) => bulkAddProducts.mutateAsync({ products, fileName }),
-        bulkUpdateProducts: (products: any[]) => bulkUpdateProducts.mutateAsync({ products }),
-        updateItem: (itemId: string, itemData: any) => updateItem.mutateAsync({ itemId, itemData }),
-        updateStock: (itemId: string, change: number, reason: string) => updateStock.mutateAsync({ itemId, change, reason }),
-        bulkUpdateVariants: (itemId: string, variants: any[], reason: string) => bulkUpdateVariants.mutateAsync({ itemId, variants, reason }),
-        recordSale: (channel: string, quantity: number, options: any) => recordSale.mutateAsync({ sales: options.sales, options: { ...options, channel } }),
-        recordSaleWithReceipt: (receiptData: any, salesData: any) => recordSaleWithReceipt.mutateAsync({ receipt: receiptData, sales: salesData }),
-        cancelSaleTransaction: (id: string) => cancelSaleTransaction.mutateAsync(id),
-        returnSaleTransaction: (id: string, items?: ReturnedItem[]) => returnSaleTransaction.mutateAsync({ transactionId: id, items }),
-        revertSaleItem: (id: string, sku: string) => revertSaleItem.mutateAsync({ transactionId: id, sku }),
-        addReseller: (name: string, phone?: string, address?: string) => addReseller.mutateAsync({ name, phone, address }),
-        editReseller: (id: number, data: any) => editReseller.mutateAsync({ id, data }),
-        deleteReseller: (id: number) => deleteReseller.mutateAsync(id),
+        addItem: (vars: any) => addItemMutation.mutateAsync(vars),
+        bulkAddProducts: (products: any[], fileName: string) => bulkAddProductsMutation.mutateAsync({ products, fileName }),
+        bulkUpdateProducts: (products: any[]) => bulkUpdateProductsMutation.mutateAsync({ products }),
+        updateItem: (itemId: string, itemData: any) => updateItemMutation.mutateAsync({ itemId, itemData }),
+        bulkUpdateVariants: (itemId: string, variants: any[], reason: string) => bulkUpdateVariantsMutation.mutateAsync({ itemId, variants, reason }),
+        updateStock: (itemId: string, change: number, reason: string) => updateStockMutation.mutateAsync({ itemId, change, reason }),
+        archiveProduct: (itemId: string, isArchived: boolean) => archiveProductMutation.mutateAsync({ itemId, isArchived }),
+        deleteProductPermanently: (id: string) => deleteProductPermanentlyMutation.mutateAsync(id),
+        addAccessory: (accessory: any) => addAccessoryMutation.mutateAsync(accessory),
+        updateAccessory: (accessoryId: string, accessoryData: any) => updateAccessoryMutation.mutateAsync({ accessoryId, accessoryData }),
+        adjustAccessoryStock: (accessoryId: string, change: number, reason: string) => adjustAccessoryStockMutation.mutateAsync({ accessoryId, change, reason }),
+        recordSale: (channel: string, quantity: number, options: any) => recordSaleMutation.mutateAsync({ sales: options.sales, options: { ...options, channel } }),
+        recordSaleWithReceipt: (receiptData: any, salesData: any) => recordSaleWithReceiptMutation.mutateAsync({ receipt: receiptData, sales: salesData }),
+        cancelSaleTransaction: (id: string) => cancelSaleTransactionMutation.mutateAsync(id),
+        returnSaleTransaction: (id: string, items?: ReturnedItem[]) => returnSaleTransactionMutation.mutateAsync({ transactionId: id, items }),
+        revertSaleItem: (id: string, sku: string) => revertSaleItemMutation.mutateAsync({ transactionId: id, sku }),
+        clearPosTransactions: (date: Date) => clearPosTransactionsMutation.mutateAsync(date),
+        addShippingReceipt: (receipt: any) => addShippingReceiptMutation.mutateAsync(receipt),
+        deleteShippingReceipt: (id: number) => deleteShippingReceiptMutation.mutateAsync(id),
+        updateShippingReceiptsStatus: (ids: number[], status: string) => updateShippingReceiptsStatusMutation.mutateAsync({ ids, status }),
+        updateShippingReceiptStatus: (id: number, status: string) => updateShippingReceiptStatusMutation.mutateAsync({ id, status }),
+        addPrintedReceipts: (date: string, salesChannel: string, shippingChannel: string, count: number) => addPrintedReceiptsMutation.mutateAsync({ date, salesChannel, shippingChannel, count }),
+        addReseller: (name: string, phone?: string, address?: string) => addResellerMutation.mutateAsync({ name, phone, address }),
+        editReseller: (id: number, data: any) => editResellerMutation.mutateAsync({ id, data }),
+        deleteReseller: (id: number) => deleteResellerMutation.mutateAsync(id),
         fetchResellers: () => queryClient.invalidateQueries({ queryKey: ['resellers'] }),
-        archiveProduct: (itemId: string, isArchived: boolean) => archiveProduct.mutateAsync({ itemId, isArchived }),
-        deleteProductPermanently: (id: string) => deleteProductPermanently.mutateAsync(id),
-        addAccessory: (accessory: any) => addAccessory.mutateAsync(accessory),
-        updateAccessory: (accessoryId: string, accessoryData: any) => updateAccessory.mutateAsync({ accessoryId, accessoryData }),
-        adjustAccessoryStock: (accessoryId: string, change: number, reason: string) => adjustAccessoryStock.mutateAsync({ accessoryId, change, reason }),
-        addShippingReceipt: (receipt: any) => addShippingReceipt.mutateAsync(receipt),
-        deleteShippingReceipt: (id: number) => deleteShippingReceipt.mutateAsync(id),
-        updateShippingReceiptsStatus: (ids: number[], status: string) => updateShippingReceiptsStatus.mutateAsync({ ids, status }),
-        updateShippingReceiptStatus: (id: number, status: string) => updateShippingReceiptStatus.mutateAsync({ id, status }),
-        addPrintedReceipts: (date: string, salesChannel: string, shippingChannel: string, count: number) => addPrintedReceipts.mutateAsync({ date, salesChannel, shippingChannel, count }),
-        deleteImportHistory: (id: number) => deleteImportHistory.mutateAsync(id),
-        clearPosTransactions: (date: Date) => clearPosTransactions.mutateAsync(date),
-        addDiscountGroup: (group: any) => addDiscountGroup.mutateAsync(group),
-        editDiscountGroup: (id: number, group: any) => editDiscountGroup.mutateAsync({ id, group }),
-        deleteDiscountGroup: (id: number) => deleteDiscountGroup.mutateAsync(id),
+        deleteImportHistory: (id: number) => deleteImportHistoryMutation.mutateAsync(id),
+        addDiscountGroup: (group: any) => addDiscountGroupMutation.mutateAsync(group),
+        editDiscountGroup: (id: number, group: any) => editDiscountGroupMutation.mutateAsync({ id, group }),
+        deleteDiscountGroup: (id: number) => deleteDiscountGroupMutation.mutateAsync(id),
         
         // Functions that don't mutate but fetch data can remain as they are
         getHistory: async (itemId: string) => (inventoryData?.products.find(i => i.id === itemId)?.history || []),
