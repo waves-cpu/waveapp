@@ -2,6 +2,10 @@
 import { fetchSingleItem, editProduct, deleteProductPermanently, archiveProduct } from '@/lib/inventory-service';
 import { NextRequest, NextResponse } from 'next/server';
 
+type RouteParams = {
+  params: Promise<{ id: string }>;
+};
+
 // GET a single product
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   const id = params.id;
@@ -18,26 +22,32 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
 }
 
 // UPDATE a product or accessory
-export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
-    const id = params.id;
-
+export async function PUT(request: NextRequest, { params }: RouteParams) {
     try {
+        const { id } = await params;
+        if (!id) {
+            return NextResponse.json({ message: 'Product ID is required' }, { status: 400 });
+        }
+        
         const body = await request.json();
         
-        // Handle archiving separately if 'isArchived' is in the body
         if (typeof body.isArchived === 'boolean') {
              await archiveProduct(id, body.isArchived);
              return NextResponse.json({ message: 'Product archive status updated' });
         }
 
-        // Handle full product or accessory update
-        await editProduct(id, body); // This service function will handle both
+        await editProduct(id, body);
         return NextResponse.json({ message: 'Item updated successfully' });
+
     } catch (error: any) {
-        console.error(`API Error updating item ${id}:`, error);
-        return NextResponse.json({ message: 'Internal Server Error' }, { status: 500 });
+        console.error(`API Error updating item:`, error);
+        if (error instanceof SyntaxError) {
+            return NextResponse.json({ message: 'Invalid JSON body' }, { status: 400 });
+        }
+        return NextResponse.json({ message: error.message || 'Internal Server Error' }, { status: 500 });
     }
 }
+
 
 // DELETE a product
 export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
