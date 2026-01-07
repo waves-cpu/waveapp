@@ -2,11 +2,16 @@
 import { fetchSingleShippingReceipt, updateShippingReceiptStatus, deleteShippingReceipt } from '@/lib/inventory-service';
 import { NextRequest, NextResponse } from 'next/server';
 
-// GET a single shipping receipt
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
-  const id = parseInt(params.id, 10);
+type RouteParams = {
+  params: Promise<{ id: string }>;
+};
 
+// GET a single shipping receipt
+export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
+    const { id: idStr } = await params;
+    const id = parseInt(idStr, 10);
+    
     if (isNaN(id)) {
         return NextResponse.json({ message: 'Invalid receipt ID' }, { status: 400 });
     }
@@ -21,10 +26,11 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
 }
 
 // UPDATE a shipping receipt (e.g., its status)
-export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
-    const id = parseInt(params.id, 10);
-
+export async function PUT(request: NextRequest, { params }: RouteParams) {
     try {
+        const { id: idStr } = await params;
+        const id = parseInt(idStr, 10);
+
         if (isNaN(id)) {
             return NextResponse.json({ message: 'Invalid receipt ID' }, { status: 400 });
         }
@@ -37,23 +43,27 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
         await updateShippingReceiptStatus(id, status);
         return NextResponse.json({ message: 'Receipt status updated successfully' });
     } catch (error: any) {
-        console.error(`API Error updating receipt ${id}:`, error);
+        console.error(`API Error updating receipt:`, error);
+        if (error instanceof SyntaxError) {
+            return NextResponse.json({ message: 'Invalid JSON body' }, { status: 400 });
+        }
         return NextResponse.json({ message: 'Internal Server Error' }, { status: 500 });
     }
 }
 
 // DELETE a shipping receipt
-export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
-    const id = parseInt(params.id, 10);
-
+export async function DELETE(request: NextRequest, { params }: RouteParams) {
     try {
+        const { id: idStr } = await params;
+        const id = parseInt(idStr, 10);
+
         if (isNaN(id)) {
             return NextResponse.json({ message: 'Invalid receipt ID' }, { status: 400 });
         }
         await deleteShippingReceipt(id);
         return NextResponse.json({ message: 'Receipt deleted successfully' });
     } catch (error) {
-        console.error(`API Error deleting receipt ${id}:`, error);
+        console.error(`API Error deleting receipt:`, error);
         return NextResponse.json({ message: 'Internal Server Error' }, { status: 500 });
     }
 }

@@ -2,16 +2,24 @@
 import { findDiscountGroupByVoucherCode } from '@/lib/inventory-service';
 import { NextRequest, NextResponse } from 'next/server';
 
-export async function GET(request: NextRequest, { params }: { params: { code: string } }) {
-    const { searchParams } = new URL(request.url);
-    const channel = searchParams.get('channel');
-    
-    if (!channel) {
-        return NextResponse.json({ message: 'Channel parameter is required.' }, { status: 400 });
-    }
-    
+type RouteParams = {
+  params: Promise<{ code: string }>;
+};
+
+export async function GET(request: NextRequest, { params }: RouteParams) {
     try {
-        const group = await findDiscountGroupByVoucherCode(params.code, channel);
+        const { code } = await params;
+        const { searchParams } = new URL(request.url);
+        const channel = searchParams.get('channel');
+        
+        if (!code) {
+            return NextResponse.json({ message: 'Voucher code is required' }, { status: 400 });
+        }
+        if (!channel) {
+            return NextResponse.json({ message: 'Channel parameter is required.' }, { status: 400 });
+        }
+        
+        const group = await findDiscountGroupByVoucherCode(code, channel);
         if (group) {
             return NextResponse.json(group);
         }

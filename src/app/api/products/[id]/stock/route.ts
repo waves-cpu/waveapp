@@ -2,11 +2,18 @@
 import { adjustStock, adjustAccessoryStock } from '@/lib/inventory-service';
 import { NextRequest, NextResponse } from 'next/server';
 
-// ADJUST stock for a product/variant or accessory
-export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
-    const id = params.id;
+type RouteParams = {
+  params: Promise<{ id: string }>;
+};
 
+// ADJUST stock for a product/variant or accessory
+export async function POST(request: NextRequest, { params }: RouteParams) {
     try {
+        const { id } = await params;
+        if (!id) {
+            return NextResponse.json({ message: 'Item ID is required' }, { status: 400 });
+        }
+
         const { change, reason, type } = await request.json();
         
         if (typeof change !== 'number' || !reason) {
@@ -22,7 +29,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
         }
 
     } catch (error: any) {
-        console.error(`API Error adjusting stock for item ${id}:`, error);
+        console.error(`API Error adjusting stock:`, error);
         return NextResponse.json({ message: error.message || 'Internal Server Error' }, { status: 500 });
     }
 }

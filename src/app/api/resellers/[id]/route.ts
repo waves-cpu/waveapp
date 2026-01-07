@@ -2,11 +2,16 @@
 import { editReseller, deleteReseller } from '@/lib/inventory-service';
 import { NextRequest, NextResponse } from 'next/server';
 
-// UPDATE a reseller
-export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
-    const id = parseInt(params.id, 10);
+type RouteParams = {
+  params: Promise<{ id: string }>;
+};
 
+// UPDATE a reseller
+export async function PUT(request: NextRequest, { params }: RouteParams) {
     try {
+        const { id: idStr } = await params;
+        const id = parseInt(idStr, 10);
+
         if (isNaN(id)) {
             return NextResponse.json({ message: 'Invalid reseller ID' }, { status: 400 });
         }
@@ -14,7 +19,10 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
         const updatedReseller = await editReseller(id, body);
         return NextResponse.json(updatedReseller);
     } catch (error: any) {
-         if (error.message.includes('UNIQUE constraint failed')) {
+         if (error instanceof SyntaxError) {
+            return NextResponse.json({ message: 'Invalid JSON body' }, { status: 400 });
+        }
+        if (error.message.includes('UNIQUE constraint failed')) {
             return NextResponse.json({ message: 'Reseller with this name already exists.' }, { status: 409 });
         }
         return NextResponse.json({ message: 'Internal Server Error' }, { status: 500 });
@@ -22,10 +30,11 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
 }
 
 // DELETE a reseller
-export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
-    const id = parseInt(params.id, 10);
+export async function DELETE(request: NextRequest, { params }: RouteParams) {
+     try {
+        const { id: idStr } = await params;
+        const id = parseInt(idStr, 10);
 
-    try {
         if (isNaN(id)) {
             return NextResponse.json({ message: 'Invalid reseller ID' }, { status: 400 });
         }

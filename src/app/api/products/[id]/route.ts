@@ -7,16 +7,19 @@ type RouteParams = {
 };
 
 // GET a single product
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
-  const id = params.id;
-
+export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
+    const { id } = await params;
+    if (!id) {
+        return NextResponse.json({ message: 'Product ID is required' }, { status: 400 });
+    }
     const item = await fetchSingleItem(id);
     if (item) {
       return NextResponse.json(item);
     }
     return NextResponse.json({ message: 'Product not found' }, { status: 404 });
   } catch (error) {
+    console.error('API Error fetching product:', error);
     return NextResponse.json({ message: 'Internal Server Error' }, { status: 500 });
   }
 }
@@ -50,10 +53,12 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 
 
 // DELETE a product
-export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
-    const id = params.id;
-
+export async function DELETE(request: NextRequest, { params }: RouteParams) {
     try {
+        const { id } = await params;
+        if (!id) {
+            return NextResponse.json({ message: 'Product ID is required' }, { status: 400 });
+        }
         await deleteProductPermanently(id);
         return NextResponse.json({ message: 'Product deleted permanently' });
     } catch (error: any) {

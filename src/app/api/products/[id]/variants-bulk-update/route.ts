@@ -2,10 +2,17 @@
 import { editVariantsBulk } from '@/lib/inventory-service';
 import { NextRequest, NextResponse } from 'next/server';
 
-export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
-    const productId = params.id;
+type RouteParams = {
+  params: Promise<{ id: string }>;
+};
 
+export async function POST(request: NextRequest, { params }: RouteParams) {
     try {
+        const { id: productId } = await params;
+        if (!productId) {
+            return NextResponse.json({ message: 'Product ID is required' }, { status: 400 });
+        }
+        
         const body = await request.json();
         const { variants, reason } = body;
         
@@ -20,7 +27,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
         }, { status: 200 });
 
     } catch (error: any) {
-        console.error(`API Error bulk updating variants for product ${productId}:`, error);
+        console.error(`API Error bulk updating variants:`, error);
         return NextResponse.json({ message: 'Internal Server Error', error: error.message }, { status: 500 });
     }
 }
