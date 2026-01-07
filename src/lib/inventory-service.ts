@@ -120,6 +120,9 @@ export async function fetchShippingReceipts(options: {
     const { page, limit, salesChannel, channel, dateString, date_range, status, awb } = options;
     const offset = (page - 1) * limit;
 
+    let countQueryStr = `SELECT COUNT(*) as count FROM shipping_receipts`;
+    let dataQueryStr = `SELECT * FROM shipping_receipts`;
+    
     let whereClauses: string[] = [];
     const params: any = {};
 
@@ -127,7 +130,6 @@ export async function fetchShippingReceipts(options: {
         whereClauses.push("LOWER(REPLACE(awb, ' ', '')) LIKE LOWER(REPLACE(@awb, ' ', ''))");
         params.awb = `%${awb}%`;
     }
-
     if (salesChannel) {
         whereClauses.push("salesChannel = @salesChannel");
         params.salesChannel = salesChannel;
@@ -140,13 +142,10 @@ export async function fetchShippingReceipts(options: {
         whereClauses.push("strftime('%Y-%m-%d', date) = @dateString");
         params.dateString = dateString;
     } else if (date_range) {
-        // Use full datetime for more accurate range filtering across timezones
         whereClauses.push("date BETWEEN @startDate AND @endDate");
         params.startDate = date_range.from.toISOString();
         params.endDate = date_range.to.toISOString();
     }
-    
-
     if (status && status.length > 0) {
         const statusPlaceholders = status.map((s, i) => `@status${i}`);
         whereClauses.push(`status IN (${statusPlaceholders.join(',')})`);
@@ -155,18 +154,18 @@ export async function fetchShippingReceipts(options: {
         });
     }
 
-    const whereString = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
-    
-    const countQuery = db.prepare(`SELECT COUNT(*) as count FROM shipping_receipts ${whereString}`);
+    if (whereClauses.length > 0) {
+        const whereString = ` WHERE ${whereClauses.join(' AND ')}`;
+        countQueryStr += whereString;
+        dataQueryStr += whereString;
+    }
+
+    const countQuery = db.prepare(countQueryStr);
     const totalResult = countQuery.get(params) as { count: number };
     const total = totalResult.count;
     
-    const dataQuery = db.prepare(`
-        SELECT * FROM shipping_receipts
-        ${whereString}
-        ORDER BY CASE status WHEN 'Perlu Diproses' THEN 0 ELSE 1 END, date DESC, id DESC
-        LIMIT @limit OFFSET @offset
-    `);
+    dataQueryStr += ` ORDER BY CASE status WHEN 'Perlu Diproses' THEN 0 ELSE 1 END, date DESC, id DESC LIMIT @limit OFFSET @offset`;
+    const dataQuery = db.prepare(dataQueryStr);
     
     const queryParams = { ...params, limit, offset };
     const receipts = dataQuery.all(queryParams) as any[];
@@ -323,27 +322,26 @@ export async function getReceiptCountByStatus(status: string): Promise<Record<st
 
 
 export async function addShippingReceipt(receipt: Omit<ShippingReceipt, 'id'>): Promise<ShippingReceipt> {
-    const existingReceipt = db.prepare('SELECT * FROM shipping_receipts WHERE awb = ?').get(receipt.awb) as ShippingReceipt | undefined;
-    if (existingReceipt) {
-        const formattedDate = formatToWIB(parseISO(existingReceipt.date), 'dd MMM yyyy, HH:mm');
-        throw new Error(`DUPLICATE_AWB::${receipt.awb}::${existingReceipt.date}::${existingReceipt.salesChannel}`);
-    }
-    
     try {
-        const result = db.prepare('INSERT INTO shipping_receipts (awb, date, channel, salesChannel, status, transactionId) VALUES (@awb, @date, @channel, @salesChannel, @status, @transactionId)').run({
-            ...receipt,
-            transactionId: receipt.awb,
-        });
-        const newReceipt = db.prepare('SELECT * FROM shipping_receipts WHERE id = ?').get(result.lastInsertRowid) as ShippingReceipt;
-        return newReceipt;
+        const stmt = db.prepare(`
+            INSERT INTO shipping_receipts (awb, channel, salesChannel, status, date, transactionId)
+            VALUES (?, ?, ?, ?, ?, ?)
+        `);
+        
+        const result = stmt.run(
+            receipt.awb,
+            receipt.channel,
+            receipt.salesChannel,
+            receipt.status,
+            receipt.date,
+            receipt.transactionId
+        );
+
+        return { id: result.lastInsertRowid as number, ...receipt };
     } catch (error: any) {
-        if (error.code === 'SQLITE_CONSTRAINT_UNIQUE') {
-            const conflictingReceipt = db.prepare('SELECT * FROM shipping_receipts WHERE awb = ?').get(receipt.awb) as ShippingReceipt | undefined;
-            if (conflictingReceipt) {
-                 const formattedDate = formatToWIB(parseISO(conflictingReceipt.date), 'dd MMM yyyy, HH:mm');
-                throw new Error(`DUPLICATE_AWB::${receipt.awb}::${formattedDate}::${conflictingReceipt.salesChannel}`);
-            }
-            throw new Error(`DUPLICATE_AWB::${receipt.awb}::unknown::unknown`);
+        // Jika AWB diset UNIQUE di database, tangkap errornya
+        if (error.message.includes('UNIQUE constraint failed')) {
+            throw new Error(`DUPLICATE_AWB::AWB ${receipt.awb} sudah ada di database.`);
         }
         throw error;
     }
@@ -1857,3 +1855,4 @@ export async function checkPrintedReceiptAvailability(salesChannel: string, ship
 
 
     
+
