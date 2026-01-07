@@ -1,4 +1,3 @@
-
 // 1. Definisikan tipe untuk opsi tambahan (misalnya query params)
 interface ApiOptions extends RequestInit {
   params?: Record<string, string | number | boolean>;
@@ -42,7 +41,7 @@ export const apiFetch = async <T = any>(endpoint: string, options: ApiOptions = 
   // C. Auto-detect Content-Type & Stringify Body
   const configHeaders: HeadersInit = {
     'Content-Type': 'application/json',
-    'X-API-Key': process.env.NEXT_PUBLIC_API_KEY || 'secret-api-key-for-waveapp', 
+    'X-API-Key': process.env.NEXT_PUBLIC_API_KEY || '', 
     ...headers,
   };
 
