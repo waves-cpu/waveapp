@@ -1,5 +1,3 @@
-
-
 'use client';
 
 import React, { useState, useMemo, useEffect } from 'react';
@@ -86,10 +84,8 @@ export function PosOrderSummary({ cart, onSaleComplete, clearCart, channel, pend
             }
         }
         
-        // Ensure total discount does not exceed the subtotal after group discounts
-        const totalCalculatedDiscount = groupDiscountCalc + voucherDiscountCalc + manualDiscount;
-        const subtotalAfterGroupDiscount = subtotalCalc - groupDiscountCalc;
-        const finalDiscount = Math.min(totalCalculatedDiscount, subtotalAfterGroupDiscount > 0 ? subtotalAfterGroupDiscount : 0);
+        const totalCalculatedDiscount = isAccessoryOnlyTx ? subtotalCalc : (groupDiscountCalc + voucherDiscountCalc + manualDiscount);
+        const finalDiscount = Math.min(totalCalculatedDiscount, subtotalCalc);
 
         const finalTotalCalc = subtotalCalc - finalDiscount;
 
@@ -100,7 +96,7 @@ export function PosOrderSummary({ cart, onSaleComplete, clearCart, channel, pend
             groupDiscount: groupDiscountCalc,
             voucherDiscount: voucherDiscountCalc 
         };
-    }, [cart, manualDiscount, activeVoucher]);
+    }, [cart, manualDiscount, activeVoucher, isAccessoryOnlyTx]);
 
 
     const change = useMemo(() => cashReceived - finalTotal, [cashReceived, finalTotal]);
@@ -162,7 +158,7 @@ export function PosOrderSummary({ cart, onSaleComplete, clearCart, channel, pend
         setIsSubmitting(true);
         
         const receiptData: ReceiptData = {
-            items: cart.map(item => ({...item, productName: item.productName, originalPrice: item.originalPrice })),
+            items: cart.map(item => ({...item, price: item.price, productName: item.productName, originalPrice: item.originalPrice })),
             subtotal: subtotal,
             discount: totalDiscount,
             total: finalTotal,

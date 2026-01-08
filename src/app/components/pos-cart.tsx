@@ -1,5 +1,3 @@
-
-
 'use client';
 
 import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
@@ -178,13 +176,14 @@ export function PosCart({ onVoucherApplied, activeVoucher }: PosCartProps) {
                 playErrorSound();
                 return;
             }
+            const price = accessory.price || 0;
             itemToAdd = {
                 id: accessory.id,
                 productId: accessory.id,
                 productName: accessory.name,
                 sku: accessory.sku!,
-                price: 0, 
-                originalPrice: 0,
+                price: price, 
+                originalPrice: price,
                 category: accessory.category || 'Aksesoris',
                 quantity: 1,
                 imageUrl: '',
@@ -345,19 +344,12 @@ export function PosCart({ onVoucherApplied, activeVoucher }: PosCartProps) {
     const handleSaleComplete = async (paymentMethod: string, receiptData: ReceiptData, status: 'Completed' | 'Pending' = 'Completed', voucherCode?: string) => {
         
         const { total, subtotal, discount } = receiptData;
-        const totalOriginalPrice = cart.reduce((sum, item) => sum + item.originalPrice * item.quantity, 0);
-        const totalDiscount = totalOriginalPrice - total;
         
         const salesData = cart.map(item => {
-            const itemOriginalTotal = item.originalPrice * item.quantity;
-            const itemProportion = itemOriginalTotal / totalOriginalPrice;
-            const itemDiscount = totalDiscount * itemProportion;
-            const finalPricePerUnit = item.quantity > 0 ? (itemOriginalTotal - itemDiscount) / item.quantity : item.originalPrice;
-            
             return {
                 sku: item.sku,
                 quantity: item.quantity,
-                priceAtSale: finalPricePerUnit,
+                priceAtSale: item.price,
             };
         });
         
