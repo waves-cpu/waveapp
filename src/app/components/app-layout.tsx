@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useMemo } from 'react';
@@ -133,14 +132,6 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                                      </SidebarMenuButton>
                                  </Link>
                               </SidebarMenuItem>
-                             <SidebarMenuItem>
-                                <Link href="/sales/reseller">
-                                    <SidebarMenuButton variant="ghost" size="sm" isActive={isActive('/sales/reseller')}>
-                                        <Users />
-                                        {t.sales.reseller}
-                                    </SidebarMenuButton>
-                                </Link>
-                            </SidebarMenuItem>
                         </SidebarMenu>
                     </CollapsibleContent>
                 </Collapsible>

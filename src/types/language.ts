@@ -1,4 +1,3 @@
-
 export const translations = {
     en: {
         sidebar: {
@@ -21,7 +20,6 @@ export const translations = {
             tiktok: "Tiktok",
             lazada: "Lazada",
             pos: "POS",
-            reseller: "Reseller",
         },
         finance: {
             title: "Finance",
@@ -356,66 +354,6 @@ export const translations = {
             paymentMethod: "Payment Method",
             cash: "Cash"
         },
-        reseller: {
-            printInvoice: "Print Invoice",
-            selectTitle: "Select Reseller",
-            selectDescription: "Select a reseller to start a transaction.",
-            selectOrCreate: "Select or Add Reseller",
-            historyTitle: "Reseller Transaction History",
-            transactionsOnDate: "Transactions on {date}",
-            transactionsDescription: "Showing all transactions from the Reseller channel.",
-            noTransactions: "No Transactions",
-            noTransactionsDesc: "No transactions recorded on the selected date.",
-            history: {
-                time: "Time",
-                reseller: "Reseller",
-                transactionDetails: "Transaction Details",
-                paymentMethod: "Payment Method",
-                total: "Total",
-                actions: "Actions"
-            },
-            dialog: {
-                title: "Select Reseller",
-                description: "Select a reseller from the list below, or add a new one.",
-                addNew: "Add New Reseller",
-                searchPlaceholder: "Search reseller...",
-                table: {
-                    name: "Name",
-                    phone: "Phone Number",
-                    address: "Address",
-                    actions: "Actions",
-                },
-                form: {
-                    addTitle: "Add New Reseller",
-                    addDescription: "Enter the new reseller's details below.",
-                    editTitle: "Edit Reseller",
-                    editDescription: "Change the reseller's details below.",
-                    nameLabel: "Reseller Name",
-                    namePlaceholder: "Name...",
-                    phoneLabel: "Phone No.",
-                    phonePlaceholder: "0812...",
-                    addressLabel: "Address",
-                    addressPlaceholder: "Short address...",
-                    save: "Save Reseller"
-                },
-                deleteDialog: {
-                    title: "Are you sure you want to delete this reseller?",
-                    description: "This action cannot be undone. This will permanently delete the reseller '{name}'.",
-                    confirm: "Yes, Delete"
-                },
-                addedToast: "Reseller Added",
-                addedToastDesc: "Reseller '{name}' has been successfully added.",
-                addErrorToast: "Failed to Add",
-                updatedToast: "Reseller Updated",
-                updatedToastDesc: "Data for '{name}' has been updated.",
-                updateErrorToast: "Failed to Update",
-                deletedToast: "Reseller Deleted",
-                deletedToastDesc: "Reseller '{name}' has been deleted.",
-                deleteErrorToast: "Failed to Delete",
-                notFound: "Reseller not found.",
-                none: "No resellers yet. Add one above."
-            }
-        },
         receipt: {
             shopName: "WaveApp Store",
             thankYou: "Thank you for your purchase!",
@@ -554,7 +492,6 @@ export const translations = {
             tiktok: "Tiktok",
             lazada: "Lazada",
             pos: "POS",
-            reseller: "Reseller",
         },
         finance: {
             title: "Keuangan",
@@ -888,66 +825,6 @@ export const translations = {
             transactionCancelled: "Transaksi Dibatalkan",
             paymentMethod: "Metode Bayar",
             cash: "Tunai",
-        },
-        reseller: {
-            printInvoice: "Cetak Invoice",
-            selectTitle: "Pilih Reseller",
-            selectDescription: "Pilih reseller untuk memulai transaksi.",
-            selectOrCreate: "Pilih atau Tambah Reseller",
-            historyTitle: "Riwayat Transaksi Reseller",
-            transactionsOnDate: "Transaksi pada {date}",
-            transactionsDescription: "Menampilkan semua transaksi dari channel Reseller.",
-            noTransactions: "Tidak Ada Transaksi",
-            noTransactionsDesc: "Tidak ada transaksi yang tercatat pada tanggal yang dipilih.",
-            history: {
-                time: "Waktu",
-                reseller: "Reseller",
-                transactionDetails: "Detail Transaksi",
-                paymentMethod: "Metode Bayar",
-                total: "Total",
-                actions: "Aksi"
-            },
-            dialog: {
-                title: "Pilih Reseller",
-                description: "Pilih reseller dari daftar di bawah, atau tambahkan yang baru.",
-                addNew: "Tambah Reseller Baru",
-                searchPlaceholder: "Cari reseller...",
-                table: {
-                    name: "Nama",
-                    phone: "No. Telepon",
-                    address: "Alamat",
-                    actions: "Aksi",
-                },
-                form: {
-                    addTitle: "Tambah Reseller Baru",
-                    addDescription: "Masukkan detail reseller baru di bawah ini.",
-                    editTitle: "Ubah Reseller",
-                    editDescription: "Ubah detail reseller di bawah ini.",
-                    nameLabel: "Nama Reseller",
-                    namePlaceholder: "Nama...",
-                    phoneLabel: "No. Telepon",
-                    phonePlaceholder: "0812...",
-                    addressLabel: "Alamat",
-                    addressPlaceholder: "Alamat singkat...",
-                    save: "Simpan Reseller"
-                },
-                deleteDialog: {
-                    title: "Anda yakin ingin menghapus reseller ini?",
-                    description: "Tindakan ini tidak dapat diurungkan. Ini akan menghapus reseller '{name}' secara permanen.",
-                    confirm: "Ya, Hapus"
-                },
-                addedToast: "Reseller Ditambahkan",
-                addedToastDesc: "Reseller '{name}' berhasil ditambahkan.",
-                addErrorToast: "Gagal Menambahkan",
-                updatedToast: "Reseller Diperbarui",
-                updatedToastDesc: "Data untuk '{name}' telah diperbarui.",
-                updateErrorToast: "Gagal Memperbarui",
-                deletedToast: "Reseller Dihapus",
-                deletedToastDesc: "Reseller '{name}' telah dihapus.",
-                deleteErrorToast: "Gagal Menghapus",
-                notFound: "Reseller tidak ditemukan.",
-                none: "Belum ada reseller. Tambahkan di atas."
-            }
         },
         receipt: {
             shopName: "WaveApp Store",

@@ -117,13 +117,6 @@ export interface Sale {
   parentImageUrl?: string;
 }
 
-export interface Reseller {
-    id: number;
-    name: string;
-    phone?: string;
-    address?: string;
-}
-
 export interface ShippingReceipt {
     id: number;
     awb: string;
