@@ -7,6 +7,7 @@ import type { User } from '@/types';
 import { useToast } from './use-toast';
 import { apiFetch } from '@/lib/api';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useRouter } from 'next/navigation';
 
 interface AuthContextType {
     isAuthenticated: boolean;
@@ -22,6 +23,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const queryClient = useQueryClient();
+    const router = useRouter();
     const [user, setUser] = useState<User | null>(null);
     const [authLoading, setAuthLoading] = useState(true);
     const { toast } = useToast();
@@ -130,3 +132,4 @@ export const useAuth = () => {
     }
     return context;
 };
+
