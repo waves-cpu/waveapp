@@ -7,7 +7,7 @@ import { SidebarTrigger } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Undo2, Truck, CheckCircle, Package, Search, Send, Ban, History } from 'lucide-react';
+import { Undo2, Truck, CheckCircle, Package, Search, Send, Ban, History, MoreVertical } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { useInventory } from '@/hooks/use-inventory';
 import type { ShippingReceipt, ReturnedItem } from '@/types';
@@ -19,6 +19,23 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ProcessReturnDialog } from '@/app/components/process-return-dialog';
 import { formatToWIB } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Checkbox } from '@/components/ui/checkbox';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const SHIPPING_CHANNEL_OPTIONS = ['Semua Jasa Kirim', 'SPX', 'J&T', 'JNE', 'INSTANT', 'CARGO'];
 
@@ -36,19 +53,26 @@ const getStatusVariant = (status: string) => {
     }
 };
 
-type StatusTab = 'Terproses' |'Siap Kirim' | 'Return' | 'Selesai' | 'Return Selesai' | 'Dibatalkan';
+type StatusTab = 'Terproses' | 'Siap Kirim' | 'Selesai' | 'Return' | 'Return Selesai' | 'Dibatalkan';
 
 const ReceiptTable = ({ 
-    receipts, 
+    receipts,
+    status,
     onAction,
+    onBulkAction,
+    isProcessing,
 }: { 
-    receipts: ShippingReceipt[], 
+    receipts: ShippingReceipt[],
+    status: StatusTab,
     onAction: (receipt: ShippingReceipt, newStatus: string) => void,
+    onBulkAction: (ids: number[], newStatus: string) => void,
+    isProcessing: boolean,
 }) => {
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(25);
     const [searchTerm, setSearchTerm] = useState('');
     const [channelFilter, setChannelFilter] = useState<string | null>(null);
+    const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
 
     const filteredReceipts = useMemo(() => {
         return receipts.filter(r => {
@@ -58,37 +82,76 @@ const ReceiptTable = ({
         });
     }, [receipts, searchTerm, channelFilter]);
 
+    useEffect(() => {
+        setSelectedIds(new Set());
+    }, [searchTerm, channelFilter, currentPage, itemsPerPage]);
+
     const totalPages = Math.ceil(filteredReceipts.length / itemsPerPage);
     const paginatedReceipts = useMemo(() => {
         const startIndex = (currentPage - 1) * itemsPerPage;
         return filteredReceipts.slice(startIndex, startIndex + itemsPerPage);
     }, [filteredReceipts, currentPage, itemsPerPage]);
+    
+    const handleSelectAll = (checked: boolean) => {
+        setSelectedIds(new Set(checked ? paginatedReceipts.map(r => r.id) : []));
+    };
 
+    const handleSelectOne = (id: number, isChecked: boolean) => {
+        const newSelectedIds = new Set(selectedIds);
+        isChecked ? newSelectedIds.add(id) : newSelectedIds.delete(id);
+        setSelectedIds(newSelectedIds);
+    };
+
+    const isAllOnPageSelected = paginatedReceipts.length > 0 && paginatedReceipts.every(r => selectedIds.has(r.id));
+    
     return (
         <div className="space-y-4">
              <div className="flex justify-between items-center">
-                <div className="relative">
-                     <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                    <Input 
-                        placeholder="Cari No. Resi..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="pl-8 h-9"
-                    />
+                <div className="flex items-center gap-2">
+                    <div className="relative">
+                        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                        <Input 
+                            placeholder="Cari No. Resi..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="pl-8 h-9"
+                        />
+                    </div>
+                    <Select value={channelFilter || 'all'} onValueChange={v => setChannelFilter(v === 'all' ? null : v)}>
+                        <SelectTrigger className="w-[200px] h-9">
+                            <SelectValue placeholder="Filter Jasa Kirim" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">Semua Jasa Kirim</SelectItem>
+                            {SHIPPING_CHANNEL_OPTIONS.slice(1).map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
                 </div>
-                <Select value={channelFilter || 'all'} onValueChange={v => setChannelFilter(v === 'all' ? null : v)}>
-                    <SelectTrigger className="w-[200px] h-9">
-                        <SelectValue placeholder="Filter Jasa Kirim" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="all">Semua Jasa Kirim</SelectItem>
-                        {SHIPPING_CHANNEL_OPTIONS.slice(1).map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
-                    </SelectContent>
-                </Select>
+                <div className="flex items-center gap-2">
+                     {selectedIds.size > 0 && status === 'Terproses' && (
+                        <Button size="sm" onClick={() => onBulkAction(Array.from(selectedIds), 'Siap Kirim')} disabled={isProcessing}>
+                            <Send className="mr-2 h-4 w-4" />
+                            {isProcessing ? 'Memproses...' : `Proses Kirim (${selectedIds.size})`}
+                        </Button>
+                     )}
+                     {selectedIds.size > 0 && status === 'Siap Kirim' && (
+                        <>
+                            <Button size="sm" onClick={() => onBulkAction(Array.from(selectedIds), 'Selesai')} disabled={isProcessing}>
+                                <CheckCircle className="mr-2 h-4 w-4" />
+                                {isProcessing ? 'Memproses...' : `Tandai Selesai (${selectedIds.size})`}
+                            </Button>
+                            <Button size="sm" variant="destructive" onClick={() => onBulkAction(Array.from(selectedIds), 'Dibatalkan')} disabled={isProcessing}>
+                                <Ban className="mr-2 h-4 w-4" />
+                                {isProcessing ? 'Memproses...' : `Batalkan (${selectedIds.size})`}
+                            </Button>
+                        </>
+                     )}
+                </div>
             </div>
             <Table>
                 <TableHeader>
                     <TableRow>
+                         <TableHead className="w-12"><Checkbox checked={isAllOnPageSelected} onCheckedChange={handleSelectAll} /></TableHead>
                         <TableHead>No. Resi</TableHead>
                         <TableHead>Tanggal</TableHead>
                         <TableHead>Kanal</TableHead>
@@ -98,41 +161,48 @@ const ReceiptTable = ({
                 </TableHeader>
                 <TableBody>
                     {paginatedReceipts.length > 0 ? paginatedReceipts.map(receipt => (
-                        <TableRow key={receipt.id}>
+                        <TableRow key={receipt.id} data-state={selectedIds.has(receipt.id) && 'selected'}>
+                             <TableCell><Checkbox checked={selectedIds.has(receipt.id)} onCheckedChange={(c) => handleSelectOne(receipt.id, !!c)} /></TableCell>
                             <TableCell className="font-medium">{receipt.awb}</TableCell>
                             <TableCell>{formatToWIB(parseISO(receipt.date), 'dd MMM yyyy')}</TableCell>
                             <TableCell>{receipt.channel}</TableCell>
                             <TableCell><Badge variant={getStatusVariant(receipt.status)}>{receipt.status}</Badge></TableCell>
-                            <TableCell className="text-right space-x-2">
-                                {receipt.status === 'Terproses' && (
-                                     <Button size="sm" variant="outline" onClick={() => onAction(receipt, 'Siap Kirim')}>
-                                        <Send className="mr-2 h-4 w-4 text-blue-500" />
-                                        Tandai Siap Kirim
-                                    </Button>
-                                )}
-                                {receipt.status === 'Siap Kirim' && (
-                                    <>
-                                        <Button size="sm" variant="outline" onClick={() => onAction(receipt, 'Dibatalkan')}>
-                                            <Ban className="mr-2 h-4 w-4 text-destructive" />
-                                            Batalkan
-                                        </Button>
-                                        <Button size="sm" variant="outline" onClick={() => onAction(receipt, 'Selesai')}>
-                                            <CheckCircle className="mr-2 h-4 w-4 text-green-500" />
-                                            Tandai Selesai
-                                        </Button>
-                                    </>
-                                )}
-                                {receipt.status === 'Return' && (
-                                    <Button size="sm" variant="outline" onClick={() => onAction(receipt, 'Return Selesai')}>
-                                        <Package className="mr-2 h-4 w-4" />
-                                        Proses Barang
-                                    </Button>
-                                )}
+                            <TableCell className="text-right">
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <Button variant="ghost" size="icon" className="h-8 w-8"><MoreVertical className="h-4 w-4" /></Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                        {receipt.status === 'Terproses' && <DropdownMenuItem onClick={() => onAction(receipt, 'Siap Kirim')}><Send className="mr-2 h-4 w-4" /> Tandai Siap Kirim</DropdownMenuItem>}
+                                        {receipt.status === 'Siap Kirim' && (
+                                            <>
+                                                <DropdownMenuItem onClick={() => onAction(receipt, 'Selesai')}><CheckCircle className="mr-2 h-4 w-4" /> Tandai Selesai</DropdownMenuItem>
+                                                <DropdownMenuItem onClick={() => onAction(receipt, 'Dibatalkan')} className="text-destructive"><Ban className="mr-2 h-4 w-4" /> Batalkan</DropdownMenuItem>
+                                            </>
+                                        )}
+                                        {receipt.status === 'Return' && <DropdownMenuItem onClick={() => onAction(receipt, 'Return Selesai')}><Package className="mr-2 h-4 w-4" /> Proses Barang Return</DropdownMenuItem>}
+                                         <AlertDialog>
+                                            <AlertDialogTrigger asChild>
+                                                <DropdownMenuItem onSelect={e => e.preventDefault()} className="text-destructive"><Trash2 className="mr-2 h-4 w-4" /> Hapus</DropdownMenuItem>
+                                            </AlertDialogTrigger>
+                                            <AlertDialogContent>
+                                                <AlertDialogHeader>
+                                                    <AlertDialogTitle>Hapus Resi Ini?</AlertDialogTitle>
+                                                    <AlertDialogDescription>Aksi ini akan menghapus resi secara permanen. Pertimbangkan untuk membatalkan jika ingin stok kembali.</AlertDialogDescription>
+                                                </AlertDialogHeader>
+                                                <AlertDialogFooter>
+                                                    <AlertDialogCancel>Batal</AlertDialogCancel>
+                                                    <AlertDialogAction onClick={() => onAction(receipt, 'Delete')} className="bg-destructive hover:bg-destructive/90">Ya, Hapus</AlertDialogAction>
+                                                </AlertDialogFooter>
+                                            </AlertDialogContent>
+                                        </AlertDialog>
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
                             </TableCell>
                         </TableRow>
                     )) : (
                         <TableRow>
-                            <TableCell colSpan={5} className="h-24 text-center">
+                            <TableCell colSpan={6} className="h-24 text-center">
                                 Tidak ada resi dengan status ini.
                             </TableCell>
                         </TableRow>
@@ -153,13 +223,21 @@ const ReceiptTable = ({
 };
 
 export default function ManageReceiptsPage() {
-    const { allShippingReceipts, updateShippingReceiptStatus, returnSaleTransaction, loading } = useInventory();
+    const { allShippingReceipts, updateShippingReceiptStatus, updateShippingReceiptsStatus, deleteShippingReceipt, returnSaleTransaction, loading } = useInventory();
     const { toast } = useToast();
     const [receiptToProcess, setReceiptToProcess] = useState<ShippingReceipt | null>(null);
+    const [isProcessing, setIsProcessing] = useState(false);
 
     const handleAction = useCallback(async (receipt: ShippingReceipt, newStatus: string) => {
         if (newStatus === 'Return Selesai') {
             setReceiptToProcess(receipt);
+        } else if (newStatus === 'Delete') {
+             try {
+                await deleteShippingReceipt(receipt.id);
+                toast({ title: 'Resi Dihapus', description: `Resi ${receipt.awb} telah dihapus.` });
+            } catch (error) {
+                toast({ variant: 'destructive', title: 'Gagal Menghapus' });
+            }
         } else {
             try {
                 await updateShippingReceiptStatus(receipt.id, newStatus);
@@ -168,7 +246,20 @@ export default function ManageReceiptsPage() {
                 toast({ variant: 'destructive', title: 'Gagal Memperbarui Status' });
             }
         }
-    }, [updateShippingReceiptStatus, toast]);
+    }, [updateShippingReceiptStatus, deleteShippingReceipt, toast]);
+    
+    const handleBulkAction = useCallback(async (ids: number[], newStatus: string) => {
+        setIsProcessing(true);
+        const toastRef = toast({ title: 'Memproses...', description: `Memproses ${ids.length} resi...` });
+        try {
+          await updateShippingReceiptsStatus(ids, newStatus);
+          toastRef.update({ id: toastRef.id, title: 'Berhasil', description: `Status untuk ${ids.length} resi berhasil diubah.` });
+        } catch (error) {
+          toastRef.update({ id: toastRef.id, title: 'Gagal', description: 'Terjadi kesalahan saat memperbarui status.', variant: 'destructive' });
+        } finally {
+          setIsProcessing(false);
+        }
+    }, [updateShippingReceiptsStatus, toast]);
 
     const handleProcessReturn = async (transactionId: string, items: ReturnedItem[]) => {
         if (!receiptToProcess) return;
@@ -187,8 +278,8 @@ export default function ManageReceiptsPage() {
         const groups: Record<StatusTab, ShippingReceipt[]> = {
             'Terproses': [],
             'Siap Kirim': [],
-            'Return': [],
             'Selesai': [],
+            'Return': [],
             'Return Selesai': [],
             'Dibatalkan': []
         };
@@ -243,9 +334,12 @@ export default function ManageReceiptsPage() {
                     </TabsList>
                     {tabs.map(tab => (
                         <TabsContent key={tab.status} value={tab.status} className="mt-6">
-                            <ReceiptTable 
-                                receipts={groupedReceipts[tab.status]} 
+                             <ReceiptTable 
+                                receipts={groupedReceipts[tab.status]}
+                                status={tab.status}
                                 onAction={handleAction}
+                                onBulkAction={handleBulkAction}
+                                isProcessing={isProcessing}
                             />
                         </TabsContent>
                     ))}
