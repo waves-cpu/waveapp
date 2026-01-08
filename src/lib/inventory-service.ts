@@ -907,7 +907,11 @@ export async function performSale(
     
     const transaction = db.transaction(() => {
         const results: { newSale: Sale, updatedItem?: InventoryItem, updatedAccessory?: Accessory }[] = [];
-        
+        const isAccessoryOnlyTx = sales.every(sale => {
+            const accessory = getAccessoryStmt.get(sale.sku);
+            return !!accessory;
+        });
+
         if (saleOptions.transactionId && saleOptions.transactionId.startsWith('trans-')) {
             const existingSales = db.prepare('SELECT * FROM sales WHERE transactionId = ? AND status = ?').all(saleOptions.transactionId, 'Pending') as Sale[];
             if (existingSales.length > 0) {
@@ -925,10 +929,16 @@ export async function performSale(
         sales.forEach(sale => {
             const saleDate = new Date();
             const saleDateString = formatToWIB(saleDate, "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
-            const saleReason = `Sale (${channel})` + (saleOptions?.resellerName ? ` - ${saleOptions.resellerName}` : '');
+            
+            let saleReason: string;
+            if (isAccessoryOnlyTx) {
+                saleReason = `Pemakaian Aksesoris (POS)`;
+            } else {
+                saleReason = `Sale (${channel})` + (saleOptions?.resellerName ? ` - ${saleOptions.resellerName}` : '');
+            }
 
             let cogsAtSale: number | undefined;
-            let saleStatus = saleOptions?.status || 'Completed';
+            let saleStatus = isAccessoryOnlyTx ? 'Pemakaian Aksesoris' : (saleOptions?.status || 'Completed');
             let parentProduct: InventoryItem | Accessory | undefined;
             let productId: number | null = null;
             let variantId: number | null = null;
@@ -1347,7 +1357,7 @@ export async function cancelSaleTransaction(transactionId: string) {
         salesToUpdate.forEach(sale => {
              const reason = `Cancelled Sale: ${sale.transactionId || `ID ${sale.id}`}`;
             // Only revert stock if the sale was in a state that deducted stock
-            if (sale.status && ['Completed', 'Siap Kirim', 'Terproses', 'Diantar'].includes(sale.status)) {
+            if (sale.status && ['Completed', 'Siap Kirim', 'Terproses', 'Diantar', 'Pemakaian Aksesoris'].includes(sale.status)) {
                 if (sale.variantId) {
                     adjustStock(sale.variantId.toString(), sale.quantity, reason);
                 } else if (sale.productId) {
@@ -1938,5 +1948,6 @@ export async function getVoucherUsageAnalytics(groupId: number) {
     
 
     
+
 
 
