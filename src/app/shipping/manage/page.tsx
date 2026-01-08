@@ -277,7 +277,7 @@ export default function ManageReceiptsPage() {
             await returnSaleTransaction(transactionId, items);
             
             const finalStatus = receiptToProcess.status === 'Dibatalkan' ? 'Selesai' : 'Return Selesai';
-            await handleChangeStatus(receiptToProcess.id, finalStatus);
+            await updateShippingReceiptStatus(receiptToProcess.id, finalStatus);
 
             toast({ title: 'Return Diproses', description: `Stok untuk transaksi ${transactionId} telah dikembalikan.` });
             setReceiptToProcess(null); // Close dialog
@@ -292,6 +292,8 @@ export default function ManageReceiptsPage() {
         try {
             await cancelSaleTransaction(transactionId);
             toast({ title: 'Transaksi Dibatalkan', description: `Stok untuk transaksi ${transactionId} telah dikembalikan.` });
+            // After cancelling sale, update the receipt status
+            await updateShippingReceiptStatus(receiptToCancel.id, 'Dibatalkan');
         } catch (error) {
             toast({ variant: 'destructive', title: 'Gagal Membatalkan', description: error instanceof Error ? error.message : 'Terjadi kesalahan.' });
             throw error;
@@ -401,12 +403,12 @@ export default function ManageReceiptsPage() {
 
                 <Tabs defaultValue="Terproses" className="w-full">
                     <div className="border-b">
-                         <TabsList className="h-auto p-0 bg-transparent flex items-center gap-2 overflow-x-auto no-scrollbar pb-2">
+                         <TabsList className="h-auto p-0 bg-transparent">
                             {tabs.map(tab => (
                                 <TabsTrigger 
                                     key={tab.status} 
                                     value={tab.status} 
-                                    className="whitespace-nowrap px-4 py-2 text-sm text-muted-foreground data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none"
+                                    className="whitespace-nowrap px-3 py-2 text-sm font-medium rounded-t-md data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-none rounded-b-none border-b-2 border-transparent data-[state=active]:border-primary"
                                 >
                                     <tab.icon className="mr-2 h-4 w-4" />
                                     {tab.status}
@@ -447,4 +449,6 @@ export default function ManageReceiptsPage() {
     
 
     
+
+
 
