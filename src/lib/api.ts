@@ -30,8 +30,8 @@ export const apiFetch = async <T = any>(endpoint: string, options: ApiOptions = 
   const url = new URL(endpoint, BASE_URL || (typeof window !== 'undefined' ? window.location.origin : ''));
   if (params) {
     Object.entries(params).forEach(([key, value]) => {
-      // Perbaikan di sini: jangan tambahkan parameter jika nilainya undefined atau null
-      if (value !== undefined && value !== null) {
+      // Perbaikan: jangan tambahkan parameter jika nilainya undefined, null, atau string 'undefined'
+      if (value !== undefined && value !== null && value !== 'undefined') {
         url.searchParams.append(key, String(value));
       }
     });
@@ -100,3 +100,5 @@ export const apiFetch = async <T = any>(endpoint: string, options: ApiOptions = 
     throw new ApiError(error.message || 'Network error', 500, null);
   }
 };
+
+    

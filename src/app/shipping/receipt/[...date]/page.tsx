@@ -184,6 +184,7 @@ export default function ReceiptPage() {
     const fetchAllCounts = useCallback(async () => {
         setCountsLoading(true);
         const dateString = currentDate ? formatToWIB(currentDate, 'yyyy-MM-dd') : undefined;
+        
         try {
             const fetchParams: { dateString?: string; shippingChannel?: string } = {};
             if (dateString) {
@@ -418,3 +419,5 @@ export default function ReceiptPage() {
         </>
     );
 }
+
+    
