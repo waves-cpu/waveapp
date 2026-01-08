@@ -7,7 +7,7 @@ import { SidebarTrigger } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Undo2, Truck, CheckCircle, Package, Search, Send } from 'lucide-react';
+import { Undo2, Truck, CheckCircle, Package, Search, Send, Ban, History } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { useInventory } from '@/hooks/use-inventory';
 import type { ShippingReceipt, ReturnedItem } from '@/types';
@@ -29,19 +29,14 @@ const getStatusVariant = (status: string) => {
         case 'siap kirim': return 'secondary';
         case 'terproses': return 'secondary';
         case 'diantar': return 'secondary';
-        case 'return': return 'destructive';
+        case 'return':
+        case 'dibatalkan':
+        case 'tidak sampai': return 'destructive';
         default: return 'outline';
     }
 };
 
-const statusIcons: { [key: string]: React.ElementType } = {
-    'Terproses': Truck,
-    'Siap Kirim': Truck,
-    'Selesai': CheckCircle,
-    'Return': Undo2,
-};
-
-type StatusTab = 'Terproses' |'Siap Kirim' | 'Return' | 'Selesai';
+type StatusTab = 'Terproses' |'Siap Kirim' | 'Return' | 'Selesai' | 'Return Selesai' | 'Dibatalkan';
 
 const ReceiptTable = ({ 
     receipts, 
@@ -187,7 +182,9 @@ export default function ManageReceiptsPage() {
             'Terproses': [],
             'Siap Kirim': [],
             'Return': [],
-            'Selesai': []
+            'Selesai': [],
+            'Return Selesai': [],
+            'Dibatalkan': []
         };
         allShippingReceipts.forEach(r => {
             if (r.status in groups) {
@@ -200,8 +197,10 @@ export default function ManageReceiptsPage() {
     const tabs: { status: StatusTab, icon: React.ElementType }[] = [
         { status: 'Terproses', icon: Truck },
         { status: 'Siap Kirim', icon: Truck },
-        { status: 'Return', icon: Undo2 },
         { status: 'Selesai', icon: CheckCircle },
+        { status: 'Return', icon: Undo2 },
+        { status: 'Return Selesai', icon: History },
+        { status: 'Dibatalkan', icon: Ban },
     ];
 
     if (loading) {
@@ -227,7 +226,7 @@ export default function ManageReceiptsPage() {
                 </div>
 
                 <Tabs defaultValue="Terproses" className="w-full">
-                    <TabsList className="grid w-full grid-cols-4">
+                    <TabsList className="grid w-full grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
                         {tabs.map(tab => (
                             <TabsTrigger key={tab.status} value={tab.status}>
                                 <tab.icon className="mr-2 h-4 w-4" />
