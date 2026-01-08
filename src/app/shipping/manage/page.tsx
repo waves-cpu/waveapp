@@ -277,7 +277,7 @@ export default function ManageReceiptsPage() {
             await returnSaleTransaction(transactionId, items);
             
             const finalStatus = receiptToProcess.status === 'Dibatalkan' ? 'Selesai' : 'Return Selesai';
-            await updateShippingReceiptStatus(receiptToProcess.id, finalStatus);
+            await handleChangeStatus(receiptToProcess.id, finalStatus);
 
             toast({ title: 'Return Diproses', description: `Stok untuk transaksi ${transactionId} telah dikembalikan.` });
             setReceiptToProcess(null); // Close dialog
@@ -447,3 +447,4 @@ export default function ManageReceiptsPage() {
     
 
     
+
