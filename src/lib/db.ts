@@ -241,6 +241,19 @@ const runMigrations = () => {
             console.error(`Failed to add column ${columnName} to ${tableName}:`, error);
         }
     };
+
+    // Emergency migration for admin password
+    try {
+        const adminUser = db.prepare('SELECT password FROM users WHERE username = ?').get('admin') as { password?: string };
+        if (adminUser && adminUser.password && !adminUser.password.startsWith('$2a$')) {
+            console.log("Old admin password detected. Hashing...");
+            const hashed = bcrypt.hashSync(adminUser.password, 10);
+            db.prepare('UPDATE users SET password = ? WHERE username = ?').run(hashed, 'admin');
+            console.log("Admin password has been securely updated.");
+        }
+    } catch (e) {
+         // This might fail if the users table doesn't exist yet, which is fine.
+    }
     
     try {
         db.exec(`
