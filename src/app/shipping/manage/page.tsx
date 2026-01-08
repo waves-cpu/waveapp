@@ -11,7 +11,7 @@ import { Undo2, Truck, CheckCircle, Package, Search, Send, Ban, History, MoreVer
 import { Badge } from '@/components/ui/badge';
 import { useInventory } from '@/hooks/use-inventory';
 import type { ShippingReceipt, ReturnedItem } from '@/types';
-import { parseISO, startOfMonth, endOfMonth, isWithinInterval, startOfDay, endOfDay, subMonths } from 'date-fns';
+import { parseISO, startOfMonth, endOfMonth, isWithinInterval, startOfDay, endOfDay, subDays, startOfYear, endOfYear } from 'date-fns';
 import { id as localeId } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
 import { Pagination } from '@/components/ui/pagination';
@@ -217,19 +217,19 @@ export default function ManageReceiptsPage() {
     const [receiptToProcess, setReceiptToProcess] = useState<ShippingReceipt | null>(null);
     const [isProcessing, setIsProcessing] = useState(false);
     
-    const [dateRange, setDateRange] = useState<DateRange | undefined>({
+    const [date, setDate] = useState<DateRange | undefined>({
         from: startOfMonth(new Date()),
         to: endOfMonth(new Date()),
     });
 
     const filteredReceipts = useMemo(() => {
         return allShippingReceipts.filter(receipt => {
-            if (!dateRange || !dateRange.from) return true;
+            if (!date || !date.from) return true;
             const receiptDate = parseISO(receipt.date);
-            const toDate = dateRange.to || dateRange.from;
-            return isWithinInterval(receiptDate, { start: startOfDay(dateRange.from), end: endOfDay(toDate) });
+            const toDate = date.to || date.from;
+            return isWithinInterval(receiptDate, { start: startOfDay(date.from), end: endOfDay(toDate) });
         });
-    }, [allShippingReceipts, dateRange]);
+    }, [allShippingReceipts, date]);
 
 
     const handleAction = useCallback(async (receipt: ShippingReceipt, newStatus: string) => {
@@ -306,6 +306,14 @@ export default function ManageReceiptsPage() {
         { status: 'Return Selesai', icon: History },
         { status: 'Dibatalkan', icon: Ban },
     ];
+    
+    const datePresets = [
+        { label: "Hari Ini", range: { from: new Date(), to: new Date() } },
+        { label: "Kemarin", range: { from: subDays(new Date(), 1), to: subDays(new Date(), 1) } },
+        { label: "Bulan Ini", range: { from: startOfMonth(new Date()), to: endOfMonth(new Date()) } },
+        { label: "Bulan Lalu", range: { from: startOfMonth(subMonths(new Date(), 1)), to: endOfMonth(subMonths(new Date(), 1)) } },
+        { label: "Tahun Ini", range: { from: startOfYear(new Date()), to: endOfYear(new Date()) } },
+    ];
 
     if (loading) {
         return (
@@ -329,44 +337,47 @@ export default function ManageReceiptsPage() {
                         <SidebarTrigger className="md:hidden" />
                         <h1 className="text-lg font-bold">Kelola Status Resi</h1>
                     </div>
-                    <div className="flex items-center gap-2">
-                        <Popover>
-                            <PopoverTrigger asChild>
-                                <Button
-                                    id="date"
-                                    variant={"outline"}
-                                    className={cn(
-                                        "w-[260px] justify-start text-left font-normal h-9",
-                                        !dateRange && "text-muted-foreground"
-                                    )}
-                                >
-                                    <CalendarIcon className="mr-2 h-4 w-4" />
-                                    {dateRange?.from ? (
-                                        dateRange.to ? (
-                                            <>
-                                                {formatToWIB(dateRange.from, "LLL dd, y")} -{" "}
-                                                {formatToWIB(dateRange.to, "LLL dd, y")}
-                                            </>
-                                        ) : (
-                                            formatToWIB(dateRange.from, "LLL dd, y")
-                                        )
+                     <Popover>
+                        <PopoverTrigger asChild>
+                            <Button
+                                id="date"
+                                variant={"outline"}
+                                className={cn(
+                                    "w-[260px] justify-start text-left font-normal h-9",
+                                    !date && "text-muted-foreground"
+                                )}
+                            >
+                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                {date?.from ? (
+                                    date.to ? (
+                                        <>
+                                            {formatToWIB(date.from, "LLL dd, y")} -{" "}
+                                            {formatToWIB(date.to, "LLL dd, y")}
+                                        </>
                                     ) : (
-                                        <span>Pilih rentang tanggal</span>
-                                    )}
-                                </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0" align="end">
-                                <Calendar
-                                    initialFocus
-                                    mode="range"
-                                    defaultMonth={dateRange?.from}
-                                    selected={dateRange}
-                                    onSelect={setDateRange}
-                                    numberOfMonths={2}
-                                />
-                            </PopoverContent>
-                        </Popover>
-                    </div>
+                                        formatToWIB(date.from, "LLL dd, y")
+                                    )
+                                ) : (
+                                    <span>Pilih rentang tanggal</span>
+                                )}
+                            </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="flex w-auto flex-col gap-y-2 p-2" align="end">
+                            <div className="grid grid-cols-2 gap-2">
+                                {datePresets.map(preset => (
+                                    <Button key={preset.label} variant="ghost" onClick={() => setDate(preset.range)}>{preset.label}</Button>
+                                ))}
+                            </div>
+                            <Calendar
+                                initialFocus
+                                mode="range"
+                                defaultMonth={date?.from}
+                                selected={date}
+                                onSelect={setDate}
+                                numberOfMonths={2}
+                            />
+                        </PopoverContent>
+                    </Popover>
                 </div>
 
                 <Tabs defaultValue="Terproses" className="w-full">
@@ -401,3 +412,4 @@ export default function ManageReceiptsPage() {
         </AppLayout>
     );
 }
+
