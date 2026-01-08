@@ -158,14 +158,6 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                     <CollapsibleContent>
                        <SidebarMenu className="ml-4 mt-2 border-l border-muted-foreground/20 pl-4 mb-4">
                            <SidebarMenuItem>
-                              <Link href="/shipping/receipt">
-                                  <SidebarMenuButton variant="ghost" size="sm" isActive={isActive('/shipping/receipt')}>
-                                      <Receipt />
-                                      {t.shipping.receipt}
-                                  </SidebarMenuButton>
-                              </Link>
-                          </SidebarMenuItem>
-                           <SidebarMenuItem>
                               <Link href="/shipping/manage">
                                   <SidebarMenuButton variant="ghost" size="sm" isActive={isActive('/shipping/manage')}>
                                       <Settings2 />
