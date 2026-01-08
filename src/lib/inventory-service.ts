@@ -62,7 +62,7 @@ export async function addBulkImportHistory(history: Omit<BulkImportHistory, 'id'
 }
 
 
-export async function updateBulkImportHistory(id: number, data: Partial<Omit<BulkImportHistory, 'id'>>) {
+export async function updateBulkImportHistory(id: number, data: Partial<Omit<BulkImportHistory, 'id'>>>) {
     let fields = '';
     const params: any = { id };
     if (data.status) { fields += 'status = @status, '; params.status = data.status; }
@@ -140,7 +140,7 @@ export async function fetchShippingReceipts(options: {
         params.channel = channel;
     }
     if (dateString) {
-        whereClauses.push("strftime('%Y-%m-%d', date) = @dateString");
+        whereClauses.push("date(date, 'localtime') = @dateString");
         params.dateString = dateString;
     } else if (date_range) {
         whereClauses.push("date BETWEEN @startDate AND @endDate");
@@ -203,6 +203,8 @@ export async function fetchShippingReceiptCounts(filters: {
     shippingChannel?: string;
     status?: string | string[];
 }): Promise<{
+    pendingToday: number;
+    pendingBefore: number;
     salesChannels: Record<string, Record<string, number>>;
     shippingChannels: Record<string, number>;
     statuses: Record<string, number>;
@@ -215,12 +217,24 @@ export async function fetchShippingReceiptCounts(filters: {
     if (typeof status === 'string') {
         status = [status];
     }
+    
+    let pendingToday = 0;
+    let pendingBefore = 0;
+
+    if (dateString) {
+        const pendingTodayResult = db.prepare("SELECT COUNT(*) as count FROM shipping_receipts WHERE status = 'Terproses' AND date(date, 'localtime') = ?").get(dateString) as { count: number };
+        pendingToday = pendingTodayResult.count;
+
+        const pendingBeforeResult = db.prepare("SELECT COUNT(*) as count FROM shipping_receipts WHERE status = 'Terproses' AND date(date, 'localtime') < ?").get(dateString) as { count: number };
+        pendingBefore = pendingBeforeResult.count;
+    }
+
 
     const buildCounts = (groupBy: string, extraGroupBy?: string) => {
         const where: string[] = [];
         const params: any[] = [];
         
-        if (dateString) { where.push(`strftime('%Y-%m-%d', date) = ?`); params.push(dateString); }
+        if (dateString) { where.push(`date(date, 'localtime') = ?`); params.push(dateString); }
         if (salesChannel) { where.push('salesChannel = ?'); params.push(salesChannel); }
         if (shippingChannel) { where.push('channel = ?'); params.push(shippingChannel); }
         
@@ -271,7 +285,7 @@ export async function fetchShippingReceiptCounts(filters: {
         const params: any[] = [];
         
         if (dateString) { 
-            where.push(`strftime('%Y-%m-%d', date) = ?`); 
+            where.push(`date(date, 'localtime') = ?`); 
             params.push(dateString); 
         }
         
@@ -297,6 +311,8 @@ export async function fetchShippingReceiptCounts(filters: {
 
 
     return {
+        pendingToday,
+        pendingBefore,
         salesChannels: buildCounts('salesChannel', 'channel') as Record<string, Record<string, number>>,
         shippingChannels: buildCounts('channel') as Record<string, number>,
         statuses: buildCounts('status') as Record<string, number>,
@@ -366,17 +382,17 @@ export async function updateShippingReceiptStatus(id: number, status: string) {
 
 
 export async function fetchInventoryData() {
-    const fetchedItems = db.prepare("SELECT * FROM products").all();
-    const fetchedAccessories = db.prepare('SELECT * FROM accessories').all();
-    const fetchedVariants = db.prepare('SELECT * FROM variants').all();
-    const fetchedHistory = db.prepare('SELECT * FROM history ORDER BY date DESC').all();
-    const fetchedAccessoryHistory = db.prepare('SELECT * FROM accessory_history ORDER BY date DESC').all();
+    const fetchedItems = db.prepare("SELECT * FROM products").all() as any[];
+    const fetchedAccessories = db.prepare('SELECT * FROM accessories').all() as any[];
+    const fetchedVariants = db.prepare('SELECT * FROM variants').all() as any[];
+    const fetchedHistory = db.prepare('SELECT * FROM history ORDER BY date DESC').all() as any[];
+    const fetchedAccessoryHistory = db.prepare('SELECT * FROM accessory_history ORDER BY date DESC').all() as any[];
     const fetchedChannelPrices = db.prepare('SELECT * FROM channel_prices').all() as any[];
     const fetchedDiscountGroups = db.prepare("SELECT * FROM discount_groups").all() as any[];
     const fetchedDiscountedProducts = db.prepare("SELECT * FROM discounted_products").all() as any[];
 
     const historyMap = new Map<string, AdjustmentHistory[]>();
-    for (const entry of fetchedHistory as any[]) {
+    for (const entry of fetchedHistory) {
         const key = entry.variantId ? entry.variantId.toString() : entry.productId.toString();
         if (!historyMap.has(key)) {
             historyMap.set(key, []);
@@ -389,7 +405,7 @@ export async function fetchInventoryData() {
     }
 
     const accessoryHistoryMap = new Map<string, AdjustmentHistory[]>();
-     for (const entry of fetchedAccessoryHistory as any[]) {
+     for (const entry of fetchedAccessoryHistory) {
         const key = entry.accessoryId.toString();
         if (!accessoryHistoryMap.has(key)) {
             accessoryHistoryMap.set(key, []);
@@ -418,7 +434,7 @@ export async function fetchInventoryData() {
     }
 
     const variantMap = new Map<string, InventoryItemVariant[]>();
-    for (const variant of fetchedVariants as any[]) {
+    for (const variant of fetchedVariants) {
         const productIdStr = variant.productId.toString();
         if (!variantMap.has(productIdStr)) {
             variantMap.set(productIdStr, []);
@@ -432,7 +448,7 @@ export async function fetchInventoryData() {
         });
     }
 
-    const fullItems: InventoryItem[] = (fetchedItems as any[]).map(item => {
+    const fullItems: InventoryItem[] = fetchedItems.map(item => {
         const itemIdStr = item.id.toString();
         if (item.hasVariants) {
             return {
@@ -451,7 +467,7 @@ export async function fetchInventoryData() {
         };
     });
 
-    const fullAccessories: Accessory[] = (fetchedAccessories as any[]).map(item => {
+    const fullAccessories: Accessory[] = fetchedAccessories.map(item => {
         const itemIdStr = item.id.toString();
         return {
             ...item,
@@ -894,7 +910,7 @@ export async function performSale(
         const results: { newSale: Sale, updatedItem?: InventoryItem, updatedAccessory?: Accessory }[] = [];
         
         if (saleOptions.transactionId && saleOptions.transactionId.startsWith('trans-')) {
-            const existingSales = db.prepare('SELECT * FROM sales WHERE transactionId = ? AND status = ?').all(saleOptions.transactionId, 'Pending');
+            const existingSales = db.prepare('SELECT * FROM sales WHERE transactionId = ? AND status = ?').all(saleOptions.transactionId, 'Pending') as Sale[];
             if (existingSales.length > 0) {
                  db.prepare('DELETE FROM sales WHERE transactionId = ?').run(saleOptions.transactionId);
             }
@@ -908,18 +924,16 @@ export async function performSale(
         }
         
         sales.forEach(sale => {
-            let updatedItem: InventoryItem | undefined = undefined;
-            let updatedAccessory: Accessory | undefined = undefined;
             const saleDate = new Date();
             const saleDateString = formatDate(saleDate, "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
             const saleReason = `Sale (${channel})` + (saleOptions?.resellerName ? ` - ${saleOptions.resellerName}` : '');
 
-            let cogsAtSale;
+            let cogsAtSale: number;
             let saleStatus = saleOptions?.status || 'Completed';
-            let parentProduct: any;
-            let productId: string | number | null = null;
-            let variantId: string | number | null = null;
-            let accessoryId: string | number | null = null;
+            let parentProduct: InventoryItem | Accessory | undefined;
+            let productId: number | null = null;
+            let variantId: number | null = null;
+            let accessoryId: number | null = null;
             
             const sku = sale.sku;
 
@@ -928,8 +942,8 @@ export async function performSale(
             const accessory = getAccessoryStmt.get(sku) as (Accessory & { id: number, costPrice?: number, sku: string }) | undefined;
             
             if (variant) {
-                parentProduct = getParentProductStmt.get(variant.productId);
-                productId = parentProduct.id;
+                parentProduct = getParentProductStmt.get(variant.productId) as InventoryItem | undefined;
+                productId = variant.productId;
                 variantId = variant.id;
                 if (variant.stock < sale.quantity) throw new Error('Insufficient stock for variant.');
                 cogsAtSale = variant.costPrice || 0;
@@ -942,7 +956,7 @@ export async function performSale(
                 adjustStock(product.id.toString(), -sale.quantity, saleReason);
             } else if (accessory) {
                 accessoryId = accessory.id;
-                parentProduct = { name: accessory.name, sku: accessory.sku, category: accessory.category, imageUrl: undefined };
+                parentProduct = accessory;
                 if (accessory.stock! < sale.quantity) throw new Error('Insufficient stock for accessory.');
                 cogsAtSale = accessory.costPrice || 0;
                 adjustAccessoryStock(accessory.id.toString(), -sale.quantity, saleReason);
@@ -1064,14 +1078,14 @@ export async function recordSaleWithReceipt(receiptData: Omit<ShippingReceipt, '
             const getVariantStmt = db.prepare('SELECT * FROM variants WHERE sku = ?');
             const getParentProductStmt = db.prepare('SELECT * FROM products WHERE id = ?');
             
-            let cogsAtSale, parentProduct, productId = null, variantId = null;
+            let cogsAtSale: number, parentProduct: InventoryItem | undefined, productId: number | null = null, variantId: number | null = null;
 
             const variant = getVariantStmt.get(sale.sku) as (InventoryItemVariant & { id: number, productId: number, costPrice?: number }) | undefined;
             const product = getProductStmt.get(sale.sku) as (InventoryItem & { id: number, costPrice?: number, sku: string }) | undefined;
             
             if (variant) {
-                parentProduct = getParentProductStmt.get(variant.productId);
-                productId = parentProduct.id;
+                parentProduct = getParentProductStmt.get(variant.productId) as InventoryItem | undefined;
+                productId = variant.productId;
                 variantId = variant.id;
                 if (variant.stock < sale.quantity) throw new Error(`Insufficient stock for variant SKU: ${sale.sku}.`);
                 cogsAtSale = variant.costPrice || 0;
@@ -1114,7 +1128,7 @@ export async function fetchSingleItem(itemId: string): Promise<InventoryItem> {
     
     if (product.hasVariants) {
         const variants = db.prepare('SELECT * FROM variants WHERE productId = ?').all(itemId) as any[];
-        product.variants = variants.map(v => {
+        product.variants = variants.map((v: any) => {
             const history = db.prepare('SELECT * FROM history WHERE variantId = ? ORDER BY date DESC').all(v.id) as any[];
             const channelPrices = db.prepare('SELECT * FROM channel_prices WHERE variant_id = ?').all(v.id) as any[];
             return {
@@ -1142,7 +1156,7 @@ export async function fetchSingleAccessory(accessoryId: string): Promise<Accesso
     }
 
     const history = db.prepare('SELECT * FROM accessory_history WHERE accessoryId = ? ORDER BY date DESC').all(accessoryId) as any[];
-    accessory.history = history.map(h => ({ ...h, id: h.id.toString() }));
+    accessory.history = history.map((h: any) => ({ ...h, id: h.id.toString() }));
     accessory.id = accessory.id.toString();
     return accessory as Accessory;
 }
@@ -1571,7 +1585,7 @@ export async function editDiscountGroup(id: number, group: Omit<DiscountGroup, '
 }
 
 export async function deleteDiscountGroup(id: number): Promise<void> {
-    return db.prepare('DELETE FROM discount_groups WHERE id = ?').run(id);
+    db.prepare('DELETE FROM discount_groups WHERE id = ?').run(id);
 }
 
 export async function fetchDiscountGroups(): Promise<DiscountGroup[]> {
@@ -1686,7 +1700,7 @@ export async function editReseller(id: number, data: Omit<Reseller, 'id'>): Prom
     }
 }
 
-export async function deleteReseller(id: number) {
+export async function deleteReseller(id: number): Promise<void> {
     db.prepare('DELETE FROM resellers WHERE id = ?').run(id);
 }
 
@@ -1906,6 +1920,9 @@ export async function getVoucherUsageAnalytics(groupId: number) {
     
 
 
+
+
+    
 
 
     
