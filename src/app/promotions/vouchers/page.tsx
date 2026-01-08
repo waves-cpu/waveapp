@@ -1,5 +1,3 @@
-
-
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -8,7 +6,7 @@ import { SidebarTrigger } from '@/components/ui/sidebar';
 import { useLanguage } from '@/hooks/use-language';
 import { translations } from '@/types/language';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Ticket, Trash2, Calendar, MoreVertical, Edit } from 'lucide-react';
+import { PlusCircle, Ticket, Trash2, Calendar, MoreVertical, Edit, BarChart2 } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { useInventory } from '@/hooks/use-inventory';
 import type { DiscountGroup } from '@/types';
@@ -124,6 +122,10 @@ export default function VouchersPage() {
                                                     Ubah
                                                  </Link>
                                             </DropdownMenuItem>
+                                             <DropdownMenuItem disabled>
+                                                <BarChart2 className="mr-2 h-4 w-4" />
+                                                Lihat Analisis
+                                            </DropdownMenuItem>
                                             <DropdownMenuItem className="text-destructive" onClick={() => setGroupToDelete(group)}>
                                                 <Trash2 className="mr-2 h-4 w-4" />
                                                 Hapus
@@ -135,15 +137,21 @@ export default function VouchersPage() {
                                     <div className="font-mono text-center bg-muted rounded-md p-2 border border-dashed mb-4">
                                         {group.voucherCode}
                                     </div>
-                                    <div className="text-sm text-muted-foreground flex items-center gap-2">
-                                        <Calendar className="h-4 w-4" />
-                                        <span>{formatToWIB(parseISO(group.startDate), 'dd MMM yyyy')} - {formatToWIB(parseISO(group.endDate), 'dd MMM yyyy')}</span>
-                                    </div>
-                                    <div className="text-sm text-muted-foreground mt-2">
-                                        {group.discountType === 'percentage'
-                                            ? `Diskon ${group.discountValue}%`
-                                            : `Potongan Rp${(group.discountValue || 0).toLocaleString('id-ID')}`
-                                        }
+                                    <div className="space-y-2 text-sm text-muted-foreground">
+                                        <div className="flex items-center gap-2">
+                                            <Calendar className="h-4 w-4" />
+                                            <span>{formatToWIB(parseISO(group.startDate), 'dd MMM yyyy')} - {formatToWIB(parseISO(group.endDate), 'dd MMM yyyy')}</span>
+                                        </div>
+                                        <div>
+                                            {group.discountType === 'percentage'
+                                                ? `Diskon ${group.discountValue}%`
+                                                : `Potongan Rp${(group.discountValue || 0).toLocaleString('id-ID')}`
+                                            }
+                                            {group.minPurchase && group.minPurchase > 0 && <span>, min. belanja {`Rp${group.minPurchase.toLocaleString('id-ID')}`}</span>}
+                                        </div>
+                                         {group.maxUses && group.maxUses > 0 && (
+                                            <div>Sisa Kuota: {group.maxUses}</div>
+                                        )}
                                     </div>
                                 </CardContent>
                                 <CardFooter>
