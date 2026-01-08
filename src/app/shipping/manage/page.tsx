@@ -7,7 +7,7 @@ import { SidebarTrigger } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Undo2, Truck, CheckCircle, Package, Search, Send, Ban, History, MoreVertical } from 'lucide-react';
+import { Undo2, Truck, CheckCircle, Package, Search, Send, Ban, History, MoreVertical, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { useInventory } from '@/hooks/use-inventory';
 import type { ShippingReceipt, ReturnedItem } from '@/types';
@@ -264,7 +264,12 @@ export default function ManageReceiptsPage() {
         if (!receiptToProcess) return;
         try {
             await returnSaleTransaction(transactionId, items);
-            await updateShippingReceiptStatus(receiptToProcess.id, 'Return Selesai');
+            
+            if (selectedReceipt) {
+                const finalStatus = selectedReceipt.status === 'Dibatalkan' ? 'Selesai' : 'Return Selesai';
+                await handleChangeStatus(selectedReceipt.id, finalStatus);
+            }
+
             toast({ title: 'Return Diproses', description: `Stok untuk transaksi ${transactionId} telah dikembalikan.` });
             setReceiptToProcess(null); // Close dialog
         } catch (error) {
@@ -353,4 +358,3 @@ export default function ManageReceiptsPage() {
         </AppLayout>
     );
 }
-
