@@ -11,7 +11,8 @@ import { Undo2, Truck, CheckCircle, Package, Search, Send, Ban, History, MoreVer
 import { Badge } from '@/components/ui/badge';
 import { useInventory } from '@/hooks/use-inventory';
 import type { ShippingReceipt, ReturnedItem } from '@/types';
-import { parseISO } from 'date-fns';
+import { parseISO, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
+import { id as localeId } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
 import { Pagination } from '@/components/ui/pagination';
 import { Input } from '@/components/ui/input';
@@ -226,6 +227,29 @@ export default function ManageReceiptsPage() {
     const { toast } = useToast();
     const [receiptToProcess, setReceiptToProcess] = useState<ShippingReceipt | null>(null);
     const [isProcessing, setIsProcessing] = useState(false);
+    
+    const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
+    const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+
+    const years = useMemo(() => {
+        const currentYear = new Date().getFullYear();
+        // Show current year and next 4 years
+        return Array.from({ length: 5 }, (_, i) => currentYear + i).concat(
+             Array.from({ length: 6 }, (_, i) => currentYear - i)
+        ).filter((v, i, a) => a.indexOf(v) === i).sort((a,b) => b-a);
+    }, []);
+
+    const allReceiptsForMonth = useMemo(() => {
+        // Correctly create a date in the local timezone for the start of the month
+        const dateForMonth = new Date(selectedYear, selectedMonth, 1);
+        const firstDay = startOfMonth(dateForMonth);
+        const lastDay = endOfMonth(dateForMonth);
+
+        return allShippingReceipts.filter(receipt => {
+            const receiptDate = parseISO(receipt.date);
+            return isWithinInterval(receiptDate, { start: firstDay, end: lastDay });
+        });
+    }, [allShippingReceipts, selectedMonth, selectedYear]);
 
     const handleAction = useCallback(async (receipt: ShippingReceipt, newStatus: string) => {
         if (newStatus === 'Return Selesai') {
@@ -265,10 +289,8 @@ export default function ManageReceiptsPage() {
         try {
             await returnSaleTransaction(transactionId, items);
             
-            if (selectedReceipt) {
-                const finalStatus = selectedReceipt.status === 'Dibatalkan' ? 'Selesai' : 'Return Selesai';
-                await handleChangeStatus(selectedReceipt.id, finalStatus);
-            }
+            const finalStatus = 'Return Selesai';
+            await updateShippingReceiptStatus(receiptToProcess.id, finalStatus);
 
             toast({ title: 'Return Diproses', description: `Stok untuk transaksi ${transactionId} telah dikembalikan.` });
             setReceiptToProcess(null); // Close dialog
@@ -287,13 +309,13 @@ export default function ManageReceiptsPage() {
             'Return Selesai': [],
             'Dibatalkan': []
         };
-        allShippingReceipts.forEach(r => {
+        allReceiptsForMonth.forEach(r => {
             if (r.status in groups) {
                 groups[r.status as StatusTab].push(r);
             }
         });
         return groups;
-    }, [allShippingReceipts]);
+    }, [allReceiptsForMonth]);
     
     const tabs: { status: StatusTab, icon: React.ElementType }[] = [
         { status: 'Terproses', icon: Truck },
@@ -321,10 +343,43 @@ export default function ManageReceiptsPage() {
     return (
         <AppLayout>
             <main className="flex-1 p-4 md:p-10">
-                <div className="flex items-center gap-4 mb-6">
-                    <SidebarTrigger className="md:hidden" />
-                    <h1 className="text-lg font-bold">Kelola Status Resi</h1>
+                <div className="flex items-center justify-between gap-4 mb-6">
+                    <div className="flex items-center gap-4">
+                        <SidebarTrigger className="md:hidden" />
+                        <h1 className="text-lg font-bold">Kelola Status Resi</h1>
+                    </div>
+                     <div className="flex items-center gap-2">
+                        {selectedMonth !== undefined && (
+                        <Select value={selectedMonth.toString()} onValueChange={(value) => setSelectedMonth(parseInt(value))}>
+                            <SelectTrigger className="w-[150px] h-9">
+                                <SelectValue placeholder="Pilih Bulan" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {Array.from({ length: 12 }).map((_, i) => (
+                                    <SelectItem key={i} value={i.toString()}>
+                                        {formatToWIB(new Date(2000, i), 'MMMM', { locale: localeId })}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                        )}
+                        {selectedYear !== undefined && (
+                        <Select value={selectedYear.toString()} onValueChange={(value) => setSelectedYear(parseInt(value))}>
+                            <SelectTrigger className="w-[100px] h-9">
+                                <SelectValue placeholder="Pilih Tahun" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {years.map(year => (
+                                    <SelectItem key={year} value={year.toString()}>
+                                        {year}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                        )}
+                    </div>
                 </div>
+
 
                 <Tabs defaultValue="Terproses" className="w-full">
                     <TabsList className="grid w-full grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
