@@ -14,7 +14,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { Calendar as CalendarIcon, Package, ArrowDownRight, DollarSign, BarChart2, Star, TrendingUp, Eye, ChevronDown, FileDown, Loader2 } from 'lucide-react';
 import { DateRange } from 'react-day-picker';
-import { subDays, startOfMonth, endOfMonth, startOfYear, endOfYear, isWithinInterval, parseISO, startOfDay, endOfDay } from 'date-fns';
+import { subDays, startOfMonth, endOfMonth, startOfYear, endOfYear, isWithinInterval, parseISO, startOfDay, endOfDay, subMonths } from 'date-fns';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -27,6 +27,8 @@ import { saveAs } from 'file-saver';
 import { useToast } from '@/hooks/use-toast';
 import { useFinanceSettings } from '@/hooks/use-finance-settings';
 import { Skeleton } from '@/components/ui/skeleton';
+import { id as localeId } from 'date-fns/locale';
+import { Separator } from '@/components/ui/separator';
 
 const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('id-ID', {
@@ -337,11 +339,11 @@ export default function StatementsPage() {
     }, [allSales, date, categoryFilter, channelFilter, financeSettings.marketplaceFee, financeSettingsLoaded]);
 
     const datePresets = [
-        { label: t.today, range: { from: new Date(), to: new Date() } },
-        { label: t.last7Days, range: { from: subDays(new Date(), 6), to: new Date() } },
-        { label: t.last30Days, range: { from: subDays(new Date(), 29), to: new Date() } },
-        { label: t.thisMonth, range: { from: startOfMonth(new Date()), to: endOfMonth(new Date()) } },
-        { label: t.thisYear, range: { from: startOfYear(new Date()), to: endOfYear(new Date()) } },
+        { label: "Hari Ini", range: { from: new Date(), to: new Date() } },
+        { label: "Kemarin", range: { from: subDays(new Date(), 1), to: subDays(new Date(), 1) } },
+        { label: "Bulan Ini", range: { from: startOfMonth(new Date()), to: endOfMonth(new Date()) } },
+        { label: "Bulan Lalu", range: { from: startOfMonth(subMonths(new Date(), 1)), to: endOfMonth(subMonths(new Date(), 1)) } },
+        { label: "Tahun Ini", range: { from: startOfYear(new Date()), to: endOfYear(new Date()) } },
     ];
     
     const salesChannels = [...new Set(allSales.map(s => s.channel))];
@@ -450,10 +452,10 @@ export default function StatementsPage() {
                                 )}
                             </Button>
                         </PopoverTrigger>
-                        <PopoverContent className="flex w-auto flex-col gap-y-2 p-2" align="start">
-                            <div className="grid grid-cols-2 gap-2">
+                        <PopoverContent className="flex w-auto flex-row" align="end">
+                            <div className="flex flex-col gap-1 pr-4 border-r">
                                 {datePresets.map(preset => (
-                                    <Button key={preset.label} variant="ghost" onClick={() => setDate(preset.range)}>{preset.label}</Button>
+                                    <Button key={preset.label} variant="ghost" className="justify-start" onClick={() => setDate(preset.range)}>{preset.label}</Button>
                                 ))}
                             </div>
                             <Calendar
@@ -462,7 +464,7 @@ export default function StatementsPage() {
                                 defaultMonth={date?.from}
                                 selected={date}
                                 onSelect={setDate}
-                                numberOfMonths={2}
+                                numberOfMonths={1}
                             />
                         </PopoverContent>
                     </Popover>
