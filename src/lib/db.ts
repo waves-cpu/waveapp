@@ -9,14 +9,36 @@ const dbPath = path.join(dbDir, 'waves.db');
 
 let db: Database.Database;
 
+function createNewDatabase() {
+  if (fs.existsSync(dbDir)) {
+      console.log('Attempting to remove corrupted db directory...');
+      fs.rmSync(dbDir, { recursive: true, force: true });
+  }
+  fs.mkdirSync(dbDir, { recursive: true });
+
+  db = new Database(dbPath);
+  db.pragma('journal_mode = WAL');
+  db.pragma('foreign_keys = ON');
+  createSchema();
+  runMigrations();
+  seedData();
+  console.log('New database created successfully.');
+}
+
 function initializeDatabase() {
   try {
-    if (!fs.existsSync(dbDir)) {
-      fs.mkdirSync(dbDir, { recursive: true });
+    if (!fs.existsSync(dbDir) || !fs.existsSync(dbPath)) {
+      console.log('Database not found, creating a new one.');
+      createNewDatabase();
+      return;
     }
+    
     db = new Database(dbPath);
     db.pragma('journal_mode = WAL');
-    db.pragma('foreign_keys = ON'); // PENTING: Aktifkan foreign key agar ON DELETE CASCADE bekerja
+    db.pragma('foreign_keys = ON'); 
+
+    // Test query to check for corruption
+    db.prepare('SELECT count(*) FROM sqlite_master').get();
 
     createSchema();
     runMigrations();
@@ -24,17 +46,9 @@ function initializeDatabase() {
 
   } catch (error) {
     if (error instanceof Error && (error.message.includes('not a database') || error.message.includes('corrupt') || error.message.includes('disk I/O error'))) {
-      console.error('Database file is corrupt. Re-initializing...');
+      console.error('Database file is corrupt or unreadable. Re-initializing...');
       if(db && db.open) db.close();
-      if (fs.existsSync(dbDir)) fs.rmSync(dbDir, { recursive: true, force: true });
-      
-      fs.mkdirSync(dbDir, { recursive: true });
-      db = new Database(dbPath);
-      db.pragma('journal_mode = WAL');
-      db.pragma('foreign_keys = ON');
-      createSchema();
-      runMigrations();
-      seedData();
+      createNewDatabase();
     } else {
       console.error("Failed to initialize database:", error);
       throw error;
@@ -333,20 +347,44 @@ function getDb() {
   return db;
 }
 
+function runDbOperation<T>(operation: (db: Database.Database) => T): T {
+    try {
+        const currentDb = getDb();
+        return operation(currentDb);
+    } catch (error) {
+        if (error instanceof Error && (error.message.includes('disk I/O error') || error.message.includes('corrupt'))) {
+            console.error('Database I/O error detected during operation. Re-initializing...');
+            if (db && db.open) {
+                db.close();
+            }
+            initializeDatabase(); // This will create a new DB
+            // We retry the operation once after re-initialization.
+            // If it fails again, it will throw, which is the desired behavior.
+            const newDb = getDb();
+            return operation(newDb);
+        }
+        // Re-throw other errors
+        throw error;
+    }
+}
+
+
 const dbProxy = {
   prepare: (sql: string) => {
-    const stmt = getDb().prepare(sql);
+    // We can't prepare a statement and then have the DB re-initialized before execution.
+    // So we wrap the execution of the prepared statement instead.
     return {
-      run: (...params: any[]) => stmt.run(...params),
-      get: (...params: any[]) => stmt.get(...params),
-      all: (...params: any[]) => stmt.all(...params),
+      run: (...params: any[]) => runDbOperation(db => db.prepare(sql).run(...params)),
+      get: (...params: any[]) => runDbOperation(db => db.prepare(sql).get(...params)),
+      all: (...params: any[]) => runDbOperation(db => db.prepare(sql).all(...params)),
     };
   },
-  exec: (sql: string) => getDb().exec(sql),
+  exec: (sql: string) => runDbOperation(db => db.exec(sql)),
   transaction: (fn: (...args: any[]) => any) => {
-    return getDb().transaction(fn);
+    // The transaction itself needs to be wrapped to handle potential corruption during execution
+    return (...args: any[]) => runDbOperation(db => db.transaction(fn)(...args));
   },
-  pragma: (sql: string) => getDb().pragma(sql),
+  pragma: (sql: string) => runDbOperation(db => db.pragma(sql)),
 };
 
 export { dbProxy as db };
