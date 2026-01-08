@@ -94,6 +94,7 @@ export const CancelShipmentDialog = ({
                                     <TableHeader className="sticky top-0 bg-background">
                                         <TableRow>
                                             <TableHead>Produk</TableHead>
+                                            <TableHead>Ukuran</TableHead>
                                             <TableHead className="w-[120px] text-center">Jumlah</TableHead>
                                             <TableHead className="w-[150px] text-right">Harga</TableHead>
                                         </TableRow>
@@ -103,15 +104,15 @@ export const CancelShipmentDialog = ({
                                             <TableRow key={item.id}>
                                                 <TableCell>
                                                     <p className="font-medium text-sm">{item.productName}</p>
-                                                    {item.variantName && <p className="text-xs text-muted-foreground">{item.variantName}</p>}
                                                     <p className="text-xs text-muted-foreground">SKU: {item.sku}</p>
                                                 </TableCell>
+                                                <TableCell>{item.variantName || '-'}</TableCell>
                                                 <TableCell className="text-center font-medium">{item.quantity}</TableCell>
                                                 <TableCell className="text-right">{formatCurrency(item.priceAtSale)}</TableCell>
                                             </TableRow>
                                         )) : (
                                             <TableRow>
-                                                <TableCell colSpan={3} className="h-40 text-center text-muted-foreground">
+                                                <TableCell colSpan={4} className="h-40 text-center text-muted-foreground">
                                                     Tidak ada produk yang tercatat pada transaksi ini.
                                                 </TableCell>
                                             </TableRow>
@@ -119,7 +120,7 @@ export const CancelShipmentDialog = ({
                                     </TableBody>
                                      <TableFooter>
                                         <TableRow>
-                                            <TableHead>Total</TableHead>
+                                            <TableHead colSpan={2}>Total</TableHead>
                                             <TableHead className="text-center font-bold">{totalItems}</TableHead>
                                             <TableHead className="text-right font-bold">{formatCurrency(totalValue)}</TableHead>
                                         </TableRow>
@@ -140,3 +141,4 @@ export const CancelShipmentDialog = ({
         </Dialog>
     );
 };
+
