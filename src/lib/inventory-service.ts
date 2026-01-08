@@ -1341,12 +1341,13 @@ export async function revertSaleByTransaction(transactionId: string, newStatus: 
 }
 
 export async function cancelSaleTransaction(transactionId: string) {
-    const salesToDelete = db.prepare("SELECT * FROM sales WHERE transactionId = ?").all(transactionId) as Sale[];
+    const salesToUpdate = db.prepare("SELECT * FROM sales WHERE transactionId = ?").all(transactionId) as Sale[];
     
     const transaction = db.transaction(() => {
-        salesToDelete.forEach(sale => {
+        salesToUpdate.forEach(sale => {
              const reason = `Cancelled Sale: ${sale.transactionId || `ID ${sale.id}`}`;
-            if (sale.status !== 'Cancelled' && sale.status !== 'Return Selesai') {
+            // Only revert stock if the sale was in a state that deducted stock
+            if (sale.status && ['Completed', 'Siap Kirim', 'Terproses', 'Diantar'].includes(sale.status)) {
                 if (sale.variantId) {
                     adjustStock(sale.variantId.toString(), sale.quantity, reason);
                 } else if (sale.productId) {
@@ -1355,13 +1356,15 @@ export async function cancelSaleTransaction(transactionId: string) {
                     adjustAccessoryStock(sale.accessoryId.toString(), sale.quantity, reason);
                 }
             }
-            db.prepare("DELETE FROM sales WHERE id = ?").run(sale.id);
+            // Update status to 'Dibatalkan' instead of deleting
+            db.prepare("UPDATE sales SET status = 'Dibatalkan' WHERE id = ?").run(sale.id);
         });
     });
 
     transaction();
-    return salesToDelete;
+    return salesToUpdate.map(s => ({ ...s, status: 'Dibatalkan' }));
 }
+
 
 export async function returnSaleTransaction(transactionId: string, items?: ReturnedItem[]) {
     if (items && items.length > 0) {
@@ -1935,4 +1938,5 @@ export async function getVoucherUsageAnalytics(groupId: number) {
     
 
     
+
 
