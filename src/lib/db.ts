@@ -15,6 +15,7 @@ function initializeDatabase() {
     }
     db = new Database(dbPath);
     db.pragma('journal_mode = WAL');
+    db.pragma('foreign_keys = ON'); // PENTING: Aktifkan foreign key agar ON DELETE CASCADE bekerja
 
     createSchema();
     runMigrations();
@@ -22,16 +23,14 @@ function initializeDatabase() {
 
   } catch (error) {
     if (error instanceof Error && (error.message.includes('not a database') || error.message.includes('corrupt') || error.message.includes('disk I/O error'))) {
-      console.error('Database file is corrupt or invalid. Re-initializing...');
-      if(db && db.open) {
-        db.close();
-      }
-      if (fs.existsSync(dbDir)) {
-        fs.rmSync(dbDir, { recursive: true, force: true });
-      }
+      console.error('Database file is corrupt. Re-initializing...');
+      if(db && db.open) db.close();
+      if (fs.existsSync(dbDir)) fs.rmSync(dbDir, { recursive: true, force: true });
+      
       fs.mkdirSync(dbDir, { recursive: true });
       db = new Database(dbPath);
       db.pragma('journal_mode = WAL');
+      db.pragma('foreign_keys = ON');
       createSchema();
       runMigrations();
       seedData();
@@ -159,7 +158,7 @@ const createSchema = () => {
 
     CREATE TABLE IF NOT EXISTS shipping_receipts (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        awb TEXT NOT NULL UNIQUE,
+        awb TEXT NOT NULL,
         date TEXT NOT NULL,
         channel TEXT NOT NULL,
         salesChannel TEXT,
@@ -211,6 +210,21 @@ const createSchema = () => {
         FOREIGN KEY (productId) REFERENCES products(id) ON DELETE CASCADE,
         FOREIGN KEY (variantId) REFERENCES variants(id) ON DELETE CASCADE
     );
+
+    -- 1. Index AWB (Pencegahan Duplikat & Pencarian Cepat)
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_shipping_receipts_awb ON shipping_receipts(awb);
+
+    -- 2. Index untuk filter Inventory (Sesuai saran sebelumnya)
+    CREATE INDEX IF NOT EXISTS idx_shipping_receipts_filters ON shipping_receipts(salesChannel, channel, status);
+    
+    -- 3. Index Tanggal untuk performa laporan
+    CREATE INDEX IF NOT EXISTS idx_shipping_receipts_date ON shipping_receipts(date);
+
+    -- 4. Index Lookup Printed Counts
+    CREATE INDEX IF NOT EXISTS idx_printed_counts_lookup ON printed_receipt_counts(date, salesChannel, shippingChannel);
+
+    -- 5. Index User (Untuk login lebih cepat)
+    CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
   `);
 };
 
@@ -227,6 +241,15 @@ const runMigrations = () => {
         }
     };
     
+    try {
+        db.exec(`
+            CREATE INDEX IF NOT EXISTS idx_sales_date ON sales(saleDate);
+            CREATE INDEX IF NOT EXISTS idx_history_product ON history(productId, variantId);
+        `);
+    } catch (e) {
+        console.error("Migration Index Error:", e);
+    }
+
     // User Migrations
     addColumn('users', 'password', "TEXT NOT NULL DEFAULT ''");
     addColumn('users', 'role', "TEXT NOT NULL DEFAULT 'user'");
