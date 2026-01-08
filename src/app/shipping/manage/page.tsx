@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
@@ -290,7 +291,6 @@ export default function ManageReceiptsPage() {
         if (!receiptToCancel) return;
         try {
             await cancelSaleTransaction(transactionId);
-            await updateShippingReceiptStatus(receiptToCancel.id, 'Dibatalkan');
             toast({ title: 'Transaksi Dibatalkan', description: `Stok untuk transaksi ${transactionId} telah dikembalikan.` });
         } catch (error) {
             toast({ variant: 'destructive', title: 'Gagal Membatalkan', description: error instanceof Error ? error.message : 'Terjadi kesalahan.' });
