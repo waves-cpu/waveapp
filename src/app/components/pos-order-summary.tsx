@@ -110,6 +110,20 @@ export function PosOrderSummary({ cart, onSaleComplete, clearCart, channel, pend
         }
     }, [cart, onVoucherApplied]);
     
+     useEffect(() => {
+        if (activeVoucher && onVoucherApplied) {
+            const preVoucherTotal = subtotal - groupDiscount;
+            if (activeVoucher.minPurchase && preVoucherTotal < activeVoucher.minPurchase) {
+                onVoucherApplied(null);
+                toast({
+                    variant: 'destructive',
+                    title: 'Voucher Dihapus',
+                    description: `Total belanja tidak lagi memenuhi syarat minimum Rp${activeVoucher.minPurchase.toLocaleString('id-ID')}.`,
+                });
+            }
+        }
+    }, [cart, activeVoucher, onVoucherApplied, subtotal, groupDiscount, toast]);
+    
     const resetForm = () => {
         setManualDiscount(0);
         setCashReceived(0);
@@ -373,5 +387,6 @@ export function PosOrderSummary({ cart, onSaleComplete, clearCart, channel, pend
 
 
     
+
 
 
