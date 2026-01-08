@@ -1,10 +1,9 @@
 
-
 import { db as dbProxy } from './db';
 const db = dbProxy;
-import type { InventoryItem, AdjustmentHistory, InventoryItemVariant, Sale, Reseller, ChannelPrice, Accessory, ShippingReceipt, BulkImportHistory, User, ReturnedItem, DiscountGroup, DiscountedProduct, PrintedReceiptCount } from '@/types';
+import type { InventoryItem, AdjustmentHistory, InventoryItemVariant, Sale, Reseller, ChannelPrice, Accessory, ShippingReceipt, BulkImportHistory, User, ReturnedItem, DiscountGroup, DiscountedProduct, PrintedReceiptCount, ShippingReceiptCounts } from '@/types';
 import { categories as allCategories } from '@/types';
-import { format as formatDate, parseISO, startOfDay, endOfDay } from 'date-fns';
+import { format as formatDate, parseISO, startOfDay, endOfDay, subDays } from 'date-fns';
 import { formatToWIB } from './utils';
 import bcrypt from 'bcryptjs';
 
@@ -62,7 +61,7 @@ export async function addBulkImportHistory(history: Omit<BulkImportHistory, 'id'
 }
 
 
-export async function updateBulkImportHistory(id: number, data: Partial<Omit<BulkImportHistory, 'id'>>>) {
+export async function updateBulkImportHistory(id: number, data: Partial<Omit<BulkImportHistory, 'id'>>) {
     let fields = '';
     const params: any = { id };
     if (data.status) { fields += 'status = @status, '; params.status = data.status; }
@@ -114,7 +113,7 @@ export async function fetchShippingReceipts(options: {
     salesChannel?: string;
     channel?: string;
     dateString?: string;
-    date_range?: { from: Date, to: Date };
+    date_range?: { from: Date; to: Date };
     status?: string[];
     awb?: string;
 }): Promise<{ receipts: ShippingReceipt[]; total: number; }> {
@@ -187,11 +186,11 @@ export async function findShippingReceiptByAwb(awb: string): Promise<ShippingRec
 }
 
 export async function getPendingReceiptsBeforeDate(date: Date): Promise<number> {
-    const dateString = date.toISOString().split('T')[0];
+    const dateString = formatToWIB(date, 'yyyy-MM-dd');
     const query = db.prepare(`
         SELECT COUNT(*) as count
         FROM shipping_receipts
-        WHERE status = 'Perlu Diproses' AND date(date) < date(?)
+        WHERE status = 'Terproses' AND date(date, 'localtime') < ?
     `);
     const result = query.get(dateString) as { count: number };
     return result.count;
@@ -201,30 +200,16 @@ export async function fetchShippingReceiptCounts(filters: {
     dateString?: string;
     salesChannel?: string;
     shippingChannel?: string;
-    status?: string | string[];
-}): Promise<{
-    pendingToday: number;
-    pendingBefore: number;
-    salesChannels: Record<string, Record<string, number>>;
-    shippingChannels: Record<string, number>;
-    statuses: Record<string, number>;
-    shippingChannelsBySalesChannel: Record<string, Record<string, number>>;
-}> {
-    const { dateString, salesChannel, shippingChannel } = filters;
-    let status = filters.status;
+    status?: string[];
+}): Promise<ShippingReceiptCounts> {
+    const { dateString, salesChannel, shippingChannel, status } = filters;
 
-    // Ensure status is always an array
-    if (typeof status === 'string') {
-        status = [status];
-    }
-    
+    // --- PENDING COUNTS ---
     let pendingToday = 0;
     let pendingBefore = 0;
-
     if (dateString) {
         const pendingTodayResult = db.prepare("SELECT COUNT(*) as count FROM shipping_receipts WHERE status = 'Terproses' AND date(date, 'localtime') = ?").get(dateString) as { count: number };
         pendingToday = pendingTodayResult.count;
-
         const pendingBeforeResult = db.prepare("SELECT COUNT(*) as count FROM shipping_receipts WHERE status = 'Terproses' AND date(date, 'localtime') < ?").get(dateString) as { count: number };
         pendingBefore = pendingBeforeResult.count;
     }
@@ -356,8 +341,12 @@ export async function addShippingReceipt(receipt: Omit<ShippingReceipt, 'id'>): 
 
         return { id: result.lastInsertRowid as number, ...receipt };
     } catch (error: any) {
-        // Jika AWB diset UNIQUE di database, tangkap errornya
         if (error.message.includes('UNIQUE constraint failed')) {
+            const existing = db.prepare('SELECT * from shipping_receipts WHERE awb = ?').get(receipt.awb) as ShippingReceipt;
+            if(existing) {
+                 const formattedDate = formatToWIB(parseISO(existing.date), 'dd MMM yyyy, HH:mm');
+                 throw new Error(`Resi ini sudah diinput di kanal ${existing.salesChannel} pada ${formattedDate}`);
+            }
             throw new Error(`DUPLICATE_AWB::AWB ${receipt.awb} sudah ada di database.`);
         }
         throw error;
@@ -675,7 +664,7 @@ export async function bulkUpdateProducts(data: any[]): Promise<{ updatedCount: n
             let found = false;
             // Check if it's a variant update
             if (row.variant_sku) {
-                const variant = getVariantStmt.get(row.variant_sku);
+                const variant = getVariantStmt.get(row.variant_sku) as { id: number } | undefined;
                 if (variant) {
                     updateVariantStmt.run({
                         variant_sku: row.variant_sku,
@@ -690,7 +679,7 @@ export async function bulkUpdateProducts(data: any[]): Promise<{ updatedCount: n
             } 
             // If not a variant or variant not found by SKU, check if it's a simple product update by parent_sku
             else if (row.parent_sku && !row.variant_sku) {
-                const product = getProductStmt.get(row.parent_sku);
+                const product = getProductStmt.get(row.parent_sku) as { id: number } | undefined;
                 if (product) {
                      updateProductStmt.run({
                         parent_sku: row.parent_sku,
@@ -712,7 +701,7 @@ export async function bulkUpdateProducts(data: any[]): Promise<{ updatedCount: n
         });
     })();
 
-    return { updatedCount: 0, notFoundSkus: [] };
+    return { updatedCount: updatedSkus.length, notFoundSkus: notFoundSkus };
 }
 
 
@@ -800,17 +789,19 @@ export async function editProduct(itemId: string, itemData: any) {
             `);
 
             const existingProduct = getProductStockStmt.get(itemId) as {stock: number} | undefined;
-            const stockChange = itemData.stock - (existingProduct?.stock || 0);
+            if (existingProduct) {
+                const stockChange = itemData.stock - (existingProduct.stock || 0);
 
-            if (stockChange !== 0) {
-                 addHistoryStmt.run({
-                    productId: itemId,
-                    variantId: null,
-                    change: stockChange,
-                    reason: 'Stock adjustment during edit',
-                    newStockLevel: itemData.stock,
-                    date: new Date().toISOString()
-                });
+                if (stockChange !== 0) {
+                     addHistoryStmt.run({
+                        productId: itemId,
+                        variantId: null,
+                        change: stockChange,
+                        reason: 'Stock adjustment during edit',
+                        newStockLevel: itemData.stock,
+                        date: new Date().toISOString()
+                    });
+                }
             }
         }
     })();
@@ -826,27 +817,29 @@ export async function editVariantsBulk(itemId: string, variants: InventoryItemVa
         `);
 
         variants.forEach(variant => {
-            const originalVariant = getVariantStockStmt.get(variant.id) as { stock: number };
-            const stockChange = variant.stock - originalVariant.stock;
+            const originalVariant = getVariantStockStmt.get(variant.id) as { stock: number } | undefined;
+            if (originalVariant) {
+                const stockChange = variant.stock - originalVariant.stock;
 
-            if (stockChange !== 0) {
-                 addHistoryStmt.run({
-                    productId: itemId,
-                    variantId: variant.id,
-                    change: stockChange,
-                    reason: reason,
-                    newStockLevel: variant.stock,
-                    date: new Date().toISOString()
+                if (stockChange !== 0) {
+                    addHistoryStmt.run({
+                        productId: itemId,
+                        variantId: variant.id,
+                        change: stockChange,
+                        reason: reason,
+                        newStockLevel: variant.stock,
+                        date: new Date().toISOString()
+                    });
+                }
+
+                updateVariantStmt.run({
+                    id: variant.id,
+                    name: variant.name,
+                    sku: variant.sku,
+                    price: variant.price,
+                    stock: variant.stock,
                 });
             }
-
-            updateVariantStmt.run({
-                id: variant.id,
-                name: variant.name,
-                sku: variant.sku,
-                price: variant.price,
-                stock: variant.stock,
-            });
         });
     })();
 }
@@ -866,7 +859,7 @@ export async function adjustStock(itemId: string, change: number, reason: string
             `).run(variant.productId, itemId, change, reason, newStockLevel, new Date().toISOString());
         } else {
             const item = db.prepare('SELECT * FROM products WHERE id = ?').get(itemId) as (InventoryItem & {id: number}) | undefined;
-            if (item && item.stock !== undefined && item.stock !== null) {
+            if (item && typeof item.stock === 'number') {
                 const newStockLevel = item.stock + change;
                 db.prepare('UPDATE products SET stock = ? WHERE id = ?').run(newStockLevel, itemId);
                 db.prepare(`
@@ -925,10 +918,10 @@ export async function performSale(
         
         sales.forEach(sale => {
             const saleDate = new Date();
-            const saleDateString = formatDate(saleDate, "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
+            const saleDateString = formatToWIB(saleDate, "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
             const saleReason = `Sale (${channel})` + (saleOptions?.resellerName ? ` - ${saleOptions.resellerName}` : '');
 
-            let cogsAtSale: number;
+            let cogsAtSale: number | undefined;
             let saleStatus = saleOptions?.status || 'Completed';
             let parentProduct: InventoryItem | Accessory | undefined;
             let productId: number | null = null;
@@ -946,19 +939,19 @@ export async function performSale(
                 productId = variant.productId;
                 variantId = variant.id;
                 if (variant.stock < sale.quantity) throw new Error('Insufficient stock for variant.');
-                cogsAtSale = variant.costPrice || 0;
+                cogsAtSale = variant.costPrice;
                 adjustStock(variant.id.toString(), -sale.quantity, saleReason);
             } else if (product) {
                 parentProduct = product;
                 productId = product.id;
                 if (product.stock! < sale.quantity) throw new Error('Insufficient stock for product.');
-                cogsAtSale = product.costPrice || 0;
+                cogsAtSale = product.costPrice;
                 adjustStock(product.id.toString(), -sale.quantity, saleReason);
             } else if (accessory) {
                 accessoryId = accessory.id;
                 parentProduct = accessory;
                 if (accessory.stock! < sale.quantity) throw new Error('Insufficient stock for accessory.');
-                cogsAtSale = accessory.costPrice || 0;
+                cogsAtSale = accessory.costPrice;
                 adjustAccessoryStock(accessory.id.toString(), -sale.quantity, saleReason);
             } else {
                 throw new Error('SKU not found or product has variants.');
@@ -1078,7 +1071,10 @@ export async function recordSaleWithReceipt(receiptData: Omit<ShippingReceipt, '
             const getVariantStmt = db.prepare('SELECT * FROM variants WHERE sku = ?');
             const getParentProductStmt = db.prepare('SELECT * FROM products WHERE id = ?');
             
-            let cogsAtSale: number, parentProduct: InventoryItem | undefined, productId: number | null = null, variantId: number | null = null;
+            let cogsAtSale: number | undefined;
+            let parentProduct: InventoryItem | undefined;
+            let productId: number | null = null;
+            let variantId: number | null = null;
 
             const variant = getVariantStmt.get(sale.sku) as (InventoryItemVariant & { id: number, productId: number, costPrice?: number }) | undefined;
             const product = getProductStmt.get(sale.sku) as (InventoryItem & { id: number, costPrice?: number, sku: string }) | undefined;
@@ -1088,13 +1084,13 @@ export async function recordSaleWithReceipt(receiptData: Omit<ShippingReceipt, '
                 productId = variant.productId;
                 variantId = variant.id;
                 if (variant.stock < sale.quantity) throw new Error(`Insufficient stock for variant SKU: ${sale.sku}.`);
-                cogsAtSale = variant.costPrice || 0;
+                cogsAtSale = variant.costPrice;
                 adjustStock(variant.id.toString(), -sale.quantity, saleReason);
             } else if (product) {
                 parentProduct = product;
                 productId = product.id;
                 if (product.stock! < sale.quantity) throw new Error(`Insufficient stock for product SKU: ${sale.sku}.`);
-                cogsAtSale = product.costPrice || 0;
+                cogsAtSale = product.costPrice;
                 adjustStock(product.id.toString(), -sale.quantity, saleReason);
             } else {
                 throw new Error(`SKU not found for sale item: ${sale.sku}.`);
@@ -1259,7 +1255,7 @@ export async function getSalesByDate(channel: string, date: Date, page: number, 
     return { sales: mappedSales, total };
 }
 
-export async function revertSale(saleId: string, newStatus: 'Cancelled' | 'Return Selesai' | 'Return'): Promise<Sale> {
+export async function revertSale(saleId: number, newStatus: 'Cancelled' | 'Return Selesai' | 'Return'): Promise<Sale> {
     const getSaleStmt = db.prepare('SELECT * FROM sales WHERE id = ?');
     const updateSaleStatusStmt = db.prepare("UPDATE sales SET status = ? WHERE id = ?");
     const deleteSaleStmt = db.prepare("DELETE FROM sales WHERE id = ?");
@@ -1311,7 +1307,7 @@ export async function revertSaleItem(transactionId: string, sku: string): Promis
     const sale = getSaleStmt.get({ transactionId, sku }) as Sale | undefined;
 
     if (sale) {
-        return revertSale(sale.id, 'Return Selesai');
+        return revertSale(Number(sale.id), 'Return Selesai');
     } else {
         throw new Error('Sale item not found in transaction');
     }
@@ -1329,7 +1325,7 @@ export async function revertSaleByTransaction(transactionId: string, newStatus: 
     const transaction = db.transaction(() => {
         const revertedSales: Sale[] = [];
         sales.forEach(async sale => {
-            const reverted = revertSale(sale.id, newStatus);
+            const reverted = revertSale(Number(sale.id), newStatus);
             revertedSales.push(await reverted);
         });
         return revertedSales;
@@ -1370,10 +1366,11 @@ export async function returnSaleTransaction(transactionId: string, items?: Retur
                     SELECT s.* FROM sales s
                     LEFT JOIN variants v ON s.variantId = v.id
                     LEFT JOIN products p ON s.productId = p.id
-                    WHERE s.transactionId = ? AND (v.sku = ? OR (s.variantId IS NULL AND p.sku = ?))
+                    LEFT JOIN accessories a ON s.accessoryId = a.id
+                    WHERE s.transactionId = ? AND COALESCE(v.sku, p.sku, a.sku) = ?
                     LIMIT 1
                 `);
-                const saleToReturn = getSaleStmt.get(transactionId, item.sku, item.sku) as Sale | undefined;
+                const saleToReturn = getSaleStmt.get(transactionId, item.sku) as Sale | undefined;
 
                 if (saleToReturn) {
                     const stockToReturn = Math.min(saleToReturn.quantity, item.quantity);
@@ -1382,6 +1379,8 @@ export async function returnSaleTransaction(transactionId: string, items?: Retur
                         adjustStock(saleToReturn.variantId.toString(), stockToReturn, reason);
                     } else if (saleToReturn.productId) {
                         adjustStock(saleToReturn.productId.toString(), stockToReturn, reason);
+                    } else if (saleToReturn.accessoryId) {
+                        adjustAccessoryStock(saleToReturn.accessoryId.toString(), stockToReturn, reason);
                     }
                 }
             });
@@ -1747,23 +1746,25 @@ export async function updateAccessory(accessoryId: string, data: Omit<Accessory,
     const getAccessoryStmt = db.prepare('SELECT stock FROM accessories WHERE id = ?');
 
     db.transaction(() => {
-        const existing = getAccessoryStmt.get(accessoryId) as { stock: number };
-        const stockChange = data.stock - existing.stock;
-        
-        updateStmt.run({
-             id: accessoryId,
-             name: data.name,
-             sku: data.sku,
-             category: data.category,
-             stock: data.stock,
-             price: data.price,
-             costPrice: data.costPrice ?? null,
-             unit: data.unit,
-             quantityPerUnit: data.quantityPerUnit ?? null
-        });
+        const existing = getAccessoryStmt.get(accessoryId) as { stock: number } | undefined;
+        if (existing) {
+            const stockChange = data.stock - existing.stock;
+            
+            updateStmt.run({
+                id: accessoryId,
+                name: data.name,
+                sku: data.sku,
+                category: data.category,
+                stock: data.stock,
+                price: data.price,
+                costPrice: data.costPrice ?? null,
+                unit: data.unit,
+                quantityPerUnit: data.quantityPerUnit ?? null
+            });
 
-        if (stockChange !== 0) {
-            historyStmt.run(accessoryId, new Date().toISOString(), stockChange, 'Stock adjustment during edit', data.stock);
+            if (stockChange !== 0) {
+                historyStmt.run(accessoryId, new Date().toISOString(), stockChange, 'Stock adjustment during edit', data.stock);
+            }
         }
     })();
 }
@@ -1779,7 +1780,7 @@ export async function adjustAccessoryStock(accessoryId: string, change: number, 
             VALUES (?, ?, ?, ?, ?)
         `);
 
-        const accessory = getStmt.get(accessoryId) as { stock: number };
+        const accessory = getStmt.get(accessoryId) as { stock: number } | undefined;
         if (accessory) {
             const newStockLevel = accessory.stock + change;
             updateStmt.run(newStockLevel, accessoryId);
@@ -1794,7 +1795,7 @@ export async function archiveProduct(itemId: string, isArchived: boolean) {
 
 export async function deleteProductPermanently(itemId: string) {
     db.transaction(() => {
-        const variantIds: { id: number }[] = db.prepare('SELECT id FROM variants WHERE productId = ?').all(itemId) as { id: number }[];
+        const variantIds = db.prepare('SELECT id FROM variants WHERE productId = ?').all(itemId) as { id: number }[];
 
         if (variantIds.length > 0) {
             const variantIdList = variantIds.map((v: any) => v.id);
@@ -1830,7 +1831,7 @@ export async function checkPrintedReceiptAvailability(salesChannel: string, ship
         SELECT SUM(count) as totalPrinted
         FROM printed_receipt_counts
         WHERE date = ? AND salesChannel = ? AND shippingChannel = ?
-    `).get(date, salesChannel, shippingChannel) as { totalPrinted: number | null };
+    `).get(date, salesChannel, shippingChannel) as { totalPrinted: number | null } | undefined;
 
     const printedCount = printedCountRow?.totalPrinted || 0;
 
@@ -1846,7 +1847,7 @@ export async function checkPrintedReceiptAvailability(salesChannel: string, ship
 }
 
 export async function getVoucherUsageAnalytics(groupId: number) {
-    const group = db.prepare('SELECT * FROM discount_groups WHERE id = ?').get(groupId) as DiscountGroup;
+    const group = db.prepare('SELECT * FROM discount_groups WHERE id = ?').get(groupId) as DiscountGroup | undefined;
     if (!group || !group.voucherCode) {
         throw new Error('Voucher not found.');
     }
@@ -1871,7 +1872,7 @@ export async function getVoucherUsageAnalytics(groupId: number) {
         LEFT JOIN products p ON s.productId = p.id
         LEFT JOIN variants v ON s.variantId = v.id
         WHERE s.voucherCode = ?
-    `).get(group.voucherCode) as { totalDiscount: number };
+    `).get(group.voucherCode) as { totalDiscount: number } | undefined;
 
     const totalDiscount = totalDiscountResult?.totalDiscount || 0;
     const totalRevenue = sales.reduce((sum, s) => sum + s.totalSale, 0);
@@ -1924,5 +1925,7 @@ export async function getVoucherUsageAnalytics(groupId: number) {
 
     
 
+
+    
 
     
