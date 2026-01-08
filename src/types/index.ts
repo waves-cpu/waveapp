@@ -134,6 +134,15 @@ export interface ShippingReceipt {
     transactionId?: string;
 }
 
+export interface ShippingReceiptCounts {
+  pendingToday: number;
+  pendingBefore: number;
+  statuses: Record<string, number>;
+  shippingChannels: Record<string, number>;
+  salesChannels: Record<string, Record<string, number>>;
+  shippingChannelsBySalesChannel: Record<string, Record<string, number>>;
+}
+
 export interface PrintedReceiptCount {
     id: number;
     date: string;
