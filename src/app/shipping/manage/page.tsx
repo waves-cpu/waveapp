@@ -103,7 +103,7 @@ const ReceiptTable = ({
                             <TableCell>{formatToWIB(parseISO(receipt.date), 'dd MMM yyyy')}</TableCell>
                             <TableCell>{receipt.channel}</TableCell>
                             <TableCell><Badge variant={getStatusVariant(receipt.status)}>{receipt.status}</Badge></TableCell>
-                            <TableCell className="text-right">
+                            <TableCell className="text-right space-x-2">
                                 {receipt.status === 'Terproses' && (
                                      <Button size="sm" variant="outline" onClick={() => onAction(receipt, 'Siap Kirim')}>
                                         <Send className="mr-2 h-4 w-4 text-blue-500" />
@@ -111,10 +111,16 @@ const ReceiptTable = ({
                                     </Button>
                                 )}
                                 {receipt.status === 'Siap Kirim' && (
-                                    <Button size="sm" variant="outline" onClick={() => onAction(receipt, 'Selesai')}>
-                                        <CheckCircle className="mr-2 h-4 w-4 text-green-500" />
-                                        Tandai Selesai
-                                    </Button>
+                                    <>
+                                        <Button size="sm" variant="outline" onClick={() => onAction(receipt, 'Dibatalkan')}>
+                                            <Ban className="mr-2 h-4 w-4 text-destructive" />
+                                            Batalkan
+                                        </Button>
+                                        <Button size="sm" variant="outline" onClick={() => onAction(receipt, 'Selesai')}>
+                                            <CheckCircle className="mr-2 h-4 w-4 text-green-500" />
+                                            Tandai Selesai
+                                        </Button>
+                                    </>
                                 )}
                                 {receipt.status === 'Return' && (
                                     <Button size="sm" variant="outline" onClick={() => onAction(receipt, 'Return Selesai')}>
