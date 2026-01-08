@@ -10,9 +10,8 @@ export async function POST(request: NextRequest) {
         }
         const user = await authenticateUser(username, password);
         if (user) {
-            // Important: Do not send the password back to the client
-            const { password, ...userWithoutPassword } = user as any;
-            return NextResponse.json(userWithoutPassword);
+            // The authenticateUser function already removes the password hash
+            return NextResponse.json(user);
         }
         return NextResponse.json({ message: 'Invalid credentials' }, { status: 401 });
     } catch (error: any) {
