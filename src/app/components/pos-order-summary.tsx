@@ -35,7 +35,7 @@ interface PosOrderSummaryProps {
   cart: CartItem[];
   onSaleComplete: (paymentMethod: string, receiptData: ReceiptData, status?: 'Completed' | 'Pending', voucherCode?: string) => Promise<void>;
   clearCart: () => void;
-  channel: 'pos' | 'reseller';
+  channel: 'pos';
   pendingTransactionId: string | null;
   onVoucherApplied?: (voucherData: Voucher | null) => void;
   activeVoucher?: Voucher | null;
@@ -54,13 +54,10 @@ export function PosOrderSummary({ cart, onSaleComplete, clearCart, channel, pend
     const [isApplyingVoucher, setIsApplyingVoucher] = useState(false);
     const [cashReceived, setCashReceived] = useState(0);
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(channel === 'reseller' ? 'Transfer' : 'Cash');
+    const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('Cash');
     
     const isAccessoryOnlyTx = useMemo(() => cart.length > 0 && cart.every(item => item.type === 'accessory'), [cart]);
 
-    useEffect(() => {
-        setPaymentMethod(channel === 'reseller' ? 'Transfer' : 'Cash');
-    }, [channel]);
     
     const { subtotal, totalDiscount, finalTotal, groupDiscount, voucherDiscount } = useMemo(() => {
         const subtotalCalc = cart.reduce((acc, item) => acc + (item.originalPrice * item.quantity), 0);
@@ -75,7 +72,7 @@ export function PosOrderSummary({ cart, onSaleComplete, clearCart, channel, pend
             const preVoucherTotal = subtotalCalc - groupDiscountCalc;
             if(activeVoucher.minPurchase && preVoucherTotal < activeVoucher.minPurchase) {
                  // Don't apply voucher if min purchase is not met
-                 // You might want to show a toast message here
+                 // The check is now primarily in handleApplyVoucher, but we keep this to prevent calculation if somehow an invalid voucher gets set
             } else {
                  if (activeVoucher.discountType === 'percentage') {
                     voucherDiscountCalc = preVoucherTotal * (activeVoucher.discountValue / 100);
@@ -107,21 +104,25 @@ export function PosOrderSummary({ cart, onSaleComplete, clearCart, channel, pend
             setManualDiscount(0);
             setCashReceived(0);
             setVoucherCode('');
-            onVoucherApplied?.(null);
+            if (onVoucherApplied) {
+                onVoucherApplied(null);
+            }
         }
     }, [cart, onVoucherApplied]);
     
     const resetForm = () => {
         setManualDiscount(0);
         setCashReceived(0);
-        setPaymentMethod(channel === 'reseller' ? 'Transfer' : 'Cash');
+        setPaymentMethod( 'Cash');
         setVoucherCode('');
-        onVoucherApplied?.(null);
+        if (onVoucherApplied) {
+            onVoucherApplied(null);
+        }
         clearCart();
     }
 
     const handleApplyVoucher = async () => {
-        if (!voucherCode.trim()) return;
+        if (!voucherCode.trim() || !onVoucherApplied) return;
         setIsApplyingVoucher(true);
         try {
             const data: Voucher = await apiFetch(`/api/finance/discounts/voucher/${voucherCode.trim()}?channel=${channel}`);
@@ -131,7 +132,16 @@ export function PosOrderSummary({ cart, onSaleComplete, clearCart, channel, pend
              if (data.maxUses !== null && data.maxUses <= 0) {
                 throw new Error("Kuota untuk voucher ini sudah habis.");
             }
-            onVoucherApplied?.(data);
+
+            const currentSubtotal = cart.reduce((acc, item) => acc + (item.originalPrice * item.quantity), 0);
+            const groupDiscountCalc = cart.reduce((acc, item) => acc + ((item.originalPrice - item.price) * item.quantity), 0);
+            const preVoucherTotal = currentSubtotal - groupDiscountCalc;
+
+            if (data.minPurchase && preVoucherTotal < data.minPurchase) {
+                 throw new Error(`Minimum belanja ${formatCurrency(data.minPurchase)} tidak terpenuhi.`);
+            }
+
+            onVoucherApplied(data);
             setManualDiscount(0); // Reset manual discount
             toast({
                 title: "Voucher Diterapkan",
@@ -143,7 +153,7 @@ export function PosOrderSummary({ cart, onSaleComplete, clearCart, channel, pend
                 title: "Voucher Tidak Valid",
                 description: error.message,
             });
-            onVoucherApplied?.(null);
+            onVoucherApplied(null);
         } finally {
             setIsApplyingVoucher(false);
             setVoucherCode('');
@@ -151,7 +161,9 @@ export function PosOrderSummary({ cart, onSaleComplete, clearCart, channel, pend
     };
     
     const handleRemoveVoucher = () => {
-        onVoucherApplied?.(null);
+        if (onVoucherApplied) {
+            onVoucherApplied(null);
+        }
         toast({ title: 'Voucher Dihapus', description: 'Harga telah kembali normal.' });
     };
 
@@ -201,6 +213,10 @@ export function PosOrderSummary({ cart, onSaleComplete, clearCart, channel, pend
         resetForm();
     }
 
+    const formatCurrency = (amount: number) => {
+        return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(amount);
+    };
+
 
     return (
         <Card className="flex flex-col h-full sticky top-4 no-print">
@@ -243,9 +259,7 @@ export function PosOrderSummary({ cart, onSaleComplete, clearCart, channel, pend
                 {!isAccessoryOnlyTx && (
                     <div className="space-y-3">
                         <Label>{t.pos.paymentMethod}</Label>
-                        {channel === 'reseller' ? (
-                            <Input value="Transfer" disabled className="h-10 text-base" />
-                        ) : (
+                        {(
                             <RadioGroup value={paymentMethod} onValueChange={(value: PaymentMethod) => setPaymentMethod(value)} className="grid grid-cols-2 gap-2">
                                 <div>
                                     <RadioGroupItem value="Cash" id="cash" className="peer sr-only" />
@@ -275,7 +289,7 @@ export function PosOrderSummary({ cart, onSaleComplete, clearCart, channel, pend
                         )}
                     </div>
                 )}
-                {paymentMethod === 'Cash' && channel !== 'reseller' && !isAccessoryOnlyTx && (
+                {paymentMethod === 'Cash' && !isAccessoryOnlyTx && (
                     <div className="space-y-2">
                         <Label htmlFor="cashReceived">{t.pos.cashReceived}</Label>
                         <Input id="cashReceived" type="number" placeholder="0" value={cashReceived || ''} onChange={(e) => setCashReceived(Number(e.target.value))} className="h-10 text-base" />
@@ -305,7 +319,7 @@ export function PosOrderSummary({ cart, onSaleComplete, clearCart, channel, pend
                             <span>{t.pos.total}</span>
                             <span className="text-primary">{finalTotal.toLocaleString('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 })}</span>
                         </div>
-                        {paymentMethod === 'Cash' && channel !== 'reseller' && (
+                        {paymentMethod === 'Cash' && (
                             <div className="flex justify-between text-sm">
                                 <span>{t.pos.change}</span>
                                 <span>{change >= 0 ? change.toLocaleString('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }) : '-'}</span>
@@ -359,4 +373,5 @@ export function PosOrderSummary({ cart, onSaleComplete, clearCart, channel, pend
 
 
     
+
 
