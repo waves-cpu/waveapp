@@ -359,3 +359,6 @@ export function PosOrderSummary({ cart, onSaleComplete, clearCart, channel, pend
 
     
 
+
+
+    

@@ -695,7 +695,7 @@ export async function bulkUpdateProducts(data: any[]): Promise<{ updatedCount: n
         });
     })();
 
-    return { updatedCount: 0, notFoundSkus };
+    return { updatedCount: 0, notFoundSkus: [] };
 }
 
 
@@ -901,7 +901,7 @@ export async function performSale(
 
         if (saleOptions.voucherCode) {
             const voucher = db.prepare('SELECT * FROM discount_groups WHERE voucherCode = ?').get(saleOptions.voucherCode) as DiscountGroup | undefined;
-            if (voucher && voucher.maxUses && voucher.maxUses > 0) {
+            if (voucher && voucher.maxUses !== null && voucher.maxUses > 0) {
                 db.prepare('UPDATE discount_groups SET maxUses = maxUses - 1 WHERE id = ?').run(voucher.id);
             }
         }
@@ -1864,3 +1864,6 @@ export async function checkPrintedReceiptAvailability(salesChannel: string, ship
     
 
 
+
+
+    
