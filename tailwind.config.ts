@@ -51,6 +51,18 @@ export default {
         orange: {
             500: '#f97316'
         },
+        green: {
+          500: '#22c55e'
+        },
+        blue: {
+          500: '#3b82f6'
+        },
+        yellow: {
+          500: '#eab308'
+        },
+        purple: {
+          500: '#8b5cf6'
+        },
         chart: {
           '1': 'hsl(var(--chart-1))',
           '2': 'hsl(var(--chart-2))',

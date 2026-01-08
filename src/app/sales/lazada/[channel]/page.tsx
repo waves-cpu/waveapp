@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React from 'react';
@@ -24,9 +25,22 @@ import { Pagination } from '@/components/ui/pagination';
 import { DailySalesDetailDialog } from '@/app/components/daily-sales-detail-dialog';
 import { Badge } from '@/components/ui/badge';
 import { RecordSaleForReceiptDialog } from '@/app/components/record-sale-for-receipt-dialog';
-// Import the hook from the Shopee page
-import { useReceiptPageLogic } from '../../shopee/[channel]/page';
+import { useReceiptPageLogic } from '@/hooks/use-receipt-page-logic';
 
+const getStatusVariant = (status: string): "default" | "secondary" | "destructive" | "outline" | "info" | "warning" | "success" | "orange" | "purple" => {
+    switch (status.toLowerCase()) {
+        case 'selesai': return 'success';
+        case 'return selesai': return 'purple';
+        case 'siap kirim': return 'info';
+        case 'terproses': return 'warning';
+        case 'perlu diproses': return 'warning';
+        case 'diantar': return 'info';
+        case 'return': return 'orange';
+        case 'dibatalkan':
+        case 'tidak sampai': return 'destructive';
+        default: return 'outline';
+    }
+};
 
 function DatePickerClient({
   selectedDate,
@@ -74,7 +88,7 @@ export default function LazadaChannelPage() {
       t, router, receipts, totalReceipts, loading, awb, setAwb, isSubmitting, awbInputRef,
       currentPage, setCurrentPage, itemsPerPage, searchTerm, setSearchTerm, selectedDate,
       setSelectedDate, detailItems, isDetailOpen, setIsDetailOpen, receiptForSale, setReceiptForSale,
-      isSaleDialogOpen, setIsSaleDialogOpen, salesChannel, shippingChannel, salesByReceipt,
+      isSaleDialogOpen, setIsSaleDialogOpen, salesChannel, shippingChannel,
       handleAwbSubmit, handleViewDetails, handleSaleComplete, totalPages
   } = useReceiptPageLogic('Lazada');
 
@@ -142,21 +156,20 @@ export default function LazadaChannelPage() {
                   ))
                 ) : receipts.length > 0 ? (
                   receipts.map((receipt) => {
-                    const relatedSales = salesByReceipt.get(receipt.transactionId || '') || [];
-                    const isProcessed = relatedSales.length > 0;
+                    const isUnprocessed = receipt.status === 'Perlu Diproses';
                     
                     return (
-                        <TableRow key={receipt.id}>
+                        <TableRow key={receipt.id} className={cn(isUnprocessed && 'bg-yellow-50/50 hover:bg-yellow-50')}>
                           <TableCell>{format(new Date(receipt.date), 'dd MMM yyyy, HH:mm')}</TableCell>
                           <TableCell className="font-medium">{receipt.awb}</TableCell>
                           <TableCell>
                             <Button variant="link" size="sm" className="h-auto p-0 text-xs" onClick={() => handleViewDetails(receipt)}>
-                                {isProcessed ? `${relatedSales.reduce((acc, s) => acc + s.quantity, 0)} produk` : 'Catat Produk'}
+                               {!isUnprocessed ? "Lihat Produk" : "Catat Produk"}
                                 <Eye className="ml-2 h-3 w-3" />
                             </Button>
                           </TableCell>
                            <TableCell>
-                                <Badge variant={receipt.status === 'Siap Kirim' ? "default" : "outline"}>
+                                <Badge variant={getStatusVariant(receipt.status)}>
                                     {receipt.status}
                                 </Badge>
                            </TableCell>

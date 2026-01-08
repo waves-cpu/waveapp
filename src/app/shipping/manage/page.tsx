@@ -34,12 +34,12 @@ const SHIPPING_CHANNEL_OPTIONS = ['Semua Jasa Kirim', 'SPX', 'J&T', 'JNE', 'INST
 
 const getStatusVariant = (status: string) => {
     switch (status.toLowerCase()) {
-        case 'selesai': return 'default';
-        case 'return selesai': return 'default';
-        case 'siap kirim': return 'secondary';
-        case 'terproses': return 'secondary';
-        case 'diantar': return 'secondary';
-        case 'return':
+        case 'selesai': return 'success';
+        case 'return selesai': return 'purple';
+        case 'siap kirim': return 'info';
+        case 'terproses': return 'warning';
+        case 'diantar': return 'info';
+        case 'return': return 'orange';
         case 'dibatalkan':
         case 'tidak sampai': return 'destructive';
         default: return 'outline';
@@ -402,21 +402,19 @@ export default function ManageReceiptsPage() {
                 </div>
 
                 <Tabs defaultValue="Terproses" className="w-full">
-                    <div className="border-b">
-                         <TabsList className="h-auto p-0 bg-transparent">
-                            {tabs.map(tab => (
-                                <TabsTrigger 
-                                    key={tab.status} 
-                                    value={tab.status} 
-                                    className="whitespace-nowrap px-3 py-2 text-sm font-medium rounded-t-md data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-none rounded-b-none border-b-2 border-transparent data-[state=active]:border-primary"
-                                >
-                                    <tab.icon className="mr-2 h-4 w-4" />
-                                    {tab.status}
-                                    <Badge variant="secondary" className="ml-2">{groupedReceipts[tab.status].length}</Badge>
-                                </TabsTrigger>
-                            ))}
-                        </TabsList>
-                    </div>
+                    <TabsList className="h-auto p-1 bg-muted rounded-lg">
+                        {tabs.map(tab => (
+                            <TabsTrigger 
+                                key={tab.status} 
+                                value={tab.status} 
+                                className="flex-1 px-3 py-1.5 text-sm"
+                            >
+                                <tab.icon className="mr-2 h-4 w-4" />
+                                {tab.status}
+                                <Badge variant={tab.status === 'Terproses' ? "default" : "secondary"} className="ml-2">{groupedReceipts[tab.status].length}</Badge>
+                            </TabsTrigger>
+                        ))}
+                    </TabsList>
                     {tabs.map(tab => (
                         <TabsContent key={tab.status} value={tab.status} className="mt-6">
                             <ReceiptTable 
@@ -449,6 +447,7 @@ export default function ManageReceiptsPage() {
     
 
     
+
 
 
 

@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -14,35 +14,17 @@ import {
 } from '@/components/ui/table';
 import { ScanLine, ShoppingCart, Search, Eye, ArrowLeft, MoreVertical, Calendar as CalendarIcon } from 'lucide-react';
 import { format, parseISO, startOfDay, endOfDay } from 'date-fns';
-import { useInventory } from '@/hooks/use-inventory';
-import { useLanguage } from '@/hooks/use-language';
-import { translations } from '@/types/language';
 import { SidebarTrigger } from '@/components/ui/sidebar';
-import type { Sale, ShippingReceipt } from '@/types';
-import { useToast } from '@/hooks/use-toast';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { cn, formatToWIB } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AppLayout } from '@/app/components/app-layout';
-import { useScanSounds } from '@/hooks/use-scan-sounds';
-import { useParams, useRouter } from 'next/navigation';
 import { Pagination } from '@/components/ui/pagination';
 import { DailySalesDetailDialog } from '@/app/components/daily-sales-detail-dialog';
 import { Badge } from '@/components/ui/badge';
 import { RecordSaleForReceiptDialog } from '@/app/components/record-sale-for-receipt-dialog';
-import { apiFetch } from '@/lib/api';
+import { useReceiptPageLogic } from '@/hooks/use-receipt-page-logic';
 
 
 function DatePickerClient({
@@ -114,184 +96,20 @@ const EmptyState = ({ searchTerm }: { searchTerm: string }) => (
     </TableRow>
 );
 
-
-export function useReceiptPageLogic(salesChannel: 'Shopee' | 'Tiktok' | 'Lazada') {
-    const params = useParams();
-    const router = useRouter();
-    const inventoryContext = useInventory();
-    const { toast } = useToast();
-    const { playSuccessSound, playErrorSound, playNotificationSound } = useScanSounds();
-    const { language } = useLanguage();
-    const t = translations[language];
-
-    const shippingChannel = typeof params.channel === 'string' ? decodeURIComponent(params.channel).toUpperCase() : '';
-
-    const [receipts, setReceipts] = useState<ShippingReceipt[]>([]);
-    const [totalReceipts, setTotalReceipts] = useState(0);
-    const [loading, setLoading] = useState(true);
-    const [awb, setAwb] = useState('');
-    const [isSubmitting, setIsSubmitting] = useState(false);
-    const awbInputRef = useRef<HTMLInputElement>(null);
-    const [currentPage, setCurrentPage] = useState(1);
-    const [itemsPerPage, setItemsPerPage] = useState(50);
-    const [searchTerm, setSearchTerm] = useState('');
-    const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
-    
-    const [detailItems, setDetailItems] = useState<Sale[]>([]);
-    const [isDetailOpen, setIsDetailOpen] = useState(false);
-    
-    const [receiptForSale, setReceiptForSale] = useState<Omit<ShippingReceipt, 'id'> | ShippingReceipt | null>(null);
-    const [isSaleDialogOpen, setIsSaleDialogOpen] = useState(false);
-    
-    const refocusInput = useCallback(() => {
-        if (!isSaleDialogOpen) {
-            setTimeout(() => awbInputRef.current?.focus(), 100);
-        }
-    }, [isSaleDialogOpen]);
-
-    const loadReceipts = useCallback(async () => {
-        if (!selectedDate) return;
-        setLoading(true);
-        try {
-            const dateString = format(selectedDate, 'yyyy-MM-dd');
-            const { receipts: receiptsData, total } = await inventoryContext.fetchShippingReceipts({ 
-                page: currentPage, 
-                limit: itemsPerPage, 
-                salesChannel: salesChannel,
-                channel: shippingChannel, 
-                awb: searchTerm,
-                dateString: dateString
-            });
-            setReceipts(receiptsData);
-            setTotalReceipts(total);
-        } catch (error) {
-            toast({
-                variant: 'destructive',
-                title: 'Gagal Memuat Resi',
-                description: 'Terjadi kesalahan saat mengambil data resi.',
-            });
-        } finally {
-            setLoading(false);
-        }
-    }, [inventoryContext, toast, currentPage, itemsPerPage, searchTerm, salesChannel, shippingChannel, selectedDate]);
-    
-    useEffect(() => {
-        loadReceipts();
-    }, [loadReceipts]);
-    
-    useEffect(() => {
-      const eventSource = new EventSource('/api/stream');
-
-      eventSource.onmessage = (event) => {
-        const data = JSON.parse(event.data);
-        if (data.type === 'new-receipt' && data.channel === shippingChannel && data.salesChannel === salesChannel) {
-          playNotificationSound();
-          setReceipts(prev => [data.payload, ...prev].slice(0, itemsPerPage));
-          setTotalReceipts(prev => prev + 1);
-        }
-      };
-
-      eventSource.onerror = () => {};
-
-      return () => {
-        eventSource.close();
-      };
-    }, [shippingChannel, salesChannel, itemsPerPage, playNotificationSound]);
-
-    useEffect(() => {
-        refocusInput();
-    }, [refocusInput, receipts, isSaleDialogOpen]);
-    
-    const handleAwbSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-        e.preventDefault();
-        const trimmedAwb = awb.trim().toUpperCase();
-        
-        if (!trimmedAwb || trimmedAwb.length < 5 || isSubmitting) return;
-    
-        setIsSubmitting(true);
-        
-        try {
-            const existingReceipt = await inventoryContext.findShippingReceiptByAwb(trimmedAwb);
-
-            if (existingReceipt) {
-                playErrorSound();
-                toast({
-                    variant: "destructive",
-                    title: 'Resi Sudah Ada',
-                    description: `AWB ${trimmedAwb} sudah diinput pada ${formatToWIB(parseISO(existingReceipt.date), 'dd/MM/yyyy HH:mm')}`
-                });
-                setAwb('');
-                return;
-            }
-
-            const newReceipt: Omit<ShippingReceipt, 'id'> = {
-                awb: trimmedAwb,
-                salesChannel: salesChannel,
-                channel: shippingChannel,
-                date: new Date().toISOString(),
-                status: 'Perlu Diproses',
-                transactionId: trimmedAwb
-            };
-            
-            setReceiptForSale(newReceipt);
-            setIsSaleDialogOpen(true);
-            setAwb('');
-            playSuccessSound();
-
-        } catch (error: any) {
-            playErrorSound();
-            toast({ variant: "destructive", title: 'Error', description: error.message });
-        } finally {
-            setIsSubmitting(false);
-        }
-    };
-
-    const handleViewDetails = async (receipt: ShippingReceipt) => {
-        // If status is not "Perlu Diproses", it means sale is recorded.
-        if (receipt.status !== 'Perlu Diproses') {
-            try {
-                const data = await apiFetch(`/api/sales/transaction/${receipt.transactionId}`);
-                setDetailItems(data.sales);
-                setIsDetailOpen(true);
-            } catch (error) {
-                toast({ variant: 'destructive', title: 'Gagal Memuat Detail', description: 'Tidak dapat menemukan detail penjualan untuk resi ini.'});
-            }
-        } else {
-             // Otherwise, open the dialog to record the sale.
-            setReceiptForSale(receipt);
-            setIsSaleDialogOpen(true);
-        }
-    };
-    
-    const handleSaleComplete = async (receiptData: Omit<ShippingReceipt, 'id'>, salesData: Omit<Sale, 'id'>[]) => {
-        try {
-            await inventoryContext.recordSaleWithReceipt(receiptData, salesData);
-            toast({
-                title: "Penjualan Berhasil Dicatat",
-                description: `Penjualan untuk resi ${receiptData.awb} telah disimpan.`,
-            });
-            setIsSaleDialogOpen(false);
-            setReceiptForSale(null);
-            await loadReceipts();
-        } catch (error: any) {
-            toast({
-                title: "Gagal Mencatat Penjualan",
-                description: error.message || "Terjadi kesalahan saat menyimpan data penjualan.",
-                variant: "destructive",
-            });
-            throw error;
-        }
-    };
-
-    return {
-        language, t, router, receipts, totalReceipts, loading, awb, setAwb, isSubmitting,
-        awbInputRef, currentPage, setCurrentPage, itemsPerPage, searchTerm, setSearchTerm,
-        selectedDate, setSelectedDate, detailItems, isDetailOpen, setIsDetailOpen, receiptForSale,
-        setReceiptForSale, isSaleDialogOpen, setIsSaleDialogOpen, salesChannel, shippingChannel,
-        handleAwbSubmit, handleViewDetails, handleSaleComplete, totalPages: Math.ceil(totalReceipts / itemsPerPage)
-    };
-}
-
+const getStatusVariant = (status: string): "default" | "secondary" | "destructive" | "outline" | "info" | "warning" | "success" | "orange" | "purple" => {
+    switch (status.toLowerCase()) {
+        case 'selesai': return 'success';
+        case 'return selesai': return 'purple';
+        case 'siap kirim': return 'info';
+        case 'terproses': return 'warning';
+        case 'perlu diproses': return 'warning';
+        case 'diantar': return 'info';
+        case 'return': return 'orange';
+        case 'dibatalkan':
+        case 'tidak sampai': return 'destructive';
+        default: return 'outline';
+    }
+};
 
 export default function ShopeeChannelPage() {
   const {
@@ -357,20 +175,20 @@ export default function ShopeeChannelPage() {
               <TableBody>
                 {loading ? <TableSkeleton /> : receipts.length > 0 ? (
                   receipts.map((receipt) => {
-                    const isProcessed = receipt.status !== 'Perlu Diproses';
+                    const isUnprocessed = receipt.status === 'Perlu Diproses';
                     
                     return (
-                        <TableRow key={receipt.id} className={cn(!isProcessed && 'bg-yellow-50/50 hover:bg-yellow-50')}>
+                        <TableRow key={receipt.id} className={cn(isUnprocessed && 'bg-yellow-50/50 hover:bg-yellow-50')}>
                           <TableCell>{format(new Date(receipt.date), 'dd MMM yyyy, HH:mm')}</TableCell>
                           <TableCell className="font-medium">{receipt.awb}</TableCell>
                           <TableCell>
                             <Button variant="link" size="sm" className="h-auto p-0 text-xs" onClick={() => handleViewDetails(receipt)}>
-                               {isProcessed ? "Lihat Produk" : "Catat Produk"}
+                               {!isUnprocessed ? "Lihat Produk" : "Catat Produk"}
                                 <Eye className="ml-2 h-3 w-3" />
                             </Button>
                           </TableCell>
                            <TableCell>
-                                <Badge variant={isProcessed ? "default" : "outline"}>
+                                <Badge variant={getStatusVariant(receipt.status)}>
                                     {receipt.status}
                                 </Badge>
                            </TableCell>
