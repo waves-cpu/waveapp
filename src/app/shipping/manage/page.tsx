@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
@@ -26,6 +27,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { DateRange } from 'react-day-picker';
+import { Separator } from '@/components/ui/separator';
 
 const SHIPPING_CHANNEL_OPTIONS = ['Semua Jasa Kirim', 'SPX', 'J&T', 'JNE', 'INSTANT', 'CARGO'];
 
@@ -270,8 +272,8 @@ export default function ManageReceiptsPage() {
         try {
             await returnSaleTransaction(transactionId, items);
             
-            const finalStatus = 'Return Selesai';
-            await updateShippingReceiptStatus(receiptToProcess.id, finalStatus);
+            const finalStatus = receiptToProcess.status === 'Dibatalkan' ? 'Selesai' : 'Return Selesai';
+            await handleChangeStatus(receiptToProcess.id, finalStatus);
 
             toast({ title: 'Return Diproses', description: `Stok untuk transaksi ${transactionId} telah dikembalikan.` });
             setReceiptToProcess(null); // Close dialog
@@ -362,10 +364,10 @@ export default function ManageReceiptsPage() {
                                 )}
                             </Button>
                         </PopoverTrigger>
-                        <PopoverContent className="flex w-auto flex-col gap-y-2 p-2" align="end">
-                            <div className="grid grid-cols-2 gap-2">
+                        <PopoverContent className="flex w-auto flex-row" align="end">
+                            <div className="flex flex-col gap-1 pr-4 border-r">
                                 {datePresets.map(preset => (
-                                    <Button key={preset.label} variant="ghost" onClick={() => setDate(preset.range)}>{preset.label}</Button>
+                                    <Button key={preset.label} variant="ghost" className="justify-start" onClick={() => setDate(preset.range)}>{preset.label}</Button>
                                 ))}
                             </div>
                             <Calendar
@@ -374,7 +376,7 @@ export default function ManageReceiptsPage() {
                                 defaultMonth={date?.from}
                                 selected={date}
                                 onSelect={setDate}
-                                numberOfMonths={2}
+                                numberOfMonths={1}
                             />
                         </PopoverContent>
                     </Popover>
@@ -412,5 +414,3 @@ export default function ManageReceiptsPage() {
         </AppLayout>
     );
 }
-
-    
