@@ -401,7 +401,7 @@ export default function ManageReceiptsPage() {
 
                 <Tabs defaultValue="Terproses" className="w-full">
                     <div className="border-b">
-                        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-2">
+                         <TabsList className="h-auto p-0 bg-transparent flex items-center gap-2 overflow-x-auto no-scrollbar pb-2">
                             {tabs.map(tab => (
                                 <TabsTrigger 
                                     key={tab.status} 
@@ -413,7 +413,7 @@ export default function ManageReceiptsPage() {
                                     <Badge variant="secondary" className="ml-2">{groupedReceipts[tab.status].length}</Badge>
                                 </TabsTrigger>
                             ))}
-                        </div>
+                        </TabsList>
                     </div>
                     {tabs.map(tab => (
                         <TabsContent key={tab.status} value={tab.status} className="mt-6">
