@@ -7,37 +7,24 @@ import { SidebarTrigger } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Undo2, Truck, CheckCircle, Package, Search, Send, Ban, History, MoreVertical, Trash2 } from 'lucide-react';
+import { Undo2, Truck, CheckCircle, Package, Search, Send, Ban, History, MoreVertical, Trash2, Calendar as CalendarIcon } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { useInventory } from '@/hooks/use-inventory';
 import type { ShippingReceipt, ReturnedItem } from '@/types';
-import { parseISO, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
+import { parseISO, startOfMonth, endOfMonth, isWithinInterval, startOfDay, endOfDay } from 'date-fns';
 import { id as localeId } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
 import { Pagination } from '@/components/ui/pagination';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ProcessReturnDialog } from '@/app/components/process-return-dialog';
-import { formatToWIB } from '@/lib/utils';
+import { formatToWIB, cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Checkbox } from '@/components/ui/checkbox';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
 
 const SHIPPING_CHANNEL_OPTIONS = ['Semua Jasa Kirim', 'SPX', 'J&T', 'JNE', 'INSTANT', 'CARGO'];
 
@@ -86,7 +73,8 @@ const ReceiptTable = ({
 
     useEffect(() => {
         setSelectedIds(new Set());
-    }, [searchTerm, channelFilter, currentPage, itemsPerPage]);
+        setCurrentPage(1);
+    }, [searchTerm, channelFilter, receipts]);
 
     const totalPages = Math.ceil(filteredReceipts.length / itemsPerPage);
     const paginatedReceipts = useMemo(() => {
@@ -228,28 +216,46 @@ export default function ManageReceiptsPage() {
     const [receiptToProcess, setReceiptToProcess] = useState<ShippingReceipt | null>(null);
     const [isProcessing, setIsProcessing] = useState(false);
     
+    const [selectedDate, setSelectedDate] = useState<Date | null>(new Date());
     const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
     const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
 
     const years = useMemo(() => {
         const currentYear = new Date().getFullYear();
-        // Show current year and next 4 years
         return Array.from({ length: 5 }, (_, i) => currentYear + i).concat(
              Array.from({ length: 6 }, (_, i) => currentYear - i)
         ).filter((v, i, a) => a.indexOf(v) === i).sort((a,b) => b-a);
     }, []);
 
-    const allReceiptsForMonth = useMemo(() => {
-        // Correctly create a date in the local timezone for the start of the month
-        const dateForMonth = new Date(selectedYear, selectedMonth, 1);
-        const firstDay = startOfMonth(dateForMonth);
-        const lastDay = endOfMonth(dateForMonth);
-
+    const filteredReceipts = useMemo(() => {
         return allShippingReceipts.filter(receipt => {
             const receiptDate = parseISO(receipt.date);
-            return isWithinInterval(receiptDate, { start: firstDay, end: lastDay });
+            if (selectedDate) {
+                 const startDate = startOfDay(selectedDate);
+                 const endDate = endOfDay(selectedDate);
+                 return isWithinInterval(receiptDate, { start: startDate, end: endDate });
+            }
+            // Fallback to month/year filter if no specific date is selected
+            return receiptDate.getFullYear() === selectedYear && receiptDate.getMonth() === selectedMonth;
         });
-    }, [allShippingReceipts, selectedMonth, selectedYear]);
+    }, [allShippingReceipts, selectedDate, selectedMonth, selectedYear]);
+
+    const handleDateSelect = (date: Date | undefined) => {
+        if (date) {
+            setSelectedDate(date);
+            setSelectedMonth(date.getMonth());
+            setSelectedYear(date.getFullYear());
+        } else {
+            setSelectedDate(null); // Allow clearing date filter
+        }
+    };
+    
+    const clearDateFilter = () => {
+        setSelectedDate(null);
+        // Optionally reset month/year to current or leave as is
+        setSelectedMonth(new Date().getMonth());
+        setSelectedYear(new Date().getFullYear());
+    }
 
     const handleAction = useCallback(async (receipt: ShippingReceipt, newStatus: string) => {
         if (newStatus === 'Return Selesai') {
@@ -309,13 +315,13 @@ export default function ManageReceiptsPage() {
             'Return Selesai': [],
             'Dibatalkan': []
         };
-        allReceiptsForMonth.forEach(r => {
+        filteredReceipts.forEach(r => {
             if (r.status in groups) {
                 groups[r.status as StatusTab].push(r);
             }
         });
         return groups;
-    }, [allReceiptsForMonth]);
+    }, [filteredReceipts]);
     
     const tabs: { status: StatusTab, icon: React.ElementType }[] = [
         { status: 'Terproses', icon: Truck },
@@ -348,9 +354,32 @@ export default function ManageReceiptsPage() {
                         <SidebarTrigger className="md:hidden" />
                         <h1 className="text-lg font-bold">Kelola Status Resi</h1>
                     </div>
-                     <div className="flex items-center gap-2">
-                        {selectedMonth !== undefined && (
-                        <Select value={selectedMonth.toString()} onValueChange={(value) => setSelectedMonth(parseInt(value))}>
+                    <div className="flex items-center gap-2">
+                        <Popover>
+                            <PopoverTrigger asChild>
+                                <Button
+                                    id="date"
+                                    variant={"outline"}
+                                    className={cn(
+                                        "w-[240px] justify-start text-left font-normal h-9",
+                                        !selectedDate && "text-muted-foreground"
+                                    )}
+                                >
+                                    <CalendarIcon className="mr-2 h-4 w-4" />
+                                    {selectedDate ? formatToWIB(selectedDate, 'PPP') : <span>Pilih tanggal</span>}
+                                </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="end">
+                                <Calendar
+                                    mode="single"
+                                    selected={selectedDate || undefined}
+                                    onSelect={handleDateSelect}
+                                    initialFocus
+                                />
+                            </PopoverContent>
+                        </Popover>
+                         {selectedDate && <Button variant="ghost" size="sm" onClick={clearDateFilter}>Hapus Filter</Button>}
+                        <Select value={selectedMonth.toString()} onValueChange={(value) => { setSelectedMonth(parseInt(value)); setSelectedDate(null); }}>
                             <SelectTrigger className="w-[150px] h-9">
                                 <SelectValue placeholder="Pilih Bulan" />
                             </SelectTrigger>
@@ -362,9 +391,7 @@ export default function ManageReceiptsPage() {
                                 ))}
                             </SelectContent>
                         </Select>
-                        )}
-                        {selectedYear !== undefined && (
-                        <Select value={selectedYear.toString()} onValueChange={(value) => setSelectedYear(parseInt(value))}>
+                        <Select value={selectedYear.toString()} onValueChange={(value) => { setSelectedYear(parseInt(value)); setSelectedDate(null); }}>
                             <SelectTrigger className="w-[100px] h-9">
                                 <SelectValue placeholder="Pilih Tahun" />
                             </SelectTrigger>
@@ -376,10 +403,8 @@ export default function ManageReceiptsPage() {
                                 ))}
                             </SelectContent>
                         </Select>
-                        )}
                     </div>
                 </div>
-
 
                 <Tabs defaultValue="Terproses" className="w-full">
                     <TabsList className="grid w-full grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
