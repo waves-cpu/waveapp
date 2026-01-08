@@ -23,7 +23,7 @@ import { formatToWIB, cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Checkbox } from '@/components/ui/checkbox';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { DateRange } from 'react-day-picker';
@@ -172,7 +172,8 @@ const ReceiptTable = ({
                                                 <DropdownMenuItem onClick={() => onAction(receipt, 'Dibatalkan')} className="text-destructive"><Ban className="mr-2 h-4 w-4" /> Batalkan</DropdownMenuItem>
                                             </>
                                         )}
-                                        {receipt.status === 'Return' && <DropdownMenuItem onClick={() => onAction(receipt, 'Return Selesai')}><Package className="mr-2 h-4 w-4" /> Proses Barang Return</DropdownMenuItem>}
+                                        {receipt.status === 'Selesai' && <DropdownMenuItem onClick={() => onAction(receipt, 'Return')}><Undo2 className="mr-2 h-4 w-4 text-orange-500" /> Tandai Return</DropdownMenuItem>}
+                                        {receipt.status === 'Return' && <DropdownMenuItem onClick={() => onAction(receipt, 'Return Selesai')}><Package className="mr-2 h-4 w-4" /> Proses Barang Sampai</DropdownMenuItem>}
                                          <AlertDialog>
                                             <AlertDialogTrigger asChild>
                                                 <DropdownMenuItem onSelect={e => e.preventDefault()} className="text-destructive"><Trash2 className="mr-2 h-4 w-4" /> Hapus</DropdownMenuItem>
@@ -443,11 +444,3 @@ export default function ManageReceiptsPage() {
         </AppLayout>
     );
 }
-
-    
-
-    
-
-
-
-

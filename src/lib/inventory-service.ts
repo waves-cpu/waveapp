@@ -1219,7 +1219,7 @@ export async function getPosSalesByDate(date: Date): Promise<Sale[]> {
         LEFT JOIN products p ON s.productId = p.id
         LEFT JOIN variants v ON s.variantId = v.id
         LEFT JOIN accessories a ON s.accessoryId = a.id
-        WHERE s.channel = 'pos' 
+        WHERE (s.channel = 'pos' OR s.status = 'Pemakaian Aksesoris')
         AND date(s.saleDate) = ?
         ORDER BY s.saleDate DESC, s.id DESC
     `);
@@ -1409,38 +1409,29 @@ export async function cancelSaleTransaction(transactionId: string) {
 
 
 export async function returnSaleTransaction(transactionId: string, items?: ReturnedItem[]) {
-    if (items && items.length > 0) {
-        // Selective return
-        const transaction = db.transaction(() => {
-            items.forEach(item => {
-                const getSaleStmt = db.prepare(`
-                    SELECT s.* FROM sales s
-                    LEFT JOIN variants v ON s.variantId = v.id
-                    LEFT JOIN products p ON s.productId = p.id
-                    LEFT JOIN accessories a ON s.accessoryId = a.id
-                    WHERE s.transactionId = ? AND COALESCE(v.sku, p.sku, a.sku) = ?
-                    LIMIT 1
-                `);
-                const saleToReturn = getSaleStmt.get(transactionId, item.sku) as Sale | undefined;
+    const transaction = db.transaction(() => {
+        const getSalesStmt = db.prepare("SELECT * FROM sales WHERE transactionId = ? AND status NOT IN ('Cancelled', 'Return Selesai')");
+        const salesToReturn = getSalesStmt.all(transactionId) as Sale[];
 
-                if (saleToReturn) {
-                    const stockToReturn = Math.min(saleToReturn.quantity, item.quantity);
-                    const reason = `Return: ${transactionId}`;
-                    if (saleToReturn.variantId) {
-                        adjustStock(saleToReturn.variantId.toString(), stockToReturn, reason);
-                    } else if (saleToReturn.productId) {
-                        adjustStock(saleToReturn.productId.toString(), stockToReturn, reason);
-                    } else if (saleToReturn.accessoryId) {
-                        adjustAccessoryStock(saleToReturn.accessoryId.toString(), stockToReturn, reason);
-                    }
-                }
-            });
+        if (!salesToReturn || salesToReturn.length === 0) {
+            throw new Error('TRANSACTION_NOT_FOUND');
+        }
+
+        salesToReturn.forEach(sale => {
+            const reason = `Return: ${transactionId}`;
+            if (sale.variantId) {
+                adjustStock(sale.variantId.toString(), sale.quantity, reason);
+            } else if (sale.productId) {
+                adjustStock(sale.productId.toString(), sale.quantity, reason);
+            } else if (sale.accessoryId) {
+                adjustAccessoryStock(sale.accessoryId.toString(), sale.quantity, reason);
+            }
+            // Update the status of each individual sale record
+            db.prepare("UPDATE sales SET status = 'Return Selesai' WHERE id = ?").run(sale.id);
         });
-        transaction();
-    } else {
-        // Full transaction return
-        await revertSaleByTransaction(transactionId, 'Return Selesai');
-    }
+    });
+
+    transaction();
 }
 
 export async function clearPosTransactions(date: Date) {
@@ -1980,6 +1971,7 @@ export async function getVoucherUsageAnalytics(groupId: number) {
     
 
     
+
 
 
 

@@ -475,10 +475,10 @@ export default function ReturnPage() {
                                                 <Badge variant={getStatusVariant(item.status)}>{item.status}</Badge>
                                             </TableCell>
                                             <TableCell className="text-center">
-                                                {item.status === 'Return' && (
+                                                {(item.status === 'Return' || item.status === 'Diantar' || item.status === 'Tidak Sampai') && (
                                                     <Button variant="outline" size="sm" onClick={() => handleActionClick(item)}>
-                                                        <CheckCircle className="mr-2 h-3 w-3 text-green-500" />
-                                                        {t.actions.itemArrived}
+                                                        <Package className="mr-2 h-3 w-3" />
+                                                        Proses Barang Sampai
                                                     </Button>
                                                 )}
                                                 {item.status === 'Dibatalkan' && (
