@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
         sku: sale.sku,
         channel: receipt.salesChannel,
         quantity: sale.quantity,
-        priceAtSale: sale.priceAtSale, // CORRECTED THIS LINE
+        priceAtSale: sale.priceAtSale,
         saleDate: receiptData.date,
         status: 'Terproses',
         productId: sale.productId,

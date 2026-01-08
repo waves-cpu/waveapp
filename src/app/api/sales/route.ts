@@ -42,9 +42,10 @@ export async function POST(request: NextRequest) {
 
     const transactionId = options?.transactionId || `trans-${Date.now()}`;
     // The performSale function now accepts a sales array directly
+    // The frontend is now responsible for sending the correct priceAtSale
     const results = await performSale(options.channel, {
         ...options,
-        sales: sales.map((s: any) => ({ ...s, priceAtSale: s.price })), // Ensure priceAtSale is passed
+        sales: sales, // Pass sales directly without re-mapping
         transactionId: transactionId,
     });
 
