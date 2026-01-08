@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Undo2, Truck, CheckCircle, Package, Search } from 'lucide-react';
+import { Undo2, Truck, CheckCircle, Package, Search, Send } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { useInventory } from '@/hooks/use-inventory';
 import type { ShippingReceipt, ReturnedItem } from '@/types';
@@ -28,18 +28,20 @@ const getStatusVariant = (status: string) => {
         case 'selesai': return 'default';
         case 'return selesai': return 'default';
         case 'siap kirim': return 'secondary';
+        case 'terproses': return 'secondary';
         case 'return': return 'destructive';
         default: return 'outline';
     }
 };
 
 const statusIcons: { [key: string]: React.ElementType } = {
+    'Terproses': Truck,
     'Siap Kirim': Truck,
     'Selesai': CheckCircle,
     'Return': Undo2,
 };
 
-type StatusTab = 'Siap Kirim' | 'Return' | 'Selesai';
+type StatusTab = 'Terproses' |'Siap Kirim' | 'Return' | 'Selesai';
 
 const ReceiptTable = ({ 
     status, 
@@ -111,6 +113,12 @@ const ReceiptTable = ({
                             <TableCell>{receipt.channel}</TableCell>
                             <TableCell><Badge variant={getStatusVariant(receipt.status)}>{receipt.status}</Badge></TableCell>
                             <TableCell className="text-right">
+                                {status === 'Terproses' && (
+                                     <Button size="sm" variant="outline" onClick={() => onAction(receipt, 'Siap Kirim')}>
+                                        <Send className="mr-2 h-4 w-4 text-blue-500" />
+                                        Tandai Siap Kirim
+                                    </Button>
+                                )}
                                 {status === 'Siap Kirim' && (
                                     <Button size="sm" variant="outline" onClick={() => onAction(receipt, 'Selesai')}>
                                         <CheckCircle className="mr-2 h-4 w-4 text-green-500" />
@@ -180,6 +188,7 @@ export default function ManageReceiptsPage() {
 
     const groupedReceipts = useMemo(() => {
         const groups: Record<StatusTab, ShippingReceipt[]> = {
+            'Terproses': [],
             'Siap Kirim': [],
             'Return': [],
             'Selesai': []
@@ -193,6 +202,7 @@ export default function ManageReceiptsPage() {
     }, [allShippingReceipts]);
     
     const tabs: { status: StatusTab, icon: React.ElementType }[] = [
+        { status: 'Terproses', icon: Truck },
         { status: 'Siap Kirim', icon: Truck },
         { status: 'Return', icon: Undo2 },
         { status: 'Selesai', icon: CheckCircle },
@@ -228,8 +238,8 @@ export default function ManageReceiptsPage() {
                     <h1 className="text-lg font-bold">Kelola Status Resi</h1>
                 </div>
 
-                <Tabs defaultValue="Siap Kirim" className="w-full">
-                    <TabsList className="grid w-full grid-cols-3">
+                <Tabs defaultValue="Terproses" className="w-full">
+                    <TabsList className="grid w-full grid-cols-4">
                         {tabs.map(tab => (
                             <TabsTrigger key={tab.status} value={tab.status}>
                                 <tab.icon className="mr-2 h-4 w-4" />
