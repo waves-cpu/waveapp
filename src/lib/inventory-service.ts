@@ -6,21 +6,22 @@ import type { InventoryItem, AdjustmentHistory, InventoryItemVariant, Sale, Rese
 import { categories as allCategories } from '@/types';
 import { format as formatDate, parseISO, startOfDay, endOfDay } from 'date-fns';
 import { formatToWIB } from './utils';
+import bcrypt from 'bcryptjs';
 
 // User functions
 export async function authenticateUser(username: string, password: string): Promise<User | null> {
-    const user = db.prepare('SELECT * FROM users WHERE username = ? AND password = ?').get(username, password) as User | undefined;
-    if (user) {
-        return { id: user.id, username: user.username, role: user.role };
+    const user = db.prepare('SELECT * FROM users WHERE username = ?').get(username) as (User & { password?: string }) | undefined;
+    if (user && user.password && bcrypt.compareSync(password, user.password)) {
+        const { password, ...userWithoutPassword } = user;
+        return userWithoutPassword;
     }
     return null;
 }
 
 export async function addUser(username: string, password: string): Promise<User> {
-    // NOTE: Storing plain text passwords is a major security risk.
-    // This is for demonstration purposes only. Use a hashing library like bcrypt in production.
+    const hashedPassword = bcrypt.hashSync(password, 10);
     const result = db.prepare('INSERT INTO users (username, password, role) VALUES (?, ?, ?)')
-      .run(username, password, 'user');
+      .run(username, hashedPassword, 'user');
     
     const newUser = db.prepare('SELECT id, username, role FROM users WHERE id = ?').get(result.lastInsertRowid) as User;
     return newUser;
@@ -901,7 +902,7 @@ export async function performSale(
 
         if (saleOptions.voucherCode) {
             const voucher = db.prepare('SELECT * FROM discount_groups WHERE voucherCode = ?').get(saleOptions.voucherCode) as DiscountGroup | undefined;
-            if (voucher && voucher.maxUses !== null) { // Allow 0 to be a valid value for "unlimited" if needed
+            if (voucher && voucher.maxUses !== null) { 
                 db.prepare('UPDATE discount_groups SET maxUses = maxUses - 1 WHERE id = ?').run(voucher.id);
             }
         }

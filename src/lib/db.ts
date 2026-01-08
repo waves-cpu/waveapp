@@ -2,6 +2,7 @@
 import Database from 'better-sqlite3';
 import path from 'path';
 import fs from 'fs';
+import bcrypt from 'bcryptjs';
 
 const dbDir = path.join(process.cwd(), 'db');
 const dbPath = path.join(dbDir, 'waves.db');
@@ -302,8 +303,9 @@ const seedData = () => {
     try {
         const userCount = db.prepare('SELECT COUNT(*) as count FROM users').get() as { count: number };
         if (userCount.count === 0) {
+            const hashedPassword = bcrypt.hashSync('admin123', 10);
             db.prepare('INSERT INTO users (username, password, role) VALUES (?, ?, ?)')
-              .run('admin', 'admin123', 'admin');
+              .run('admin', hashedPassword, 'admin');
         }
 
     } catch (e) {
