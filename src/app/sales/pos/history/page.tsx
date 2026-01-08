@@ -113,7 +113,6 @@ export default function PosHistoryPage() {
             group.items.push(sale);
             group.totalAmount += sale.priceAtSale * sale.quantity;
             group.totalItems += sale.quantity;
-            
         });
 
         // Determine if it's an accessory usage transaction
@@ -313,7 +312,7 @@ export default function PosHistoryPage() {
                                                 </Badge>
                                             </TableCell>
                                             <TableCell className="text-right font-semibold text-sm">
-                                                {group.totalAmount.toLocaleString('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                                                {group.totalAmount.toLocaleString('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 })}
                                             </TableCell>
                                             <TableCell className="text-center">
                                                 <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => {e.stopPropagation(); triggerPrint(group)}}>

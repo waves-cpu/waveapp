@@ -921,7 +921,7 @@ export async function performSale(
 
         if (saleOptions.voucherCode) {
             const voucher = db.prepare('SELECT * FROM discount_groups WHERE voucherCode = ?').get(saleOptions.voucherCode) as DiscountGroup | undefined;
-            if (voucher && voucher.maxUses !== null) { 
+            if (voucher && voucher.maxUses !== null && voucher.maxUses > 0) { 
                 db.prepare('UPDATE discount_groups SET maxUses = maxUses - 1 WHERE id = ?').run(voucher.id);
             }
         }
@@ -931,14 +931,17 @@ export async function performSale(
             const saleDateString = formatToWIB(saleDate, "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
             
             let saleReason: string;
+            let saleStatus: string;
             if (isAccessoryOnlyTx) {
                 saleReason = `Pemakaian Aksesoris (POS)`;
+                saleStatus = 'Pemakaian Aksesoris';
             } else {
                 saleReason = `Sale (${channel})` + (saleOptions?.resellerName ? ` - ${saleOptions.resellerName}` : '');
+                saleStatus = saleOptions?.status || 'Completed';
             }
+            
 
             let cogsAtSale: number | undefined;
-            let saleStatus = isAccessoryOnlyTx ? 'Pemakaian Aksesoris' : (saleOptions?.status || 'Completed');
             let parentProduct: InventoryItem | Accessory | undefined;
             let productId: number | null = null;
             let variantId: number | null = null;
@@ -1948,6 +1951,7 @@ export async function getVoucherUsageAnalytics(groupId: number) {
     
 
     
+
 
 
 
