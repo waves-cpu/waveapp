@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
@@ -11,7 +10,7 @@ import { Undo2, Truck, CheckCircle, Package, Search, Send, Ban, History, MoreVer
 import { Badge } from '@/components/ui/badge';
 import { useInventory } from '@/hooks/use-inventory';
 import type { ShippingReceipt, ReturnedItem } from '@/types';
-import { parseISO, startOfMonth, endOfMonth, isWithinInterval, startOfDay, endOfDay, subDays, startOfYear, endOfYear, subMonths } from 'date-fns';
+import { parseISO, startOfMonth, endOfMonth, isWithinInterval, startOfDay, endOfDay, subDays, startOfYear, subMonths } from 'date-fns';
 import { id as localeId } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
 import { Pagination } from '@/components/ui/pagination';
@@ -27,6 +26,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { DateRange } from 'react-day-picker';
 import { Separator } from '@/components/ui/separator';
+import { CancelShipmentDialog } from '@/app/components/cancel-shipment-dialog';
 
 const SHIPPING_CHANNEL_OPTIONS = ['Semua Jasa Kirim', 'SPX', 'J&T', 'JNE', 'INSTANT', 'CARGO'];
 
@@ -213,9 +213,10 @@ const ReceiptTable = ({
 };
 
 export default function ManageReceiptsPage() {
-    const { allShippingReceipts, updateShippingReceiptStatus, updateShippingReceiptsStatus, deleteShippingReceipt, returnSaleTransaction, loading } = useInventory();
+    const { allShippingReceipts, updateShippingReceiptStatus, updateShippingReceiptsStatus, deleteShippingReceipt, returnSaleTransaction, cancelSaleTransaction, loading } = useInventory();
     const { toast } = useToast();
     const [receiptToProcess, setReceiptToProcess] = useState<ShippingReceipt | null>(null);
+    const [receiptToCancel, setReceiptToCancel] = useState<ShippingReceipt | null>(null);
     const [isProcessing, setIsProcessing] = useState(false);
     
     const [date, setDate] = useState<DateRange | undefined>({
@@ -236,6 +237,8 @@ export default function ManageReceiptsPage() {
     const handleAction = useCallback(async (receipt: ShippingReceipt, newStatus: string) => {
         if (newStatus === 'Return Selesai') {
             setReceiptToProcess(receipt);
+        } else if (newStatus === 'Dibatalkan' && receipt.status === 'Siap Kirim') {
+            setReceiptToCancel(receipt);
         } else if (newStatus === 'Delete') {
              try {
                 await deleteShippingReceipt(receipt.id);
@@ -272,13 +275,27 @@ export default function ManageReceiptsPage() {
             await returnSaleTransaction(transactionId, items);
             
             const finalStatus = receiptToProcess.status === 'Dibatalkan' ? 'Selesai' : 'Return Selesai';
-            await handleChangeStatus(receiptToProcess.id, finalStatus);
+            await updateShippingReceiptStatus(receiptToProcess.id, finalStatus);
 
             toast({ title: 'Return Diproses', description: `Stok untuk transaksi ${transactionId} telah dikembalikan.` });
             setReceiptToProcess(null); // Close dialog
         } catch (error) {
             toast({ variant: 'destructive', title: 'Gagal Memproses Return', description: error instanceof Error ? error.message : 'Terjadi kesalahan.' });
             throw error; // Prevent dialog from closing on error
+        }
+    };
+    
+    const handleProcessCancellation = async (transactionId: string) => {
+        if (!receiptToCancel) return;
+        try {
+            await cancelSaleTransaction(transactionId);
+            await updateShippingReceiptStatus(receiptToCancel.id, 'Dibatalkan');
+            toast({ title: 'Transaksi Dibatalkan', description: `Stok untuk transaksi ${transactionId} telah dikembalikan.` });
+        } catch (error) {
+            toast({ variant: 'destructive', title: 'Gagal Membatalkan', description: error instanceof Error ? error.message : 'Terjadi kesalahan.' });
+            throw error;
+        } finally {
+             setReceiptToCancel(null);
         }
     };
 
@@ -415,6 +432,12 @@ export default function ManageReceiptsPage() {
                 onOpenChange={(isOpen) => !isOpen && setReceiptToProcess(null)}
                 onProcessReturn={handleProcessReturn}
                 receipt={receiptToProcess}
+            />
+            <CancelShipmentDialog
+                open={!!receiptToCancel}
+                onOpenChange={(isOpen) => !isOpen && setReceiptToCancel(null)}
+                onProcessCancellation={handleProcessCancellation}
+                receipt={receiptToCancel}
             />
         </AppLayout>
     );
