@@ -35,6 +35,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { formatToWIB } from '@/lib/utils';
 
 const SALES_CHANNEL_OPTIONS = ['Semua Kanal', 'Shopee', 'Tiktok', 'Lazada'];
 const SHIPPING_CHANNEL_OPTIONS = ['Semua Jasa Kirim', 'SPX', 'J&T', 'JNE', 'INSTANT', 'CARGO'];
@@ -90,41 +91,44 @@ export function ProcessedReceiptsDialog({
   const [activeSalesChannel, setActiveSalesChannel] = useState<string | null>(null);
   
   const loadReceipts = useCallback(async () => {
+    if (!open) return;
     setLoading(true);
-    let statusToFetch: string[] = [];
-    let dateToFetch: string | undefined = undefined;
-    let beforeDateToFetch: string | undefined = undefined;
-
-    if (initialStatusFilter) {
-      if (initialStatusFilter === 'Tertunda') {
-        statusToFetch = ['Terproses'];
-        if(currentDate) {
-          beforeDateToFetch = format(subDays(currentDate, 0), 'yyyy-MM-dd');
-        }
-      } else if (initialStatusFilter === 'Terproses Hari Ini') {
-        statusToFetch = ['Terproses'];
-        if(currentDate) {
-           dateToFetch = format(currentDate, 'yyyy-MM-dd');
-        }
-      } else {
-        statusToFetch = [initialStatusFilter];
-        if(currentDate) {
-          dateToFetch = format(currentDate, 'yyyy-MM-dd');
-        }
-      }
+    
+    let fetchOptions: Parameters<typeof fetchShippingReceipts>[0] = {
+        page: currentPage,
+        limit: itemsPerPage,
+        salesChannel: activeSalesChannel || undefined,
+        channel: initialChannelFilter || undefined,
+        awb: searchTerm,
+    };
+    
+    // Smart logic for handling special filters from the dashboard
+    switch (initialStatusFilter) {
+        case 'Tertunda':
+            fetchOptions.status = ['Terproses'];
+            if (currentDate) {
+                 fetchOptions.beforeDate = formatToWIB(subDays(currentDate, 0), 'yyyy-MM-dd');
+            }
+            break;
+        case 'Terproses Hari Ini':
+            fetchOptions.status = ['Terproses'];
+            if (currentDate) {
+                fetchOptions.dateString = formatToWIB(currentDate, 'yyyy-MM-dd');
+            }
+            break;
+        default:
+            if(initialStatusFilter) {
+                fetchOptions.status = [initialStatusFilter];
+            }
+            if (currentDate) {
+                 fetchOptions.dateString = formatToWIB(currentDate, 'yyyy-MM-dd');
+            }
+            break;
     }
 
+
     try {
-        const { receipts: fetchedReceipts, total } = await fetchShippingReceipts({
-            page: currentPage,
-            limit: itemsPerPage,
-            dateString: dateToFetch,
-            beforeDate: beforeDateToFetch,
-            status: statusToFetch,
-            salesChannel: activeSalesChannel || undefined,
-            channel: initialChannelFilter || undefined,
-            awb: searchTerm,
-        });
+        const { receipts: fetchedReceipts, total } = await fetchShippingReceipts(fetchOptions);
         setReceipts(fetchedReceipts);
         setTotalReceipts(total);
     } catch (error) {
@@ -132,7 +136,11 @@ export function ProcessedReceiptsDialog({
     } finally {
         setLoading(false);
     }
-  }, [fetchShippingReceipts, toast, currentPage, itemsPerPage, currentDate, activeSalesChannel, initialChannelFilter, searchTerm, initialStatusFilter]);
+  }, [
+      open, fetchShippingReceipts, toast, currentPage, itemsPerPage, 
+      activeSalesChannel, initialChannelFilter, searchTerm, 
+      initialStatusFilter, currentDate
+  ]);
 
 
   useEffect(() => {
@@ -290,7 +298,7 @@ export function ProcessedReceiptsDialog({
                     <TableRow key={item.id} data-state={selectedIds.has(item.id) && 'selected'}>
                       <TableCell><Checkbox checked={selectedIds.has(item.id)} onCheckedChange={(c) => handleSelectOne(item.id, !!c)} /></TableCell>
                       <TableCell className="font-medium">{item.awb}</TableCell>
-                      <TableCell>{format(parseISO(item.date), 'dd MMM yyyy')}</TableCell>
+                      <TableCell>{formatToWIB(parseISO(item.date), 'dd MMM yyyy')}</TableCell>
                       <TableCell>{item.salesChannel}</TableCell>
                       <TableCell>{item.channel}</TableCell>
                       <TableCell><Badge variant={getStatusVariant(item.status)}>{item.status}</Badge></TableCell>
@@ -298,7 +306,7 @@ export function ProcessedReceiptsDialog({
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8"><MoreVertical className="h-4 w-4" /></Button></DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            {initialStatusFilter === 'Terproses' && <DropdownMenuItem onClick={() => handleChangeStatus(item, 'Siap Kirim')}><Send className="mr-2 h-4 w-4" /> Tandai Siap Kirim</DropdownMenuItem>}
+                            {(initialStatusFilter === 'Terproses' || initialStatusFilter === 'Terproses Hari Ini' || initialStatusFilter === 'Tertunda') && <DropdownMenuItem onClick={() => handleChangeStatus(item, 'Siap Kirim')}><Send className="mr-2 h-4 w-4" /> Tandai Siap Kirim</DropdownMenuItem>}
                             {initialStatusFilter === 'Siap Kirim' && <DropdownMenuItem onClick={() => handleChangeStatus(item, 'Selesai')}><CheckCircle className="mr-2 h-4 w-4" /> Tandai Selesai</DropdownMenuItem>}
                             {initialStatusFilter === 'Selesai' && <DropdownMenuItem onClick={() => handleChangeStatus(item, 'Return')}><Undo2 className="mr-2 h-4 w-4 text-orange-500" /> Tandai Return</DropdownMenuItem>}
                             

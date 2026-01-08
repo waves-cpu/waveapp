@@ -185,9 +185,10 @@ export default function ReceiptPage() {
         setCountsLoading(true);
         const dateString = currentDate ? formatToWIB(currentDate, 'yyyy-MM-dd') : undefined;
         try {
-            const fetchParams: { dateString?: string; shippingChannel?: string } = {
-                dateString: dateString,
-            };
+            const fetchParams: { dateString?: string; shippingChannel?: string } = {};
+            if (dateString) {
+                fetchParams.dateString = dateString;
+            }
             if (shippingChannel && shippingChannel !== 'Semua Jasa Kirim') {
                 fetchParams.shippingChannel = shippingChannel;
             }
@@ -239,7 +240,7 @@ export default function ReceiptPage() {
     const orderedStatuses = useMemo(() => {
         return STATUS_ORDER.filter(status => {
             return CORE_STATUSES.includes(status) || (statusCounts.statuses?.[status] > 0);
-        });
+        }).filter(status => status !== 'Terproses'); // Remove 'Terproses' from main list
     }, [statusCounts.statuses]);
     
     const groupedPrintedReceipts = useMemo(() => {
@@ -310,75 +311,44 @@ export default function ReceiptPage() {
                                     <AlertTitle>Pekerjaan Tertunda</AlertTitle>
                                     <AlertDescription className="flex justify-between items-center">
                                         Anda memiliki {statusCounts.pendingBefore} resi dari hari sebelumnya yang belum diproses.
-                                        <Button variant="secondary" size="sm" onClick={handleShowAllPending}>Lihat & Proses Sekarang</Button>
+                                        <Button variant="secondary" size="sm" onClick={() => setSelectedStatus('Tertunda')}>Lihat & Proses Sekarang</Button>
                                     </AlertDescription>
                                 </Alert>
                             )}
-                            <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-5 gap-4">
+                            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
+                                <Card
+                                    key="pending-today"
+                                    className={cn("transition-all", statusCounts.pendingToday > 0 && "cursor-pointer hover:bg-accent hover:border-primary")}
+                                    onClick={() => statusCounts.pendingToday > 0 && setSelectedStatus('Terproses Hari Ini')}
+                                >
+                                    <CardContent className="flex flex-col items-center justify-center p-6 gap-2 text-center">
+                                        <Truck className="h-6 w-6 text-yellow-600" />
+                                        <div className="text-3xl font-bold">
+                                            {countsLoading ? <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /> : statusCounts.pendingToday}
+                                        </div>
+                                        <p className="text-sm font-medium text-muted-foreground">Terproses Hari Ini</p>
+                                    </CardContent>
+                                </Card>
+
                                 {orderedStatuses.map(status => {
                                     const Icon = statusIcons[status] || Package;
-                                    const isPendingToday = status === 'Terproses' && statusCounts.pendingToday > 0;
-                                    const isPendingOld = status === 'Terproses' && statusCounts.pendingBefore > 0;
-                                    let count = isPendingToday ? statusCounts.pendingToday : (statusCounts.statuses?.[status] || 0);
-                                    let statusText = isPendingToday ? 'Terproses Hari Ini' : status;
+                                    const count = statusCounts.statuses?.[status] || 0;
                                     
-                                    const cardsToRender = [];
-                                    
-                                    if(isPendingToday) {
-                                         cardsToRender.push(
-                                            <Card
-                                                key="pending-today"
-                                                className={cn("transition-all", count > 0 && "cursor-pointer hover:bg-accent hover:border-primary")}
-                                                onClick={() => count > 0 && setSelectedStatus('Terproses Hari Ini')}
-                                            >
-                                                <CardContent className="flex flex-col items-center justify-center p-6 gap-2 text-center">
-                                                    <Icon className="h-6 w-6 text-yellow-600" />
-                                                    <div className="text-3xl font-bold">
-                                                        {countsLoading ? <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /> : count}
-                                                    </div>
-                                                    <p className="text-sm font-medium text-muted-foreground">{statusText}</p>
-                                                </CardContent>
-                                            </Card>
-                                        );
-                                    }
-
-                                    if(isPendingOld) {
-                                         cardsToRender.push(
-                                            <Card
-                                                key="pending-old"
-                                                className={cn("transition-all", statusCounts.pendingBefore > 0 && "cursor-pointer hover:bg-accent hover:border-primary")}
-                                                onClick={() => statusCounts.pendingBefore > 0 && setSelectedStatus('Tertunda')}
-                                            >
-                                                <CardContent className="flex flex-col items-center justify-center p-6 gap-2 text-center">
-                                                    <Icon className="h-6 w-6 text-red-600" />
-                                                    <div className="text-3xl font-bold">
-                                                        {countsLoading ? <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /> : statusCounts.pendingBefore}
-                                                    </div>
-                                                    <p className="text-sm font-medium text-muted-foreground">Tertunda</p>
-                                                </CardContent>
-                                            </Card>
-                                        );
-                                    }
-
-                                    if(status !== 'Terproses') {
-                                         cardsToRender.push(
-                                             <Card
-                                                key={status}
-                                                className={cn("transition-all", count > 0 && "cursor-pointer hover:bg-accent hover:border-primary")}
-                                                onClick={() => count > 0 && setSelectedStatus(status)}
-                                            >
-                                                <CardContent className="flex flex-col items-center justify-center p-6 gap-2 text-center">
-                                                    <Icon className="h-6 w-6 text-muted-foreground" />
-                                                    <div className="text-3xl font-bold">
-                                                        {countsLoading ? <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /> : count}
-                                                    </div>
-                                                    <p className="text-sm font-medium text-muted-foreground">{status}</p>
-                                                </CardContent>
-                                            </Card>
-                                         );
-                                    }
-                                    
-                                    return cardsToRender;
+                                    return (
+                                        <Card
+                                            key={status}
+                                            className={cn("transition-all", count > 0 && "cursor-pointer hover:bg-accent hover:border-primary")}
+                                            onClick={() => count > 0 && setSelectedStatus(status)}
+                                        >
+                                            <CardContent className="flex flex-col items-center justify-center p-6 gap-2 text-center">
+                                                <Icon className="h-6 w-6 text-muted-foreground" />
+                                                <div className="text-3xl font-bold">
+                                                    {countsLoading ? <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /> : count}
+                                                </div>
+                                                <p className="text-sm font-medium text-muted-foreground">{status}</p>
+                                            </CardContent>
+                                        </Card>
+                                    );
                                 })}
                             </div>
                         </div>
