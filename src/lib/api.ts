@@ -1,6 +1,6 @@
 // 1. Definisikan tipe untuk opsi tambahan (misalnya query params)
 interface ApiOptions extends RequestInit {
-  params?: Record<string, string | number | boolean>;
+  params?: Record<string, string | number | boolean | null | undefined>;
   timeout?: number; // dalam milidetik
 }
 
@@ -28,6 +28,7 @@ export const apiFetch = async <T = any>(endpoint: string, options: ApiOptions = 
   const url = new URL(endpoint, BASE_URL || (typeof window !== 'undefined' ? window.location.origin : ''));
   if (params) {
     Object.entries(params).forEach(([key, value]) => {
+      // PERBAIKAN: Hanya tambahkan parameter jika nilainya tidak null atau undefined
       if (value !== undefined && value !== null) {
         url.searchParams.append(key, String(value));
       }
@@ -41,7 +42,7 @@ export const apiFetch = async <T = any>(endpoint: string, options: ApiOptions = 
   // C. Auto-detect Content-Type & Stringify Body
   const configHeaders: HeadersInit = {
     'Content-Type': 'application/json',
-    'X-API-Key': process.env.NEXT_PUBLIC_API_KEY || '', 
+    'X-API-Key': process.env.NEXT_PUBLIC_API_KEY || 'secret-api-key-for-waveapp', 
     ...headers,
   };
 

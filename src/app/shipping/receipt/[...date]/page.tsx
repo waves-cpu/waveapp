@@ -13,7 +13,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { isValid, parseISO } from 'date-fns';
 import { cn, formatToWIB } from '@/lib/utils';
 import { useInventory } from '@/hooks/use-inventory';
-import type { PrintedReceiptCount } from '@/types';
+import type { PrintedReceiptCount, ShippingReceiptCounts } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { useLanguage } from '@/hooks/use-language';
 import { translations } from '@/types/language';
@@ -168,10 +168,13 @@ export default function ReceiptPage() {
     const [isAddPrintedOpen, setAddPrintedOpen] = useState(false);
     const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
     const [pendingOldReceiptsCount, setPendingOldReceiptsCount] = useState(0);
-    const [statusCounts, setStatusCounts] = useState<Record<string, Record<string, number>>>({
+    const [statusCounts, setStatusCounts] = useState<ShippingReceiptCounts>({
+        pendingToday: 0,
+        pendingBefore: 0,
         statuses: {},
         shippingChannels: {},
-        salesChannels: {}
+        salesChannels: {},
+        shippingChannelsBySalesChannel: {}
     });
     const [printedReceiptCounts, setPrintedReceiptCounts] = useState<PrintedReceiptCount[]>([]);
     const [countsLoading, setCountsLoading] = useState(true);
@@ -184,25 +187,24 @@ export default function ReceiptPage() {
         setCountsLoading(true);
         const dateString = currentDate ? formatToWIB(currentDate, 'yyyy-MM-dd') : undefined;
         try {
-            const [statusData, printedData, pendingOldData] = await Promise.all([
-                fetchShippingReceiptCounts({ 
-                    dateString: dateString,
-                    shippingChannel: shippingChannel || undefined
-                }),
+            const fetchParams: { dateString?: string, shippingChannel?: string } = {};
+            if (dateString) fetchParams.dateString = dateString;
+            if (shippingChannel) fetchParams.shippingChannel = shippingChannel;
+
+            const [statusData, printedData] = await Promise.all([
+                fetchShippingReceiptCounts(fetchParams),
                 dateString ? getPrintedReceiptCountsForDate(dateString) : Promise.resolve([]),
-                currentDate ? getPendingReceiptsBeforeDate(currentDate) : Promise.resolve(0),
             ]);
     
             setStatusCounts(statusData);
             setPrintedReceiptCounts(printedData);
-            setPendingOldReceiptsCount(pendingOldData);
 
         } catch (error) {
              toast({ variant: 'destructive', title: "Gagal memuat jumlah status" });
         } finally {
             setCountsLoading(false);
         }
-    }, [currentDate, shippingChannel, fetchShippingReceiptCounts, getPrintedReceiptCountsForDate, getPendingReceiptsBeforeDate, toast]);
+    }, [currentDate, shippingChannel, fetchShippingReceiptCounts, getPrintedReceiptCountsForDate, toast]);
 
 
     useEffect(() => {
@@ -228,7 +230,7 @@ export default function ReceiptPage() {
     
     const handleShowAllPending = () => {
         router.push('/shipping/receipt/semua');
-        setSelectedStatus('Terproses'); 
+        setSelectedStatus('Tertunda'); 
     };
 
     const orderedStatuses = useMemo(() => {
@@ -299,12 +301,12 @@ export default function ReceiptPage() {
 
                      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3 lg:gap-8">
                         <div className="lg:col-span-2 space-y-6">
-                             {pendingOldReceiptsCount > 0 && (
+                             {statusCounts.pendingBefore > 0 && (
                                 <Alert variant="destructive">
                                     <AlertCircle className="h-4 w-4" />
                                     <AlertTitle>Pekerjaan Tertunda</AlertTitle>
                                     <AlertDescription className="flex justify-between items-center">
-                                        Anda memiliki {pendingOldReceiptsCount} resi dari hari sebelumnya yang belum diproses.
+                                        Anda memiliki {statusCounts.pendingBefore} resi dari hari sebelumnya yang belum diproses.
                                         <Button variant="secondary" size="sm" onClick={handleShowAllPending}>Lihat & Proses Sekarang</Button>
                                     </AlertDescription>
                                 </Alert>
@@ -312,27 +314,68 @@ export default function ReceiptPage() {
                             <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-5 gap-4">
                                 {orderedStatuses.map(status => {
                                     const Icon = statusIcons[status] || Package;
-                                    const count = statusCounts.statuses?.[status] || 0;
-                                    const canClick = count > 0;
+                                    const isPendingToday = status === 'Terproses' && statusCounts.pendingToday > 0;
+                                    const isPendingOld = status === 'Terproses' && statusCounts.pendingBefore > 0;
+                                    let count = isPendingToday ? statusCounts.pendingToday : (statusCounts.statuses?.[status] || 0);
+                                    let statusText = isPendingToday ? 'Terproses Hari Ini' : status;
+                                    
+                                    const cardsToRender = [];
+                                    
+                                    if(isPendingToday) {
+                                         cardsToRender.push(
+                                            <Card
+                                                key="pending-today"
+                                                className={cn("transition-all", count > 0 && "cursor-pointer hover:bg-accent hover:border-primary")}
+                                                onClick={() => count > 0 && setSelectedStatus('Terproses Hari Ini')}
+                                            >
+                                                <CardContent className="flex flex-col items-center justify-center p-6 gap-2 text-center">
+                                                    <Icon className="h-6 w-6 text-yellow-600" />
+                                                    <div className="text-3xl font-bold">
+                                                        {countsLoading ? <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /> : count}
+                                                    </div>
+                                                    <p className="text-sm font-medium text-muted-foreground">{statusText}</p>
+                                                </CardContent>
+                                            </Card>
+                                        );
+                                    }
 
-                                    return (
-                                        <Card
-                                            key={status}
-                                            className={cn(
-                                                "transition-all",
-                                                canClick && "cursor-pointer hover:bg-accent hover:border-primary"
-                                            )}
-                                            onClick={() => canClick && setSelectedStatus(status)}
-                                        >
-                                            <CardContent className="flex flex-col items-center justify-center p-6 gap-2 text-center">
-                                                <Icon className="h-6 w-6 text-muted-foreground mb-2" />
-                                                <div className="text-3xl font-bold">
-                                                    {countsLoading ? <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /> : count}
-                                                </div>
-                                                <p className="text-sm font-medium text-muted-foreground">{status}</p>
-                                            </CardContent>
-                                        </Card>
-                                    )
+                                    if(isPendingOld) {
+                                         cardsToRender.push(
+                                            <Card
+                                                key="pending-old"
+                                                className={cn("transition-all", statusCounts.pendingBefore > 0 && "cursor-pointer hover:bg-accent hover:border-primary")}
+                                                onClick={() => statusCounts.pendingBefore > 0 && setSelectedStatus('Tertunda')}
+                                            >
+                                                <CardContent className="flex flex-col items-center justify-center p-6 gap-2 text-center">
+                                                    <Icon className="h-6 w-6 text-red-600" />
+                                                    <div className="text-3xl font-bold">
+                                                        {countsLoading ? <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /> : statusCounts.pendingBefore}
+                                                    </div>
+                                                    <p className="text-sm font-medium text-muted-foreground">Tertunda</p>
+                                                </CardContent>
+                                            </Card>
+                                        );
+                                    }
+
+                                    if(status !== 'Terproses') {
+                                         cardsToRender.push(
+                                             <Card
+                                                key={status}
+                                                className={cn("transition-all", count > 0 && "cursor-pointer hover:bg-accent hover:border-primary")}
+                                                onClick={() => count > 0 && setSelectedStatus(status)}
+                                            >
+                                                <CardContent className="flex flex-col items-center justify-center p-6 gap-2 text-center">
+                                                    <Icon className="h-6 w-6 text-muted-foreground" />
+                                                    <div className="text-3xl font-bold">
+                                                        {countsLoading ? <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /> : count}
+                                                    </div>
+                                                    <p className="text-sm font-medium text-muted-foreground">{status}</p>
+                                                </CardContent>
+                                            </Card>
+                                         );
+                                    }
+                                    
+                                    return cardsToRender;
                                 })}
                             </div>
                         </div>
@@ -356,15 +399,6 @@ export default function ReceiptPage() {
                                                     </h3>
                                                     <div className="pl-4 border-l ml-2 space-y-2">
                                                         {group.items.map(item => {
-                                                            const statusesToCount = ['Terproses', 'Siap Kirim', 'Selesai'];
-                                                            const usedCount = statusesToCount.reduce((sum, status) => {
-                                                                const salesChannelGroup = statusCounts.salesChannels?.[group.salesChannel];
-                                                                if (salesChannelGroup && salesChannelGroup[item.shippingChannel]) {
-                                                                    // This logic is complex, for now let's simplify
-                                                                }
-                                                                return sum;
-                                                            }, 0);
-                                                            
                                                             const shippingChannelData = statusCounts.shippingChannelsBySalesChannel?.[group.salesChannel] || {};
                                                             const totalUsedForThisCombo = shippingChannelData[item.shippingChannel] || 0;
 
