@@ -122,9 +122,11 @@ export default function VouchersPage() {
                                                     Ubah
                                                  </Link>
                                             </DropdownMenuItem>
-                                             <DropdownMenuItem disabled>
-                                                <BarChart2 className="mr-2 h-4 w-4" />
-                                                Lihat Analisis
+                                             <DropdownMenuItem asChild>
+                                                <Link href={`/promotions/vouchers/analytics/${group.id}`}>
+                                                    <BarChart2 className="mr-2 h-4 w-4" />
+                                                    Lihat Analisis
+                                                </Link>
                                             </DropdownMenuItem>
                                             <DropdownMenuItem className="text-destructive" onClick={() => setGroupToDelete(group)}>
                                                 <Trash2 className="mr-2 h-4 w-4" />
@@ -149,7 +151,7 @@ export default function VouchersPage() {
                                             }
                                             {group.minPurchase && group.minPurchase > 0 && <span>, min. belanja {`Rp${group.minPurchase.toLocaleString('id-ID')}`}</span>}
                                         </div>
-                                         {group.maxUses && group.maxUses > 0 && (
+                                         {group.maxUses !== null && (
                                             <div>Sisa Kuota: {group.maxUses}</div>
                                         )}
                                     </div>

@@ -901,7 +901,7 @@ export async function performSale(
 
         if (saleOptions.voucherCode) {
             const voucher = db.prepare('SELECT * FROM discount_groups WHERE voucherCode = ?').get(saleOptions.voucherCode) as DiscountGroup | undefined;
-            if (voucher && voucher.maxUses !== null && voucher.maxUses > 0) {
+            if (voucher && voucher.maxUses !== null) { // Allow 0 to be a valid value for "unlimited" if needed
                 db.prepare('UPDATE discount_groups SET maxUses = maxUses - 1 WHERE id = ?').run(voucher.id);
             }
         }
@@ -950,30 +950,31 @@ export async function performSale(
             }
 
             const saleResult = db.prepare(`
-                INSERT INTO sales (transactionId, paymentMethod, resellerName, productId, variantId, accessoryId, channel, quantity, priceAtSale, cogsAtSale, saleDate, status, parentSku, productCategory, parentImageUrl)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            `).run(
-                saleOptions?.transactionId || `tx-${Date.now()}`, 
-                saleOptions?.paymentMethod, 
-                saleOptions?.resellerName, 
-                productId, 
-                variantId, 
-                accessoryId,
-                channel, 
-                sale.quantity, 
-                sale.priceAtSale, 
-                cogsAtSale, 
-                saleDateString, 
-                saleStatus,
-                parentProduct?.sku,
-                parentProduct?.category,
-                parentProduct?.imageUrl
-            );
+                INSERT INTO sales (transactionId, paymentMethod, resellerName, productId, variantId, accessoryId, channel, quantity, priceAtSale, cogsAtSale, saleDate, status, parentSku, productCategory, parentImageUrl, voucherCode)
+                VALUES (@transactionId, @paymentMethod, @resellerName, @productId, @variantId, @accessoryId, @channel, @quantity, @priceAtSale, @cogsAtSale, @saleDate, @status, @parentSku, @productCategory, @parentImageUrl, @voucherCode)
+            `).run({
+                transactionId: saleOptions?.transactionId || `tx-${Date.now()}`, 
+                paymentMethod: saleOptions?.paymentMethod, 
+                resellerName: saleOptions?.resellerName, 
+                productId: productId, 
+                variantId: variantId, 
+                accessoryId: accessoryId,
+                channel: channel, 
+                quantity: sale.quantity, 
+                priceAtSale: sale.priceAtSale, 
+                cogsAtSale: cogsAtSale, 
+                saleDate: saleDateString, 
+                status: saleStatus,
+                parentSku: parentProduct?.sku,
+                productCategory: parentProduct?.category,
+                parentImageUrl: parentProduct?.imageUrl,
+                voucherCode: saleOptions.voucherCode || null
+            });
             
             const newSaleId = saleResult.lastInsertRowid;
             const newSale = db.prepare(`
                 SELECT 
-                    s.id, s.transactionId, s.paymentMethod, s.resellerName, s.productId, s.variantId, s.accessoryId, s.channel, s.quantity, s.priceAtSale, s.cogsAtSale, s.saleDate,
+                    s.id, s.transactionId, s.paymentMethod, s.resellerName, s.productId, s.variantId, s.accessoryId, s.channel, s.quantity, s.priceAtSale, s.cogsAtSale, s.saleDate, s.voucherCode,
                     COALESCE(p.name, a.name) as productName,
                     COALESCE(p.category, a.category) as productCategory,
                     p.imageUrl as parentImageUrl,
@@ -1149,7 +1150,7 @@ export async function fetchSingleAccessory(accessoryId: string): Promise<Accesso
 export async function fetchAllSales(): Promise<Sale[]> {
      const salesQuery = db.prepare(`
         SELECT 
-            s.id, s.transactionId, s.paymentMethod, s.resellerName, s.productId, s.variantId, s.accessoryId, s.channel, s.quantity, s.priceAtSale, s.cogsAtSale, s.saleDate,
+            s.id, s.transactionId, s.paymentMethod, s.resellerName, s.productId, s.variantId, s.accessoryId, s.channel, s.quantity, s.priceAtSale, s.cogsAtSale, s.saleDate, s.voucherCode,
             COALESCE(p.name, a.name) as productName,
             COALESCE(p.category, a.category) as productCategory,
             p.imageUrl as parentImageUrl,
@@ -1827,6 +1828,46 @@ export async function checkPrintedReceiptAvailability(salesChannel: string, ship
     const usedCount = usedCountRow.totalUsed;
     
     return usedCount < printedCount;
+}
+
+export async function getVoucherUsageAnalytics(groupId: number) {
+    const group = db.prepare('SELECT * FROM discount_groups WHERE id = ?').get(groupId) as DiscountGroup;
+    if (!group || !group.voucherCode) {
+        throw new Error('Voucher not found.');
+    }
+
+    const sales = db.prepare(`
+        SELECT 
+            transactionId, 
+            channel,
+            resellerName,
+            saleDate, 
+            SUM(priceAtSale * quantity) as totalSale
+        FROM sales 
+        WHERE voucherCode = ? 
+        GROUP BY transactionId, channel, resellerName, saleDate
+        ORDER BY saleDate DESC
+    `).all(group.voucherCode) as { transactionId: string; channel: string; resellerName: string | null, saleDate: string; totalSale: number }[];
+
+    const totalDiscountResult = db.prepare(`
+        SELECT 
+            SUM(s.quantity * (COALESCE(v.price, p.price) - s.priceAtSale)) as totalDiscount
+        FROM sales s
+        LEFT JOIN products p ON s.productId = p.id
+        LEFT JOIN variants v ON s.variantId = v.id
+        WHERE s.voucherCode = ?
+    `).get(group.voucherCode) as { totalDiscount: number };
+
+    const totalDiscount = totalDiscountResult?.totalDiscount || 0;
+    const totalRevenue = sales.reduce((sum, s) => sum + s.totalSale, 0);
+
+    return {
+        voucher: group,
+        usageCount: sales.length,
+        totalDiscount,
+        totalRevenue,
+        transactions: sales
+    };
 }
     
 

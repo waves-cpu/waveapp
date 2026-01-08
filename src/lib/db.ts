@@ -139,6 +139,7 @@ const createSchema = () => {
         cogsAtSale REAL,
         saleDate TEXT NOT NULL,
         status TEXT DEFAULT 'Completed',
+        voucherCode TEXT,
         FOREIGN KEY (productId) REFERENCES products(id) ON DELETE CASCADE,
         FOREIGN KEY (variantId) REFERENCES variants(id) ON DELETE CASCADE,
         FOREIGN KEY (accessoryId) REFERENCES accessories(id) ON DELETE CASCADE
@@ -239,6 +240,7 @@ const runMigrations = () => {
     addColumn('sales', 'status', "TEXT DEFAULT 'Completed'");
     addColumn('sales', 'productCategory', 'TEXT');
     addColumn('sales', 'parentImageUrl', 'TEXT');
+    addColumn('sales', 'voucherCode', 'TEXT');
 
     // Reseller Migrations
     addColumn('resellers', 'phone', 'TEXT');
