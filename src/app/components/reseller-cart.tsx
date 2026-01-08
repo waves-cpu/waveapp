@@ -4,7 +4,7 @@
 
 import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { useInventory } from '@/hooks/use-inventory';
-import type { InventoryItem, InventoryItemVariant, Reseller } from '@/types';
+import type { InventoryItem, InventoryItemVariant, Reseller, SearchableItem } from '@/types';
 import { PosSearch } from './pos-search';
 import { PosOrderSummary } from './pos-order-summary';
 import { VariantSelectionDialog } from './variant-selection-dialog';
@@ -28,6 +28,9 @@ export interface CartItem extends InventoryItemVariant {
     productName: string;
     quantity: number;
     parentImageUrl?: string;
+    originalPrice: number;
+    type: 'product';
+    maxStock: number;
 }
 
 interface ResellerCartProps {
@@ -36,7 +39,7 @@ interface ResellerCartProps {
 
 export function ResellerCart({ reseller }: ResellerCartProps) {
     const LOCAL_STORAGE_KEY = `resellerCart_${reseller.id}`;
-    const { recordSale, items: inventoryItems } = useInventory();
+    const { recordSale, items: inventoryItems, findProductBySku } = useInventory();
     const { language } = useLanguage();
     const { playSuccessSound, playErrorSound } = useScanSounds();
     const t = translations[language];
@@ -47,19 +50,18 @@ export function ResellerCart({ reseller }: ResellerCartProps) {
     const [invoiceToPrint, setInvoiceToPrint] = useState<ReceiptData & {reseller: Reseller} | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
     const debouncedSearchTerm = useDebounce(searchTerm, 300);
+    const searchInputRef = useRef<HTMLInputElement>(null);
 
-    const searchSuggestions = useMemo(() => {
-        if (debouncedSearchTerm.length < 3) return [];
+    const searchSuggestions = useMemo((): SearchableItem[] => {
+        if (debouncedSearchTerm.length < 2) return [];
         const lowercasedTerm = debouncedSearchTerm.toLowerCase();
-        
-        const exactSkuMatch = inventoryItems.find(item => item.sku?.toLowerCase() === lowercasedTerm);
-        if (exactSkuMatch) return [exactSkuMatch];
-        const variantSkuMatch = inventoryItems.find(item => item.variants?.some(v => v.sku?.toLowerCase() === lowercasedTerm));
-        if(variantSkuMatch) return [variantSkuMatch];
-        
+
         return inventoryItems.filter(item => 
-            item.name.toLowerCase().includes(lowercasedTerm)
-        ).slice(0, 10);
+            !item.isArchived &&
+            (item.name.toLowerCase().includes(lowercasedTerm) ||
+            (item.sku && item.sku.toLowerCase().includes(lowercasedTerm)) ||
+            (item.variants && item.variants.some(v => v.sku?.toLowerCase().includes(lowercasedTerm))))
+        ).slice(0, 10) as SearchableItem[];
     }, [debouncedSearchTerm, inventoryItems]);
 
 
@@ -110,10 +112,18 @@ export function ResellerCart({ reseller }: ResellerCartProps) {
         const itemToAddRaw = variant || item;
         const price = getPriceForChannel(itemToAddRaw, 'reseller');
 
-        const itemToAdd = variant ? 
-            { ...variant, price, productId: item.id, productName: item.name, parentImageUrl: item.imageUrl } : 
-            { ...item, price, id: item.id, productId: item.id, productName: item.name, stock: item.stock!, parentImageUrl: item.imageUrl };
-
+        const itemToAdd = {
+            ...(variant || item),
+            id: variant?.id || item.id,
+            price,
+            productId: item.id,
+            productName: item.name,
+            parentImageUrl: item.imageUrl,
+            originalPrice: itemToAddRaw.price || 0,
+            maxStock: itemToAddRaw.stock || 0,
+            type: 'product' as const
+        };
+        
         const existingCartItem = cart.find(ci => ci.id === itemToAdd.id);
         const quantityInCart = existingCartItem?.quantity || 0;
         
@@ -121,7 +131,7 @@ export function ResellerCart({ reseller }: ResellerCartProps) {
              toast({
                 variant: "destructive",
                 title: "Stok tidak mencukupi",
-                description: `Anda tidak dapat menambahkan ${itemToAdd.name} lagi.`,
+                description: `Anda tidak dapat menambahkan ${itemToAdd.productName} ${variant?.name || ''} lagi.`,
             });
             playErrorSound();
             return;
@@ -140,7 +150,10 @@ export function ResellerCart({ reseller }: ResellerCartProps) {
         });
     }, [cart, playErrorSound, playSuccessSound, toast]);
 
-    const handleProductSelect = useCallback(async (product: InventoryItem) => {
+    const handleProductSelect = useCallback(async (selected: SearchableItem) => {
+        if (selected.itemType !== 'product') return;
+        const product = selected as InventoryItem;
+        
         try {
             if (product.variants && product.variants.length > 1) {
                 setProductForVariantSelection(product);
@@ -168,7 +181,21 @@ export function ResellerCart({ reseller }: ResellerCartProps) {
             });
             playErrorSound();
         }
+        setSearchTerm('');
     }, [addToCart, playErrorSound, toast]);
+
+    const handleSkuSubmit = useCallback(async (sku: string) => {
+        const productData = await findProductBySku(sku);
+
+        if (!productData) {
+            playErrorSound();
+            toast({ variant: 'destructive', title: 'Produk Tidak Ditemukan', description: `Tidak ada produk yang cocok dengan SKU '${sku}'` });
+            return;
+        }
+
+        handleProductSelect(productData as SearchableItem);
+        setSearchTerm('');
+    }, [findProductBySku, handleProductSelect, playErrorSound, toast]);
 
 
     const handleVariantSelect = (variant: InventoryItemVariant | null) => {
@@ -208,16 +235,17 @@ export function ResellerCart({ reseller }: ResellerCartProps) {
     };
 
     const handleSaleComplete = async (paymentMethod: string, receiptData: ReceiptData, status: 'Completed' | 'Pending' = 'Completed') => {
+        const transactionId = `trans-${Date.now()}`;
         const salesPayload = cart.map(item => ({
             sku: item.sku!,
             quantity: item.quantity,
-            price: item.price,
+            priceAtSale: item.price,
         }));
 
         try {
-            await recordSale('reseller', 0, {
+            await recordSale('reseller', {
                 sales: salesPayload,
-                transactionId: `trans-${Date.now()}`,
+                transactionId: transactionId,
                 paymentMethod,
                 resellerName: reseller.name,
                 status,
@@ -227,7 +255,7 @@ export function ResellerCart({ reseller }: ResellerCartProps) {
                 title: "Invoice Dibuat",
                 description: "Invoice telah berhasil dibuat dan stok telah dipotong."
             });
-            setInvoiceToPrint({ ...receiptData, transactionId: salesPayload.options.transactionId, reseller });
+            setInvoiceToPrint({ ...receiptData, transactionId: transactionId, reseller });
         } catch (error) {
             console.error("Failed to complete sale:", error);
             toast({
@@ -244,7 +272,9 @@ export function ResellerCart({ reseller }: ResellerCartProps) {
             <div className="flex-grow grid grid-cols-1 lg:grid-cols-5 gap-4 p-4 h-full no-print">
                 <div className="lg:col-span-3 flex flex-col gap-4 h-full">
                     <PosSearch 
-                        onProductSelect={handleProductSelect} 
+                        ref={searchInputRef}
+                        onProductSelect={handleProductSelect}
+                        onSkuSubmit={handleSkuSubmit}
                         searchTerm={searchTerm}
                         setSearchTerm={setSearchTerm}
                         suggestions={searchSuggestions}
@@ -313,6 +343,8 @@ export function ResellerCart({ reseller }: ResellerCartProps) {
                         clearCart={clearCart}
                         channel="reseller"
                         pendingTransactionId={null}
+                        onVoucherApplied={() => {}}
+                        activeVoucher={null}
                     />
                 </div>
                 {productForVariantSelection && (

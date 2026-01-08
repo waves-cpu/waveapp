@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useMemo, useEffect } from 'react';
@@ -36,8 +37,8 @@ interface PosOrderSummaryProps {
   clearCart: () => void;
   channel: 'pos' | 'reseller';
   pendingTransactionId: string | null;
-  onVoucherApplied: (voucherData: Voucher | null) => void;
-  activeVoucher: Voucher | null;
+  onVoucherApplied?: (voucherData: Voucher | null) => void;
+  activeVoucher?: Voucher | null;
 }
 
 type PaymentMethod = 'Cash' | 'Qris' | 'Transfer' | 'Debit';
@@ -106,7 +107,7 @@ export function PosOrderSummary({ cart, onSaleComplete, clearCart, channel, pend
             setManualDiscount(0);
             setCashReceived(0);
             setVoucherCode('');
-            onVoucherApplied(null);
+            onVoucherApplied?.(null);
         }
     }, [cart, onVoucherApplied]);
     
@@ -115,7 +116,7 @@ export function PosOrderSummary({ cart, onSaleComplete, clearCart, channel, pend
         setCashReceived(0);
         setPaymentMethod(channel === 'reseller' ? 'Transfer' : 'Cash');
         setVoucherCode('');
-        onVoucherApplied(null);
+        onVoucherApplied?.(null);
         clearCart();
     }
 
@@ -130,7 +131,7 @@ export function PosOrderSummary({ cart, onSaleComplete, clearCart, channel, pend
              if (data.maxUses !== null && data.maxUses <= 0) {
                 throw new Error("Kuota untuk voucher ini sudah habis.");
             }
-            onVoucherApplied(data);
+            onVoucherApplied?.(data);
             setManualDiscount(0); // Reset manual discount
             toast({
                 title: "Voucher Diterapkan",
@@ -142,7 +143,7 @@ export function PosOrderSummary({ cart, onSaleComplete, clearCart, channel, pend
                 title: "Voucher Tidak Valid",
                 description: error.message,
             });
-            onVoucherApplied(null);
+            onVoucherApplied?.(null);
         } finally {
             setIsApplyingVoucher(false);
             setVoucherCode('');
@@ -150,7 +151,7 @@ export function PosOrderSummary({ cart, onSaleComplete, clearCart, channel, pend
     };
     
     const handleRemoveVoucher = () => {
-        onVoucherApplied(null);
+        onVoucherApplied?.(null);
         toast({ title: 'Voucher Dihapus', description: 'Harga telah kembali normal.' });
     };
 
@@ -358,3 +359,4 @@ export function PosOrderSummary({ cart, onSaleComplete, clearCart, channel, pend
 
 
     
+
