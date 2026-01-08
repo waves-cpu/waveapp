@@ -116,7 +116,7 @@ export async function fetchShippingReceipts(options: {
     date_range?: { from: Date, to: Date };
     status?: string[];
     awb?: string;
-}): Promise<{ receipts: ShippingReceipt[]; total: number }> {
+}): Promise<{ receipts: ShippingReceipt[]; total: number; }> {
     const { page, limit, salesChannel, channel, dateString, date_range, status, awb } = options;
     const offset = (page - 1) * limit;
 
@@ -878,7 +878,8 @@ export async function performSale(
         transactionId?: string, 
         paymentMethod?: string,
         resellerName?: string,
-        status?: string
+        status?: string,
+        voucherCode?: string;
     }
 ): Promise<{ newSale: Sale, updatedItem?: InventoryItem, updatedAccessory?: Accessory }[]> {
     const { sales, ...saleOptions } = options;
@@ -891,11 +892,17 @@ export async function performSale(
     const transaction = db.transaction(() => {
         const results: { newSale: Sale, updatedItem?: InventoryItem, updatedAccessory?: Accessory }[] = [];
         
-        // If it's an existing pending transaction, first delete it.
         if (saleOptions.transactionId && saleOptions.transactionId.startsWith('trans-')) {
             const existingSales = db.prepare('SELECT * FROM sales WHERE transactionId = ? AND status = ?').all(saleOptions.transactionId, 'Pending');
             if (existingSales.length > 0) {
                  db.prepare('DELETE FROM sales WHERE transactionId = ?').run(saleOptions.transactionId);
+            }
+        }
+
+        if (saleOptions.voucherCode) {
+            const voucher = db.prepare('SELECT * FROM discount_groups WHERE voucherCode = ?').get(saleOptions.voucherCode) as DiscountGroup | undefined;
+            if (voucher && voucher.maxUses && voucher.maxUses > 0) {
+                db.prepare('UPDATE discount_groups SET maxUses = maxUses - 1 WHERE id = ?').run(voucher.id);
             }
         }
         
@@ -1855,4 +1862,5 @@ export async function checkPrintedReceiptAvailability(salesChannel: string, ship
 
 
     
+
 

@@ -23,7 +23,7 @@ interface InventoryContextType {
   bulkUpdateVariants: (itemId: string, variants: InventoryItemVariant[], reason: string) => Promise<void>;
   fetchItems: () => Promise<void>;
   loading: boolean;
-  recordSale: (channel: string, quantity: number, options: any) => Promise<any>;
+  recordSale: (channel: string, options: any) => Promise<any>;
   recordSaleWithReceipt: (receiptData: Omit<ShippingReceipt, 'id'>, salesData: Omit<Sale, 'id'>[]) => Promise<void>;
   fetchSales: (channel: string, date: Date, page: number, limit: number) => Promise<{sales: Sale[], total: number}>;
   cancelSaleTransaction: (transactionId: string) => Promise<void>;
@@ -230,7 +230,7 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
         addAccessory: (accessory: any) => addAccessoryMutation.mutateAsync(accessory),
         updateAccessory: (accessoryId: string, accessoryData: any) => updateAccessoryMutation.mutateAsync({ accessoryId, accessoryData }),
         adjustAccessoryStock: (accessoryId: string, change: number, reason: string) => adjustAccessoryStockMutation.mutateAsync({ accessoryId, change, reason }),
-        recordSale: (channel: string, quantity: number, options: any) => recordSaleMutation.mutateAsync({ sales: options.sales, options: { ...options, channel } }),
+        recordSale: (channel: string, options: any) => recordSaleMutation.mutateAsync({ sales: options.sales, options: { ...options, channel } }),
         recordSaleWithReceipt: (receiptData: any, salesData: any) => recordSaleWithReceiptMutation.mutateAsync({ receipt: receiptData, sales: salesData }),
         cancelSaleTransaction: (id: string) => cancelSaleTransactionMutation.mutateAsync(id),
         returnSaleTransaction: (id: string, items?: ReturnedItem[]) => returnSaleTransactionMutation.mutateAsync({ transactionId: id, items }),

@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
@@ -341,21 +342,34 @@ export function PosCart({ onVoucherApplied, activeVoucher }: PosCartProps) {
         localStorage.removeItem(LOCAL_STORAGE_KEY);
     };
 
-    const handleSaleComplete = async (paymentMethod: string, receiptData: ReceiptData, status: 'Completed' | 'Pending' = 'Completed') => {
-        const salesData = cart.map(item => ({
-            sku: item.sku,
-            quantity: item.quantity,
-            price: item.price, // Use the current price from cart, which might be discounted
-        }));
+    const handleSaleComplete = async (paymentMethod: string, receiptData: ReceiptData, status: 'Completed' | 'Pending' = 'Completed', voucherCode?: string) => {
+        
+        const { total, subtotal, discount } = receiptData;
+        const totalOriginalPrice = cart.reduce((sum, item) => sum + item.originalPrice * item.quantity, 0);
+        const totalDiscount = totalOriginalPrice - total;
+        
+        const salesData = cart.map(item => {
+            const itemOriginalTotal = item.originalPrice * item.quantity;
+            const itemProportion = itemOriginalTotal / totalOriginalPrice;
+            const itemDiscount = totalDiscount * itemProportion;
+            const finalPricePerUnit = item.quantity > 0 ? (itemOriginalTotal - itemDiscount) / item.quantity : item.originalPrice;
+            
+            return {
+                sku: item.sku,
+                quantity: item.quantity,
+                priceAtSale: finalPricePerUnit,
+            };
+        });
         
         const transactionId = pendingTransactionId || `trans-${Date.now()}`;
 
         try {
-            await recordSale('pos', 0, {
+            await recordSale('pos', {
                 sales: salesData,
                 transactionId: transactionId,
                 paymentMethod: paymentMethod,
                 status: status,
+                voucherCode: voucherCode
             });
 
             if (status === 'Completed') {

@@ -34,7 +34,7 @@ import type { Voucher } from '@/types';
 
 interface PosOrderSummaryProps {
   cart: CartItem[];
-  onSaleComplete: (paymentMethod: string, receiptData: ReceiptData, status?: 'Completed' | 'Pending') => Promise<void>;
+  onSaleComplete: (paymentMethod: string, receiptData: ReceiptData, status?: 'Completed' | 'Pending', voucherCode?: string) => Promise<void>;
   clearCart: () => void;
   channel: 'pos' | 'reseller';
   pendingTransactionId: string | null;
@@ -73,31 +73,29 @@ export function PosOrderSummary({ cart, onSaleComplete, clearCart, channel, pend
 
         let voucherDiscountCalc = 0;
         if (activeVoucher) {
-            voucherDiscountCalc = cart.reduce((acc, item) => {
-                const appliesToAll = activeVoucher.category === 'Semua Kategori';
-                const categoryMatch = item.category === activeVoucher.category;
-                
-                if (appliesToAll || categoryMatch) {
-                    // Apply voucher to the price *after* group discount
-                    const priceForItem = item.price; 
-                    if (activeVoucher.discountType === 'percentage') {
-                        return acc + (priceForItem * (activeVoucher.discountValue / 100)) * item.quantity;
-                    } else if (activeVoucher.discountType === 'fixed') {
-                        const totalDiscountForThisItem = activeVoucher.discountValue! * item.quantity;
-                        const itemTotalAfterGroupDiscount = priceForItem * item.quantity;
-                        return acc + Math.min(totalDiscountForThisItem, itemTotalAfterGroupDiscount);
-                    }
+            const preVoucherTotal = subtotalCalc - groupDiscountCalc;
+            if(activeVoucher.minPurchase && preVoucherTotal < activeVoucher.minPurchase) {
+                 // Don't apply voucher if min purchase is not met
+                 // You might want to show a toast message here
+            } else {
+                 if (activeVoucher.discountType === 'percentage') {
+                    voucherDiscountCalc = preVoucherTotal * (activeVoucher.discountValue / 100);
+                } else if (activeVoucher.discountType === 'fixed') {
+                    voucherDiscountCalc = activeVoucher.discountValue;
                 }
-                return acc;
-            }, 0);
+            }
         }
+        
+        // Ensure total discount does not exceed the subtotal after group discounts
+        const totalCalculatedDiscount = groupDiscountCalc + voucherDiscountCalc + manualDiscount;
+        const subtotalAfterGroupDiscount = subtotalCalc - groupDiscountCalc;
+        const finalDiscount = Math.min(totalCalculatedDiscount, subtotalAfterGroupDiscount > 0 ? subtotalAfterGroupDiscount : 0);
 
-        const totalDiscountCalc = groupDiscountCalc + voucherDiscountCalc + manualDiscount;
-        const finalTotalCalc = subtotalCalc - totalDiscountCalc;
+        const finalTotalCalc = subtotalCalc - finalDiscount;
 
         return { 
             subtotal: subtotalCalc, 
-            totalDiscount: totalDiscountCalc, 
+            totalDiscount: finalDiscount, 
             finalTotal: finalTotalCalc,
             groupDiscount: groupDiscountCalc,
             voucherDiscount: voucherDiscountCalc 
@@ -133,6 +131,9 @@ export function PosOrderSummary({ cart, onSaleComplete, clearCart, channel, pend
             if (!data.voucherCode || !data.discountType || data.discountValue === undefined) {
               throw new Error("Data voucher tidak lengkap dari server.");
             }
+             if (data.maxUses !== null && data.maxUses <= 0) {
+                throw new Error("Kuota untuk voucher ini sudah habis.");
+            }
             onVoucherApplied(data);
             setManualDiscount(0); // Reset manual discount
             toast({
@@ -160,34 +161,6 @@ export function PosOrderSummary({ cart, onSaleComplete, clearCart, channel, pend
     const handleSale = async (status: 'Completed' | 'Pending') => {
         setIsSubmitting(true);
         
-        const salesData = cart.map(item => {
-            // Start with the price after group discounts
-            let finalPrice = item.price;
-            
-            // Apply voucher discount if applicable
-            if (activeVoucher) {
-                const appliesToAll = activeVoucher.category === 'Semua Kategori';
-                const categoryMatch = item.category === activeVoucher.category;
-                
-                if (appliesToAll || categoryMatch) {
-                    if (activeVoucher.discountType === 'percentage') {
-                        finalPrice -= (item.price * (activeVoucher.discountValue / 100));
-                    } else if (activeVoucher.discountType === 'fixed') {
-                        finalPrice -= activeVoucher.discountValue;
-                    }
-                }
-            }
-            
-            // Ensure price doesn't go below zero
-            finalPrice = Math.max(0, finalPrice);
-
-            return {
-                sku: item.sku,
-                quantity: item.quantity,
-                priceAtSale: finalPrice, 
-            };
-        });
-        
         const receiptData: ReceiptData = {
             items: cart.map(item => ({...item, productName: item.productName, originalPrice: item.originalPrice })),
             subtotal: subtotal,
@@ -200,7 +173,7 @@ export function PosOrderSummary({ cart, onSaleComplete, clearCart, channel, pend
         };
         
         try {
-            await onSaleComplete(paymentMethod, receiptData, status);
+            await onSaleComplete(paymentMethod, receiptData, status, activeVoucher?.voucherCode);
             resetForm();
             if(status === 'Pending') {
                 router.push('/sales/pos/pending');
@@ -385,3 +358,4 @@ export function PosOrderSummary({ cart, onSaleComplete, clearCart, channel, pend
     
 
     
+
