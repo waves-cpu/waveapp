@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
@@ -364,8 +363,8 @@ export default function ManageReceiptsPage() {
                                 )}
                             </Button>
                         </PopoverTrigger>
-                        <PopoverContent className="flex w-auto flex-row" align="end">
-                            <div className="flex flex-col gap-1 pr-4 border-r">
+                        <PopoverContent className="flex w-auto p-0" align="end">
+                           <div className="flex flex-col gap-1 pr-4 border-r py-2">
                                 {datePresets.map(preset => (
                                     <Button key={preset.label} variant="ghost" className="justify-start" onClick={() => setDate(preset.range)}>{preset.label}</Button>
                                 ))}
@@ -383,15 +382,21 @@ export default function ManageReceiptsPage() {
                 </div>
 
                 <Tabs defaultValue="Terproses" className="w-full">
-                    <TabsList className="grid w-full grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
-                        {tabs.map(tab => (
-                            <TabsTrigger key={tab.status} value={tab.status}>
-                                <tab.icon className="mr-2 h-4 w-4" />
-                                {tab.status}
-                                <Badge variant="secondary" className="ml-2">{groupedReceipts[tab.status].length}</Badge>
-                            </TabsTrigger>
-                        ))}
-                    </TabsList>
+                    <div className="border-b">
+                        <TabsList className="bg-transparent p-0 h-auto -mb-px no-scrollbar overflow-x-auto">
+                            {tabs.map(tab => (
+                                <TabsTrigger 
+                                    key={tab.status} 
+                                    value={tab.status} 
+                                    className="whitespace-nowrap px-4 py-2 text-sm text-muted-foreground data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none"
+                                >
+                                    <tab.icon className="mr-2 h-4 w-4" />
+                                    {tab.status}
+                                    <Badge variant="secondary" className="ml-2">{groupedReceipts[tab.status].length}</Badge>
+                                </TabsTrigger>
+                            ))}
+                        </TabsList>
+                    </div>
                     {tabs.map(tab => (
                         <TabsContent key={tab.status} value={tab.status} className="mt-6">
                             <ReceiptTable 
