@@ -37,6 +37,8 @@ import { AccessoryUsageVoucher, type VoucherData } from '@/app/components/access
 import type { CartItem } from '@/app/components/pos-cart';
 import { useRouter } from 'next/navigation';
 import { formatToWIB } from '@/lib/utils';
+import { apiFetch } from '@/lib/api';
+import { Skeleton } from '@/components/ui/skeleton';
 
 
 type GroupedSale = {
@@ -51,49 +53,49 @@ type GroupedSale = {
 }
 
 export default function PosHistoryPage() {
-    const { allSales, fetchItems, cancelSaleTransaction, loading, clearPosTransactions, loadPendingTransaction } = useInventory();
+    const { cancelSaleTransaction, clearPosTransactions, loadPendingTransaction, fetchItems } = useInventory();
     const { language } = useLanguage();
     const { toast } = useToast();
     const t = translations[language];
     const router = useRouter();
 
-    const [date, setDate] = useState<Date | undefined>(undefined);
+    const [date, setDate] = useState<Date | undefined>(new Date());
+    const [historyData, setHistoryData] = useState<Sale[]>([]);
+    const [loading, setLoading] = useState(true);
+    
     const [selectedSaleItems, setSelectedSaleItems] = useState<Sale[]>([]);
     const [isDetailOpen, setIsDetailOpen] = useState(false);
     
     const [receiptToPrint, setReceiptToPrint] = useState<ReceiptData | null>(null);
     const [voucherToPrint, setVoucherToPrint] = useState<VoucherData | null>(null);
 
-    useEffect(() => {
-        setDate(new Date());
-    }, []);
-
-    const fetchAllData = useCallback(async () => {
-        await fetchItems();
-    }, [fetchItems]);
-    
-    useEffect(() => {
-        fetchAllData();
-    }, [fetchAllData]);
-    
-    const posSales = useMemo(() => {
-        const filtered = allSales.filter(s => s.channel === 'pos' && s.status !== 'Pending');
-        if (date) {
-            const startDate = startOfDay(date);
-            const endDate = endOfDay(date);
-            return filtered.filter(s => {
-                const saleDate = parseISO(s.saleDate);
-                return isWithinInterval(saleDate, { start: startDate, end: endDate });
+    const fetchHistory = useCallback(async () => {
+        if (!date) return;
+        setLoading(true);
+        try {
+            const data = await apiFetch<Sale[]>(`/api/sales/pos-history?date=${date.toISOString()}`);
+            setHistoryData(data);
+        } catch (error) {
+            toast({
+                variant: 'destructive',
+                title: 'Gagal Memuat Riwayat',
+                description: 'Tidak dapat mengambil data transaksi untuk tanggal yang dipilih.',
             });
+            setHistoryData([]);
+        } finally {
+            setLoading(false);
         }
-        return filtered;
-    }, [allSales, date]);
+    }, [date, toast]);
+
+    useEffect(() => {
+        fetchHistory();
+    }, [fetchHistory]);
 
 
     const groupedSales = useMemo((): GroupedSale[] => {
         const groups = new Map<string, GroupedSale>();
 
-        posSales.forEach(sale => {
+        historyData.forEach(sale => {
             const id = sale.transactionId || `sale-${sale.id}`;
 
             if (!groups.has(id)) {
@@ -121,7 +123,7 @@ export default function PosHistoryPage() {
         });
 
         return Array.from(groups.values()).sort((a,b) => new Date(b.saleDate).getTime() - new Date(a.saleDate).getTime());
-    }, [posSales]);
+    }, [historyData]);
 
     const handleCancelTransaction = useCallback(async (transactionId: string) => {
         try {
@@ -130,6 +132,8 @@ export default function PosHistoryPage() {
                 title: "Transaksi Dihapus & Stok Dikembalikan",
                 description: "Transaksi telah berhasil dihapus dari riwayat.",
             });
+            await fetchHistory();
+            await fetchItems();
         } catch (error) {
             console.error("Error cancelling transaction:", error);
             toast({
@@ -138,7 +142,7 @@ export default function PosHistoryPage() {
                 description: "Terjadi kesalahan saat membatalkan transaksi.",
             });
         }
-    }, [cancelSaleTransaction, toast]);
+    }, [cancelSaleTransaction, toast, fetchHistory, fetchItems]);
     
     const handleClearHistory = async () => {
         if (!date) return;
@@ -148,6 +152,8 @@ export default function PosHistoryPage() {
                 title: "Riwayat Dibersihkan",
                 description: `Semua transaksi POS untuk tanggal ${formatToWIB(date, 'PPP')} telah dihapus dan stok telah dikembalikan.`,
             });
+             await fetchHistory();
+             await fetchItems();
         } catch (error) {
             toast({
                 variant: 'destructive',
@@ -286,9 +292,15 @@ export default function PosHistoryPage() {
                             </TableHeader>
                             <TableBody>
                                 {loading ? (
-                                    <TableRow>
-                                        <TableCell colSpan={5} className="h-24 text-center text-sm">Memuat riwayat...</TableCell>
-                                    </TableRow>
+                                    Array.from({length: 5}).map((_, i) => (
+                                        <TableRow key={i}>
+                                            <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+                                            <TableCell><Skeleton className="h-4 w-48" /></TableCell>
+                                            <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                                            <TableCell className="text-right"><Skeleton className="h-4 w-20 ml-auto" /></TableCell>
+                                            <TableCell className="text-center"><Skeleton className="h-8 w-16 mx-auto" /></TableCell>
+                                        </TableRow>
+                                    ))
                                 ) : groupedSales.length > 0 ? (
                                     groupedSales.map(group => (
                                         <TableRow key={group.transactionId} onClick={() => handleRowClick(group)} className="cursor-pointer">

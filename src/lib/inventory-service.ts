@@ -1203,6 +1203,35 @@ export async function fetchAllSales(): Promise<Sale[]> {
     }));
 }
 
+export async function getPosSalesByDate(date: Date): Promise<Sale[]> {
+    const dateString = formatToWIB(date, 'yyyy-MM-dd');
+    const salesQuery = db.prepare(`
+        SELECT 
+            s.id, s.transactionId, s.paymentMethod, s.resellerName, s.productId, s.variantId, s.accessoryId, s.channel, s.quantity, s.priceAtSale, s.cogsAtSale, s.saleDate,
+            COALESCE(p.name, a.name) as productName,
+            COALESCE(p.category, a.category) as productCategory,
+            p.imageUrl as parentImageUrl,
+            COALESCE(v.sku, p.sku, a.sku) as sku,
+            COALESCE(p.sku, a.sku) as parentSku,
+            v.name as variantName,
+            s.status
+        FROM sales s
+        LEFT JOIN products p ON s.productId = p.id
+        LEFT JOIN variants v ON s.variantId = v.id
+        LEFT JOIN accessories a ON s.accessoryId = a.id
+        WHERE s.channel = 'pos' 
+        AND date(s.saleDate) = ?
+        ORDER BY s.saleDate DESC, s.id DESC
+    `);
+    const sales = salesQuery.all(dateString) as any[];
+    return sales.map(s => ({
+        ...s,
+        id: s.id.toString(),
+        saleDate: s.saleDate,
+    }));
+}
+
+
 export async function getSalesByTransactionId(transactionId: string): Promise<Sale[]> {
     const salesQuery = db.prepare(`
         SELECT 
@@ -1415,7 +1444,7 @@ export async function returnSaleTransaction(transactionId: string, items?: Retur
 }
 
 export async function clearPosTransactions(date: Date) {
-    const dateString = formatDate(date, 'yyyy-MM-dd');
+    const dateString = formatToWIB(date, 'yyyy-MM-dd');
     
     const getSalesStmt = db.prepare("SELECT * FROM sales WHERE channel = 'pos' AND strftime('%Y-%m-%d', saleDate) = ?");
     const sales = getSalesStmt.all(dateString) as Sale[];
@@ -1951,6 +1980,7 @@ export async function getVoucherUsageAnalytics(groupId: number) {
     
 
     
+
 
 
 
