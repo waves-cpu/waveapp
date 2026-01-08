@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
@@ -186,10 +187,10 @@ export default function ReceiptPage() {
         try {
             const fetchParams: { dateString?: string; shippingChannel?: string } = {
                 dateString: dateString,
-                shippingChannel: (shippingChannel && shippingChannel !== 'Semua Jasa Kirim') 
-                                 ? shippingChannel 
-                                 : undefined
             };
+            if (shippingChannel && shippingChannel !== 'Semua Jasa Kirim') {
+                fetchParams.shippingChannel = shippingChannel;
+            }
     
             const statusData = await fetchShippingReceiptCounts(fetchParams);
             setStatusCounts(statusData);

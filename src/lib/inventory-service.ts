@@ -1,4 +1,5 @@
 
+
 import { db as dbProxy } from './db';
 const db = dbProxy;
 import type { InventoryItem, AdjustmentHistory, InventoryItemVariant, Sale, Reseller, ChannelPrice, Accessory, ShippingReceipt, BulkImportHistory, User, ReturnedItem, DiscountGroup, DiscountedProduct, PrintedReceiptCount, ShippingReceiptCounts } from '@/types';
@@ -140,7 +141,7 @@ export async function fetchShippingReceipts(options: {
         params.channel = channel;
     }
     if (dateString) {
-        whereClauses.push("date(date) = @dateString");
+        whereClauses.push("date(date, 'localtime') = @dateString");
         params.dateString = dateString;
     } else if (date_range) {
         whereClauses.push("date BETWEEN @startDate AND @endDate");
@@ -148,7 +149,7 @@ export async function fetchShippingReceipts(options: {
         params.endDate = date_range.to.toISOString();
     }
     if (beforeDate) {
-        whereClauses.push("date(date) < @beforeDate");
+        whereClauses.push("date(date, 'localtime') < @beforeDate");
         params.beforeDate = beforeDate;
     }
     if (status && status.length > 0) {
@@ -216,14 +217,14 @@ export async function fetchShippingReceiptCounts(filters: {
     if (dateString) {
         const pendingTodayResult = db.prepare(`
             SELECT COUNT(*) as count FROM shipping_receipts 
-            WHERE status = 'Terproses' AND date(date) = ?
+            WHERE status = 'Terproses' AND date(date, 'localtime') = ?
         `).get(dateString) as { count: number };
         
         pendingToday = pendingTodayResult?.count || 0;
 
         const pendingBeforeResult = db.prepare(`
             SELECT COUNT(*) as count FROM shipping_receipts 
-            WHERE status = 'Terproses' AND date(date) < ?
+            WHERE status = 'Terproses' AND date(date, 'localtime') < ?
         `).get(dateString) as { count: number };
         
         pendingBefore = pendingBeforeResult?.count || 0;
@@ -234,12 +235,10 @@ export async function fetchShippingReceiptCounts(filters: {
         const where: string[] = [];
         const params: any[] = [];
         
-        // Filter Dasar
-        if (dateString) { where.push(`date(date) = ?`); params.push(dateString); }
+        if (dateString) { where.push(`date(date, 'localtime') = ?`); params.push(dateString); }
         if (salesChannel) { where.push('salesChannel = ?'); params.push(salesChannel); }
         if (shippingChannel) { where.push('channel = ?'); params.push(shippingChannel); }
         
-        // Filter Status (Array)
         if (Array.isArray(status) && status.length > 0) {
             const statusPlaceholders = status.map(() => `?`).join(',');
             where.push(`status IN (${statusPlaceholders})`);
@@ -278,13 +277,12 @@ export async function fetchShippingReceiptCounts(filters: {
         }
     };
 
-    // --- 3. SHIPPING CHANNELS BY SALES CHANNEL ---
     const getShippingBySales = () => {
         const where = ["status IN ('Terproses', 'Siap Kirim', 'Selesai')"];
         const params: any[] = [];
         
         if (dateString) {
-            where.push(`date(date) = ?`);
+            where.push(`date(date, 'localtime') = ?`);
             params.push(dateString);
         }
 
@@ -1707,7 +1705,7 @@ export async function editReseller(id: number, data: Omit<Reseller, 'id'>): Prom
     }
 }
 
-export async function deleteReseller(id: number): Promise<void> {
+export async function deleteReseller(id: number) {
     db.prepare('DELETE FROM resellers WHERE id = ?').run(id);
 }
 
@@ -1937,3 +1935,4 @@ export async function getVoucherUsageAnalytics(groupId: number) {
     
 
     
+

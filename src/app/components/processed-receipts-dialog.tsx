@@ -9,7 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { MoreVertical, Search, Send, Trash2, Undo2, CheckCircle, Ban, PackageCheck } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { format, parseISO } from 'date-fns';
+import { format, parseISO, subDays } from 'date-fns';
 import { useInventory } from '@/hooks/use-inventory';
 import type { ShippingReceipt } from '@/types';
 import { Pagination } from '@/components/ui/pagination';
@@ -91,12 +91,36 @@ export function ProcessedReceiptsDialog({
   
   const loadReceipts = useCallback(async () => {
     setLoading(true);
+    let statusToFetch: string[] = [];
+    let dateToFetch: string | undefined = undefined;
+    let beforeDateToFetch: string | undefined = undefined;
+
+    if (initialStatusFilter) {
+      if (initialStatusFilter === 'Tertunda') {
+        statusToFetch = ['Terproses'];
+        if(currentDate) {
+          beforeDateToFetch = format(subDays(currentDate, 0), 'yyyy-MM-dd');
+        }
+      } else if (initialStatusFilter === 'Terproses Hari Ini') {
+        statusToFetch = ['Terproses'];
+        if(currentDate) {
+           dateToFetch = format(currentDate, 'yyyy-MM-dd');
+        }
+      } else {
+        statusToFetch = [initialStatusFilter];
+        if(currentDate) {
+          dateToFetch = format(currentDate, 'yyyy-MM-dd');
+        }
+      }
+    }
+
     try {
         const { receipts: fetchedReceipts, total } = await fetchShippingReceipts({
             page: currentPage,
             limit: itemsPerPage,
-            dateString: currentDate ? format(currentDate, 'yyyy-MM-dd') : undefined,
-            status: initialStatusFilter ? [initialStatusFilter] : undefined,
+            dateString: dateToFetch,
+            beforeDate: beforeDateToFetch,
+            status: statusToFetch,
             salesChannel: activeSalesChannel || undefined,
             channel: initialChannelFilter || undefined,
             awb: searchTerm,
@@ -110,6 +134,7 @@ export function ProcessedReceiptsDialog({
     }
   }, [fetchShippingReceipts, toast, currentPage, itemsPerPage, currentDate, activeSalesChannel, initialChannelFilter, searchTerm, initialStatusFilter]);
 
+
   useEffect(() => {
     if (open) {
       loadReceipts();
@@ -120,7 +145,7 @@ export function ProcessedReceiptsDialog({
       setSelectedIds(new Set());
       setCurrentPage(1);
     }
-  }, [open, currentPage, itemsPerPage, activeSalesChannel, searchTerm, loadReceipts, initialChannelFilter]);
+  }, [open, currentPage, itemsPerPage, activeSalesChannel, searchTerm, loadReceipts]);
   
   useEffect(() => {
     setCurrentPage(1);

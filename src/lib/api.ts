@@ -1,4 +1,5 @@
 
+
 // 1. Definisikan tipe untuk opsi tambahan (misalnya query params)
 interface ApiOptions extends RequestInit {
   params?: Record<string, string | number | boolean | null | undefined>;
@@ -29,6 +30,7 @@ export const apiFetch = async <T = any>(endpoint: string, options: ApiOptions = 
   const url = new URL(endpoint, BASE_URL || (typeof window !== 'undefined' ? window.location.origin : ''));
   if (params) {
     Object.entries(params).forEach(([key, value]) => {
+      // Perbaikan di sini: jangan tambahkan parameter jika nilainya undefined atau null
       if (value !== undefined && value !== null) {
         url.searchParams.append(key, String(value));
       }
