@@ -12,7 +12,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { ScanLine, Trash2, ShoppingCart, Search, Eye, ArrowLeft, MoreVertical, Calendar as CalendarIcon } from 'lucide-react';
+import { ScanLine, ShoppingCart, Search, Eye, ArrowLeft, MoreVertical, Calendar as CalendarIcon } from 'lucide-react';
 import { format, parseISO, startOfDay, endOfDay } from 'date-fns';
 import { useInventory } from '@/hooks/use-inventory';
 import { useLanguage } from '@/hooks/use-language';
@@ -85,13 +85,42 @@ function DatePickerClient({
   );
 }
 
+const TableSkeleton = () => (
+    <>
+        {Array.from({ length: 5 }).map((_, i) => (
+            <TableRow key={i}>
+                <TableCell><Skeleton className="h-4 w-[100px]" /></TableCell>
+                <TableCell><Skeleton className="h-4 w-[250px]" /></TableCell>
+                <TableCell><Skeleton className="h-8 w-[100px]" /></TableCell>
+                <TableCell><Skeleton className="h-6 w-[100px]" /></TableCell>
+            </TableRow>
+        ))}
+    </>
+);
+
+const EmptyState = ({ searchTerm }: { searchTerm: string }) => (
+     <TableRow>
+        <TableCell colSpan={4} className="h-48 text-center">
+            <div className="flex flex-col items-center justify-center gap-4 text-muted-foreground">
+                <ShoppingCart className="h-16 w-16" />
+                <div className="text-center">
+                    <p className="font-semibold">Tidak Ada Resi</p>
+                    <p className="text-sm">
+                         {searchTerm ? `Tidak ada resi yang cocok dengan pencarian "${searchTerm}".` : "Belum ada resi yang tercatat untuk hari ini."}
+                    </p>
+                </div>
+            </div>
+        </TableCell>
+    </TableRow>
+);
+
 
 export function useReceiptPageLogic(salesChannel: 'Shopee' | 'Tiktok' | 'Lazada') {
     const params = useParams();
     const router = useRouter();
     const inventoryContext = useInventory();
     const { toast } = useToast();
-    const { playSuccessSound, playErrorSound, playSuccessSound: playNotificationSound } = useScanSounds();
+    const { playSuccessSound, playErrorSound, playNotificationSound } = useScanSounds();
     const { language } = useLanguage();
     const t = translations[language];
 
@@ -157,59 +186,44 @@ export function useReceiptPageLogic(salesChannel: 'Shopee' | 'Tiktok' | 'Lazada'
         const data = JSON.parse(event.data);
         if (data.type === 'new-receipt' && data.channel === shippingChannel && data.salesChannel === salesChannel) {
           playNotificationSound();
-          toast({
-            title: "Resi Baru Ditambahkan",
-            description: `Sebuah resi baru untuk ${data.salesChannel} - ${data.channel} telah ditambahkan.`,
-          });
-          // Optimistically add to the top or just reload
-          loadReceipts();
+          setReceipts(prev => [data.payload, ...prev].slice(0, itemsPerPage));
+          setTotalReceipts(prev => prev + 1);
         }
       };
 
-      eventSource.onerror = (error) => {
-        // This error is expected during development with hot-reloading.
-        // The browser's EventSource implementation will automatically attempt to reconnect.
-        // We don't need to log it or close the connection manually.
-      };
+      eventSource.onerror = () => {};
 
       return () => {
         eventSource.close();
       };
-    }, [shippingChannel, salesChannel, loadReceipts, playNotificationSound, toast]);
+    }, [shippingChannel, salesChannel, itemsPerPage, playNotificationSound]);
 
     useEffect(() => {
         refocusInput();
     }, [refocusInput, receipts, isSaleDialogOpen]);
     
-    const salesByReceipt = useMemo(() => {
-        const map = new Map<string, Sale[]>();
-        inventoryContext.allSales.forEach(sale => {
-            const key = sale.transactionId;
-            if (key) {
-                if (!map.has(key)) map.set(key, []);
-                map.get(key)!.push(sale);
-            }
-        });
-        return map;
-    }, [inventoryContext.allSales]);
-
     const handleAwbSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
-        const trimmedAwb = awb.trim();
-        if (!trimmedAwb || isSubmitting || !selectedDate) return;
+        const trimmedAwb = awb.trim().toUpperCase();
+        
+        if (!trimmedAwb || trimmedAwb.length < 5 || isSubmitting) return;
     
         setIsSubmitting(true);
         
         try {
-            // Step 1: Check if AWB exists
             const existingReceipt = await inventoryContext.findShippingReceiptByAwb(trimmedAwb);
 
             if (existingReceipt) {
-                const formattedDate = formatToWIB(parseISO(existingReceipt.date), 'dd MMM yyyy, HH:mm');
-                throw new Error(`Resi ini sudah diinput di kanal ${existingReceipt.salesChannel} pada ${formattedDate}`);
+                playErrorSound();
+                toast({
+                    variant: "destructive",
+                    title: 'Resi Sudah Ada',
+                    description: `AWB ${trimmedAwb} sudah diinput pada ${formatToWIB(parseISO(existingReceipt.date), 'dd/MM/yyyy HH:mm')}`
+                });
+                setAwb('');
+                return;
             }
 
-            // Step 2: If not, open dialog
             const newReceipt: Omit<ShippingReceipt, 'id'> = {
                 awb: trimmedAwb,
                 salesChannel: salesChannel,
@@ -226,31 +240,24 @@ export function useReceiptPageLogic(salesChannel: 'Shopee' | 'Tiktok' | 'Lazada'
 
         } catch (error: any) {
             playErrorSound();
-            toast({
-                variant: "destructive",
-                title: 'Input Gagal',
-                description: error.message
-            });
-            setAwb('');
+            toast({ variant: "destructive", title: 'Error', description: error.message });
         } finally {
             setIsSubmitting(false);
-            refocusInput();
         }
     };
 
     const handleViewDetails = async (receipt: ShippingReceipt) => {
-        if (!receipt.transactionId) {
-            setReceiptForSale(receipt);
-            setIsSaleDialogOpen(true);
-            return;
-        }
-
-        try {
-            const data = await apiFetch(`/api/sales/transaction/${receipt.transactionId}`);
-            setDetailItems(data.sales);
-            setIsDetailOpen(true);
-        } catch (error) {
-            // If fetching fails, it likely means no sale is recorded yet. Open the recording dialog.
+        // If status is not "Perlu Diproses", it means sale is recorded.
+        if (receipt.status !== 'Perlu Diproses') {
+            try {
+                const data = await apiFetch(`/api/sales/transaction/${receipt.transactionId}`);
+                setDetailItems(data.sales);
+                setIsDetailOpen(true);
+            } catch (error) {
+                toast({ variant: 'destructive', title: 'Gagal Memuat Detail', description: 'Tidak dapat menemukan detail penjualan untuk resi ini.'});
+            }
+        } else {
+             // Otherwise, open the dialog to record the sale.
             setReceiptForSale(receipt);
             setIsSaleDialogOpen(true);
         }
@@ -263,17 +270,16 @@ export function useReceiptPageLogic(salesChannel: 'Shopee' | 'Tiktok' | 'Lazada'
                 title: "Penjualan Berhasil Dicatat",
                 description: `Penjualan untuk resi ${receiptData.awb} telah disimpan.`,
             });
+            setIsSaleDialogOpen(false);
+            setReceiptForSale(null);
+            await loadReceipts();
         } catch (error: any) {
             toast({
                 title: "Gagal Mencatat Penjualan",
                 description: error.message || "Terjadi kesalahan saat menyimpan data penjualan.",
                 variant: "destructive",
             });
-            throw error; // Re-throw to allow dialog to handle it
-        } finally {
-            setIsSaleDialogOpen(false);
-            setReceiptForSale(null);
-            await loadReceipts();
+            throw error;
         }
     };
 
@@ -281,7 +287,7 @@ export function useReceiptPageLogic(salesChannel: 'Shopee' | 'Tiktok' | 'Lazada'
         language, t, router, receipts, totalReceipts, loading, awb, setAwb, isSubmitting,
         awbInputRef, currentPage, setCurrentPage, itemsPerPage, searchTerm, setSearchTerm,
         selectedDate, setSelectedDate, detailItems, isDetailOpen, setIsDetailOpen, receiptForSale,
-        setReceiptForSale, isSaleDialogOpen, setIsSaleDialogOpen, salesChannel, shippingChannel, salesByReceipt,
+        setReceiptForSale, isSaleDialogOpen, setIsSaleDialogOpen, salesChannel, shippingChannel,
         handleAwbSubmit, handleViewDetails, handleSaleComplete, totalPages: Math.ceil(totalReceipts / itemsPerPage)
     };
 }
@@ -292,7 +298,7 @@ export default function ShopeeChannelPage() {
       t, router, receipts, totalReceipts, loading, awb, setAwb, isSubmitting, awbInputRef,
       currentPage, setCurrentPage, itemsPerPage, searchTerm, setSearchTerm, selectedDate,
       setSelectedDate, detailItems, isDetailOpen, setIsDetailOpen, receiptForSale, setReceiptForSale,
-      isSaleDialogOpen, setIsSaleDialogOpen, salesChannel, shippingChannel, salesByReceipt,
+      isSaleDialogOpen, setIsSaleDialogOpen, salesChannel, shippingChannel,
       handleAwbSubmit, handleViewDetails, handleSaleComplete, totalPages
   } = useReceiptPageLogic('Shopee');
 
@@ -349,32 +355,22 @@ export default function ShopeeChannelPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {loading ? (
-                  Array.from({ length: 5 }).map((_, i) => (
-                      <TableRow key={i}>
-                          <TableCell><Skeleton className="h-4 w-[100px]" /></TableCell>
-                          <TableCell><Skeleton className="h-4 w-[250px]" /></TableCell>
-                          <TableCell><Skeleton className="h-4 w-[80px]" /></TableCell>
-                          <TableCell><Skeleton className="h-6 w-[100px]" /></TableCell>
-                      </TableRow>
-                  ))
-                ) : receipts.length > 0 ? (
+                {loading ? <TableSkeleton /> : receipts.length > 0 ? (
                   receipts.map((receipt) => {
-                    const relatedSales = salesByReceipt.get(receipt.transactionId || '') || [];
-                    const isProcessed = relatedSales.length > 0;
+                    const isProcessed = receipt.status !== 'Perlu Diproses';
                     
                     return (
-                        <TableRow key={receipt.id}>
+                        <TableRow key={receipt.id} className={cn(!isProcessed && 'bg-yellow-50/50 hover:bg-yellow-50')}>
                           <TableCell>{format(new Date(receipt.date), 'dd MMM yyyy, HH:mm')}</TableCell>
                           <TableCell className="font-medium">{receipt.awb}</TableCell>
                           <TableCell>
                             <Button variant="link" size="sm" className="h-auto p-0 text-xs" onClick={() => handleViewDetails(receipt)}>
-                                {isProcessed ? `${relatedSales.reduce((acc, s) => acc + s.quantity, 0)} produk` : 'Catat Produk'}
+                               {isProcessed ? "Lihat Produk" : "Catat Produk"}
                                 <Eye className="ml-2 h-3 w-3" />
                             </Button>
                           </TableCell>
                            <TableCell>
-                                <Badge variant={receipt.status === 'Siap Kirim' ? "default" : "outline"}>
+                                <Badge variant={isProcessed ? "default" : "outline"}>
                                     {receipt.status}
                                 </Badge>
                            </TableCell>
@@ -382,17 +378,7 @@ export default function ShopeeChannelPage() {
                     )
                   })
                 ) : (
-                  <TableRow>
-                      <TableCell colSpan={5} className="h-48 text-center">
-                          <div className="flex flex-col items-center justify-center gap-4 text-muted-foreground">
-                              <ShoppingCart className="h-16 w-16" />
-                              <div className="text-center">
-                                  <p className="font-semibold">Tidak Ada Resi</p>
-                                  <p className="text-sm">Belum ada resi yang tercatat untuk hari ini.</p>
-                              </div>
-                          </div>
-                      </TableCell>
-                  </TableRow>
+                    <EmptyState searchTerm={searchTerm} />
                 )}
               </TableBody>
             </Table>
