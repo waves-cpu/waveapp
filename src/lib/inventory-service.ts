@@ -140,7 +140,7 @@ export async function fetchShippingReceipts(options: {
         params.channel = channel;
     }
     if (dateString) {
-        whereClauses.push("date(date, 'localtime') = @dateString");
+        whereClauses.push("date(date) = @dateString");
         params.dateString = dateString;
     } else if (date_range) {
         whereClauses.push("date BETWEEN @startDate AND @endDate");
@@ -148,7 +148,7 @@ export async function fetchShippingReceipts(options: {
         params.endDate = date_range.to.toISOString();
     }
     if (beforeDate) {
-        whereClauses.push("date(date, 'localtime') < @beforeDate");
+        whereClauses.push("date(date) < @beforeDate");
         params.beforeDate = beforeDate;
     }
     if (status && status.length > 0) {
@@ -195,7 +195,7 @@ export async function getPendingReceiptsBeforeDate(date: Date): Promise<number> 
     const query = db.prepare(`
         SELECT COUNT(*) as count
         FROM shipping_receipts
-        WHERE status = 'Terproses' AND date(date, 'localtime') < ?
+        WHERE status = 'Terproses' AND date(date) < ?
     `);
     const result = query.get(dateString) as { count: number };
     return result.count;
@@ -209,104 +209,107 @@ export async function fetchShippingReceiptCounts(filters: {
 }): Promise<ShippingReceiptCounts> {
     const { dateString, salesChannel, shippingChannel, status } = filters;
 
-    // --- PENDING COUNTS ---
+    // --- 1. PENDING COUNTS (Optimasi Query) ---
     let pendingToday = 0;
     let pendingBefore = 0;
+
     if (dateString) {
-        const pendingTodayResult = db.prepare("SELECT COUNT(*) as count FROM shipping_receipts WHERE status = 'Terproses' AND date(date, 'localtime') = ?").get(dateString) as { count: number };
-        pendingToday = pendingTodayResult.count;
-        const pendingBeforeResult = db.prepare("SELECT COUNT(*) as count FROM shipping_receipts WHERE status = 'Terproses' AND date(date, 'localtime') < ?").get(dateString) as { count: number };
-        pendingBefore = pendingBeforeResult.count;
+        const pendingTodayResult = db.prepare(`
+            SELECT COUNT(*) as count FROM shipping_receipts 
+            WHERE status = 'Terproses' AND date(date) = ?
+        `).get(dateString) as { count: number };
+        
+        pendingToday = pendingTodayResult?.count || 0;
+
+        const pendingBeforeResult = db.prepare(`
+            SELECT COUNT(*) as count FROM shipping_receipts 
+            WHERE status = 'Terproses' AND date(date) < ?
+        `).get(dateString) as { count: number };
+        
+        pendingBefore = pendingBeforeResult?.count || 0;
     }
 
-
+    // --- 2. HELPER BUILD COUNTS (Optimasi Dynamic SQL) ---
     const buildCounts = (groupBy: string, extraGroupBy?: string) => {
         const where: string[] = [];
         const params: any[] = [];
         
-        if (dateString) { where.push(`date(date, 'localtime') = ?`); params.push(dateString); }
+        // Filter Dasar
+        if (dateString) { where.push(`date(date) = ?`); params.push(dateString); }
         if (salesChannel) { where.push('salesChannel = ?'); params.push(salesChannel); }
         if (shippingChannel) { where.push('channel = ?'); params.push(shippingChannel); }
         
+        // Filter Status (Array)
         if (Array.isArray(status) && status.length > 0) {
-            const statusPlaceholders = status.map(() => `?`);
-            where.push(`status IN (${statusPlaceholders.join(',')})`);
+            const statusPlaceholders = status.map(() => `?`).join(',');
+            where.push(`status IN (${statusPlaceholders})`);
             params.push(...status);
         }
 
         const whereClause = where.length > 0 ? `WHERE ${where.join(' AND ')}` : '';
-        const selectClause = extraGroupBy ? `${groupBy}, ${extraGroupBy}` : groupBy;
+        const selectCols = extraGroupBy ? `${groupBy}, ${extraGroupBy}` : groupBy;
 
         const query = db.prepare(`
-            SELECT ${selectClause}, COUNT(*) as count
+            SELECT ${selectCols}, COUNT(*) as count
             FROM shipping_receipts
             ${whereClause}
-            GROUP BY ${selectClause}
+            GROUP BY ${selectCols}
         `);
 
-        const results = query.all(...params) as { [key: string]: string | number }[];
+        const results = query.all(...params) as any[];
         
         if (extraGroupBy) {
-            const nestedCounts: Record<string, Record<string, number>> = {};
-             results.forEach(row => {
-                const groupKey = row[groupBy] as string;
-                const subKey = row[extraGroupBy] as string;
-                if(groupKey && subKey) {
-                    if (!nestedCounts[groupKey]) {
-                        nestedCounts[groupKey] = {};
-                    }
-                    nestedCounts[groupKey][subKey] = row.count as number;
-                }
-            });
-            return nestedCounts;
-        } else {
-            const counts: Record<string, number> = {};
+            const nested: Record<string, Record<string, number>> = {};
             results.forEach(row => {
-                if (row[groupBy]) {
-                    counts[row[groupBy] as string] = row.count as number;
+                const gKey = row[groupBy];
+                const sKey = row[extraGroupBy];
+                if (gKey && sKey) {
+                    if (!nested[gKey]) nested[gKey] = {};
+                    nested[gKey][sKey] = row.count;
                 }
             });
-            return counts;
+            return nested;
+        } else {
+            const simple: Record<string, number> = {};
+            results.forEach(row => {
+                if (row[groupBy]) simple[row[groupBy]] = row.count;
+            });
+            return simple;
         }
     };
 
-    const shippingChannelsBySalesChannel = () => {
-        const where: string[] = ["status IN ('Terproses', 'Siap Kirim', 'Selesai')"];
+    // --- 3. SHIPPING CHANNELS BY SALES CHANNEL ---
+    const getShippingBySales = () => {
+        const where = ["status IN ('Terproses', 'Siap Kirim', 'Selesai')"];
         const params: any[] = [];
         
-        if (dateString) { 
-            where.push(`date(date, 'localtime') = ?`); 
-            params.push(dateString); 
+        if (dateString) {
+            where.push(`date(date) = ?`);
+            params.push(dateString);
         }
-        
-        const whereClause = `WHERE ${where.join(' AND ')}`;
 
-        const query = db.prepare(`
+        const results = db.prepare(`
             SELECT salesChannel, channel, COUNT(*) as count
             FROM shipping_receipts
-            ${whereClause}
+            WHERE ${where.join(' AND ')}
             GROUP BY salesChannel, channel
-        `);
-        const results = query.all(...params) as { salesChannel: string, channel: string, count: number }[];
-        
-        const nestedCounts: Record<string, Record<string, number>> = {};
-        results.forEach(row => {
-            if (!nestedCounts[row.salesChannel]) {
-                nestedCounts[row.salesChannel] = {};
-            }
-            nestedCounts[row.salesChannel][row.channel] = row.count;
-        });
-        return nestedCounts;
-    };
+        `).all(...params) as any[];
 
+        const nested: Record<string, Record<string, number>> = {};
+        results.forEach(row => {
+            if (!nested[row.salesChannel]) nested[row.salesChannel] = {};
+            nested[row.salesChannel][row.channel] = row.count;
+        });
+        return nested;
+    };
 
     return {
         pendingToday,
         pendingBefore,
-        salesChannels: buildCounts('salesChannel', 'channel') as Record<string, Record<string, number>>,
-        shippingChannels: buildCounts('channel') as Record<string, number>,
-        statuses: buildCounts('status') as Record<string, number>,
-        shippingChannelsBySalesChannel: shippingChannelsBySalesChannel(),
+        salesChannels: buildCounts('salesChannel', 'channel') as any,
+        shippingChannels: buildCounts('channel') as any,
+        statuses: buildCounts('status') as any,
+        shippingChannelsBySalesChannel: getShippingBySales(),
     };
 }
 

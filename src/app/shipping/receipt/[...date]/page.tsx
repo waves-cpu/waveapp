@@ -184,26 +184,25 @@ export default function ReceiptPage() {
         setCountsLoading(true);
         const dateString = currentDate ? formatToWIB(currentDate, 'yyyy-MM-dd') : undefined;
         try {
-            const fetchParams: { dateString?: string; shippingChannel?: string } = {};
-            if (dateString) {
-                fetchParams.dateString = dateString;
-            }
-            if (shippingChannel) {
-                fetchParams.shippingChannel = shippingChannel;
-            }
-
+            const fetchParams: { dateString?: string; shippingChannel?: string } = {
+                dateString: dateString,
+                shippingChannel: (shippingChannel && shippingChannel !== 'Semua Jasa Kirim') 
+                                 ? shippingChannel 
+                                 : undefined
+            };
+    
             const statusData = await fetchShippingReceiptCounts(fetchParams);
             setStatusCounts(statusData);
-
+    
             if (dateString) {
                 const printedData = await getPrintedReceiptCountsForDate(dateString);
                 setPrintedReceiptCounts(printedData);
             } else {
                 setPrintedReceiptCounts([]);
             }
-
+    
         } catch (error) {
-             toast({ variant: 'destructive', title: "Gagal memuat jumlah status" });
+             toast({ variant: 'destructive', title: "Gagal memuat statistik resi" });
         } finally {
             setCountsLoading(false);
         }
@@ -406,11 +405,18 @@ export default function ReceiptPage() {
                                                             const totalUsedForThisCombo = shippingChannelData[item.shippingChannel] || 0;
 
                                                             const remaining = Math.max(0, item.count - totalUsedForThisCombo);
+                                                            const isCritical = remaining > 0 && remaining <= 5;
                                                             
                                                             return (
                                                                 <div key={item.shippingChannel} className="flex justify-between items-center text-sm">
                                                                     <span className="text-muted-foreground">{item.shippingChannel}</span>
-                                                                    <span className="font-medium">{remaining} / {item.count}</span>
+                                                                    <span className={cn(
+                                                                        "font-medium",
+                                                                        isCritical ? "text-orange-600 animate-pulse" : "",
+                                                                        remaining === 0 ? "text-green-600" : ""
+                                                                    )}>
+                                                                        {remaining === 0 ? 'Selesai' : `${remaining} / ${item.count}`}
+                                                                    </span>
                                                                 </div>
                                                             )
                                                         })}
@@ -441,4 +447,3 @@ export default function ReceiptPage() {
         </>
     );
 }
-
