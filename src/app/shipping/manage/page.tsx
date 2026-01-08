@@ -5,7 +5,6 @@ import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { AppLayout } from '@/app/components/app-layout';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Undo2, Truck, CheckCircle, Package, Search, Send } from 'lucide-react';
@@ -29,6 +28,7 @@ const getStatusVariant = (status: string) => {
         case 'return selesai': return 'default';
         case 'siap kirim': return 'secondary';
         case 'terproses': return 'secondary';
+        case 'diantar': return 'secondary';
         case 'return': return 'destructive';
         default: return 'outline';
     }
@@ -44,15 +44,11 @@ const statusIcons: { [key: string]: React.ElementType } = {
 type StatusTab = 'Terproses' |'Siap Kirim' | 'Return' | 'Selesai';
 
 const ReceiptTable = ({ 
-    status, 
     receipts, 
     onAction,
-    onDelete,
 }: { 
-    status: StatusTab, 
     receipts: ShippingReceipt[], 
     onAction: (receipt: ShippingReceipt, newStatus: string) => void,
-    onDelete: (receipt: ShippingReceipt) => void
 }) => {
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(25);
@@ -113,19 +109,19 @@ const ReceiptTable = ({
                             <TableCell>{receipt.channel}</TableCell>
                             <TableCell><Badge variant={getStatusVariant(receipt.status)}>{receipt.status}</Badge></TableCell>
                             <TableCell className="text-right">
-                                {status === 'Terproses' && (
+                                {receipt.status === 'Terproses' && (
                                      <Button size="sm" variant="outline" onClick={() => onAction(receipt, 'Siap Kirim')}>
                                         <Send className="mr-2 h-4 w-4 text-blue-500" />
                                         Tandai Siap Kirim
                                     </Button>
                                 )}
-                                {status === 'Siap Kirim' && (
+                                {receipt.status === 'Siap Kirim' && (
                                     <Button size="sm" variant="outline" onClick={() => onAction(receipt, 'Selesai')}>
                                         <CheckCircle className="mr-2 h-4 w-4 text-green-500" />
                                         Tandai Selesai
                                     </Button>
                                 )}
-                                {status === 'Return' && (
+                                {receipt.status === 'Return' && (
                                     <Button size="sm" variant="outline" onClick={() => onAction(receipt, 'Return Selesai')}>
                                         <Package className="mr-2 h-4 w-4" />
                                         Proses Barang
@@ -216,15 +212,7 @@ export default function ManageReceiptsPage() {
                         <Skeleton className="h-8 w-8 md:hidden" />
                         <Skeleton className="h-8 w-48" />
                     </div>
-                    <Card>
-                        <CardHeader>
-                            <Skeleton className="h-6 w-1/4" />
-                            <Skeleton className="h-4 w-1/2" />
-                        </CardHeader>
-                        <CardContent>
-                            <Skeleton className="h-40 w-full" />
-                        </CardContent>
-                    </Card>
+                    <Skeleton className="h-96 w-full" />
                 </main>
             </AppLayout>
         );
@@ -249,23 +237,11 @@ export default function ManageReceiptsPage() {
                         ))}
                     </TabsList>
                     {tabs.map(tab => (
-                        <TabsContent key={tab.status} value={tab.status}>
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle>Daftar Resi: {tab.status}</CardTitle>
-                                    <CardDescription>
-                                        Daftar semua resi yang saat ini berstatus "{tab.status}".
-                                    </CardDescription>
-                                </CardHeader>
-                                <CardContent>
-                                    <ReceiptTable 
-                                        status={tab.status} 
-                                        receipts={groupedReceipts[tab.status]} 
-                                        onAction={handleAction}
-                                        onDelete={() => {}} // Placeholder, not implemented
-                                    />
-                                </CardContent>
-                            </Card>
+                        <TabsContent key={tab.status} value={tab.status} className="mt-6">
+                            <ReceiptTable 
+                                receipts={groupedReceipts[tab.status]} 
+                                onAction={handleAction}
+                            />
                         </TabsContent>
                     ))}
                 </Tabs>
