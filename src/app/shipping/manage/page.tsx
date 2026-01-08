@@ -11,7 +11,7 @@ import { Undo2, Truck, CheckCircle, Package, Search, Send, Ban, History, MoreVer
 import { Badge } from '@/components/ui/badge';
 import { useInventory } from '@/hooks/use-inventory';
 import type { ShippingReceipt, ReturnedItem } from '@/types';
-import { parseISO, startOfMonth, endOfMonth, isWithinInterval, startOfDay, endOfDay } from 'date-fns';
+import { parseISO, startOfMonth, endOfMonth, isWithinInterval, startOfDay, endOfDay, subMonths } from 'date-fns';
 import { id as localeId } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
 import { Pagination } from '@/components/ui/pagination';
@@ -25,6 +25,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
+import { DateRange } from 'react-day-picker';
 
 const SHIPPING_CHANNEL_OPTIONS = ['Semua Jasa Kirim', 'SPX', 'J&T', 'JNE', 'INSTANT', 'CARGO'];
 
@@ -216,46 +217,20 @@ export default function ManageReceiptsPage() {
     const [receiptToProcess, setReceiptToProcess] = useState<ShippingReceipt | null>(null);
     const [isProcessing, setIsProcessing] = useState(false);
     
-    const [selectedDate, setSelectedDate] = useState<Date | null>(new Date());
-    const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
-    const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
-
-    const years = useMemo(() => {
-        const currentYear = new Date().getFullYear();
-        return Array.from({ length: 5 }, (_, i) => currentYear + i).concat(
-             Array.from({ length: 6 }, (_, i) => currentYear - i)
-        ).filter((v, i, a) => a.indexOf(v) === i).sort((a,b) => b-a);
-    }, []);
+    const [dateRange, setDateRange] = useState<DateRange | undefined>({
+        from: startOfMonth(new Date()),
+        to: endOfMonth(new Date()),
+    });
 
     const filteredReceipts = useMemo(() => {
         return allShippingReceipts.filter(receipt => {
+            if (!dateRange || !dateRange.from) return true;
             const receiptDate = parseISO(receipt.date);
-            if (selectedDate) {
-                 const startDate = startOfDay(selectedDate);
-                 const endDate = endOfDay(selectedDate);
-                 return isWithinInterval(receiptDate, { start: startDate, end: endDate });
-            }
-            // Fallback to month/year filter if no specific date is selected
-            return receiptDate.getFullYear() === selectedYear && receiptDate.getMonth() === selectedMonth;
+            const toDate = dateRange.to || dateRange.from;
+            return isWithinInterval(receiptDate, { start: startOfDay(dateRange.from), end: endOfDay(toDate) });
         });
-    }, [allShippingReceipts, selectedDate, selectedMonth, selectedYear]);
+    }, [allShippingReceipts, dateRange]);
 
-    const handleDateSelect = (date: Date | undefined) => {
-        if (date) {
-            setSelectedDate(date);
-            setSelectedMonth(date.getMonth());
-            setSelectedYear(date.getFullYear());
-        } else {
-            setSelectedDate(null); // Allow clearing date filter
-        }
-    };
-    
-    const clearDateFilter = () => {
-        setSelectedDate(null);
-        // Optionally reset month/year to current or leave as is
-        setSelectedMonth(new Date().getMonth());
-        setSelectedYear(new Date().getFullYear());
-    }
 
     const handleAction = useCallback(async (receipt: ShippingReceipt, newStatus: string) => {
         if (newStatus === 'Return Selesai') {
@@ -361,48 +336,36 @@ export default function ManageReceiptsPage() {
                                     id="date"
                                     variant={"outline"}
                                     className={cn(
-                                        "w-[240px] justify-start text-left font-normal h-9",
-                                        !selectedDate && "text-muted-foreground"
+                                        "w-[260px] justify-start text-left font-normal h-9",
+                                        !dateRange && "text-muted-foreground"
                                     )}
                                 >
                                     <CalendarIcon className="mr-2 h-4 w-4" />
-                                    {selectedDate ? formatToWIB(selectedDate, 'PPP') : <span>Pilih tanggal</span>}
+                                    {dateRange?.from ? (
+                                        dateRange.to ? (
+                                            <>
+                                                {formatToWIB(dateRange.from, "LLL dd, y")} -{" "}
+                                                {formatToWIB(dateRange.to, "LLL dd, y")}
+                                            </>
+                                        ) : (
+                                            formatToWIB(dateRange.from, "LLL dd, y")
+                                        )
+                                    ) : (
+                                        <span>Pilih rentang tanggal</span>
+                                    )}
                                 </Button>
                             </PopoverTrigger>
                             <PopoverContent className="w-auto p-0" align="end">
                                 <Calendar
-                                    mode="single"
-                                    selected={selectedDate || undefined}
-                                    onSelect={handleDateSelect}
                                     initialFocus
+                                    mode="range"
+                                    defaultMonth={dateRange?.from}
+                                    selected={dateRange}
+                                    onSelect={setDateRange}
+                                    numberOfMonths={2}
                                 />
                             </PopoverContent>
                         </Popover>
-                         {selectedDate && <Button variant="ghost" size="sm" onClick={clearDateFilter}>Hapus Filter</Button>}
-                        <Select value={selectedMonth.toString()} onValueChange={(value) => { setSelectedMonth(parseInt(value)); setSelectedDate(null); }}>
-                            <SelectTrigger className="w-[150px] h-9">
-                                <SelectValue placeholder="Pilih Bulan" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {Array.from({ length: 12 }).map((_, i) => (
-                                    <SelectItem key={i} value={i.toString()}>
-                                        {formatToWIB(new Date(2000, i), 'MMMM', { locale: localeId })}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                        <Select value={selectedYear.toString()} onValueChange={(value) => { setSelectedYear(parseInt(value)); setSelectedDate(null); }}>
-                            <SelectTrigger className="w-[100px] h-9">
-                                <SelectValue placeholder="Pilih Tahun" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {years.map(year => (
-                                    <SelectItem key={year} value={year.toString()}>
-                                        {year}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
                     </div>
                 </div>
 
@@ -418,7 +381,7 @@ export default function ManageReceiptsPage() {
                     </TabsList>
                     {tabs.map(tab => (
                         <TabsContent key={tab.status} value={tab.status} className="mt-6">
-                             <ReceiptTable 
+                            <ReceiptTable 
                                 receipts={groupedReceipts[tab.status]}
                                 status={tab.status}
                                 onAction={handleAction}
