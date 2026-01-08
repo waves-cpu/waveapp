@@ -56,8 +56,8 @@ export async function addBulkImportHistory(history: Omit<BulkImportHistory, 'id'
             addedSkus: history.addedSkus ? JSON.stringify(history.addedSkus) : '[]',
             skippedSkus: history.skippedSkus ? JSON.stringify(history.skippedSkus) : '[]',
         });
-    const newHistory = db.prepare('SELECT * FROM bulk_import_history WHERE id = ?').get(result.lastInsertRowid) as any;
-    return { ...newHistory, addedSkus: newHistory.addedSkus ? JSON.parse(newHistory.addedSkus) : [], skippedSkus: newHistory.skippedSkus ? JSON.parse(newHistory.skippedSkus) : [] };
+    const newHistory = db.prepare('SELECT * FROM bulk_import_history WHERE id = ?').get(result.lastInsertRowid) as BulkImportHistory;
+    return { ...newHistory, addedSkus: newHistory.addedSkus ? JSON.parse(newHistory.addedSkus as any) : [], skippedSkus: newHistory.skippedSkus ? JSON.parse(newHistory.skippedSkus as any) : [] };
 }
 
 
@@ -116,8 +116,9 @@ export async function fetchShippingReceipts(options: {
     date_range?: { from: Date; to: Date };
     status?: string[];
     awb?: string;
+    beforeDate?: string;
 }): Promise<{ receipts: ShippingReceipt[]; total: number; }> {
-    const { page, limit, salesChannel, channel, dateString, date_range, status, awb } = options;
+    const { page, limit, salesChannel, channel, dateString, date_range, status, awb, beforeDate } = options;
     const offset = (page - 1) * limit;
 
     let countQueryStr = `SELECT COUNT(*) as count FROM shipping_receipts`;
@@ -145,6 +146,10 @@ export async function fetchShippingReceipts(options: {
         whereClauses.push("date BETWEEN @startDate AND @endDate");
         params.startDate = date_range.from.toISOString();
         params.endDate = date_range.to.toISOString();
+    }
+    if (beforeDate) {
+        whereClauses.push("date(date, 'localtime') < @beforeDate");
+        params.beforeDate = beforeDate;
     }
     if (status && status.length > 0) {
         const statusPlaceholders = status.map((s, i) => `@status${i}`);

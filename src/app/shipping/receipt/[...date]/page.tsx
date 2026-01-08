@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
@@ -153,7 +152,6 @@ const statusIcons: { [key: string]: React.ElementType } = {
 
 export default function ReceiptPage() {
     const { 
-        getPendingReceiptsBeforeDate,
         addPrintedReceipts,
         getPrintedReceiptCountsForDate,
         fetchShippingReceiptCounts,
@@ -167,7 +165,6 @@ export default function ReceiptPage() {
 
     const [isAddPrintedOpen, setAddPrintedOpen] = useState(false);
     const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
-    const [pendingOldReceiptsCount, setPendingOldReceiptsCount] = useState(0);
     const [statusCounts, setStatusCounts] = useState<ShippingReceiptCounts>({
         pendingToday: 0,
         pendingBefore: 0,
@@ -187,17 +184,23 @@ export default function ReceiptPage() {
         setCountsLoading(true);
         const dateString = currentDate ? formatToWIB(currentDate, 'yyyy-MM-dd') : undefined;
         try {
-            const fetchParams: { dateString?: string, shippingChannel?: string } = {};
-            if (dateString) fetchParams.dateString = dateString;
-            if (shippingChannel) fetchParams.shippingChannel = shippingChannel;
+            const fetchParams: { dateString?: string; shippingChannel?: string } = {};
+            if (dateString) {
+                fetchParams.dateString = dateString;
+            }
+            if (shippingChannel) {
+                fetchParams.shippingChannel = shippingChannel;
+            }
 
-            const [statusData, printedData] = await Promise.all([
-                fetchShippingReceiptCounts(fetchParams),
-                dateString ? getPrintedReceiptCountsForDate(dateString) : Promise.resolve([]),
-            ]);
-    
+            const statusData = await fetchShippingReceiptCounts(fetchParams);
             setStatusCounts(statusData);
-            setPrintedReceiptCounts(printedData);
+
+            if (dateString) {
+                const printedData = await getPrintedReceiptCountsForDate(dateString);
+                setPrintedReceiptCounts(printedData);
+            } else {
+                setPrintedReceiptCounts([]);
+            }
 
         } catch (error) {
              toast({ variant: 'destructive', title: "Gagal memuat jumlah status" });
@@ -438,3 +441,4 @@ export default function ReceiptPage() {
         </>
     );
 }
+
