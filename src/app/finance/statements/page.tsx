@@ -253,7 +253,8 @@ export default function StatementsPage() {
                 return;
             }
 
-            if (['Completed', 'Siap Kirim', 'Selesai', 'Terproses'].includes(sale.status || '')) {
+            // Consider only "finalized" sales for main metrics
+            if (['Completed', 'Siap Kirim', 'Selesai', 'Terproses', 'Diantar'].includes(sale.status || '')) {
                 revenue += salePrice;
                 units += sale.quantity;
                 profit += saleGrossProfit;
