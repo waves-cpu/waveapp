@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
@@ -10,7 +11,7 @@ import { Undo2, Truck, CheckCircle, Package, Search, Send, Ban, History, MoreVer
 import { Badge } from '@/components/ui/badge';
 import { useInventory } from '@/hooks/use-inventory';
 import type { ShippingReceipt, ReturnedItem } from '@/types';
-import { parseISO, startOfMonth, endOfMonth, isWithinInterval, startOfDay, endOfDay, subDays, startOfYear, subMonths } from 'date-fns';
+import { parseISO, startOfMonth, endOfMonth, isWithinInterval, startOfDay, endOfDay, subDays, startOfYear, subMonths, endOfYear } from 'date-fns';
 import { id as localeId } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
 import { Pagination } from '@/components/ui/pagination';
@@ -361,7 +362,7 @@ export default function ManageReceiptsPage() {
                                 id="date"
                                 variant={"outline"}
                                 className={cn(
-                                    "w-[260px] justify-start text-left font-normal h-9",
+                                    "w-auto justify-start text-left font-normal h-9",
                                     !date && "text-muted-foreground"
                                 )}
                             >
@@ -400,7 +401,7 @@ export default function ManageReceiptsPage() {
 
                 <Tabs defaultValue="Terproses" className="w-full">
                     <div className="border-b">
-                        <TabsList className="bg-transparent p-0 h-auto -mb-px no-scrollbar overflow-x-auto">
+                        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-2">
                             {tabs.map(tab => (
                                 <TabsTrigger 
                                     key={tab.status} 
@@ -412,7 +413,7 @@ export default function ManageReceiptsPage() {
                                     <Badge variant="secondary" className="ml-2">{groupedReceipts[tab.status].length}</Badge>
                                 </TabsTrigger>
                             ))}
-                        </TabsList>
+                        </div>
                     </div>
                     {tabs.map(tab => (
                         <TabsContent key={tab.status} value={tab.status} className="mt-6">
@@ -442,3 +443,5 @@ export default function ManageReceiptsPage() {
         </AppLayout>
     );
 }
+
+    
