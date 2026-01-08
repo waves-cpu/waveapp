@@ -11,7 +11,7 @@ import { Undo2, Truck, CheckCircle, Package, Search, Send, Ban, History, MoreVer
 import { Badge } from '@/components/ui/badge';
 import { useInventory } from '@/hooks/use-inventory';
 import type { ShippingReceipt, ReturnedItem } from '@/types';
-import { parseISO, startOfMonth, endOfMonth, isWithinInterval, startOfDay, endOfDay, subDays, startOfYear, endOfYear } from 'date-fns';
+import { parseISO, startOfMonth, endOfMonth, isWithinInterval, startOfDay, endOfDay, subDays, startOfYear, endOfYear, subMonths } from 'date-fns';
 import { id as localeId } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
 import { Pagination } from '@/components/ui/pagination';
@@ -131,7 +131,7 @@ const ReceiptTable = ({
                                 <CheckCircle className="mr-2 h-4 w-4" />
                                 {isProcessing ? 'Memproses...' : `Tandai Selesai (${selectedIds.size})`}
                             </Button>
-                            <Button size="sm" variant="destructive" onClick={() => onBulkAction(Array.from(selectedIds), 'Dibatalkan')} disabled={isProcessing}>
+                             <Button size="sm" variant="destructive" onClick={() => onBulkAction(Array.from(selectedIds), 'Dibatalkan')} disabled={isProcessing}>
                                 <Ban className="mr-2 h-4 w-4" />
                                 {isProcessing ? 'Memproses...' : `Batalkan (${selectedIds.size})`}
                             </Button>
@@ -413,3 +413,4 @@ export default function ManageReceiptsPage() {
     );
 }
 
+    
