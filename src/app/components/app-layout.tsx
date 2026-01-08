@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import React, { useState, useMemo } from 'react';
@@ -163,6 +162,14 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                                   <SidebarMenuButton variant="ghost" size="sm" isActive={isActive('/shipping/receipt')}>
                                       <Receipt />
                                       {t.shipping.receipt}
+                                  </SidebarMenuButton>
+                              </Link>
+                          </SidebarMenuItem>
+                           <SidebarMenuItem>
+                              <Link href="/shipping/manage">
+                                  <SidebarMenuButton variant="ghost" size="sm" isActive={isActive('/shipping/manage')}>
+                                      <Settings2 />
+                                      Kelola Resi
                                   </SidebarMenuButton>
                               </Link>
                           </SidebarMenuItem>
