@@ -1,16 +1,16 @@
 
 'use client';
 
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { AppLayout } from '@/app/components/app-layout';
-import { PosCart } from '@/app/components/pos-cart';
+import { ResellerCart } from '@/app/components/reseller-cart';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { useLanguage } from '@/hooks/use-language';
 import { translations } from '@/types/language';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { History, Settings, Users, UserSquare } from 'lucide-react';
-import type { Voucher, Reseller } from '@/types';
+import { Users, UserSquare } from 'lucide-react';
+import type { Reseller } from '@/types';
 import { useInventory } from '@/hooks/use-inventory';
 import {
   Select,
@@ -34,7 +34,7 @@ export default function ResellerPage() {
 
     const resellerTier = useMemo(() => {
         if (selectedReseller) {
-            return getResellerTier(selectedReseller.totalTransactions);
+            return getResellerTier(selectedReseller.totalTransactions || 0);
         }
         return getResellerTier(0);
     }, [selectedReseller]);
@@ -72,10 +72,8 @@ export default function ResellerPage() {
                 </Link>
             </div>
         </header>
-        <PosCart 
+        <ResellerCart 
             key={selectedReseller?.id} // Re-mount cart when reseller changes
-            onVoucherApplied={() => {}} 
-            activeVoucher={null}
             reseller={selectedReseller}
             resellerTier={resellerTier}
         />
