@@ -925,6 +925,16 @@ export async function performSale(
                 db.prepare('UPDATE discount_groups SET maxUses = maxUses - 1 WHERE id = ?').run(voucher.id);
             }
         }
+
+        let totalTransactionAmount = 0;
+        sales.forEach(sale => {
+            totalTransactionAmount += sale.priceAtSale * sale.quantity;
+        });
+
+        if (channel === 'reseller' && saleOptions.resellerName) {
+            db.prepare('UPDATE resellers SET totalTransactions = totalTransactions + ? WHERE name = ?')
+              .run(totalTransactionAmount, saleOptions.resellerName);
+        }
         
         sales.forEach(sale => {
             const saleDate = new Date();
@@ -1710,7 +1720,7 @@ export async function getResellers(): Promise<Reseller[]> {
 
 export async function addReseller(name: string, phone?: string, address?: string): Promise<Reseller> {
     try {
-        const result = db.prepare('INSERT INTO resellers (name, phone, address) VALUES (@name, @phone, @address)').run({
+        const result = db.prepare('INSERT INTO resellers (name, phone, address, totalTransactions) VALUES (@name, @phone, @address, 0)').run({
             name, 
             phone: phone || null, 
             address: address || null
@@ -1724,7 +1734,7 @@ export async function addReseller(name: string, phone?: string, address?: string
     }
 }
 
-export async function editReseller(id: number, data: Omit<Reseller, 'id'>): Promise<Reseller> {
+export async function editReseller(id: number, data: Omit<Reseller, 'id' | 'totalTransactions'>): Promise<Reseller> {
      try {
         db.prepare('UPDATE resellers SET name = @name, phone = @phone, address = @address WHERE id = @id').run({
             id,
@@ -1971,6 +1981,7 @@ export async function getVoucherUsageAnalytics(groupId: number) {
     
 
     
+
 
 
 
