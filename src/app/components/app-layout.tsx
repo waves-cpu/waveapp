@@ -134,14 +134,6 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                                      </SidebarMenuButton>
                                  </Link>
                               </SidebarMenuItem>
-                               <SidebarMenuItem>
-                                 <Link href="/sales/reseller">
-                                     <SidebarMenuButton variant="ghost" size="sm" isActive={isActive('/sales/reseller')}>
-                                         <UserSquare />
-                                         Reseller
-                                     </SidebarMenuButton>
-                                 </Link>
-                              </SidebarMenuItem>
                         </SidebarMenu>
                     </CollapsibleContent>
                 </Collapsible>

@@ -2,7 +2,7 @@
 
 import { db as dbProxy } from './db';
 const db = dbProxy;
-import type { InventoryItem, AdjustmentHistory, InventoryItemVariant, Sale, Reseller, ChannelPrice, Accessory, ShippingReceipt, BulkImportHistory, User, ReturnedItem, DiscountGroup, DiscountedProduct, PrintedReceiptCount, ShippingReceiptCounts } from '@/types';
+import type { InventoryItem, AdjustmentHistory, InventoryItemVariant, Sale, Accessory, ShippingReceipt, BulkImportHistory, User, ReturnedItem, DiscountGroup, DiscountedProduct, PrintedReceiptCount, ShippingReceiptCounts } from '@/types';
 import { categories as allCategories } from '@/types';
 import { format as formatDate, parseISO, startOfDay, endOfDay, subDays } from 'date-fns';
 import { formatToWIB } from './utils';
@@ -893,7 +893,6 @@ export async function performSale(
         sales: { sku: string; quantity: number; priceAtSale: number }[];
         transactionId?: string, 
         paymentMethod?: string,
-        resellerName?: string,
         status?: string,
         voucherCode?: string;
     }
@@ -925,16 +924,6 @@ export async function performSale(
                 db.prepare('UPDATE discount_groups SET maxUses = maxUses - 1 WHERE id = ?').run(voucher.id);
             }
         }
-
-        if (channel === 'reseller' && saleOptions.resellerName) {
-            let totalTransactionAmount = 0;
-            sales.forEach(sale => {
-                totalTransactionAmount += (sale.priceAtSale * sale.quantity);
-            });
-
-            db.prepare('UPDATE resellers SET totalTransactions = totalTransactions + ? WHERE name = ?')
-              .run(totalTransactionAmount, saleOptions.resellerName);
-        }
         
         sales.forEach(sale => {
             const saleDate = new Date();
@@ -946,7 +935,7 @@ export async function performSale(
                 saleReason = `Pemakaian Aksesoris (POS)`;
                 saleStatus = 'Pemakaian Aksesoris';
             } else {
-                saleReason = `Sale (${channel})` + (saleOptions?.resellerName ? ` - ${saleOptions.resellerName}` : '');
+                saleReason = `Sale (${channel})`;
                 saleStatus = saleOptions?.status || 'Completed';
             }
             
@@ -987,12 +976,11 @@ export async function performSale(
             }
 
             const saleResult = db.prepare(`
-                INSERT INTO sales (transactionId, paymentMethod, resellerName, productId, variantId, accessoryId, channel, quantity, priceAtSale, cogsAtSale, saleDate, status, parentSku, productCategory, parentImageUrl, voucherCode)
-                VALUES (@transactionId, @paymentMethod, @resellerName, @productId, @variantId, @accessoryId, @channel, @quantity, @priceAtSale, @cogsAtSale, @saleDate, @status, @parentSku, @productCategory, @parentImageUrl, @voucherCode)
+                INSERT INTO sales (transactionId, paymentMethod, productId, variantId, accessoryId, channel, quantity, priceAtSale, cogsAtSale, saleDate, status, parentSku, productCategory, parentImageUrl, voucherCode)
+                VALUES (@transactionId, @paymentMethod, @productId, @variantId, @accessoryId, @channel, @quantity, @priceAtSale, @cogsAtSale, @saleDate, @status, @parentSku, @productCategory, @parentImageUrl, @voucherCode)
             `).run({
                 transactionId: saleOptions?.transactionId || `tx-${Date.now()}`, 
                 paymentMethod: saleOptions?.paymentMethod, 
-                resellerName: saleOptions?.resellerName, 
                 productId: productId, 
                 variantId: variantId, 
                 accessoryId: accessoryId,
@@ -1011,7 +999,7 @@ export async function performSale(
             const newSaleId = saleResult.lastInsertRowid;
             const newSale = db.prepare(`
                 SELECT 
-                    s.id, s.transactionId, s.paymentMethod, s.resellerName, s.productId, s.variantId, s.accessoryId, s.channel, s.quantity, s.priceAtSale, s.cogsAtSale, s.saleDate, s.voucherCode,
+                    s.id, s.transactionId, s.paymentMethod, s.productId, s.variantId, s.accessoryId, s.channel, s.quantity, s.priceAtSale, s.cogsAtSale, s.saleDate, s.voucherCode,
                     COALESCE(p.name, a.name) as productName,
                     COALESCE(p.category, a.category) as productCategory,
                     p.imageUrl as parentImageUrl,
@@ -1126,10 +1114,10 @@ export async function recordSaleWithReceipt(receiptData: Omit<ShippingReceipt, '
             }
 
             db.prepare(`
-                INSERT INTO sales (transactionId, paymentMethod, resellerName, productId, variantId, accessoryId, channel, quantity, priceAtSale, cogsAtSale, saleDate, status, parentSku, productCategory, parentImageUrl)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO sales (transactionId, productId, variantId, accessoryId, channel, quantity, priceAtSale, cogsAtSale, saleDate, status, parentSku, productCategory, parentImageUrl)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             `).run(
-                sale.transactionId, null, null, productId, variantId, null,
+                sale.transactionId, productId, variantId, null,
                 sale.channel, sale.quantity, sale.priceAtSale, cogsAtSale, sale.saleDate,
                 'Terproses', parentProduct?.sku, parentProduct?.category, parentProduct?.imageUrl
             );
@@ -1190,7 +1178,7 @@ export async function fetchSingleAccessory(accessoryId: string): Promise<Accesso
 export async function fetchAllSales(): Promise<Sale[]> {
      const salesQuery = db.prepare(`
         SELECT 
-            s.id, s.transactionId, s.paymentMethod, s.resellerName, s.productId, s.variantId, s.accessoryId, s.channel, s.quantity, s.priceAtSale, s.cogsAtSale, s.saleDate, s.voucherCode,
+            s.id, s.transactionId, s.paymentMethod, s.productId, s.variantId, s.accessoryId, s.channel, s.quantity, s.priceAtSale, s.cogsAtSale, s.saleDate, s.voucherCode,
             COALESCE(p.name, a.name) as productName,
             COALESCE(p.category, a.category) as productCategory,
             p.imageUrl as parentImageUrl,
@@ -1217,7 +1205,7 @@ export async function getPosSalesByDate(date: Date): Promise<Sale[]> {
     const dateString = formatToWIB(date, 'yyyy-MM-dd');
     const salesQuery = db.prepare(`
         SELECT 
-            s.id, s.transactionId, s.paymentMethod, s.resellerName, s.productId, s.variantId, s.accessoryId, s.channel, s.quantity, s.priceAtSale, s.cogsAtSale, s.saleDate,
+            s.id, s.transactionId, s.paymentMethod, s.productId, s.variantId, s.accessoryId, s.channel, s.quantity, s.priceAtSale, s.cogsAtSale, s.saleDate,
             COALESCE(p.name, a.name) as productName,
             COALESCE(p.category, a.category) as productCategory,
             p.imageUrl as parentImageUrl,
@@ -1245,7 +1233,7 @@ export async function getPosSalesByDate(date: Date): Promise<Sale[]> {
 export async function getSalesByTransactionId(transactionId: string): Promise<Sale[]> {
     const salesQuery = db.prepare(`
         SELECT 
-            s.id, s.transactionId, s.paymentMethod, s.resellerName, s.productId, s.variantId, s.accessoryId, s.channel, s.quantity, s.priceAtSale, s.cogsAtSale, s.saleDate,
+            s.id, s.transactionId, s.paymentMethod, s.productId, s.variantId, s.accessoryId, s.channel, s.quantity, s.priceAtSale, s.cogsAtSale, s.saleDate,
             COALESCE(p.name, a.name) as productName,
             COALESCE(p.category, a.category) as productCategory,
             p.imageUrl as parentImageUrl,
@@ -1282,7 +1270,7 @@ export async function getSalesByDate(channel: string, date: Date, page: number, 
 
     const salesQuery = db.prepare(`
         SELECT 
-            s.id, s.transactionId, s.paymentMethod, s.resellerName, s.productId, s.variantId, s.channel, s.quantity, s.priceAtSale, s.cogsAtSale, s.saleDate,
+            s.id, s.transactionId, s.paymentMethod, s.productId, s.variantId, s.channel, s.quantity, s.priceAtSale, s.cogsAtSale, s.saleDate,
             p.name as productName,
             v.name as variantName,
             COALESCE(v.sku, p.sku) as sku,
@@ -1712,49 +1700,6 @@ export async function findDiscountGroupByVoucherCode(voucherCode: string, channe
     return { ...group, products, productCount: products.length };
 }
 
-
-// Reseller functions
-export async function getResellers(): Promise<Reseller[]> {
-    return db.prepare('SELECT * FROM resellers ORDER BY name').all() as Reseller[];
-}
-
-export async function addReseller(name: string, phone?: string, address?: string): Promise<Reseller> {
-    try {
-        const result = db.prepare('INSERT INTO resellers (name, phone, address, totalTransactions) VALUES (@name, @phone, @address, 0)').run({
-            name, 
-            phone: phone || null, 
-            address: address || null
-        });
-        return db.prepare('SELECT * FROM resellers WHERE id = ?').get(result.lastInsertRowid) as Reseller;
-    } catch(error) {
-        if (error instanceof Error && error.message.includes('UNIQUE constraint failed')) {
-            throw new Error('Reseller name already exists.');
-        }
-        throw error;
-    }
-}
-
-export async function editReseller(id: number, data: Omit<Reseller, 'id' | 'totalTransactions'>): Promise<Reseller> {
-     try {
-        db.prepare('UPDATE resellers SET name = @name, phone = @phone, address = @address WHERE id = @id').run({
-            id,
-            name: data.name,
-            phone: data.phone || null,
-            address: data.address || null
-        });
-        return db.prepare('SELECT * FROM resellers WHERE id = ?').get(id) as Reseller;
-    } catch(error) {
-        if (error instanceof Error && error.message.includes('UNIQUE constraint failed')) {
-            throw new Error('Reseller name already exists.');
-        }
-        throw error;
-    }
-}
-
-export async function deleteReseller(id: number) {
-    db.prepare('DELETE FROM resellers WHERE id = ?').run(id);
-}
-
 export async function addAccessory(accessory: Omit<Accessory, 'id' | 'history'>): Promise<string> {
     const addStmt = db.prepare(`
         INSERT INTO accessories (name, sku, category, stock, price, costPrice, unit, quantityPerUnit)
@@ -1908,14 +1853,13 @@ export async function getVoucherUsageAnalytics(groupId: number) {
         SELECT 
             transactionId, 
             channel,
-            resellerName,
             saleDate, 
             SUM(priceAtSale * quantity) as totalSale
         FROM sales 
         WHERE voucherCode = ? 
-        GROUP BY transactionId, channel, resellerName, saleDate
+        GROUP BY transactionId, channel, saleDate
         ORDER BY saleDate DESC
-    `).all(group.voucherCode) as { transactionId: string; channel: string; resellerName: string | null, saleDate: string; totalSale: number }[];
+    `).all(group.voucherCode) as { transactionId: string; channel: string; saleDate: string; totalSale: number }[];
 
     const totalDiscountResult = db.prepare(`
         SELECT 
@@ -1981,6 +1925,7 @@ export async function getVoucherUsageAnalytics(groupId: number) {
     
 
     
+
 
 
 

@@ -1,5 +1,4 @@
 
-
 export const categories = [
     "T-Shirt Oversize",
     "T-Shirt Boxy",
@@ -99,7 +98,6 @@ export interface Sale {
   id: string;
   transactionId?: string;
   paymentMethod?: string;
-  resellerName?: string;
   productId?: string;
   variantId?: string;
   accessoryId?: string;

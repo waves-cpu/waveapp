@@ -140,7 +140,6 @@ const createSchema = () => {
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         transactionId TEXT,
         paymentMethod TEXT,
-        resellerName TEXT,
         productId INTEGER,
         variantId INTEGER,
         accessoryId INTEGER,
@@ -157,14 +156,6 @@ const createSchema = () => {
         FOREIGN KEY (productId) REFERENCES products(id) ON DELETE CASCADE,
         FOREIGN KEY (variantId) REFERENCES variants(id) ON DELETE CASCADE,
         FOREIGN KEY (accessoryId) REFERENCES accessories(id) ON DELETE CASCADE
-    );
-
-     CREATE TABLE IF NOT EXISTS resellers (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT NOT NULL UNIQUE,
-        phone TEXT,
-        address TEXT,
-        totalTransactions INTEGER DEFAULT 0
     );
 
     CREATE TABLE IF NOT EXISTS settings (
@@ -286,18 +277,12 @@ const runMigrations = () => {
     // Sales Migrations
     addColumn('sales', 'transactionId', 'TEXT');
     addColumn('sales', 'paymentMethod', 'TEXT');
-    addColumn('sales', 'resellerName', 'TEXT');
     addColumn('sales', 'cogsAtSale', 'REAL');
     addColumn('sales', 'parentSku', 'TEXT');
     addColumn('sales', 'status', "TEXT DEFAULT 'Completed'");
     addColumn('sales', 'productCategory', 'TEXT');
     addColumn('sales', 'parentImageUrl', 'TEXT');
     addColumn('sales', 'voucherCode', 'TEXT');
-
-    // Reseller Migrations
-    addColumn('resellers', 'phone', 'TEXT');
-    addColumn('resellers', 'address', 'TEXT');
-    addColumn('resellers', 'totalTransactions', 'INTEGER DEFAULT 0');
 
     // Product Migrations
     addColumn('products', 'costPrice', 'REAL');
