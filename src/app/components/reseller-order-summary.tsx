@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useMemo, useEffect } from 'react';
@@ -38,20 +39,16 @@ export function ResellerOrderSummary({ cart, onSaleComplete, clearCart, reseller
     const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('Transfer');
 
     const { subtotal, totalDiscount, finalTotal } = useMemo(() => {
-        const subtotalCalc = cart.reduce((acc, item) => acc + (item.price * item.quantity), 0);
-        let discount = 0;
-        if (resellerTier.discountPercentage > 0) {
-            discount = subtotalCalc * (resellerTier.discountPercentage / 100);
-        }
+        const subtotalCalc = cart.reduce((acc, item) => acc + (item.originalPrice * item.quantity), 0);
+        const finalTotalCalc = cart.reduce((acc, item) => acc + (item.price * item.quantity), 0);
+        const discount = subtotalCalc - finalTotalCalc;
         
-        const finalTotalCalc = subtotalCalc - discount;
-
         return { 
             subtotal: subtotalCalc, 
             totalDiscount: discount,
             finalTotal: finalTotalCalc,
         };
-    }, [cart, resellerTier]);
+    }, [cart]);
 
     useEffect(() => {
         if (cart.length === 0) {

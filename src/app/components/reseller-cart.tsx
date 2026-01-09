@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
@@ -122,13 +123,15 @@ export function ResellerCart({ reseller, resellerTier }: ResellerCartProps) {
     }, [invoiceToPrint]);
     
     useEffect(() => {
-        if (!productForVariantSelection) {
+        if (!productForVariantSelection && reseller) {
             searchInputRef.current?.focus();
         }
-    }, [cart.length, productForVariantSelection]);
+    }, [cart.length, productForVariantSelection, reseller]);
 
 
     const addToCart = useCallback(async (item: InventoryItem, variant?: InventoryItemVariant) => {
+        if (!reseller) return;
+
         const itemToAddRaw = variant || item;
         if ((itemToAddRaw.stock ?? 0) <= 0) {
             toast({ variant: 'destructive', title: 'Stok Habis', description: `Stok untuk ${item.name} ${itemToAddRaw.name ? `- ${itemToAddRaw.name}` : ''} sudah habis.` });
@@ -136,7 +139,9 @@ export function ResellerCart({ reseller, resellerTier }: ResellerCartProps) {
             return;
         }
 
-        const price = itemToAddRaw.price || 0;
+        const originalPrice = itemToAddRaw.price || 0;
+        const discountAmount = originalPrice * (resellerTier.discountPercentage / 100);
+        const finalPrice = originalPrice - discountAmount;
         
         const itemToAdd: CartItem = {
             id: itemToAddRaw.id,
@@ -145,8 +150,8 @@ export function ResellerCart({ reseller, resellerTier }: ResellerCartProps) {
             variantName: variant?.name,
             sku: itemToAddRaw.sku!,
             quantity: 1,
-            price: price, 
-            originalPrice: price,
+            price: finalPrice, 
+            originalPrice: originalPrice,
             category: item.category,
             imageUrl: item.imageUrl,
             type: 'product',
@@ -173,7 +178,7 @@ export function ResellerCart({ reseller, resellerTier }: ResellerCartProps) {
             }
             return [...currentCart, itemToAdd];
         });
-    }, [cart, toast, playSuccessSound, playErrorSound]);
+    }, [cart, toast, playSuccessSound, playErrorSound, reseller, resellerTier.discountPercentage]);
 
     const handleProductSelect = useCallback(async (item: SearchableItem) => {
         try {
@@ -342,7 +347,14 @@ export function ResellerCart({ reseller, resellerTier }: ResellerCartProps) {
                                                     <Input type="number" value={item.quantity} onChange={(e) => updateQuantity(item.id, parseInt(e.target.value) || 0)} className="w-16 h-8 text-center text-sm focus-visible:ring-1" />
                                                 </div>
                                             </TableCell>
-                                            <TableCell className="text-left text-sm">{item.price.toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</TableCell>
+                                            <TableCell className="text-left text-sm">
+                                                {item.price !== item.originalPrice && (
+                                                    <span className="line-through text-muted-foreground text-xs mr-1">
+                                                        {item.originalPrice.toLocaleString('id-ID')}
+                                                    </span>
+                                                )}
+                                                {item.price.toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                                            </TableCell>
                                             <TableCell className="text-left font-medium text-sm">{(item.price * item.quantity).toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</TableCell>
                                             <TableCell>
                                                  <Button variant="ghost" size="icon" className="text-destructive h-8 w-8" onClick={() => removeFromCart(item.id)}>
