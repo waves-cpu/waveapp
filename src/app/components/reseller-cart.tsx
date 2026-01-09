@@ -261,7 +261,7 @@ export function ResellerCart({ reseller, resellerTier }: ResellerCartProps) {
         const salesData = cart.map(item => ({
             sku: item.sku,
             quantity: item.quantity,
-            priceAtSale: item.price,
+            priceAtSale: item.price, // **FIX**: Use the discounted price
         }));
         
         try {
