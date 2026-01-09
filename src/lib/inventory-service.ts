@@ -1118,7 +1118,7 @@ export async function recordSaleWithReceipt(receiptData: Omit<ShippingReceipt, '
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             `).run(
                 sale.transactionId, productId, variantId, null,
-                sale.channel, sale.quantity, sale.priceAtSale, cogsAtSale, sale.saleDate,
+                sale.channel, sale.quantity, sale.priceAtSale, cogsAtSale, sale.date,
                 'Terproses', parentProduct?.sku, parentProduct?.category, parentProduct?.imageUrl
             );
         });
@@ -1925,6 +1925,7 @@ export async function getVoucherUsageAnalytics(groupId: number) {
     
 
     
+
 
 
 

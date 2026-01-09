@@ -3,7 +3,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback, useMemo } from 'react';
-import type { InventoryItem, AdjustmentHistory, InventoryItemVariant, Sale, Reseller, ChannelPrice, Accessory, ShippingReceipt, BulkImportHistory, User, ReturnedItem, DiscountGroup, DiscountedProduct, PrintedReceiptCount, ShippingReceiptCounts } from '@/types';
+import type { InventoryItem, AdjustmentHistory, InventoryItemVariant, Sale, Accessory, ShippingReceipt, BulkImportHistory, User, ReturnedItem, DiscountGroup, DiscountedProduct, PrintedReceiptCount, ShippingReceiptCounts } from '@/types';
 import { categories as allCategories } from '@/types';
 import { useToast } from './use-toast';
 import { apiFetch } from '@/lib/api';
@@ -31,11 +31,6 @@ interface InventoryContextType {
   revertSaleItem: (transactionId: string, sku: string) => Promise<void>;
   findProductBySku: (sku: string) => Promise<InventoryItem | null>;
   allSales: Sale[];
-  resellers: Reseller[];
-  addReseller: (name: string, phone?: string, address?: string) => Promise<void>;
-  editReseller: (id: number, data: Omit<Reseller, 'id'>) => Promise<void>;
-  deleteReseller: (id: number) => Promise<void>;
-  fetchResellers: () => Promise<void>;
   archiveProduct: (itemId: string, isArchived: boolean) => Promise<void>;
   deleteProductPermanently: (itemId: string) => Promise<void>;
   // Accessories
@@ -91,11 +86,6 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
         queryFn: () => apiFetch<{ sales: Sale[] }>('/api/sales').then(res => res.sales),
     });
 
-    const { data: resellers, isLoading: isResellersLoading } = useQuery({
-        queryKey: ['resellers'],
-        queryFn: () => apiFetch<Reseller[]>('/api/resellers'),
-    });
-
     const { data: allShippingReceipts, isLoading: isReceiptsLoading } = useQuery({
         queryKey: ['shippingReceipts'],
         queryFn: () => apiFetch<{ receipts: ShippingReceipt[] }>('/api/shipping/receipts?limit=100000').then(res => res.receipts),
@@ -114,7 +104,7 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
         }
     }, []);
 
-    const loading = isInventoryLoading || isSalesLoading || isResellersLoading || isReceiptsLoading || isDiscountsLoading;
+    const loading = isInventoryLoading || isSalesLoading || isReceiptsLoading || isDiscountsLoading;
 
     const useApiMutation = <TData, TVariables>(
         mutationFn: (variables: TVariables) => Promise<TData>,
@@ -128,7 +118,7 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
             mutationFn,
             onSuccess: () => {
                 const keysToInvalidate: (string | number)[][] = [
-                    ['inventory'], ['sales'], ['resellers'], 
+                    ['inventory'], ['sales'], 
                     ['shippingReceipts'], ['discountGroups'], 
                     ...(options.invalidateQueries || [])
                 ];
@@ -198,9 +188,6 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
     const updateShippingReceiptsStatusMutation = useApiMutation((vars: { ids: number[], status: string }) => apiFetch('/api/shipping/receipts/status', { method: 'PUT', body: vars }));
     const updateShippingReceiptStatusMutation = useApiMutation((vars: { id: number, status: string }) => apiFetch(`/api/shipping/receipts/${vars.id}`, { method: 'PUT', body: { status: vars.status } }));
     const addPrintedReceiptsMutation = useApiMutation((vars: { date: string, salesChannel: string, shippingChannel: string, count: number }) => apiFetch('/api/shipping/printed-receipts', { method: 'POST', body: vars }));
-    const addResellerMutation = useApiMutation((vars: { name: string, phone?: string, address?: string }) => apiFetch('/api/resellers', { method: 'POST', body: vars }));
-    const editResellerMutation = useApiMutation((vars: { id: number, data: Omit<Reseller, 'id'> }) => apiFetch(`/api/resellers/${vars.id}`, { method: 'PUT', body: vars.data }));
-    const deleteResellerMutation = useApiMutation((id: number) => apiFetch(`/api/resellers/${id}`, { method: 'DELETE' }));
     const deleteImportHistoryMutation = useApiMutation((id: number) => apiFetch(`/api/products/bulk-add/${id}`, { method: 'DELETE' }), { invalidateQueries: [['bulkImportHistory']] });
     const addDiscountGroupMutation = useApiMutation((group: any) => apiFetch('/api/finance/discounts', { method: 'POST', body: group }));
     const editDiscountGroupMutation = useApiMutation((vars: { id: number, group: any }) => apiFetch(`/api/finance/discounts/${vars.id}`, { method: 'PUT', body: vars.group }));
@@ -211,7 +198,6 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
         items: inventoryData?.products || [],
         accessories: inventoryData?.accessories || [],
         allSales: allSales || [],
-        resellers: resellers || [],
         allShippingReceipts: allShippingReceipts || [],
         discountGroups: discountGroups || [],
         loading,
@@ -241,10 +227,6 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
         updateShippingReceiptsStatus: (ids: number[], status: string) => updateShippingReceiptsStatusMutation.mutateAsync({ ids, status }),
         updateShippingReceiptStatus: (id: number, status: string) => updateShippingReceiptStatusMutation.mutateAsync({ id, status }),
         addPrintedReceipts: (date: string, salesChannel: string, shippingChannel: string, count: number) => addPrintedReceiptsMutation.mutateAsync({ date, salesChannel, shippingChannel, count }),
-        addReseller: (name: string, phone?: string, address?: string) => addResellerMutation.mutateAsync({ name, phone, address }),
-        editReseller: (id: number, data: any) => editResellerMutation.mutateAsync({ id, data }),
-        deleteReseller: (id: number) => deleteResellerMutation.mutateAsync(id),
-        fetchResellers: () => queryClient.invalidateQueries({ queryKey: ['resellers'] }),
         deleteImportHistory: (id: number) => deleteImportHistoryMutation.mutateAsync(id),
         addDiscountGroup: (group: any) => addDiscountGroupMutation.mutateAsync(group),
         editDiscountGroup: (id: number, group: any) => editDiscountGroupMutation.mutateAsync({ id, group }),
