@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useMemo, useEffect } from 'react';
@@ -379,14 +380,3 @@ export function PosOrderSummary({ cart, onSaleComplete, clearCart, channel, pend
         </Card>
     );
 }
-
-    
-
-    
-
-
-
-    
-
-
-

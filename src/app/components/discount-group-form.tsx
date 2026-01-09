@@ -273,7 +273,6 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm = false }: Disc
                       <SelectContent>
                         <SelectItem value="online">Online (Shopee, Tiktok, etc)</SelectItem>
                         <SelectItem value="pos">POS (Point of Sale)</SelectItem>
-                        <SelectItem value="reseller">Reseller</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
