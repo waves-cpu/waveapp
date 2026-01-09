@@ -1,8 +1,7 @@
 
-
 'use client';
 
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import React, { useState, useMemo, useEffect, useCallback, useDeferredValue } from 'react';
 import { AppLayout } from '@/app/components/app-layout';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
@@ -12,7 +11,7 @@ import { Undo2, Truck, CheckCircle, Package, Search, Send, Ban, History, MoreVer
 import { Badge } from '@/components/ui/badge';
 import { useInventory } from '@/hooks/use-inventory';
 import type { ShippingReceipt, ReturnedItem } from '@/types';
-import { parseISO, startOfMonth, endOfMonth, isWithinInterval, startOfDay, endOfDay, subDays, startOfYear, subMonths, endOfYear } from 'date-fns';
+import { parseISO, startOfDay, endOfDay, isWithinInterval, startOfMonth, endOfMonth, subDays, startOfYear, subMonths, endOfYear } from 'date-fns';
 import { id as localeId } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
 import { Pagination } from '@/components/ui/pagination';
@@ -22,7 +21,7 @@ import { ProcessReturnDialog } from '@/app/components/process-return-dialog';
 import { formatToWIB, cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Checkbox } from '@/components/ui/checkbox';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
@@ -46,7 +45,53 @@ const getStatusVariant = (status: string) => {
     }
 };
 
+const STATUS_FLOW = {
+    TERPROSES: 'Terproses',
+    SIAP_KIRIM: 'Siap Kirim',
+    SELESAI: 'Selesai',
+    RETURN: 'Return',
+    RETURN_SELESAI: 'Return Selesai',
+    DIBATALKAN: 'Dibatalkan',
+    DELETE: 'Delete'
+} as const;
+
 type StatusTab = 'Terproses' | 'Siap Kirim' | 'Selesai' | 'Return' | 'Return Selesai' | 'Dibatalkan';
+
+const DropdownAction = ({ receipt, onAction }: { receipt: ShippingReceipt, onAction: any }) => (
+    <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon" className="h-8 w-8"><MoreVertical className="h-4 w-4" /></Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-48">
+            {receipt.status === STATUS_FLOW.TERPROSES && <DropdownMenuItem onClick={() => onAction(receipt, STATUS_FLOW.SIAP_KIRIM)}><Send className="mr-2 h-4 w-4" /> Tandai Siap Kirim</DropdownMenuItem>}
+            {receipt.status === STATUS_FLOW.SIAP_KIRIM && (
+                <>
+                    <DropdownMenuItem onClick={() => onAction(receipt, STATUS_FLOW.SELESAI)}><CheckCircle className="mr-2 h-4 w-4" /> Tandai Selesai</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => onAction(receipt, STATUS_FLOW.DIBATALKAN)} className="text-destructive"><Ban className="mr-2 h-4 w-4" /> Batalkan</DropdownMenuItem>
+                </>
+            )}
+            {receipt.status === STATUS_FLOW.SELESAI && <DropdownMenuItem onClick={() => onAction(receipt, STATUS_FLOW.RETURN)}><Undo2 className="mr-2 h-4 w-4 text-orange-500" /> Tandai Return</DropdownMenuItem>}
+            {receipt.status === STATUS_FLOW.RETURN && <DropdownMenuItem onClick={() => onAction(receipt, STATUS_FLOW.RETURN_SELESAI)}><Package className="mr-2 h-4 w-4" /> Proses Barang Sampai</DropdownMenuItem>}
+            
+            <Separator className="my-1" />
+            <AlertDialog>
+                <AlertDialogTrigger asChild>
+                    <DropdownMenuItem onSelect={e => e.preventDefault()} className="text-destructive"><Trash2 className="mr-2 h-4 w-4" /> Hapus Resi</DropdownMenuItem>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Konfirmasi Hapus</AlertDialogTitle>
+                        <AlertDialogDescription>Menghapus resi tidak akan mengembalikan stok. Gunakan 'Batalkan' jika ingin stok kembali.</AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Batal</AlertDialogCancel>
+                        <AlertDialogAction onClick={() => onAction(receipt, 'Delete')} className="bg-destructive hover:bg-destructive/90">Hapus</AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+        </DropdownMenuContent>
+    </DropdownMenu>
+);
 
 const ReceiptTable = ({ 
     receipts,
@@ -62,47 +107,55 @@ const ReceiptTable = ({
     isProcessing: boolean,
 }) => {
     const [currentPage, setCurrentPage] = useState(1);
-    const [itemsPerPage, setItemsPerPage] = useState(25);
+    const [itemsPerPage] = useState(25);
     const [searchTerm, setSearchTerm] = useState('');
-    const [channelFilter, setChannelFilter] = useState<string | null>(null);
+    const deferredSearch = useDeferredValue(searchTerm); 
     const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
 
     const filteredReceipts = useMemo(() => {
         return receipts.filter(r => {
-            const searchMatch = !searchTerm || r.awb.toLowerCase().includes(searchTerm.toLowerCase());
-            const channelMatch = !channelFilter || r.channel === channelFilter;
-            return searchMatch && channelMatch;
+            const searchMatch = !deferredSearch || r.awb.toLowerCase().includes(deferredSearch.toLowerCase());
+            return searchMatch;
         });
-    }, [receipts, searchTerm, channelFilter]);
+    }, [receipts, deferredSearch]);
 
     useEffect(() => {
         setSelectedIds(new Set());
         setCurrentPage(1);
-    }, [searchTerm, channelFilter, receipts]);
+    }, [status, deferredSearch]);
 
-    const totalPages = Math.ceil(filteredReceipts.length / itemsPerPage);
     const paginatedReceipts = useMemo(() => {
         const startIndex = (currentPage - 1) * itemsPerPage;
         return filteredReceipts.slice(startIndex, startIndex + itemsPerPage);
     }, [filteredReceipts, currentPage, itemsPerPage]);
     
-    const handleSelectAll = (checked: boolean) => {
-        setSelectedIds(new Set(checked ? paginatedReceipts.map(r => r.id) : []));
-    };
+    const handleSelectAll = useCallback((checked: boolean) => {
+        if (checked) {
+            const allIdsOnPage = paginatedReceipts.map(r => r.id);
+            setSelectedIds(prev => new Set([...Array.from(prev), ...allIdsOnPage]));
+        } else {
+            const idsOnPage = new Set(paginatedReceipts.map(r => r.id));
+            setSelectedIds(prev => new Set(Array.from(prev).filter(id => !idsOnPage.has(id))));
+        }
+    }, [paginatedReceipts]);
 
-    const handleSelectOne = (id: number, isChecked: boolean) => {
-        const newSelectedIds = new Set(selectedIds);
-        isChecked ? newSelectedIds.add(id) : newSelectedIds.delete(id);
-        setSelectedIds(newSelectedIds);
-    };
+    const handleSelectOne = useCallback((id: number, isChecked: boolean) => {
+        setSelectedIds(prev => {
+            const next = new Set(prev);
+            if (isChecked) next.add(id);
+            else next.delete(id);
+            return next;
+        });
+    }, []);
 
-    const isAllOnPageSelected = paginatedReceipts.length > 0 && paginatedReceipts.every(r => selectedIds.has(r.id));
-    
+    const isAllSelected = paginatedReceipts.length > 0 && paginatedReceipts.every(r => selectedIds.has(r.id));
+    const totalPages = Math.ceil(filteredReceipts.length / itemsPerPage);
+
     return (
         <div className="space-y-4">
-             <div className="flex justify-between items-center">
-                <div className="flex items-center gap-2">
-                    <div className="relative">
+            <div className="flex flex-col md:flex-row justify-between gap-4">
+                <div className="flex flex-1 items-center gap-2">
+                    <div className="relative w-full max-w-sm">
                         <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                         <Input 
                             placeholder="Cari No. Resi..."
@@ -111,97 +164,59 @@ const ReceiptTable = ({
                             className="pl-8 h-9"
                         />
                     </div>
-                    <Select value={channelFilter || 'all'} onValueChange={v => setChannelFilter(v === 'all' ? null : v)}>
-                        <SelectTrigger className="w-[200px] h-9">
-                            <SelectValue placeholder="Filter Jasa Kirim" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="all">Semua Jasa Kirim</SelectItem>
-                            {SHIPPING_CHANNEL_OPTIONS.slice(1).map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
-                        </SelectContent>
-                    </Select>
                 </div>
-                <div className="flex items-center gap-2">
-                     {selectedIds.size > 0 && status === 'Terproses' && (
-                        <Button size="sm" onClick={() => onBulkAction(Array.from(selectedIds), 'Siap Kirim')} disabled={isProcessing}>
-                            <Send className="mr-2 h-4 w-4" />
-                            {isProcessing ? 'Memproses...' : `Proses Kirim (${selectedIds.size})`}
-                        </Button>
-                     )}
-                     {selectedIds.size > 0 && status === 'Siap Kirim' && (
-                        <>
-                            <Button size="sm" onClick={() => onBulkAction(Array.from(selectedIds), 'Selesai')} disabled={isProcessing}>
-                                <CheckCircle className="mr-2 h-4 w-4" />
-                                {isProcessing ? 'Memproses...' : `Tandai Selesai (${selectedIds.size})`}
+
+                {selectedIds.size > 0 && (
+                    <div className="flex items-center gap-2 bg-primary/5 p-1 px-2 rounded-md border border-primary/20">
+                        <span className="text-xs font-medium mr-2">{selectedIds.size} dipilih</span>
+                        {status === STATUS_FLOW.TERPROSES && (
+                            <Button size="sm" onClick={() => onBulkAction(Array.from(selectedIds), STATUS_FLOW.SIAP_KIRIM)} disabled={isProcessing}>
+                                <Send className="mr-2 h-4 w-4" /> {isProcessing ? 'Memproses...' : 'Proses Kirim'}
                             </Button>
-                             <Button size="sm" variant="destructive" onClick={() => onBulkAction(Array.from(selectedIds), 'Dibatalkan')} disabled={isProcessing}>
-                                <Ban className="mr-2 h-4 w-4" />
-                                {isProcessing ? 'Memproses...' : `Batalkan (${selectedIds.size})`}
+                        )}
+                        {status === STATUS_FLOW.SIAP_KIRIM && (
+                            <Button size="sm" onClick={() => onBulkAction(Array.from(selectedIds), STATUS_FLOW.SELESAI)} disabled={isProcessing}>
+                                <CheckCircle className="mr-2 h-4 w-4" /> {isProcessing ? 'Memproses...' : 'Selesai'}
                             </Button>
-                        </>
-                     )}
-                </div>
+                        )}
+                    </div>
+                )}
             </div>
-            <Table>
-                <TableHeader>
-                    <TableRow>
-                         <TableHead className="w-12"><Checkbox checked={isAllOnPageSelected} onCheckedChange={handleSelectAll} /></TableHead>
-                        <TableHead>No. Resi</TableHead>
-                        <TableHead>Tanggal</TableHead>
-                        <TableHead>Kanal</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead className="text-right">Aksi</TableHead>
-                    </TableRow>
-                </TableHeader>
-                <TableBody>
-                    {paginatedReceipts.length > 0 ? paginatedReceipts.map(receipt => (
-                        <TableRow key={receipt.id} data-state={selectedIds.has(receipt.id) && 'selected'}>
-                             <TableCell><Checkbox checked={selectedIds.has(receipt.id)} onCheckedChange={(c) => handleSelectOne(receipt.id, !!c)} /></TableCell>
-                            <TableCell className="font-medium">{receipt.awb}</TableCell>
-                            <TableCell>{formatToWIB(parseISO(receipt.date), 'dd MMM yyyy')}</TableCell>
-                            <TableCell>{receipt.channel}</TableCell>
-                            <TableCell><Badge variant={getStatusVariant(receipt.status)}>{receipt.status}</Badge></TableCell>
-                            <TableCell className="text-right">
-                                <DropdownMenu>
-                                    <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8"><MoreVertical className="h-4 w-4" /></Button></DropdownMenuTrigger>
-                                    <DropdownMenuContent align="end">
-                                        {receipt.status === 'Terproses' && <DropdownMenuItem onClick={() => onAction(receipt, 'Siap Kirim')}><Send className="mr-2 h-4 w-4" /> Tandai Siap Kirim</DropdownMenuItem>}
-                                        {receipt.status === 'Siap Kirim' && (
-                                            <>
-                                                <DropdownMenuItem onClick={() => onAction(receipt, 'Selesai')}><CheckCircle className="mr-2 h-4 w-4" /> Tandai Selesai</DropdownMenuItem>
-                                                <DropdownMenuItem onClick={() => onAction(receipt, 'Dibatalkan')} className="text-destructive"><Ban className="mr-2 h-4 w-4" /> Batalkan</DropdownMenuItem>
-                                            </>
-                                        )}
-                                        {receipt.status === 'Selesai' && <DropdownMenuItem onClick={() => onAction(receipt, 'Return')}><Undo2 className="mr-2 h-4 w-4 text-orange-500" /> Tandai Return</DropdownMenuItem>}
-                                        {receipt.status === 'Return' && <DropdownMenuItem onClick={() => onAction(receipt, 'Return Selesai')}><Package className="mr-2 h-4 w-4" /> Proses Barang Sampai</DropdownMenuItem>}
-                                         <AlertDialog>
-                                            <AlertDialogTrigger asChild>
-                                                <DropdownMenuItem onSelect={e => e.preventDefault()} className="text-destructive"><Trash2 className="mr-2 h-4 w-4" /> Hapus</DropdownMenuItem>
-                                            </AlertDialogTrigger>
-                                            <AlertDialogContent>
-                                                <AlertDialogHeader>
-                                                    <AlertDialogTitle>Hapus Resi Ini?</AlertDialogTitle>
-                                                    <AlertDialogDescription>Aksi ini akan menghapus resi secara permanen. Pertimbangkan untuk membatalkan jika ingin stok kembali.</AlertDialogDescription>
-                                                </AlertDialogHeader>
-                                                <AlertDialogFooter>
-                                                    <AlertDialogCancel>Batal</AlertDialogCancel>
-                                                    <AlertDialogAction onClick={() => onAction(receipt, 'Delete')} className="bg-destructive hover:bg-destructive/90">Ya, Hapus</AlertDialogAction>
-                                                </AlertDialogFooter>
-                                            </AlertDialogContent>
-                                        </AlertDialog>
-                                    </DropdownMenuContent>
-                                </DropdownMenu>
-                            </TableCell>
+
+            <div className="rounded-md border bg-card">
+                <Table>
+                    <TableHeader>
+                        <TableRow className="bg-muted/50">
+                             <TableHead className="w-12"><Checkbox checked={isAllSelected} onCheckedChange={handleSelectAll} /></TableHead>
+                            <TableHead>No. Resi</TableHead>
+                            <TableHead>Tanggal</TableHead>
+                            <TableHead>Kurir</TableHead>
+                            <TableHead>Status</TableHead>
+                            <TableHead className="text-right">Aksi</TableHead>
                         </TableRow>
-                    )) : (
-                        <TableRow>
-                            <TableCell colSpan={6} className="h-24 text-center">
-                                Tidak ada resi dengan status ini.
-                            </TableCell>
-                        </TableRow>
-                    )}
-                </TableBody>
-            </Table>
+                    </TableHeader>
+                    <TableBody>
+                        {paginatedReceipts.length > 0 ? paginatedReceipts.map(receipt => (
+                            <TableRow key={receipt.id} data-state={selectedIds.has(receipt.id) ? 'selected' : 'unselected'}>
+                                 <TableCell><Checkbox checked={selectedIds.has(receipt.id)} onCheckedChange={(c) => handleSelectOne(receipt.id, !!c)} /></TableCell>
+                                <TableCell className="font-mono font-medium">{receipt.awb}</TableCell>
+                                <TableCell className="whitespace-nowrap">{formatToWIB(parseISO(receipt.date), 'dd MMM yyyy')}</TableCell>
+                                <TableCell><Badge variant="outline">{receipt.channel}</Badge></TableCell>
+                                <TableCell><Badge variant={getStatusVariant(receipt.status)}>{receipt.status}</Badge></TableCell>
+                                <TableCell className="text-right">
+                                    <DropdownAction receipt={receipt} onAction={onAction} />
+                                </TableCell>
+                            </TableRow>
+                        )) : (
+                            <TableRow>
+                                <TableCell colSpan={6} className="h-32 text-center text-muted-foreground">
+                                    Data tidak ditemukan.
+                                </TableCell>
+                            </TableRow>
+                        )}
+                    </TableBody>
+                </Table>
+            </div>
             {totalPages > 1 && (
                 <div className="pt-4 border-t">
                     <Pagination
@@ -215,6 +230,7 @@ const ReceiptTable = ({
     );
 };
 
+
 export default function ManageReceiptsPage() {
     const { allShippingReceipts, updateShippingReceiptStatus, updateShippingReceiptsStatus, deleteShippingReceipt, returnSaleTransaction, cancelSaleTransaction, loading } = useInventory();
     const { toast } = useToast();
@@ -223,26 +239,27 @@ export default function ManageReceiptsPage() {
     const [isProcessing, setIsProcessing] = useState(false);
     
     const [date, setDate] = useState<DateRange | undefined>({
-        from: startOfMonth(new Date()),
-        to: endOfMonth(new Date()),
+        from: new Date(),
+        to: new Date(),
     });
+    
+    const [shippingChannel, setShippingChannel] = useState<string | null>(null);
 
     const filteredReceipts = useMemo(() => {
         return allShippingReceipts.filter(receipt => {
-            if (!date || !date.from) return true;
-            const receiptDate = parseISO(receipt.date);
-            const toDate = date.to || date.from;
-            return isWithinInterval(receiptDate, { start: startOfDay(date.from), end: endOfDay(toDate) });
+            const dateMatch = !date || !date.from || isWithinInterval(parseISO(receipt.date), { start: startOfDay(date.from), end: endOfDay(date.to || date.from) });
+            const channelMatch = !shippingChannel || receipt.channel === shippingChannel;
+            return dateMatch && channelMatch;
         });
-    }, [allShippingReceipts, date]);
+    }, [allShippingReceipts, date, shippingChannel]);
 
 
     const handleAction = useCallback(async (receipt: ShippingReceipt, newStatus: string) => {
-        if (newStatus === 'Return Selesai') {
+        if (newStatus === STATUS_FLOW.RETURN_SELESAI) {
             setReceiptToProcess(receipt);
-        } else if (newStatus === 'Dibatalkan' && receipt.status === 'Siap Kirim') {
+        } else if (newStatus === STATUS_FLOW.DIBATALKAN && receipt.status === STATUS_FLOW.SIAP_KIRIM) {
             setReceiptToCancel(receipt);
-        } else if (newStatus === 'Delete') {
+        } else if (newStatus === STATUS_FLOW.DELETE) {
              try {
                 await deleteShippingReceipt(receipt.id);
                 toast({ title: 'Resi Dihapus', description: `Resi ${receipt.awb} telah dihapus.` });
@@ -293,7 +310,6 @@ export default function ManageReceiptsPage() {
         try {
             await cancelSaleTransaction(transactionId);
             toast({ title: 'Transaksi Dibatalkan', description: `Stok untuk transaksi ${transactionId} telah dikembalikan.` });
-            // After cancelling sale, update the receipt status
             await updateShippingReceiptStatus(receiptToCancel.id, 'Dibatalkan');
         } catch (error) {
             toast({ variant: 'destructive', title: 'Gagal Membatalkan', description: error instanceof Error ? error.message : 'Terjadi kesalahan.' });
@@ -359,47 +375,58 @@ export default function ManageReceiptsPage() {
                         <SidebarTrigger className="md:hidden" />
                         <h1 className="text-lg font-bold">Kelola Status Resi</h1>
                     </div>
-                     <Popover>
-                        <PopoverTrigger asChild>
-                            <Button
-                                id="date"
-                                variant={"outline"}
-                                className={cn(
-                                    "w-auto justify-start text-left font-normal h-9",
-                                    !date && "text-muted-foreground"
-                                )}
-                            >
-                                <CalendarIcon className="mr-2 h-4 w-4" />
-                                {date?.from ? (
-                                    date.to ? (
-                                        <>
-                                            {formatToWIB(date.from, "LLL dd, y")} -{" "}
-                                            {formatToWIB(date.to, "LLL dd, y")}
-                                        </>
+                    <div className="flex items-center gap-2">
+                         <Popover>
+                            <PopoverTrigger asChild>
+                                <Button
+                                    id="date"
+                                    variant={"outline"}
+                                    className={cn(
+                                        "w-auto justify-start text-left font-normal h-9",
+                                        !date && "text-muted-foreground"
+                                    )}
+                                >
+                                    <CalendarIcon className="mr-2 h-4 w-4" />
+                                    {date?.from ? (
+                                        date.to ? (
+                                            <>
+                                                {formatToWIB(date.from, "LLL dd, y")} -{" "}
+                                                {formatToWIB(date.to, "LLL dd, y")}
+                                            </>
+                                        ) : (
+                                            formatToWIB(date.from, "LLL dd, y")
+                                        )
                                     ) : (
-                                        formatToWIB(date.from, "LLL dd, y")
-                                    )
-                                ) : (
-                                    <span>Pilih rentang tanggal</span>
-                                )}
-                            </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="flex w-auto p-0" align="end">
-                           <div className="flex flex-col gap-1 pr-4 border-r py-2">
-                                {datePresets.map(preset => (
-                                    <Button key={preset.label} variant="ghost" className="justify-start" onClick={() => setDate(preset.range)}>{preset.label}</Button>
-                                ))}
-                            </div>
-                            <Calendar
-                                initialFocus
-                                mode="range"
-                                defaultMonth={date?.from}
-                                selected={date}
-                                onSelect={setDate}
-                                numberOfMonths={1}
-                            />
-                        </PopoverContent>
-                    </Popover>
+                                        <span>Pilih rentang tanggal</span>
+                                    )}
+                                </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="flex w-auto p-0" align="end">
+                               <div className="flex flex-col gap-1 pr-4 border-r py-2">
+                                    {datePresets.map(preset => (
+                                        <Button key={preset.label} variant="ghost" className="justify-start" onClick={() => setDate(preset.range)}>{preset.label}</Button>
+                                    ))}
+                                </div>
+                                <Calendar
+                                    initialFocus
+                                    mode="range"
+                                    defaultMonth={date?.from}
+                                    selected={date}
+                                    onSelect={setDate}
+                                    numberOfMonths={1}
+                                />
+                            </PopoverContent>
+                        </Popover>
+                         <Select value={shippingChannel || 'all'} onValueChange={v => setShippingChannel(v === 'all' ? null : v)}>
+                            <SelectTrigger className="w-[180px] h-9">
+                                <SelectValue placeholder="Jasa Kirim" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">Semua Jasa Kirim</SelectItem>
+                                {SHIPPING_CHANNEL_OPTIONS.slice(1).map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
+                            </SelectContent>
+                        </Select>
+                    </div>
                 </div>
 
                 <Tabs defaultValue="Terproses" className="w-full">
