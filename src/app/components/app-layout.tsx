@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useMemo } from 'react';
@@ -44,6 +45,7 @@ import {
   Tags,
   BadgePercent,
   Ticket,
+  UserSquare,
 } from 'lucide-react';
 import { Logo } from './logo';
 import { Separator } from '@/components/ui/separator';
@@ -129,6 +131,14 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                                      <SidebarMenuButton variant="ghost" size="sm" isActive={isActive('/sales/pos')}>
                                          <LayoutGrid />
                                          {t.sales.pos}
+                                     </SidebarMenuButton>
+                                 </Link>
+                              </SidebarMenuItem>
+                               <SidebarMenuItem>
+                                 <Link href="/sales/reseller">
+                                     <SidebarMenuButton variant="ghost" size="sm" isActive={isActive('/sales/reseller')}>
+                                         <UserSquare />
+                                         Reseller
                                      </SidebarMenuButton>
                                  </Link>
                               </SidebarMenuItem>
