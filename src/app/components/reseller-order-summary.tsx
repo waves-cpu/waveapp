@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useMemo, useEffect } from 'react';
@@ -102,7 +101,7 @@ export function ResellerOrderSummary({ cart, onSaleComplete, clearCart, reseller
         <Card className="flex flex-col h-full sticky top-4 no-print">
             <CardHeader>
                  {!reseller ? (
-                    <div className="text-center text-muted-foreground py-10">
+                    <div className="text-center text-muted-foreground py-10 flex flex-col items-center justify-center h-full">
                         <User className="mx-auto h-12 w-12" />
                         <h3 className="mt-4 text-lg font-semibold">Pilih Reseller</h3>
                         <p className="mt-1 text-sm">Pilih reseller untuk memulai transaksi.</p>

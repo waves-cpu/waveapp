@@ -1,5 +1,3 @@
-
-
 'use client';
 
 import React, { useState, useRef, useEffect, useCallback, forwardRef } from 'react';
@@ -23,10 +21,11 @@ interface PosSearchProps {
   searchTerm: string;
   setSearchTerm: (term: string) => void;
   suggestions: SearchableItem[];
+  disabled?: boolean;
 }
 
 export const PosSearch = forwardRef<HTMLInputElement, PosSearchProps>(
-    ({ onProductSelect, onSkuSubmit, searchTerm, setSearchTerm, suggestions }, ref) => {
+    ({ onProductSelect, onSkuSubmit, searchTerm, setSearchTerm, suggestions, disabled = false }, ref) => {
     const { language } = useLanguage();
     const t = translations[language];
     const [isPopoverOpen, setIsPopoverOpen] = useState(false);
@@ -34,11 +33,11 @@ export const PosSearch = forwardRef<HTMLInputElement, PosSearchProps>(
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         
-        // If there are suggestions, hitting Enter should select the first one.
+        if (disabled) return;
+        
         if (suggestions.length > 0) {
             handleSelectSuggestion(suggestions[0]);
         } 
-        // Otherwise, if an onSkuSubmit handler is provided, use it (for raw SKU scans).
         else if (onSkuSubmit && searchTerm) {
             onSkuSubmit(searchTerm);
             setSearchTerm('');
@@ -46,8 +45,8 @@ export const PosSearch = forwardRef<HTMLInputElement, PosSearchProps>(
     };
     
     useEffect(() => {
-        setIsPopoverOpen(searchTerm.length >= 2 && suggestions.length > 0);
-    }, [searchTerm, suggestions]);
+        setIsPopoverOpen(searchTerm.length >= 2 && suggestions.length > 0 && !disabled);
+    }, [searchTerm, suggestions, disabled]);
 
     const handleSelectSuggestion = (item: SearchableItem) => {
         onProductSelect(item);
@@ -72,6 +71,7 @@ export const PosSearch = forwardRef<HTMLInputElement, PosSearchProps>(
                         placeholder={t.pos.searchPlaceholder}
                         className="pl-10 h-10 text-sm"
                         autoComplete='off'
+                        disabled={disabled}
                     />
                     {searchTerm && (
                          <Button 

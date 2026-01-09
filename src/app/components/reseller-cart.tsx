@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
@@ -14,7 +13,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import Image from 'next/image';
-import { ShoppingCart, Trash2, Tags } from 'lucide-react';
+import { ShoppingCart, Trash2, Tags, User } from 'lucide-react';
 import { useLanguage } from '@/hooks/use-language';
 import { translations } from '@/types/language';
 import { useScanSounds } from '@/hooks/use-scan-sounds';
@@ -37,8 +36,7 @@ export type CartItem = {
     maxStock: number;
 };
 
-
-const LOCAL_STORAGE_KEY_RESELLER = 'resellerCart';
+const getLocalStorageKey = (resellerId: number | string | undefined) => `resellerCart_${resellerId}`;
 
 interface ResellerCartProps {
     reseller: Reseller | null;
@@ -74,29 +72,44 @@ export function ResellerCart({ reseller, resellerTier }: ResellerCartProps) {
 
     useEffect(() => {
         setIsClient(true);
-        try {
-            const savedCart = localStorage.getItem(LOCAL_STORAGE_KEY_RESELLER);
-            if (savedCart) {
-                setCart(JSON.parse(savedCart));
-            }
-        } catch (error) {
-            console.error("Failed to load reseller cart from localStorage", error);
-        }
     }, []);
 
+    // Effect to load cart from local storage when reseller changes
     useEffect(() => {
-        if (isClient) {
+        if (isClient && reseller) {
             try {
-                if (cart.length > 0) {
-                    localStorage.setItem(LOCAL_STORAGE_KEY_RESELLER, JSON.stringify(cart));
+                const storageKey = getLocalStorageKey(reseller.id);
+                const savedCart = localStorage.getItem(storageKey);
+                if (savedCart) {
+                    setCart(JSON.parse(savedCart));
                 } else {
-                    localStorage.removeItem(LOCAL_STORAGE_KEY_RESELLER);
+                    setCart([]);
+                }
+            } catch (error) {
+                console.error("Failed to load reseller cart from localStorage", error);
+                setCart([]);
+            }
+        } else if (!reseller) {
+            setCart([]); // Clear cart if no reseller is selected
+        }
+    }, [reseller, isClient]);
+
+    // Effect to save cart to local storage when it changes
+    useEffect(() => {
+        if (isClient && reseller) {
+            try {
+                const storageKey = getLocalStorageKey(reseller.id);
+                if (cart.length > 0) {
+                    localStorage.setItem(storageKey, JSON.stringify(cart));
+                } else {
+                    localStorage.removeItem(storageKey);
                 }
             } catch (error) {
                 console.error("Failed to save reseller cart to localStorage", error);
             }
         }
-    }, [cart, isClient]);
+    }, [cart, reseller, isClient]);
+
 
     useEffect(() => {
         if (invoiceToPrint) {
@@ -231,8 +244,10 @@ export function ResellerCart({ reseller, resellerTier }: ResellerCartProps) {
     };
 
     const clearCart = () => {
+        if (reseller) {
+            localStorage.removeItem(getLocalStorageKey(reseller.id));
+        }
         setCart([]);
-        localStorage.removeItem(LOCAL_STORAGE_KEY_RESELLER);
     };
 
     const handleSaleComplete = async (paymentMethod: string, invoiceData: InvoiceData) => {
@@ -274,6 +289,7 @@ export function ResellerCart({ reseller, resellerTier }: ResellerCartProps) {
                     setSearchTerm={setSearchTerm}
                     suggestions={searchSuggestions}
                     ref={searchInputRef}
+                    disabled={!reseller}
                 />
                 <Card className="flex-grow flex flex-col">
                     <CardHeader>
@@ -292,7 +308,16 @@ export function ResellerCart({ reseller, resellerTier }: ResellerCartProps) {
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {cart.length === 0 ? (
+                                    {!reseller ? (
+                                        <TableRow>
+                                            <TableCell colSpan={5} className="h-48 text-center">
+                                                 <div className="flex flex-col items-center justify-center gap-4 text-muted-foreground">
+                                                    <User className="h-12 w-12" />
+                                                    <p className="font-semibold text-sm">Pilih Reseller untuk Memulai</p>
+                                                </div>
+                                            </TableCell>
+                                        </TableRow>
+                                    ) : cart.length === 0 ? (
                                         <TableRow>
                                             <TableCell colSpan={5} className="h-48 text-center">
                                                 <div className="flex flex-col items-center justify-center gap-4 text-muted-foreground">
@@ -344,9 +369,7 @@ export function ResellerCart({ reseller, resellerTier }: ResellerCartProps) {
              {productForVariantSelection && (
                 <VariantSelectionDialog
                     open={!!productForVariantSelection}
-                    onOpenChange={(isOpen) => {
-                        if (!isOpen) setProductForVariantSelection(null);
-                    }}
+                    onOpenChange={(isOpen) => { if (!isOpen) setProductForVariantSelection(null); }}
                     item={productForVariantSelection}
                     onSelect={handleVariantSelect}
                     cart={cart}
