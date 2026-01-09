@@ -164,7 +164,7 @@ const createSchema = () => {
         name TEXT NOT NULL UNIQUE,
         phone TEXT,
         address TEXT,
-        totalTransactions REAL DEFAULT 0
+        totalTransactions INTEGER DEFAULT 0
     );
 
     CREATE TABLE IF NOT EXISTS settings (
@@ -297,7 +297,7 @@ const runMigrations = () => {
     // Reseller Migrations
     addColumn('resellers', 'phone', 'TEXT');
     addColumn('resellers', 'address', 'TEXT');
-    addColumn('resellers', 'totalTransactions', 'REAL DEFAULT 0');
+    addColumn('resellers', 'totalTransactions', 'INTEGER DEFAULT 0');
 
     // Product Migrations
     addColumn('products', 'costPrice', 'REAL');

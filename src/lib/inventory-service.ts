@@ -927,9 +927,9 @@ export async function performSale(
         }
 
         if (channel === 'reseller' && saleOptions.resellerName) {
-             let totalTransactionAmount = 0;
+            let totalTransactionAmount = 0;
             sales.forEach(sale => {
-                totalTransactionAmount += sale.priceAtSale * sale.quantity;
+                totalTransactionAmount += (sale.priceAtSale * sale.quantity);
             });
 
             db.prepare('UPDATE resellers SET totalTransactions = totalTransactions + ? WHERE name = ?')
@@ -1981,6 +1981,7 @@ export async function getVoucherUsageAnalytics(groupId: number) {
     
 
     
+
 
 
 
