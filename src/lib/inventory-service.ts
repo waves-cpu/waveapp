@@ -926,12 +926,12 @@ export async function performSale(
             }
         }
 
-        let totalTransactionAmount = 0;
-        sales.forEach(sale => {
-            totalTransactionAmount += sale.priceAtSale * sale.quantity;
-        });
-
         if (channel === 'reseller' && saleOptions.resellerName) {
+             let totalTransactionAmount = 0;
+            sales.forEach(sale => {
+                totalTransactionAmount += sale.priceAtSale * sale.quantity;
+            });
+
             db.prepare('UPDATE resellers SET totalTransactions = totalTransactions + ? WHERE name = ?')
               .run(totalTransactionAmount, saleOptions.resellerName);
         }
@@ -1981,6 +1981,7 @@ export async function getVoucherUsageAnalytics(groupId: number) {
     
 
     
+
 
 
 
