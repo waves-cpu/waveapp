@@ -1114,11 +1114,11 @@ export async function recordSaleWithReceipt(receiptData: Omit<ShippingReceipt, '
             }
 
             db.prepare(`
-                INSERT INTO sales (transactionId, productId, variantId, accessoryId, channel, quantity, priceAtSale, cogsAtSale, saleDate, status, parentSku, productCategory, parentImageUrl)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO sales (transactionId, productId, variantId, channel, quantity, priceAtSale, cogsAtSale, saleDate, status, parentSku, productCategory, parentImageUrl)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             `).run(
-                sale.transactionId, productId, variantId, null,
-                sale.channel, sale.quantity, sale.priceAtSale, cogsAtSale, sale.date,
+                sale.transactionId, productId, variantId,
+                sale.channel, sale.quantity, sale.priceAtSale, cogsAtSale, sale.saleDate,
                 'Terproses', parentProduct?.sku, parentProduct?.category, parentProduct?.imageUrl
             );
         });
@@ -1925,6 +1925,7 @@ export async function getVoucherUsageAnalytics(groupId: number) {
     
 
     
+
 
 
 
