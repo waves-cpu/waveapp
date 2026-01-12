@@ -1075,7 +1075,6 @@ export async function recordSaleWithReceipt(receiptData: Omit<ShippingReceipt, '
     const { awb } = receiptData;
 
     const transaction = db.transaction(() => {
-        // This will now throw an error if the AWB is a duplicate, which is caught by the API route.
         addShippingReceipt(receiptData);
 
         salesData.forEach(sale => {
@@ -1115,7 +1114,7 @@ export async function recordSaleWithReceipt(receiptData: Omit<ShippingReceipt, '
 
             db.prepare(`
                 INSERT INTO sales (transactionId, productId, variantId, channel, quantity, priceAtSale, cogsAtSale, saleDate, status, parentSku, productCategory, parentImageUrl)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             `).run(
                 sale.transactionId, productId, variantId,
                 sale.channel, sale.quantity, sale.priceAtSale, cogsAtSale, sale.saleDate,
@@ -1925,6 +1924,7 @@ export async function getVoucherUsageAnalytics(groupId: number) {
     
 
     
+
 
 
 
