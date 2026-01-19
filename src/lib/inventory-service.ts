@@ -40,7 +40,7 @@ export async function fetchResellers(): Promise<Reseller[]> {
 
 export async function addReseller(reseller: Omit<Reseller, 'id' | 'createdAt'>): Promise<Reseller> {
     const result = db.prepare('INSERT INTO resellers (name, phone, address, createdAt) VALUES (?, ?, ?, ?)')
-        .run(reseller.name, reseller.phone, reseller.address, new Date().toISOString());
+        .run(reseller.name, reseller.phone, reseller.address, formatToWIB(new Date(), "yyyy-MM-dd HH:mm:ss"));
     const newReseller = db.prepare('SELECT * FROM resellers WHERE id = ?').get(result.lastInsertRowid) as Reseller;
     return newReseller;
 }
@@ -573,7 +573,7 @@ export async function addProduct(itemData: any): Promise<string> {
                         change: variant.stock,
                         reason: 'Initial Stock',
                         newStockLevel: variant.stock,
-                        date: new Date().toISOString()
+                        date: formatToWIB(new Date(), "yyyy-MM-dd HH:mm:ss")
                     });
                 }
             });
@@ -585,7 +585,7 @@ export async function addProduct(itemData: any): Promise<string> {
                     change: itemData.stock,
                     reason: 'Initial Stock',
                     newStockLevel: itemData.stock,
-                    date: new Date().toISOString()
+                    date: formatToWIB(new Date(), "yyyy-MM-dd HH:mm:ss")
                 });
             }
         }
@@ -655,7 +655,7 @@ export async function bulkAddProducts(data: any[], fileName: string): Promise<{ 
                             change: row.stock,
                             reason: 'Initial Stock (Bulk Import)',
                             newStockLevel: row.stock,
-                            date: new Date().toISOString()
+                            date: formatToWIB(new Date(), "yyyy-MM-dd HH:mm:ss")
                         });
                     }
                 });
@@ -674,7 +674,7 @@ export async function bulkAddProducts(data: any[], fileName: string): Promise<{ 
                         change: row.stock,
                         reason: 'Initial Stock (Bulk Import)',
                         newStockLevel: row.stock,
-                        date: new Date().toISOString()
+                        date: formatToWIB(new Date(), "yyyy-MM-dd HH:mm:ss")
                     });
                 }
             }
@@ -813,7 +813,7 @@ export async function editProduct(itemId: string, itemData: any) {
                         change: stockChange,
                         reason: reason,
                         newStockLevel: variant.stock,
-                        date: new Date().toISOString()
+                        date: formatToWIB(new Date(), "yyyy-MM-dd HH:mm:ss")
                     });
                 }
             });
@@ -835,7 +835,7 @@ export async function editProduct(itemId: string, itemData: any) {
                         change: stockChange,
                         reason: 'Stock adjustment during edit',
                         newStockLevel: itemData.stock,
-                        date: new Date().toISOString()
+                        date: formatToWIB(new Date(), "yyyy-MM-dd HH:mm:ss")
                     });
                 }
             }
@@ -864,7 +864,7 @@ export async function editVariantsBulk(itemId: string, variants: InventoryItemVa
                         change: stockChange,
                         reason: reason,
                         newStockLevel: variant.stock,
-                        date: new Date().toISOString()
+                        date: formatToWIB(new Date(), "yyyy-MM-dd HH:mm:ss")
                     });
                 }
 
@@ -892,7 +892,7 @@ export async function adjustStock(itemId: string, change: number, reason: string
             db.prepare(`
                 INSERT INTO history (productId, variantId, change, reason, newStockLevel, date)
                 VALUES (?, ?, ?, ?, ?, ?)
-            `).run(variant.productId, itemId, change, reason, newStockLevel, new Date().toISOString());
+            `).run(variant.productId, itemId, change, reason, newStockLevel, formatToWIB(new Date(), "yyyy-MM-dd HH:mm:ss"));
         } else {
             const item = db.prepare('SELECT * FROM products WHERE id = ?').get(itemId) as (InventoryItem & {id: number}) | undefined;
             if (item && typeof item.stock === 'number') {
@@ -901,7 +901,7 @@ export async function adjustStock(itemId: string, change: number, reason: string
                 db.prepare(`
                     INSERT INTO history (productId, variantId, change, reason, newStockLevel, date)
                     VALUES (?, ?, ?, ?, ?, ?)
-                `).run(itemId, null, change, reason, newStockLevel, new Date().toISOString());
+                `).run(itemId, null, change, reason, newStockLevel, formatToWIB(new Date(), "yyyy-MM-dd HH:mm:ss"));
             }
         }
     })();
@@ -958,8 +958,7 @@ export async function performSale(
         }
         
         sales.forEach(sale => {
-            const saleDate = new Date();
-            const saleDateString = saleDate.toISOString();
+            const saleDateString = formatToWIB(new Date(), "yyyy-MM-dd HH:mm:ss");
             
             let saleReason: string;
             let saleStatus: string;
@@ -1543,7 +1542,7 @@ export async function updatePrices(updates: { id: string, type: 'product' | 'var
                     change: 0,
                     reason: `Penyesuaian Modal (HPP): Rp${newCostPrice.toLocaleString('id-ID')} x ${currentStock} stok`,
                     newStockLevel: totalAssetValue,
-                    date: new Date().toISOString()
+                    date: formatToWIB(new Date(), "yyyy-MM-dd HH:mm:ss")
                 });
             }
 
@@ -1756,7 +1755,7 @@ export async function addAccessory(accessory: Omit<Accessory, 'id' | 'history'>)
         });
         const accessoryId = result.lastInsertRowid;
         if (accessory.stock > 0) {
-            historyStmt.run(accessoryId, new Date().toISOString(), accessory.stock, 'Initial Stock', accessory.stock);
+            historyStmt.run(accessoryId, formatToWIB(new Date(), "yyyy-MM-dd HH:mm:ss"), accessory.stock, 'Initial Stock', accessory.stock);
         }
         return accessoryId.toString();
     });
@@ -1793,7 +1792,7 @@ export async function updateAccessory(accessoryId: string, data: Omit<Accessory,
             });
 
             if (stockChange !== 0) {
-                historyStmt.run(accessoryId, new Date().toISOString(), stockChange, 'Stock adjustment during edit', data.stock);
+                historyStmt.run(accessoryId, formatToWIB(new Date(), "yyyy-MM-dd HH:mm:ss"), stockChange, 'Stock adjustment during edit', data.stock);
             }
         }
     })();
@@ -1814,7 +1813,7 @@ export async function adjustAccessoryStock(accessoryId: string, change: number, 
         if (accessory) {
             const newStockLevel = accessory.stock + change;
             updateStmt.run(newStockLevel, accessoryId);
-            historyStmt.run(accessoryId, new Date().toISOString(), change, reason, newStockLevel);
+            historyStmt.run(accessoryId, formatToWIB(new Date(), "yyyy-MM-dd HH:mm:ss"), change, reason, newStockLevel);
         }
     })();
 }
@@ -1959,6 +1958,7 @@ export async function getVoucherUsageAnalytics(groupId: number) {
     
 
     
+
 
 
 

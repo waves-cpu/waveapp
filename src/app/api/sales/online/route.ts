@@ -4,6 +4,7 @@ import { recordSaleWithReceipt } from '@/lib/inventory-service';
 import { NextRequest, NextResponse } from 'next/server';
 import type { ShippingReceipt, Sale } from '@/types';
 import { sseChannel } from '@/lib/sse-channel';
+import { formatToWIB } from '@/lib/utils';
 
 // Handler for POST requests to record a new online sale with its receipt
 export async function POST(request: NextRequest) {
@@ -25,7 +26,7 @@ export async function POST(request: NextRequest) {
         awb: receipt.awb,
         salesChannel: receipt.salesChannel,
         channel: receipt.channel,
-        date: new Date().toISOString(),
+        date: formatToWIB(new Date(), "yyyy-MM-dd HH:mm:ss"),
         status: 'Terproses',
         transactionId: receipt.awb, // Use AWB as transactionId
     };

@@ -2,6 +2,7 @@
 
 import { bulkAddProducts, addBulkImportHistory, updateBulkImportHistory, fetchBulkImportHistory } from '@/lib/inventory-service';
 import { NextRequest, NextResponse } from 'next/server';
+import { formatToWIB } from '@/lib/utils';
 
 export async function POST(request: NextRequest) {
     let historyEntryId: number | undefined;
@@ -16,7 +17,7 @@ export async function POST(request: NextRequest) {
         
         const historyEntry = await addBulkImportHistory({
             fileName: fileName,
-            date: new Date().toISOString(),
+            date: formatToWIB(new Date(), "yyyy-MM-dd HH:mm:ss"),
             status: 'Memproses...',
         });
         historyEntryId = historyEntry.id;

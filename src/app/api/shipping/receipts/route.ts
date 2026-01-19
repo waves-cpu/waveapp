@@ -1,6 +1,8 @@
 
+
 import { fetchShippingReceipts, addShippingReceipt } from '@/lib/inventory-service';
 import { NextRequest, NextResponse } from 'next/server';
+import { formatToWIB } from '@/lib/utils';
 
 // GET shipping receipts with filters
 export async function GET(request: NextRequest) {
@@ -47,7 +49,7 @@ export async function POST(request: NextRequest) {
         // 2. Proses penambahan data
         const newReceipt = await addShippingReceipt({
             ...body,
-            date: new Date().toISOString(),
+            date: formatToWIB(new Date(), "yyyy-MM-dd HH:mm:ss"),
             status: 'Perlu Diproses'
         });
 
