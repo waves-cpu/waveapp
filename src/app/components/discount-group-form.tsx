@@ -122,7 +122,7 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm = false }: Disc
         };
         form.reset(defaultValues);
     }
-  }, [existingGroup, isEditMode, form]);
+  }, [existingGroup, isEditMode, form.reset]);
 
 
   const { fields, replace } = useFieldArray({
@@ -166,7 +166,7 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm = false }: Disc
   }, [items, replace]);
 
   useEffect(() => {
-    if (!isEditMode) { // Only run this effect when creating a new group
+    if (!isEditMode) {
       if (selectedCategory && selectedCategory !== 'Semua Kategori') {
         populateProductsByCategory(selectedCategory);
       } else {
