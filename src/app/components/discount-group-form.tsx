@@ -24,215 +24,238 @@ import {
 import { useInventory } from '@/hooks/use-inventory';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
-import { CalendarIcon } from 'lucide-react';
+import { CalendarIcon, PlusCircle, Pencil } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState, useMemo, useRef } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import type { DiscountGroup, DiscountedProduct, InventoryItem } from '@/types';
 import { categories } from '@/types';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { cn, formatToWIB } from '@/lib/utils';
-import { format } from 'date-fns';
+import { format, addDays } from 'date-fns';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import Image from 'next/image';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Label } from "@/components/ui/label";
+import { ProductSelectionDialog } from './product-selection-dialog';
 
-const detailsSchema = z.object({
+const formSchema = z.object({
   id: z.number().optional(),
   name: z.string().min(2, { message: 'Nama grup diskon minimal 2 karakter.' }),
+  category: z.string().min(1, { message: "Kategori harus dipilih." }),
   channel: z.string().min(1, { message: 'Kanal penjualan harus dipilih.' }),
   dateRange: z.object({
       from: z.date({ required_error: "Tanggal mulai harus diisi." }),
       to: z.date({ required_error: "Tanggal berakhir harus diisi." }),
   }),
+  voucherCode: z.string().optional(),
+  discountType: z.enum(['fixed', 'percentage']).optional(),
+  discountValue: z.coerce.number().optional(),
+  maxUses: z.coerce.number().int().optional(),
+  minPurchase: z.coerce.number().optional(),
+  products: z.array(z.object({
+      productId: z.number(),
+      variantId: z.number().optional(),
+      productName: z.string(),
+      variantName: z.string().optional(),
+      sku: z.string().optional(),
+      imageUrl: z.string().optional(),
+      originalPrice: z.number().nullable(),
+      discountedPrice: z.coerce.number().min(0, "Harga harus non-negatif."),
+  })),
 });
-
-const pricingSchema = z.object({
-    products: z.array(z.object({
-        productId: z.number(),
-        variantId: z.number().optional(),
-        productName: z.string(),
-        variantName: z.string().optional(),
-        sku: z.string().optional(),
-        imageUrl: z.string().optional(),
-        originalPrice: z.number().nullable(),
-        discountedPrice: z.coerce.number().min(0, "Harga harus non-negatif."),
-    })),
-});
-
 
 interface DiscountGroupEditorProps {
-    existingGroup: DiscountGroup;
+    existingGroup?: DiscountGroup;
+    isVoucherForm: boolean;
 }
 
-export function DiscountGroupForm({ existingGroup }: DiscountGroupEditorProps) {
+export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGroupEditorProps) {
     const { toast } = useToast();
     const router = useRouter();
-    const { editDiscountGroup, items } = useInventory();
-    const [isSavingDetails, setIsSavingDetails] = useState(false);
-    const [isSavingPrices, setIsSavingPrices] = useState(false);
+    const { addDiscountGroup, editDiscountGroup, items } = useInventory();
+    const [isSaving, setIsSaving] = useState(false);
     const [bulkPrice, setBulkPrice] = useState<number | ''>('');
-    const initializedRef = useRef(false);
-    
-    // Memoize the default values to stabilize them
-    const defaultDetails = useMemo(() => ({
-        id: existingGroup.id,
-        name: existingGroup.name,
-        channel: existingGroup.channel,
-        dateRange: {
-            from: new Date(existingGroup.startDate),
-            to: new Date(existingGroup.endDate),
+    const [isProductSelectorOpen, setProductSelectorOpen] = useState(false);
+    const isEditMode = !!existingGroup;
+
+    const defaultValues = useMemo(() => {
+        if (!existingGroup) {
+            return {
+                name: '',
+                category: '',
+                channel: 'online',
+                dateRange: {
+                    from: new Date(),
+                    to: addDays(new Date(), 7),
+                },
+                products: [],
+                voucherCode: '',
+                discountType: 'percentage',
+                discountValue: 10,
+                maxUses: undefined,
+                minPurchase: 0,
+            };
         }
-    }), [existingGroup]);
+        return {
+            id: existingGroup.id,
+            name: existingGroup.name,
+            category: existingGroup.category,
+            channel: existingGroup.channel,
+            dateRange: {
+                from: new Date(existingGroup.startDate),
+                to: new Date(existingGroup.endDate),
+            },
+            products: existingGroup.products,
+            voucherCode: existingGroup.voucherCode || '',
+            discountType: existingGroup.discountType || 'percentage',
+            discountValue: existingGroup.discountValue || undefined,
+            maxUses: existingGroup.maxUses === null ? undefined : existingGroup.maxUses,
+            minPurchase: existingGroup.minPurchase || 0,
+        };
+    }, [existingGroup]);
     
-    const detailsForm = useForm<z.infer<typeof detailsSchema>>({
-        resolver: zodResolver(detailsSchema),
-        defaultValues: defaultDetails,
-    });
-    
-    const pricingForm = useForm<z.infer<typeof pricingSchema>>({
-        resolver: zodResolver(pricingSchema),
-        defaultValues: { products: [] }
+    const form = useForm<z.infer<typeof formSchema>>({
+        resolver: zodResolver(formSchema),
+        defaultValues: defaultValues,
     });
 
-    const { fields, replace } = useFieldArray({
-        control: pricingForm.control,
+    const { fields, append, remove, replace } = useFieldArray({
+        control: form.control,
         name: "products"
     });
 
+    const selectedCategory = form.watch('category');
+
     useEffect(() => {
-        if (existingGroup && !initializedRef.current) {
-            detailsForm.reset(defaultDetails);
-            
-            const productsInCategory = items.filter(item => item.category === existingGroup.category && !item.isArchived);
-            const productList: DiscountedProduct[] = [];
+        form.reset(defaultValues);
+        if (existingGroup) {
+             const productsInCategory = items.filter(item => item.category === existingGroup.category && !item.isArchived);
+             const productList = getProductsForForm(productsInCategory, existingGroup.products);
+             replace(productList);
+        }
+    }, [existingGroup, items, replace, form, defaultValues]);
+    
+    const getProductsForForm = (productsToAdd: InventoryItem[], existingDiscounts: DiscountedProduct[] = []) => {
+        const productList: Omit<DiscountedProduct, 'originalPrice'> & { originalPrice: number | null, discountedPrice: number }[] = [];
+        productsToAdd.forEach(product => {
+            const baseProductInfo = {
+                productId: Number(product.id),
+                productName: product.name,
+                sku: product.sku,
+                imageUrl: product.imageUrl,
+            };
 
-            productsInCategory.forEach(product => {
-                const baseProductInfo = {
-                    productId: Number(product.id),
-                    productName: product.name,
-                    sku: product.sku,
-                    imageUrl: product.imageUrl,
-                };
-
-                if (product.variants && product.variants.length > 0) {
-                    product.variants.forEach(variant => {
-                        const existingDiscount = existingGroup.products.find(p => p.variantId === Number(variant.id));
-                        productList.push({
-                            ...baseProductInfo,
-                            variantId: Number(variant.id),
-                            variantName: variant.name,
-                            sku: variant.sku,
-                            originalPrice: variant.price,
-                            discountedPrice: existingDiscount ? existingDiscount.discountedPrice : variant.price,
-                        });
-                    });
-                } else {
-                    const existingDiscount = existingGroup.products.find(p => p.productId === Number(product.id) && !p.variantId);
+            if (product.variants && product.variants.length > 0) {
+                product.variants.forEach(variant => {
+                    const existingDiscount = existingDiscounts.find(p => p.variantId === Number(variant.id));
                     productList.push({
                         ...baseProductInfo,
-                        originalPrice: product.price ?? null,
-                        discountedPrice: existingDiscount ? existingDiscount.discountedPrice : (product.price || 0),
+                        variantId: Number(variant.id),
+                        variantName: variant.name,
+                        sku: variant.sku,
+                        originalPrice: variant.price,
+                        discountedPrice: existingDiscount ? existingDiscount.discountedPrice : variant.price,
                     });
-                }
-            });
-            replace(productList);
-            pricingForm.reset({ products: productList });
-            initializedRef.current = true;
-        }
-    }, [existingGroup, items, replace, detailsForm, pricingForm, defaultDetails]);
+                });
+            } else {
+                 if (product.price === null || product.price === undefined) return;
+                 const existingDiscount = existingDiscounts.find(p => p.productId === Number(product.id) && !p.variantId);
+                 productList.push({
+                    ...baseProductInfo,
+                    originalPrice: product.price ?? null,
+                    discountedPrice: existingDiscount ? existingDiscount.discountedPrice : (product.price || 0),
+                });
+            }
+        });
+        return productList;
+    };
+    
+    const handleSelectProducts = (selectedItemIds: string[]) => {
+        const itemsToAdd = items.filter(item => {
+            if (selectedItemIds.includes(item.id)) return true;
+            return item.variants?.some(v => selectedItemIds.includes(v.id));
+        });
+        
+        const newProducts = getProductsForForm(itemsToAdd);
+        
+        const currentProductIds = new Set(fields.map(f => `${f.productId}-${f.variantId || 'base'}`));
+        const productsToAppend = newProducts.filter(p => !currentProductIds.has(`${p.productId}-${p.variantId || 'base'}`));
 
+        append(productsToAppend);
+    };
 
-    async function onSaveDetails(values: z.infer<typeof detailsSchema>) {
-        setIsSavingDetails(true);
-        const groupData: Omit<DiscountGroup, 'id' | 'productCount'> = {
-            ...existingGroup, // keep existing products
-            name: values.name,
-            channel: values.channel,
-            startDate: values.dateRange.from.toISOString(),
-            endDate: values.dateRange.to.toISOString(),
-        };
+    async function onSubmit(values: z.infer<typeof formSchema>) {
+        setIsSaving(true);
+        const groupData = { ...values, products: values.products.filter(p => p.originalPrice !== null) };
 
         try {
-            await editDiscountGroup(existingGroup.id, groupData);
-            toast({ title: "Detail Diperbarui", description: "Nama, kanal, dan tanggal telah disimpan." });
-            detailsForm.reset(values); // Re-sync isDirty
+            if (isEditMode) {
+                await editDiscountGroup(values.id!, groupData);
+                toast({ title: "Perubahan Disimpan", description: "Detail diskon/voucher telah berhasil diperbarui." });
+            } else {
+                await addDiscountGroup(groupData);
+                toast({ title: "Berhasil Dibuat", description: "Diskon/voucher baru telah berhasil dibuat." });
+            }
+            router.push(isVoucherForm ? '/promotions/vouchers' : '/promotions/discount-groups');
         } catch (error) {
             toast({ title: "Gagal Menyimpan", variant: "destructive" });
         } finally {
-            setIsSavingDetails(false);
-        }
-    }
-    
-    async function onSavePrices(values: z.infer<typeof pricingSchema>) {
-        setIsSavingPrices(true);
-        const groupData: Omit<DiscountGroup, 'id' | 'productCount'> = {
-            ...existingGroup, // keep existing details
-            name: detailsForm.getValues('name'),
-            channel: detailsForm.getValues('channel'),
-            startDate: detailsForm.getValues('dateRange.from').toISOString(), 
-            endDate: detailsForm.getValues('dateRange.to').toISOString(),
-            products: values.products.filter(p => p.originalPrice !== null) as DiscountedProduct[],
-        };
-
-        try {
-            await editDiscountGroup(existingGroup.id, groupData);
-            toast({ title: "Harga Diskon Disimpan", description: "Harga diskon untuk semua produk telah diperbarui." });
-            pricingForm.reset(values); // Re-sync isDirty
-        } catch (error) {
-            toast({ title: "Gagal Menyimpan Harga", variant: "destructive" });
-        } finally {
-            setIsSavingPrices(false);
+            setIsSaving(false);
         }
     }
 
     const applyBulkPrice = () => {
         if (typeof bulkPrice === 'number' && bulkPrice >= 0) {
             fields.forEach((_, index) => {
-                pricingForm.setValue(`products.${index}.discountedPrice`, bulkPrice, { shouldDirty: true });
+                form.setValue(`products.${index}.discountedPrice`, bulkPrice, { shouldDirty: true });
             });
             toast({ title: 'Harga Diterapkan', description: 'Harga diskon massal telah diterapkan ke semua produk.' });
         } else {
             toast({ variant: 'destructive', title: 'Harga Tidak Valid' });
         }
     };
+    
+    const availableItemsForSelection = useMemo(() => items.filter(i => i.category === selectedCategory), [items, selectedCategory]);
 
     return (
-        <div className="space-y-6">
-            {/* Details Form Card */}
-            <Form {...detailsForm}>
-                <form onSubmit={detailsForm.handleSubmit(onSaveDetails)}>
+        <>
+            <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                      <Card>
                           <CardHeader>
-                            <CardTitle>Detail Grup Diskon</CardTitle>
-                            <CardDescription>Ubah detail dasar untuk promosi ini. Kategori tidak dapat diubah setelah grup dibuat.</CardDescription>
+                            <CardTitle>{isEditMode ? 'Ubah Detail' : 'Detail Baru'}</CardTitle>
                           </CardHeader>
                           <CardContent className="space-y-6">
                              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <FormField control={detailsForm.control} name="name" render={({ field }) => (
-                                    <FormItem><FormLabel>Nama Grup Diskon</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                                <FormField control={form.control} name="name" render={({ field }) => (
+                                    <FormItem><FormLabel>Nama {isVoucherForm ? 'Voucher' : 'Grup Diskon'}</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
                                 )}/>
-                                 <FormField control={detailsForm.control} name="channel" render={({ field }) => (
+                                 <FormField control={form.control} name="category" render={({ field }) => (
+                                    <FormItem><FormLabel>Kategori Produk</FormLabel>
+                                        <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value} disabled={isEditMode}>
+                                            <FormControl><SelectTrigger><SelectValue placeholder="Pilih kategori produk..."/></SelectTrigger></FormControl>
+                                            <SelectContent>{categories.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}</SelectContent>
+                                        </Select>
+                                        {isEditMode && <FormDescription>Kategori tidak dapat diubah setelah grup dibuat.</FormDescription>}
+                                        <FormMessage />
+                                    </FormItem>
+                                )}/>
+                             </div>
+                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                 <FormField control={form.control} name="channel" render={({ field }) => (
                                     <FormItem><FormLabel>Kanal Penjualan</FormLabel>
                                         <Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue/></SelectTrigger></FormControl>
                                             <SelectContent>
-                                                <SelectItem value="online">Online</SelectItem>
-                                                <SelectItem value="pos">POS</SelectItem>
+                                                <SelectItem value="online">Online (Shopee, Tiktok, dll.)</SelectItem>
+                                                <SelectItem value="pos">POS (Toko Fisik)</SelectItem>
                                                 <SelectItem value="reseller">Reseller</SelectItem>
                                             </SelectContent>
                                         </Select><FormMessage />
                                     </FormItem>
                                 )}/>
-                             </div>
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div>
-                                    <Label>Kategori Produk</Label>
-                                    <Input value={existingGroup.category} disabled />
-                                    <FormDescription>Kategori tidak dapat diubah.</FormDescription>
-                                </div>
-                                <FormField control={detailsForm.control} name="dateRange" render={({ field }) => (
-                                    <FormItem className="flex flex-col"><FormLabel>Durasi Diskon</FormLabel>
+                                <FormField control={form.control} name="dateRange" render={({ field }) => (
+                                    <FormItem className="flex flex-col"><FormLabel>Durasi</FormLabel>
                                         <Popover>
                                             <PopoverTrigger asChild><FormControl><Button id="date" variant={"outline"} className={cn("justify-start text-left font-normal", !field.value?.from && "text-muted-foreground")}>
                                                 <CalendarIcon className="mr-2 h-4 w-4" />
@@ -243,23 +266,51 @@ export function DiscountGroupForm({ existingGroup }: DiscountGroupEditorProps) {
                                     </FormItem>
                                 )}/>
                               </div>
+                               {isVoucherForm && (
+                                   <>
+                                     <Separator />
+                                     <h3 className="text-lg font-medium">Detail Voucher</h3>
+                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <FormField control={form.control} name="voucherCode" render={({ field }) => (
+                                            <FormItem><FormLabel>Kode Voucher</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                                        )}/>
+                                        <FormField control={form.control} name="discountType" render={({ field }) => (
+                                            <FormItem><FormLabel>Tipe Diskon</FormLabel>
+                                                <Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue/></SelectTrigger></FormControl>
+                                                    <SelectContent>
+                                                        <SelectItem value="percentage">Persentase (%)</SelectItem>
+                                                        <SelectItem value="fixed">Potongan Tetap (Rp)</SelectItem>
+                                                    </SelectContent>
+                                                </Select><FormMessage />
+                                            </FormItem>
+                                        )}/>
+                                        <FormField control={form.control} name="discountValue" render={({ field }) => (
+                                            <FormItem><FormLabel>Nilai Diskon</FormLabel><FormControl><Input type="number" {...field} value={field.value ?? ''}/></FormControl><FormMessage /></FormItem>
+                                        )}/>
+                                         <FormField control={form.control} name="maxUses" render={({ field }) => (
+                                            <FormItem><FormLabel>Batas Penggunaan (Opsional)</FormLabel><FormControl><Input type="number" placeholder="Kosongkan untuk tanpa batas" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
+                                        )}/>
+                                         <FormField control={form.control} name="minPurchase" render={({ field }) => (
+                                            <FormItem className="md:col-span-2"><FormLabel>Minimum Belanja (Opsional)</FormLabel><FormControl><Input type="number" placeholder="cth. 100000" {...field} value={field.value ?? ''}/></FormControl><FormMessage /></FormItem>
+                                        )}/>
+                                     </div>
+                                   </>
+                               )}
                           </CardContent>
-                          <CardFooter className="justify-end border-t pt-6">
-                             <Button type="submit" disabled={isSavingDetails || !detailsForm.formState.isDirty}>
-                                {isSavingDetails ? 'Menyimpan...' : 'Simpan Detail'}
-                             </Button>
-                          </CardFooter>
                      </Card>
-                </form>
-            </Form>
 
-            {/* Pricing Form Card */}
-            <Form {...pricingForm}>
-                <form onSubmit={pricingForm.handleSubmit(onSavePrices)}>
                     <Card>
-                        <CardHeader>
-                            <CardTitle>Pengaturan Harga Produk</CardTitle>
-                            <CardDescription>Atur harga diskon untuk setiap produk dalam kategori '{existingGroup.category}'.</CardDescription>
+                        <CardHeader className="flex-row justify-between items-center">
+                            <div>
+                                <CardTitle>Pengaturan Harga Produk</CardTitle>
+                                <CardDescription>Atur harga diskon untuk produk dalam kategori '{selectedCategory || "..."}'.</CardDescription>
+                            </div>
+                             {!isVoucherForm && (
+                                <Button type="button" onClick={() => setProductSelectorOpen(true)} disabled={!selectedCategory}>
+                                    <PlusCircle className="mr-2 h-4 w-4" />
+                                    Pilih Produk
+                                </Button>
+                             )}
                         </CardHeader>
                         <CardContent>
                            <div className="flex items-center gap-2 mb-4">
@@ -279,23 +330,34 @@ export function DiscountGroupForm({ existingGroup }: DiscountGroupEditorProps) {
                                            </TableCell><TableCell>
                                                <p className="text-sm text-muted-foreground line-through">{field.originalPrice ? new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(field.originalPrice) : 'N/A'}</p>
                                            </TableCell><TableCell>
-                                               <FormField control={pricingForm.control} name={`products.${index}.discountedPrice`} render={({ field }) => (
+                                               <FormField control={form.control} name={`products.${index}.discountedPrice`} render={({ field }) => (
                                                    <FormItem><FormControl><Input type="number" {...field} className="h-8" /></FormControl><FormMessage /></FormItem>
                                                )}/>
                                            </TableCell></TableRow>
-                                       )) : (<TableRow><TableCell colSpan={3} className="h-24 text-center">Tidak ada produk dalam kategori ini.</TableCell></TableRow>)}
+                                       )) : (<TableRow><TableCell colSpan={3} className="h-24 text-center">Pilih kategori untuk menambahkan produk.</TableCell></TableRow>)}
                                    </TableBody>
                                </Table>
                            </ScrollArea>
                         </CardContent>
-                        <CardFooter className="justify-end border-t pt-6">
-                            <Button type="submit" disabled={isSavingPrices || !pricingForm.formState.isDirty}>
-                                {isSavingPrices ? 'Menyimpan...' : 'Simpan Semua Harga'}
-                            </Button>
-                        </CardFooter>
                     </Card>
+                    <div className="flex justify-end gap-2">
+                        <Button type="button" variant="ghost" onClick={() => router.back()} disabled={isSaving}>Batal</Button>
+                        <Button type="submit" disabled={isSaving}>
+                            {isSaving ? 'Menyimpan...' : (isEditMode ? 'Simpan Perubahan' : 'Buat & Simpan')}
+                        </Button>
+                    </div>
                 </form>
             </Form>
-        </div>
+             <ProductSelectionDialog 
+                open={isProductSelectorOpen}
+                onOpenChange={setProductSelectorOpen}
+                onSelect={handleSelectProducts}
+                availableItems={availableItemsForSelection}
+                categories={[]} // Hide category filter inside dialog
+                initialSelectedIds={new Set(fields.map(f => f.variantId?.toString() || f.productId.toString()))}
+                title="Pilih Produk untuk Diskon"
+                description={`Pilih produk dari kategori "${selectedCategory}" untuk ditambahkan ke grup diskon ini.`}
+            />
+        </>
     );
 }
