@@ -1,5 +1,3 @@
-
-
 'use client';
 
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback, useMemo } from 'react';
@@ -193,6 +191,27 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
     const editDiscountGroupMutation = useApiMutation((vars: { id: number, group: any }) => apiFetch(`/api/finance/discounts/${vars.id}`, { method: 'PUT', body: vars.group }));
     const deleteDiscountGroupMutation = useApiMutation((id: number) => apiFetch(`/api/finance/discounts/${id}`, { method: 'DELETE' }));
     
+    const getHistory = useCallback(async (itemId: string) => (inventoryData?.products.find(i => i.id === itemId)?.history || []), [inventoryData]);
+    const getItem = useCallback((itemId: string) => (inventoryData?.products || []).find(i => i.id === itemId), [inventoryData]);
+    const fetchItems = useCallback(() => queryClient.invalidateQueries({ queryKey: ['inventory'] }), [queryClient]);
+    const fetchSales = useCallback(async (channel: string, date: Date, page: number, limit: number) => {
+        const dateString = date.toISOString().split('T')[0];
+        const url = `/api/sales?channel=${channel}&startDate=${dateString}&endDate=${dateString}&page=${page}&limit=${limit}`;
+        const result = await apiFetch(url);
+        return { sales: result.sales, total: result.total };
+    }, []);
+    const findShippingReceiptByAwb = useCallback(async (awb: string) => (await apiFetch(`/api/shipping/receipts?awb=${awb}`)).receipts?.[0] || null, []);
+    const fetchShippingReceipts = useCallback(async (options: any) => apiFetch(`/api/shipping/receipts?${new URLSearchParams(options as any).toString()}`), []);
+    const fetchShippingReceiptCounts = useCallback(async (filters: any) => apiFetch(`/api/shipping/receipts/counts?${new URLSearchParams(filters as any).toString()}`), []);
+    const getReceiptCountByStatus = useCallback(async (status: string) => apiFetch(`/api/shipping/receipts/counts?status=${status}`), []);
+    const getPendingReceiptsBeforeDate = useCallback(async (date: Date) => (await apiFetch(`/api/shipping/receipts/pending-count?before=${date.toISOString()}`)).count, []);
+    const getPrintedReceiptCountsForDate = useCallback(async (date: string) => apiFetch(`/api/shipping/printed-receipts?date=${date}`), []);
+    const checkPrintedReceiptAvailability = useCallback(async (salesChannel: string, shippingChannel: string, date: string) => (await apiFetch('/api/shipping/printed-receipts/check', { method: 'POST', body: { salesChannel, shippingChannel, date } })).isAvailable, []);
+    const fetchImportHistory = useCallback(async () => apiFetch('/api/products/bulk-add'), []);
+    const fetchDiscountGroups = useCallback(() => queryClient.invalidateQueries({ queryKey: ['discountGroups'] }), [queryClient]);
+    const getDiscountGroup = useCallback(async (id: number) => apiFetch(`/api/finance/discounts/${id}`), []);
+    const getActiveDiscountPrice = useCallback(async (productId: any, variantId: any, category: any, channel: any) => (await apiFetch('/api/finance/discounts/get-active-price', { method: 'POST', body: { productId, variantId, category, channel } })).price, []);
+
   return (
     <InventoryContext.Provider value={{ 
         items: inventoryData?.products || [],
@@ -203,7 +222,7 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
         loading,
         categories,
         pendingTransaction, loadPendingTransaction, clearPendingTransaction, findProductBySku,
-        fetchItems: () => queryClient.invalidateQueries({ queryKey: ['inventory'] }),
+        fetchItems,
         // Mutations
         addItem: (vars: any) => addItemMutation.mutateAsync(vars),
         bulkAddProducts: (products: any[], fileName: string) => bulkAddProductsMutation.mutateAsync({ products, fileName }),
@@ -231,27 +250,21 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
         addDiscountGroup: (group: any) => addDiscountGroupMutation.mutateAsync(group),
         editDiscountGroup: (id: number, group: any) => editDiscountGroupMutation.mutateAsync({ id, group }),
         deleteDiscountGroup: (id: number) => deleteDiscountGroupMutation.mutateAsync(id),
-        
-        // Functions that don't mutate but fetch data can remain as they are
-        getHistory: async (itemId: string) => (inventoryData?.products.find(i => i.id === itemId)?.history || []),
-        getItem: useCallback((itemId: string) => (inventoryData?.products || []).find(i => i.id === itemId), [inventoryData]),
-        fetchSales: async (channel: string, date: Date, page: number, limit: number) => {
-            const dateString = date.toISOString().split('T')[0];
-            const url = `/api/sales?channel=${channel}&startDate=${dateString}&endDate=${dateString}&page=${page}&limit=${limit}`;
-            const result = await apiFetch(url);
-            return { sales: result.sales, total: result.total };
-        },
-        findShippingReceiptByAwb: async (awb: string) => (await apiFetch(`/api/shipping/receipts?awb=${awb}`)).receipts?.[0] || null,
-        fetchShippingReceipts: async (options) => apiFetch(`/api/shipping/receipts?${new URLSearchParams(options as any).toString()}`),
-        fetchShippingReceiptCounts: async (filters) => apiFetch(`/api/shipping/receipts/counts?${new URLSearchParams(filters as any).toString()}`),
-        getReceiptCountByStatus: async (status: string) => apiFetch(`/api/shipping/receipts/counts?status=${status}`),
-        getPendingReceiptsBeforeDate: async (date: Date) => (await apiFetch(`/api/shipping/receipts/pending-count?before=${date.toISOString()}`)).count,
-        getPrintedReceiptCountsForDate: async (date: string) => apiFetch(`/api/shipping/printed-receipts?date=${date}`),
-        checkPrintedReceiptAvailability: async (salesChannel: string, shippingChannel: string, date: string) => (await apiFetch('/api/shipping/printed-receipts/check', { method: 'POST', body: { salesChannel, shippingChannel, date } })).isAvailable,
-        fetchImportHistory: async () => apiFetch('/api/products/bulk-add'),
-        fetchDiscountGroups: () => queryClient.invalidateQueries({queryKey: ['discountGroups']}),
-        getDiscountGroup: async (id: number) => apiFetch(`/api/finance/discounts/${id}`),
-        getActiveDiscountPrice: async (productId, variantId, category, channel) => (await apiFetch('/api/finance/discounts/get-active-price', { method: 'POST', body: { productId, variantId, category, channel } })).price,
+        // Memoized functions
+        getHistory,
+        getItem,
+        fetchSales,
+        findShippingReceiptByAwb,
+        fetchShippingReceipts,
+        fetchShippingReceiptCounts,
+        getReceiptCountByStatus,
+        getPendingReceiptsBeforeDate,
+        getPrintedReceiptCountsForDate,
+        checkPrintedReceiptAvailability,
+        fetchImportHistory,
+        fetchDiscountGroups,
+        getDiscountGroup,
+        getActiveDiscountPrice,
       }}>
       {children}
     </InventoryContext.Provider>
