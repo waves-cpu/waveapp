@@ -216,7 +216,11 @@ export function DiscountGroupForm({ existingGroup }: DiscountGroupEditorProps) {
                                  <FormField control={detailsForm.control} name="channel" render={({ field }) => (
                                     <FormItem><FormLabel>Kanal Penjualan</FormLabel>
                                         <Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue/></SelectTrigger></FormControl>
-                                            <SelectContent><SelectItem value="online">Online</SelectItem><SelectItem value="pos">POS</SelectItem></SelectContent>
+                                            <SelectContent>
+                                                <SelectItem value="online">Online</SelectItem>
+                                                <SelectItem value="pos">POS</SelectItem>
+                                                <SelectItem value="reseller">Reseller</SelectItem>
+                                            </SelectContent>
                                         </Select><FormMessage />
                                     </FormItem>
                                 )}/>

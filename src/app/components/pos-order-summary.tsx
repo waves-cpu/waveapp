@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useMemo, useEffect } from 'react';
@@ -47,11 +46,13 @@ interface PosOrderSummaryProps {
   pendingTransactionId: string | null;
   onVoucherApplied?: (voucherData: Voucher | null) => void;
   activeVoucher?: Voucher | null;
+  selectedReseller: Reseller | null;
+  onResellerChange: (resellerId: string) => void;
 }
 
 type PaymentMethod = 'Cash' | 'Qris' | 'Transfer' | 'Debit';
 
-export function PosOrderSummary({ cart, onSaleComplete, clearCart, channel, pendingTransactionId, onVoucherApplied, activeVoucher }: PosOrderSummaryProps) {
+export function PosOrderSummary({ cart, onSaleComplete, clearCart, channel, pendingTransactionId, onVoucherApplied, activeVoucher, selectedReseller, onResellerChange }: PosOrderSummaryProps) {
     const { language } = useLanguage();
     const t = translations[language];
     const { cancelSaleTransaction, resellers } = useInventory();
@@ -63,7 +64,6 @@ export function PosOrderSummary({ cart, onSaleComplete, clearCart, channel, pend
     const [cashReceived, setCashReceived] = useState(0);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('Cash');
-    const [selectedReseller, setSelectedReseller] = useState<Reseller | null>(null);
     
     const isAccessoryOnlyTx = useMemo(() => cart.length > 0 && cart.every(item => item.type === 'accessory'), [cart]);
 
@@ -138,21 +138,12 @@ export function PosOrderSummary({ cart, onSaleComplete, clearCart, channel, pend
         setCashReceived(0);
         setPaymentMethod( 'Cash');
         setVoucherCode('');
-        setSelectedReseller(null);
+        onResellerChange('general');
         if (onVoucherApplied) {
             onVoucherApplied(null);
         }
         clearCart();
     }
-
-    const handleResellerChange = (resellerId: string) => {
-        if (resellerId === 'general') {
-            setSelectedReseller(null);
-            return;
-        }
-        const reseller = resellers.find(r => r.id.toString() === resellerId);
-        setSelectedReseller(reseller || null);
-    };
 
     const handleApplyVoucher = async () => {
         if (!voucherCode.trim() || !onVoucherApplied) return;
@@ -262,7 +253,7 @@ export function PosOrderSummary({ cart, onSaleComplete, clearCart, channel, pend
                         <Label htmlFor="reseller" className="flex items-center"><Users className="mr-2 h-4 w-4" /> Pelanggan / Reseller</Label>
                         <Select
                             value={selectedReseller?.id.toString() || 'general'}
-                            onValueChange={handleResellerChange}
+                            onValueChange={onResellerChange}
                         >
                             <SelectTrigger id="reseller">
                                 <SelectValue placeholder="Pilih Reseller (Opsional)" />

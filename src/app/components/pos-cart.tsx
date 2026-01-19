@@ -46,7 +46,7 @@ interface PosCartProps {
 }
 
 export function PosCart({ onVoucherApplied, activeVoucher }: PosCartProps) {
-    const { recordSale, items: inventoryItems, accessories, loading: inventoryLoading, pendingTransaction, clearPendingTransaction, cancelSaleTransaction, fetchItems, findProductBySku, getActiveDiscountPrice } = useInventory();
+    const { recordSale, items: inventoryItems, accessories, loading: inventoryLoading, pendingTransaction, clearPendingTransaction, cancelSaleTransaction, fetchItems, findProductBySku, getActiveDiscountPrice, resellers } = useInventory();
     const { language } = useLanguage();
     const { playSuccessSound, playErrorSound } = useScanSounds();
     const t = translations[language];
@@ -60,6 +60,7 @@ export function PosCart({ onVoucherApplied, activeVoucher }: PosCartProps) {
     const debouncedSearchTerm = useDebounce(searchTerm, 300);
     const [pendingTransactionId, setPendingTransactionId] = useState<string | null>(null);
     const searchInputRef = useRef<HTMLInputElement>(null);
+    const [selectedReseller, setSelectedReseller] = useState<Reseller | null>(null);
 
     const searchSuggestions = useMemo((): SearchableItem[] => {
         if (debouncedSearchTerm.length < 2) return [];
@@ -160,9 +161,18 @@ export function PosCart({ onVoucherApplied, activeVoucher }: PosCartProps) {
         }
     }, [cart.length, productForVariantSelection]);
 
+    const handleResellerChange = (resellerId: string) => {
+        if (resellerId === 'general') {
+            setSelectedReseller(null);
+            return;
+        }
+        const reseller = resellers.find(r => r.id.toString() === resellerId);
+        setSelectedReseller(reseller || null);
+    };
 
     const addToCart = useCallback(async (item: InventoryItem | Accessory, variant?: InventoryItemVariant) => {
         let itemToAdd: CartItem;
+        const channel = selectedReseller ? 'reseller' : 'pos';
 
         if (item.hasOwnProperty('itemType') && (item as any).itemType === 'accessory') {
             const accessory = item as Accessory;
@@ -200,7 +210,7 @@ export function PosCart({ onVoucherApplied, activeVoucher }: PosCartProps) {
             }
             
             const originalPrice = itemToAddRaw.price || 0;
-            const discountedPrice = await getActiveDiscountPrice(product.id, variant?.id || null, product.category, 'pos');
+            const discountedPrice = await getActiveDiscountPrice(product.id, variant?.id || null, product.category, channel);
             
             itemToAdd = {
                 id: itemToAddRaw.id,
@@ -243,7 +253,7 @@ export function PosCart({ onVoucherApplied, activeVoucher }: PosCartProps) {
             }
             return [...currentCart, itemToAdd];
         });
-    }, [cart, toast, playSuccessSound, playErrorSound, getActiveDiscountPrice]);
+    }, [cart, toast, playSuccessSound, playErrorSound, getActiveDiscountPrice, selectedReseller]);
 
     const handleProductSelect = useCallback(async (item: SearchableItem) => {
         try {
@@ -338,6 +348,7 @@ export function PosCart({ onVoucherApplied, activeVoucher }: PosCartProps) {
     const clearCart = () => {
         setCart([]);
         setPendingTransactionId(null);
+        setSelectedReseller(null);
         localStorage.removeItem(LOCAL_STORAGE_KEY);
     };
 
@@ -488,6 +499,8 @@ export function PosCart({ onVoucherApplied, activeVoucher }: PosCartProps) {
                     pendingTransactionId={pendingTransactionId}
                     onVoucherApplied={onVoucherApplied}
                     activeVoucher={activeVoucher}
+                    selectedReseller={selectedReseller}
+                    onResellerChange={handleResellerChange}
                 />
             </div>
              {productForVariantSelection && (
