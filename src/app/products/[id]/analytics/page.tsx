@@ -57,6 +57,10 @@ function ProductAnalyticsPage() {
         return { product: foundProduct, productSales: sales };
     }, [id, items, allSales, inventoryLoading]);
 
+    const isOnlineSale = (salesByChannel: Record<string, any>) => {
+        return Object.keys(salesByChannel).some(channel => ['shopee', 'tiktok', 'lazada'].includes(channel.toLowerCase()));
+    }
+
     const analytics = useMemo(() => {
         if (!product || !financeSettingsLoaded) {
             return null;
@@ -118,10 +122,6 @@ function ProductAnalyticsPage() {
         };
 
     }, [product, productSales, financeSettings, financeSettingsLoaded]);
-
-    const isOnlineSale = (salesByChannel: Record<string, any>) => {
-        return Object.keys(salesByChannel).some(channel => ['shopee', 'tiktok', 'lazada'].includes(channel.toLowerCase()));
-    }
     
     if (inventoryLoading || !financeSettingsLoaded) {
         return (
@@ -239,5 +239,3 @@ function ProductAnalyticsPage() {
 }
 
 export default ProductAnalyticsPage;
-
-    
