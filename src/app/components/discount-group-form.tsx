@@ -38,6 +38,7 @@ import Image from 'next/image';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Label } from "@/components/ui/label";
 import { ProductSelectionDialog } from './product-selection-dialog';
+import { Separator } from '@/components/ui/separator';
 
 const formSchema = z.object({
   id: z.number().optional(),
@@ -79,8 +80,9 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
     const [isProductSelectorOpen, setProductSelectorOpen] = useState(false);
     const isEditMode = !!existingGroup;
 
-    const defaultValues = useMemo(() => {
-        if (!existingGroup) {
+    // Memoize the default values to stabilize them
+    const defaultDetails = useMemo(() => {
+        if (!isEditMode || !existingGroup) {
             return {
                 name: '',
                 category: '',
@@ -113,11 +115,11 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
             maxUses: existingGroup.maxUses === null ? undefined : existingGroup.maxUses,
             minPurchase: existingGroup.minPurchase || 0,
         };
-    }, [existingGroup]);
+    }, [isEditMode, existingGroup]);
     
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
-        defaultValues: defaultValues,
+        defaultValues: defaultDetails,
     });
 
     const { fields, append, remove, replace } = useFieldArray({
@@ -128,13 +130,16 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
     const selectedCategory = form.watch('category');
 
     useEffect(() => {
-        form.reset(defaultValues);
-        if (existingGroup) {
+        form.reset(defaultDetails);
+    }, [defaultDetails, form]);
+    
+    useEffect(() => {
+        if (isEditMode && existingGroup && items.length > 0) {
              const productsInCategory = items.filter(item => item.category === existingGroup.category && !item.isArchived);
              const productList = getProductsForForm(productsInCategory, existingGroup.products);
              replace(productList);
         }
-    }, [existingGroup, items, replace, form, defaultValues]);
+    }, [existingGroup, items, isEditMode, replace]);
     
     const getProductsForForm = (productsToAdd: InventoryItem[], existingDiscounts: DiscountedProduct[] = []) => {
         const productList: Omit<DiscountedProduct, 'originalPrice'> & { originalPrice: number | null, discountedPrice: number }[] = [];
@@ -187,7 +192,13 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
 
     async function onSubmit(values: z.infer<typeof formSchema>) {
         setIsSaving(true);
-        const groupData = { ...values, products: values.products.filter(p => p.originalPrice !== null) };
+        const { dateRange, ...rest } = values;
+        const groupData = { 
+            ...rest,
+            startDate: dateRange.from.toISOString(),
+            endDate: dateRange.to.toISOString(),
+            products: values.products.filter(p => p.originalPrice !== null)
+        };
 
         try {
             if (isEditMode) {
