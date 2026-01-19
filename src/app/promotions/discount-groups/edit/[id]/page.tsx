@@ -1,8 +1,7 @@
-
 'use client';
 
 import { AppLayout } from "@/app/components/app-layout";
-import { DiscountGroupForm } from "@/app/components/discount-group-form";
+import { DiscountGroupEditor } from "@/app/components/discount-group-form";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { useInventory } from "@/hooks/use-inventory";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -13,41 +12,36 @@ import type { DiscountGroup } from "@/types";
 function EditDiscountPageSkeleton() {
     return (
         <div className="space-y-6">
-            <div className="space-y-2">
-                <Skeleton className="h-4 w-24" />
-                <Skeleton className="h-9 w-full" />
-            </div>
-             <div className="space-y-2">
-                <Skeleton className="h-4 w-24" />
-                <Skeleton className="h-9 w-full" />
-            </div>
-             <div className="space-y-2">
-                <Skeleton className="h-4 w-24" />
-                <Skeleton className="h-9 w-full" />
-            </div>
+            <Skeleton className="h-40 w-full" />
+            <Skeleton className="h-96 w-full" />
         </div>
-    )
+    );
 }
 
 export default function EditDiscountGroupPage() {
     const params = useParams();
-    const { getDiscountGroup, loading } = useInventory();
+    const { getDiscountGroup, loading: inventoryLoading } = useInventory();
     const [group, setGroup] = useState<DiscountGroup | null>(null);
     const [pageLoading, setPageLoading] = useState(true);
 
     const id = typeof params.id === 'string' ? parseInt(params.id, 10) : NaN;
 
     useEffect(() => {
-        if (!loading && !isNaN(id)) {
+        if (!inventoryLoading && !isNaN(id)) {
             const fetchGroup = async () => {
-                const fetchedGroup = await getDiscountGroup(id);
-                setGroup(fetchedGroup);
-                setPageLoading(false);
-            }
+                try {
+                    const fetchedGroup = await getDiscountGroup(id);
+                    setGroup(fetchedGroup);
+                } catch (error) {
+                    console.error("Failed to fetch discount group:", error);
+                    setGroup(null);
+                } finally {
+                    setPageLoading(false);
+                }
+            };
             fetchGroup();
         }
-    }, [id, loading, getDiscountGroup]);
-
+    }, [id, inventoryLoading, getDiscountGroup]);
 
     return (
         <AppLayout>
@@ -56,11 +50,11 @@ export default function EditDiscountGroupPage() {
                     <SidebarTrigger className="md:hidden" />
                     <h1 className="text-lg font-bold">Ubah Grup Diskon</h1>
                 </div>
-                 <div className="max-w-7xl mx-auto">
+                <div className="max-w-7xl mx-auto">
                     {pageLoading ? (
                         <EditDiscountPageSkeleton />
                     ) : group ? (
-                        <DiscountGroupForm existingGroup={group} />
+                        <DiscountGroupEditor existingGroup={group} />
                     ) : (
                         <p>Grup diskon tidak ditemukan.</p>
                     )}
@@ -69,5 +63,3 @@ export default function EditDiscountGroupPage() {
         </AppLayout>
     );
 }
-
-    
