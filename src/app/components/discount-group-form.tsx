@@ -28,7 +28,7 @@ import { translations } from '@/types/language';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { CalendarIcon, Edit, Eye, Store, Trash2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import type { DiscountGroup, DiscountedProduct, InventoryItem, InventoryItemVariant } from '@/types';
 import { categories } from '@/types';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -87,42 +87,49 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm = false }: Disc
   const { toast } = useToast();
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const isEditMode = !!existingGroup;
   const [bulkPrice, setBulkPrice] = useState<number | ''>('');
   
+  const isEditMode = !!existingGroup;
+
+  const defaultValues = useMemo(() => {
+    if (!isEditMode || !existingGroup) {
+      return {
+        name: '',
+        category: '',
+        channel: '',
+        voucherCode: '',
+        dateRange: { from: new Date(), to: addDays(new Date(), 7) },
+        products: [],
+        discountType: undefined,
+        discountValue: undefined,
+        maxUses: undefined,
+        minPurchase: undefined,
+      };
+    }
+    return {
+      ...existingGroup,
+      dateRange: {
+        from: new Date(existingGroup.startDate),
+        to: new Date(existingGroup.endDate),
+      },
+      products: existingGroup.products || [],
+      discountType: existingGroup.discountType || undefined,
+      discountValue: existingGroup.discountValue || undefined,
+      maxUses: existingGroup.maxUses || undefined,
+      minPurchase: existingGroup.minPurchase || undefined,
+    };
+  }, [existingGroup, isEditMode]);
+
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
-    defaultValues: {
-      name: '',
-      category: '',
-      channel: '',
-      voucherCode: '',
-      dateRange: { from: new Date(), to: addDays(new Date(), 7) },
-      products: [],
-      discountType: undefined,
-      discountValue: undefined,
-      maxUses: undefined,
-      minPurchase: undefined,
-    },
+    defaultValues: defaultValues,
   });
 
   useEffect(() => {
-    if (isEditMode && existingGroup) {
-        const defaultValues = {
-            ...existingGroup,
-            dateRange: {
-                from: new Date(existingGroup.startDate),
-                to: new Date(existingGroup.endDate),
-            },
-            products: existingGroup.products || [],
-            discountType: existingGroup.discountType || undefined,
-            discountValue: existingGroup.discountValue || undefined,
-            maxUses: existingGroup.maxUses || undefined,
-            minPurchase: existingGroup.minPurchase || undefined,
-        };
-        form.reset(defaultValues);
-    }
-  }, [existingGroup, isEditMode, form.reset]);
+    // Reset the form whenever the memoized defaultValues change.
+    // This is key to populating the form correctly on edit without causing re-render loops.
+    form.reset(defaultValues);
+  }, [defaultValues, form]);
 
 
   const { fields, replace } = useFieldArray({
@@ -166,8 +173,9 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm = false }: Disc
   }, [items, replace]);
 
   useEffect(() => {
-    if (!isEditMode) {
-      if (selectedCategory && selectedCategory !== 'Semua Kategori') {
+    // This effect should only run for NEW forms, not when editing.
+    if (!isEditMode && selectedCategory) {
+      if (selectedCategory !== 'Semua Kategori') {
         populateProductsByCategory(selectedCategory);
       } else {
         replace([]);
@@ -205,7 +213,7 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm = false }: Disc
     };
 
     try {
-        if (isEditMode) {
+        if (isEditMode && existingGroup) {
             await editDiscountGroup(existingGroup.id, groupData);
             toast({ title: "Promosi Diperbarui", description: `"${values.name}" telah berhasil diperbarui.` });
         } else {
