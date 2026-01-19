@@ -2,7 +2,7 @@
 
 import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { useInventory } from '@/hooks/use-inventory';
-import type { InventoryItem, InventoryItemVariant, Accessory, SearchableItem, Sale, DiscountGroup } from '@/types';
+import type { InventoryItem, InventoryItemVariant, Accessory, SearchableItem, Sale, DiscountGroup, Reseller } from '@/types';
 import { PosSearch } from './pos-search';
 import { PosOrderSummary } from './pos-order-summary';
 import { VariantSelectionDialog } from './variant-selection-dialog';
@@ -341,7 +341,7 @@ export function PosCart({ onVoucherApplied, activeVoucher }: PosCartProps) {
         localStorage.removeItem(LOCAL_STORAGE_KEY);
     };
 
-    const handleSaleComplete = async (paymentMethod: string, receiptData: ReceiptData, status: 'Completed' | 'Pending' = 'Completed', voucherCode?: string) => {
+    const handleSaleComplete = async (paymentMethod: string, receiptData: ReceiptData, status: 'Completed' | 'Pending' = 'Completed', voucherCode?: string, reseller?: Reseller | null) => {
         
         const { total, subtotal, discount } = receiptData;
         
@@ -361,7 +361,9 @@ export function PosCart({ onVoucherApplied, activeVoucher }: PosCartProps) {
                 transactionId: transactionId,
                 paymentMethod: paymentMethod,
                 status: status,
-                voucherCode: voucherCode
+                voucherCode: voucherCode,
+                resellerId: reseller?.id,
+                resellerName: reseller?.name
             });
 
             if (status === 'Completed') {

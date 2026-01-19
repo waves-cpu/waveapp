@@ -1,5 +1,3 @@
-
-
 'use client';
 
 import React, { useState, useMemo, useEffect } from 'react';
@@ -9,7 +7,7 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/componen
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
-import { X, Printer, Save, Tag, CheckCircle } from 'lucide-react';
+import { X, Printer, Save, Tag, CheckCircle, Users } from 'lucide-react';
 import { useLanguage } from '@/hooks/use-language';
 import { translations } from '@/types/language';
 import {
@@ -30,11 +28,19 @@ import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import { Badge } from '@/components/ui/badge';
 import { apiFetch } from '@/lib/api';
-import type { Voucher } from '@/types';
+import type { Voucher, Reseller } from '@/types';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+
 
 interface PosOrderSummaryProps {
   cart: CartItem[];
-  onSaleComplete: (paymentMethod: string, receiptData: ReceiptData, status?: 'Completed' | 'Pending', voucherCode?: string) => Promise<void>;
+  onSaleComplete: (paymentMethod: string, receiptData: ReceiptData, status?: 'Completed' | 'Pending', voucherCode?: string, reseller?: Reseller | null) => Promise<void>;
   clearCart: () => void;
   channel: 'pos';
   pendingTransactionId: string | null;
@@ -47,7 +53,7 @@ type PaymentMethod = 'Cash' | 'Qris' | 'Transfer' | 'Debit';
 export function PosOrderSummary({ cart, onSaleComplete, clearCart, channel, pendingTransactionId, onVoucherApplied, activeVoucher }: PosOrderSummaryProps) {
     const { language } = useLanguage();
     const t = translations[language];
-    const { cancelSaleTransaction } = useInventory();
+    const { cancelSaleTransaction, resellers } = useInventory();
     const { toast } = useToast();
     const router = useRouter();
     const [manualDiscount, setManualDiscount] = useState(0);
@@ -56,6 +62,7 @@ export function PosOrderSummary({ cart, onSaleComplete, clearCart, channel, pend
     const [cashReceived, setCashReceived] = useState(0);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('Cash');
+    const [selectedReseller, setSelectedReseller] = useState<Reseller | null>(null);
     
     const isAccessoryOnlyTx = useMemo(() => cart.length > 0 && cart.every(item => item.type === 'accessory'), [cart]);
 
@@ -130,11 +137,17 @@ export function PosOrderSummary({ cart, onSaleComplete, clearCart, channel, pend
         setCashReceived(0);
         setPaymentMethod( 'Cash');
         setVoucherCode('');
+        setSelectedReseller(null);
         if (onVoucherApplied) {
             onVoucherApplied(null);
         }
         clearCart();
     }
+
+    const handleResellerChange = (resellerId: string) => {
+        const reseller = resellers.find(r => r.id.toString() === resellerId);
+        setSelectedReseller(reseller || null);
+    };
 
     const handleApplyVoucher = async () => {
         if (!voucherCode.trim() || !onVoucherApplied) return;
@@ -197,7 +210,7 @@ export function PosOrderSummary({ cart, onSaleComplete, clearCart, channel, pend
         };
         
         try {
-            await onSaleComplete(paymentMethod, receiptData, status, activeVoucher?.voucherCode);
+            await onSaleComplete(paymentMethod, receiptData, status, activeVoucher?.voucherCode, selectedReseller);
             resetForm();
             if(status === 'Pending') {
                 router.push('/sales/pos/pending');
@@ -240,6 +253,24 @@ export function PosOrderSummary({ cart, onSaleComplete, clearCart, channel, pend
             </CardHeader>
             <CardContent className="flex-grow space-y-4">
                  <div className="space-y-2 text-sm">
+                    <div className="space-y-2">
+                        <Label htmlFor="reseller" className="flex items-center"><Users className="mr-2 h-4 w-4" /> Pelanggan / Reseller</Label>
+                        <Select
+                            value={selectedReseller?.id.toString() || ''}
+                            onValueChange={handleResellerChange}
+                        >
+                            <SelectTrigger id="reseller">
+                                <SelectValue placeholder="Pilih Reseller (Opsional)" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="">-- Pelanggan Umum --</SelectItem>
+                                {resellers.map(reseller => (
+                                    <SelectItem key={reseller.id} value={reseller.id.toString()}>{reseller.name}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    <Separator className="my-4" />
                     <div className="flex justify-between">
                         <span>{t.pos.subtotal}</span>
                         <span>{subtotal.toLocaleString('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0, maximumFractionDigits: 0 })}</span>
