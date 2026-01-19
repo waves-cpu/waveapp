@@ -10,7 +10,13 @@ import { AppProviders } from '@/components/providers';
 export const metadata: Metadata = {
   title: 'Waveblast',
   description: 'Smart Inventory Management',
-  manifest: '/manifest.json'
+  manifest: '/manifest.json',
+  themeColor: '#ffffff',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'Waveblast',
+  },
 };
 
 export default function RootLayout({
