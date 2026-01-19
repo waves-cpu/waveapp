@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useMemo, useEffect } from 'react';
@@ -48,7 +47,7 @@ interface PosOrderSummaryProps {
   onVoucherApplied?: (voucherData: DiscountGroup | null) => void;
   activeVoucher?: DiscountGroup | null;
   selectedReseller: Reseller | null;
-  onResellerChange: (reseller: Reseller | null) => void;
+  onResellerChange: (resellerId: string) => void;
 }
 
 type PaymentMethod = 'Cash' | 'Qris' | 'Transfer' | 'Debit';
@@ -139,7 +138,7 @@ export function PosOrderSummary({ cart, onSaleComplete, clearCart, channel, pend
         setCashReceived(0);
         setPaymentMethod( 'Cash');
         setVoucherCode('');
-        handleResellerSelection('general');
+        onResellerChange('general');
         if (onVoucherApplied) {
             onVoucherApplied(null);
         }
@@ -242,16 +241,6 @@ export function PosOrderSummary({ cart, onSaleComplete, clearCart, channel, pend
         return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(amount);
     };
 
-    const handleResellerSelection = (resellerId: string) => {
-        if (resellerId === 'general') {
-            onResellerChange(null);
-            return;
-        }
-        const reseller = resellers.find(r => r.id.toString() === resellerId);
-        onResellerChange(reseller || null);
-    };
-
-
     return (
         <Card className="flex flex-col h-full sticky top-4 no-print">
             <CardHeader>
@@ -263,7 +252,7 @@ export function PosOrderSummary({ cart, onSaleComplete, clearCart, channel, pend
                         <Label htmlFor="reseller" className="flex items-center"><Users className="mr-2 h-4 w-4" /> Pelanggan / Reseller</Label>
                         <Select
                             value={selectedReseller?.id.toString() || 'general'}
-                            onValueChange={handleResellerSelection}
+                            onValueChange={onResellerChange}
                         >
                             <SelectTrigger id="reseller">
                                 <SelectValue placeholder="Pilih Reseller (Opsional)" />

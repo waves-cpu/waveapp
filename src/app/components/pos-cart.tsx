@@ -160,6 +160,42 @@ export function PosCart({ onVoucherApplied, activeVoucher }: PosCartProps) {
             searchInputRef.current?.focus();
         }
     }, [cart.length, productForVariantSelection]);
+    
+    useEffect(() => {
+        if (!isClient || cart.length === 0) return;
+
+        let isMounted = true;
+
+        const updateCartPrices = async () => {
+            const channel = selectedReseller ? 'reseller' : 'pos';
+            
+            const updatedCart = await Promise.all(cart.map(async (item) => {
+                if (item.type === 'product') {
+                    const discountedPrice = await getActiveDiscountPrice(
+                        item.productId, 
+                        item.id, // The item.id is the variantId in this context
+                        item.category, 
+                        channel
+                    );
+                    return {
+                        ...item,
+                        price: discountedPrice ?? item.originalPrice,
+                    };
+                }
+                return item; // No price change for accessories
+            }));
+
+            if (isMounted) {
+                setCart(updatedCart);
+            }
+        };
+
+        updateCartPrices();
+
+        return () => {
+            isMounted = false;
+        };
+    }, [selectedReseller, isClient]); // Only run when reseller changes
 
     const handleResellerChange = (resellerId: string) => {
         if (resellerId === 'general') {
