@@ -121,16 +121,16 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm = false }: Disc
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
-    defaultValues: isEditMode ? {} : defaultValues, // Start empty in edit mode to await reset
+    defaultValues: defaultValues, 
   });
-
+  
   const { reset } = form;
 
   useEffect(() => {
-    if (isEditMode) {
+    if (isEditMode && existingGroup) {
       reset(defaultValues);
     }
-  }, [isEditMode, defaultValues, reset]);
+  }, [isEditMode, existingGroup, defaultValues, reset]);
 
   
   const { fields, replace } = useFieldArray({
@@ -175,13 +175,9 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm = false }: Disc
 
 
   useEffect(() => {
-    if (isEditMode) {
-        // Do nothing on initial load for edit mode, data is set by the main useEffect
-        return;
-    }
-    if (!isVoucherForm && selectedCategory && selectedCategory !== 'Semua Kategori') {
+    if (!isEditMode && !isVoucherForm && selectedCategory && selectedCategory !== 'Semua Kategori') {
         populateProductsByCategory(selectedCategory);
-    } else if (!isVoucherForm) {
+    } else if (!isVoucherForm && !isEditMode) {
         replace([]);
     }
   }, [selectedCategory, isEditMode, isVoucherForm, populateProductsByCategory, replace]);
