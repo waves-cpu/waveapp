@@ -78,7 +78,7 @@ const formSchema = z.object({
 });
 
 interface DiscountGroupFormProps {
-    existingGroup?: DiscountGroup;
+    existingGroup?: DiscountGroup | null;
     isVoucherForm?: boolean;
 }
 
@@ -92,42 +92,45 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm = false }: Disc
   const isEditMode = !!existingGroup;
   const [bulkPrice, setBulkPrice] = useState<number | ''>('');
   
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-        name: '',
-        category: '',
-        channel: '',
-        voucherCode: '',
-        dateRange: { from: new Date(), to: addDays(new Date(), 7) },
-        products: [],
-        discountType: undefined,
-        discountValue: undefined,
-        maxUses: undefined,
-        minPurchase: undefined,
-    }, 
-  });
-  
-  const { reset } = form;
-  const isInitialMount = useRef(true);
-
-  useEffect(() => {
-    if (existingGroup) {
-      const formValues = {
+  const defaultValues = useMemo(() => {
+    if (!existingGroup) {
+        return {
+            name: '',
+            category: '',
+            channel: '',
+            voucherCode: '',
+            dateRange: { from: new Date(), to: addDays(new Date(), 7) },
+            products: [],
+            discountType: undefined,
+            discountValue: undefined,
+            maxUses: undefined,
+            minPurchase: undefined,
+        };
+    }
+    return {
         ...existingGroup,
+        id: existingGroup.id,
         dateRange: {
-          from: new Date(existingGroup.startDate),
-          to: new Date(existingGroup.endDate),
+            from: new Date(existingGroup.startDate),
+            to: new Date(existingGroup.endDate),
         },
         products: existingGroup.products || [],
         discountType: existingGroup.discountType || undefined,
         discountValue: existingGroup.discountValue || undefined,
-      };
-      reset(formValues);
-    }
-  }, [existingGroup, reset]);
-
+    };
+  }, [existingGroup]);
   
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
+    defaultValues,
+  });
+  
+  useEffect(() => {
+    if (existingGroup) {
+        form.reset(defaultValues);
+    }
+  }, [existingGroup, defaultValues, form]);
+
   const { fields, replace } = useFieldArray({
       control: form.control,
       name: "products"
@@ -170,8 +173,7 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm = false }: Disc
 
 
   useEffect(() => {
-    if (isEditMode && isInitialMount.current) {
-        isInitialMount.current = false;
+    if (isEditMode) {
         return;
     }
 
@@ -305,9 +307,7 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm = false }: Disc
                     render={({ field }) => (
                     <FormItem>
                         <FormLabel>Kategori Produk</FormLabel>
-                        <Select onValueChange={(value) => {
-                            field.onChange(value);
-                        }} value={field.value} defaultValue={field.value}>
+                        <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value} disabled={isEditMode}>
                         <FormControl>
                             <SelectTrigger>
                             <SelectValue placeholder="Pilih kategori untuk diskon" />
@@ -551,3 +551,5 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm = false }: Disc
     </Card>
   );
 }
+
+    
