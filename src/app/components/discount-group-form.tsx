@@ -111,9 +111,6 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm = false }: Disc
   const initializedGroupId = useRef<number | undefined>();
 
   useEffect(() => {
-    // This effect ensures that the form is populated with existing data
-    // ONLY when editing and when the data is first loaded or changed.
-    // This prevents the form from resetting on every render.
     if (existingGroup && existingGroup.id !== initializedGroupId.current) {
         reset({
             ...existingGroup,
@@ -174,25 +171,17 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm = false }: Disc
 
   const isFirstRender = useRef(true);
   useEffect(() => {
-    // In edit mode, we don't want to auto-populate products based on category changes.
-    // The data is already loaded and set via the `reset` effect.
-    if (isEditMode) {
-        return;
-    }
-    
-    // In NEW mode, skip the very first render to avoid running on initial empty category
     if (isFirstRender.current) {
       isFirstRender.current = false;
       return;
     }
 
-    // In NEW mode, if category changes, populate the products list.
     if (!isVoucherForm && selectedCategory && selectedCategory !== 'Semua Kategori') {
         populateProductsByCategory(selectedCategory);
     } else if (!isVoucherForm) {
         replace([]);
     }
-  }, [selectedCategory, isEditMode, isVoucherForm, populateProductsByCategory, replace]);
+  }, [selectedCategory, isVoucherForm, populateProductsByCategory, replace]);
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsSubmitting(true);
@@ -316,7 +305,7 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm = false }: Disc
                     render={({ field }) => (
                     <FormItem>
                         <FormLabel>Kategori Produk</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value} disabled={isEditMode}>
+                        <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value}>
                         <FormControl>
                             <SelectTrigger>
                             <SelectValue placeholder="Pilih kategori untuk diskon" />
@@ -561,3 +550,4 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm = false }: Disc
   );
 }
 
+    
