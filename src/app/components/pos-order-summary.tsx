@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useMemo, useEffect } from 'react';
@@ -28,7 +29,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import { Badge } from '@/components/ui/badge';
 import { apiFetch } from '@/lib/api';
-import type { Voucher, Reseller } from '@/types';
+import type { Voucher, Reseller, DiscountGroup } from '@/types';
 import {
   Select,
   SelectContent,
@@ -44,10 +45,10 @@ interface PosOrderSummaryProps {
   clearCart: () => void;
   channel: 'pos';
   pendingTransactionId: string | null;
-  onVoucherApplied?: (voucherData: Voucher | null) => void;
-  activeVoucher?: Voucher | null;
+  onVoucherApplied?: (voucherData: DiscountGroup | null) => void;
+  activeVoucher?: DiscountGroup | null;
   selectedReseller: Reseller | null;
-  onResellerChange: (resellerId: string) => void;
+  onResellerChange: (reseller: Reseller | null) => void;
 }
 
 type PaymentMethod = 'Cash' | 'Qris' | 'Transfer' | 'Debit';
@@ -138,7 +139,7 @@ export function PosOrderSummary({ cart, onSaleComplete, clearCart, channel, pend
         setCashReceived(0);
         setPaymentMethod( 'Cash');
         setVoucherCode('');
-        onResellerChange('general');
+        handleResellerSelection('general');
         if (onVoucherApplied) {
             onVoucherApplied(null);
         }
@@ -149,7 +150,7 @@ export function PosOrderSummary({ cart, onSaleComplete, clearCart, channel, pend
         if (!voucherCode.trim() || !onVoucherApplied) return;
         setIsApplyingVoucher(true);
         try {
-            const data: Voucher = await apiFetch(`/api/finance/discounts/voucher/${voucherCode.trim()}?channel=${channel}`);
+            const data: DiscountGroup = await apiFetch(`/api/finance/discounts/voucher/${voucherCode.trim()}?channel=${channel}`);
             if (!data.voucherCode || !data.discountType || data.discountValue === undefined) {
               throw new Error("Data voucher tidak lengkap dari server.");
             }
@@ -241,6 +242,15 @@ export function PosOrderSummary({ cart, onSaleComplete, clearCart, channel, pend
         return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(amount);
     };
 
+    const handleResellerSelection = (resellerId: string) => {
+        if (resellerId === 'general') {
+            onResellerChange(null);
+            return;
+        }
+        const reseller = resellers.find(r => r.id.toString() === resellerId);
+        onResellerChange(reseller || null);
+    };
+
 
     return (
         <Card className="flex flex-col h-full sticky top-4 no-print">
@@ -253,14 +263,14 @@ export function PosOrderSummary({ cart, onSaleComplete, clearCart, channel, pend
                         <Label htmlFor="reseller" className="flex items-center"><Users className="mr-2 h-4 w-4" /> Pelanggan / Reseller</Label>
                         <Select
                             value={selectedReseller?.id.toString() || 'general'}
-                            onValueChange={onResellerChange}
+                            onValueChange={handleResellerSelection}
                         >
                             <SelectTrigger id="reseller">
                                 <SelectValue placeholder="Pilih Reseller (Opsional)" />
                             </SelectTrigger>
                             <SelectContent>
                                 <SelectItem value="general">-- Pelanggan Umum --</SelectItem>
-                                {resellers.map(reseller => (
+                                {(resellers || []).map(reseller => (
                                     <SelectItem key={reseller.id} value={reseller.id.toString()}>{reseller.name}</SelectItem>
                                 ))}
                             </SelectContent>
