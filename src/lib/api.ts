@@ -24,7 +24,7 @@ const BASE_URL = process.env.NEXT_PUBLIC_API_URL || '';
 
 // 4. Fungsi Utama dengan Generics <T>
 export const apiFetch = async <T = any>(endpoint: string, options: ApiOptions = {}): Promise<T> => {
-  const { params, timeout = 10000, headers, body, ...restOptions } = options;
+  const { params, timeout = 30000, headers, body, ...restOptions } = options;
 
   // A. Handling URL & Query Params
   const url = new URL(endpoint, BASE_URL || (typeof window !== 'undefined' ? window.location.origin : ''));

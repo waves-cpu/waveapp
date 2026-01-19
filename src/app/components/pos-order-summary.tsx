@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useMemo, useEffect } from 'react';
@@ -145,6 +146,10 @@ export function PosOrderSummary({ cart, onSaleComplete, clearCart, channel, pend
     }
 
     const handleResellerChange = (resellerId: string) => {
+        if (resellerId === 'general') {
+            setSelectedReseller(null);
+            return;
+        }
         const reseller = resellers.find(r => r.id.toString() === resellerId);
         setSelectedReseller(reseller || null);
     };
@@ -256,14 +261,14 @@ export function PosOrderSummary({ cart, onSaleComplete, clearCart, channel, pend
                     <div className="space-y-2">
                         <Label htmlFor="reseller" className="flex items-center"><Users className="mr-2 h-4 w-4" /> Pelanggan / Reseller</Label>
                         <Select
-                            value={selectedReseller?.id.toString() || ''}
+                            value={selectedReseller?.id.toString() || 'general'}
                             onValueChange={handleResellerChange}
                         >
                             <SelectTrigger id="reseller">
                                 <SelectValue placeholder="Pilih Reseller (Opsional)" />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="">-- Pelanggan Umum --</SelectItem>
+                                <SelectItem value="general">-- Pelanggan Umum --</SelectItem>
                                 {resellers.map(reseller => (
                                     <SelectItem key={reseller.id} value={reseller.id.toString()}>{reseller.name}</SelectItem>
                                 ))}
