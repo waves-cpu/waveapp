@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useForm, useFieldArray } from 'react-hook-form';
@@ -91,42 +90,45 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm = false }: Disc
   const isEditMode = !!existingGroup;
   const [bulkPrice, setBulkPrice] = useState<number | ''>('');
   
+  const defaultValues = useMemo(() => {
+    if (!existingGroup) {
+        return {
+          name: '',
+          category: '',
+          channel: '',
+          voucherCode: '',
+          dateRange: { from: new Date(), to: addDays(new Date(), 7) },
+          products: [],
+          discountType: undefined,
+          discountValue: undefined,
+          maxUses: undefined,
+          minPurchase: undefined,
+        };
+    }
+    return {
+        ...existingGroup,
+        dateRange: {
+            from: new Date(existingGroup.startDate),
+            to: new Date(existingGroup.endDate),
+        },
+        products: existingGroup.products || [],
+        discountType: existingGroup.discountType || undefined,
+        discountValue: existingGroup.discountValue || undefined,
+        maxUses: existingGroup.maxUses || undefined,
+        minPurchase: existingGroup.minPurchase || undefined,
+    };
+  }, [existingGroup]);
+  
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
-    defaultValues: {
-      name: '',
-      category: '',
-      channel: '',
-      voucherCode: '',
-      dateRange: { from: new Date(), to: addDays(new Date(), 7) },
-      products: [],
-      discountType: undefined,
-      discountValue: undefined,
-      maxUses: undefined,
-      minPurchase: undefined,
-    },
+    defaultValues,
   });
 
-  const { reset } = form;
-  const initializedGroupId = useRef<number | undefined>();
-
   useEffect(() => {
-    if (existingGroup && existingGroup.id !== initializedGroupId.current) {
-        reset({
-            ...existingGroup,
-            dateRange: {
-                from: new Date(existingGroup.startDate),
-                to: new Date(existingGroup.endDate),
-            },
-            products: existingGroup.products || [],
-            discountType: existingGroup.discountType || undefined,
-            discountValue: existingGroup.discountValue || undefined,
-            maxUses: existingGroup.maxUses || undefined,
-            minPurchase: existingGroup.minPurchase || undefined,
-        });
-        initializedGroupId.current = existingGroup.id;
+    if (existingGroup) {
+        form.reset(defaultValues);
     }
-  }, [existingGroup, reset]);
+  }, [existingGroup, defaultValues, form]);
 
 
   const { fields, replace } = useFieldArray({
@@ -169,19 +171,20 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm = false }: Disc
         replace(discountedProducts);
   }, [items, replace]);
 
-  const isFirstRender = useRef(true);
+  const isMountedRef = useRef(false);
   useEffect(() => {
-    if (isFirstRender.current) {
-      isFirstRender.current = false;
-      return;
-    }
-
-    if (!isVoucherForm && selectedCategory && selectedCategory !== 'Semua Kategori') {
-        populateProductsByCategory(selectedCategory);
-    } else if (!isVoucherForm) {
-        replace([]);
-    }
-  }, [selectedCategory, isVoucherForm, populateProductsByCategory, replace]);
+      if (isMountedRef.current) {
+          if (!isVoucherForm && !isEditMode) {
+              if (selectedCategory && selectedCategory !== 'Semua Kategori') {
+                  populateProductsByCategory(selectedCategory);
+              } else {
+                  replace([]);
+              }
+          }
+      } else {
+          isMountedRef.current = true;
+      }
+  }, [selectedCategory, isVoucherForm, isEditMode, populateProductsByCategory, replace]);
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsSubmitting(true);
