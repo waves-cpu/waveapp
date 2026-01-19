@@ -20,6 +20,7 @@ import { useScanSounds } from '@/hooks/use-scan-sounds';
 import { PosReceipt, type ReceiptData } from './pos-receipt';
 import { useDebounce } from '@/hooks/use-debounce';
 import { AccessoryUsageVoucher, type VoucherData } from './accessory-usage-voucher';
+import { ResellerInvoice, type InvoiceData } from './reseller-invoice';
 
 
 export type CartItem = {
@@ -56,6 +57,7 @@ export function PosCart({ onVoucherApplied, activeVoucher }: PosCartProps) {
     const [isClient, setIsClient] = useState(false);
     const [receiptToPrint, setReceiptToPrint] = useState<ReceiptData | null>(null);
     const [voucherToPrint, setVoucherToPrint] = useState<VoucherData | null>(null);
+    const [invoiceToPrint, setInvoiceToPrint] = useState<InvoiceData | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
     const debouncedSearchTerm = useDebounce(searchTerm, 300);
     const [pendingTransactionId, setPendingTransactionId] = useState<string | null>(null);
@@ -142,16 +144,17 @@ export function PosCart({ onVoucherApplied, activeVoucher }: PosCartProps) {
 
     // This useEffect handles the printing after the state has been updated
     useEffect(() => {
-        if (receiptToPrint || voucherToPrint) {
+        if (receiptToPrint || voucherToPrint || invoiceToPrint) {
             // Timeout ensures the component has time to render before printing
             const timer = setTimeout(() => {
                 window.print();
                 setReceiptToPrint(null); // Reset after printing
                 setVoucherToPrint(null);
+                setInvoiceToPrint(null);
             }, 100); 
             return () => clearTimeout(timer);
         }
-    }, [receiptToPrint, voucherToPrint]);
+    }, [receiptToPrint, voucherToPrint, invoiceToPrint]);
     
     // Effect to refocus the search input after cart updates or dialog closes
     useEffect(() => {
@@ -414,23 +417,38 @@ export function PosCart({ onVoucherApplied, activeVoucher }: PosCartProps) {
             });
 
             if (status === 'Completed') {
-                const isAccessoryOnly = cart.every(item => item.type === 'accessory');
-                if (isAccessoryOnly) {
+                if (reseller) {
                     toast({
-                        title: "Pemakaian Aksesoris Dicatat",
-                        description: "Voucher pengambilan barang sedang dicetak."
+                        title: "Invoice Dibuat",
+                        description: `Invoice untuk ${reseller.name} sedang disiapkan.`
                     });
-                    setVoucherToPrint({
+                    setInvoiceToPrint({
                         items: cart,
+                        subtotal: receiptData.subtotal,
+                        discount: receiptData.discount,
+                        total: receiptData.total,
                         transactionId: transactionId,
-                        date: new Date(),
+                        reseller: reseller,
                     });
                 } else {
-                    toast({
-                        title: "Penjualan Berhasil",
-                        description: "Transaksi telah berhasil dicatat."
-                    });
-                    setReceiptToPrint({ ...receiptData, transactionId: transactionId });
+                    const isAccessoryOnly = cart.every(item => item.type === 'accessory');
+                    if (isAccessoryOnly) {
+                        toast({
+                            title: "Pemakaian Aksesoris Dicatat",
+                            description: "Voucher pengambilan barang sedang dicetak."
+                        });
+                        setVoucherToPrint({
+                            items: cart,
+                            transactionId: transactionId,
+                            date: new Date(),
+                        });
+                    } else {
+                        toast({
+                            title: "Penjualan Berhasil",
+                            description: "Transaksi telah berhasil dicatat."
+                        });
+                        setReceiptToPrint({ ...receiptData, transactionId: transactionId });
+                    }
                 }
             } else { // Pending
                 toast({
@@ -558,7 +576,10 @@ export function PosCart({ onVoucherApplied, activeVoucher }: PosCartProps) {
         </div>
          <div className="print-only-a4">
             {voucherToPrint && <AccessoryUsageVoucher ref={null} voucher={voucherToPrint} />}
+            {invoiceToPrint && <ResellerInvoice ref={null} invoice={invoiceToPrint} />}
         </div>
         </>
     );
 }
+
+    

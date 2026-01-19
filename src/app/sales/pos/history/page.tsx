@@ -1,4 +1,3 @@
-
 'use client'
 
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
@@ -16,7 +15,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-import { Calendar as CalendarIcon, Trash2, Printer, Clock } from 'lucide-react';
+import { Calendar as CalendarIcon, Trash2, Printer, Clock, FileText } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -26,7 +25,6 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
@@ -39,6 +37,7 @@ import { useRouter } from 'next/navigation';
 import { formatToWIB } from '@/lib/utils';
 import { apiFetch } from '@/lib/api';
 import { Skeleton } from '@/components/ui/skeleton';
+import { ResellerInvoice, type InvoiceData } from '@/app/components/reseller-invoice';
 
 
 type GroupedSale = {
@@ -50,6 +49,8 @@ type GroupedSale = {
     paymentMethod?: string;
     isAccessoryUsage: boolean;
     status?: string;
+    resellerId?: number;
+    resellerName?: string | null;
 }
 
 export default function PosHistoryPage() {
@@ -68,6 +69,7 @@ export default function PosHistoryPage() {
     
     const [receiptToPrint, setReceiptToPrint] = useState<ReceiptData | null>(null);
     const [voucherToPrint, setVoucherToPrint] = useState<VoucherData | null>(null);
+    const [invoiceToPrint, setInvoiceToPrint] = useState<InvoiceData | null>(null);
 
     const fetchHistory = useCallback(async () => {
         if (!date) return;
@@ -108,6 +110,8 @@ export default function PosHistoryPage() {
                     totalAmount: 0,
                     totalItems: 0,
                     isAccessoryUsage: false, // will be updated later
+                    resellerId: sale.resellerId,
+                    resellerName: sale.resellerName,
                 });
             }
 
@@ -189,7 +193,20 @@ export default function PosHistoryPage() {
             maxStock: 0, // Not relevant for reprint
         }));
 
-        if (group.isAccessoryUsage) {
+        if (group.resellerId && group.resellerName) {
+            setInvoiceToPrint({
+                items: cartItems,
+                subtotal: group.totalAmount,
+                discount: 0, // No discount info on reprint
+                total: group.totalAmount,
+                transactionId: group.transactionId,
+                reseller: {
+                    id: group.resellerId,
+                    name: group.resellerName,
+                    createdAt: '', // Not needed for printing
+                },
+            });
+        } else if (group.isAccessoryUsage) {
              setVoucherToPrint({
                 items: cartItems,
                 transactionId: group.transactionId,
@@ -211,15 +228,16 @@ export default function PosHistoryPage() {
     };
 
     useEffect(() => {
-        if (receiptToPrint || voucherToPrint) {
+        if (receiptToPrint || voucherToPrint || invoiceToPrint) {
             const timer = setTimeout(() => {
                 window.print();
                 setReceiptToPrint(null);
                 setVoucherToPrint(null);
+                setInvoiceToPrint(null);
             }, 100);
             return () => clearTimeout(timer);
         }
-    }, [receiptToPrint, voucherToPrint]);
+    }, [receiptToPrint, voucherToPrint, invoiceToPrint]);
 
 
     return (
@@ -309,8 +327,8 @@ export default function PosHistoryPage() {
                                             </TableCell>
                                             <TableCell>
                                                 <div className="font-medium text-sm">
-                                                    {group.isAccessoryUsage ? 'Pemakaian Aksesoris' : (group.items[0]?.productName || 'N/A')}
-                                                    {!group.isAccessoryUsage && ` ${group.items[0]?.variantName || ''}`}
+                                                    {group.isAccessoryUsage ? 'Pemakaian Aksesoris' : (group.resellerName ? `Reseller: ${group.resellerName}` : group.items[0]?.productName || 'N/A')}
+                                                    {!group.isAccessoryUsage && !group.resellerName && ` ${group.items[0]?.variantName || ''}`}
                                                 </div>
                                                 {group.items.length > 1 && (
                                                     <div className="text-xs text-muted-foreground">
@@ -328,7 +346,7 @@ export default function PosHistoryPage() {
                                             </TableCell>
                                             <TableCell className="text-center">
                                                 <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => {e.stopPropagation(); triggerPrint(group)}}>
-                                                    <Printer className="h-4 w-4" />
+                                                    {group.resellerId ? <FileText className="h-4 w-4" /> : <Printer className="h-4 w-4" />}
                                                 </Button>
                                                 <AlertDialog>
                                                     <AlertDialogTrigger asChild>
@@ -384,6 +402,7 @@ export default function PosHistoryPage() {
         </div>
         <div className="print-only-a4">
              {voucherToPrint && <AccessoryUsageVoucher ref={null} voucher={voucherToPrint} />}
+             {invoiceToPrint && <ResellerInvoice ref={null} invoice={invoiceToPrint} />}
         </div>
         </>
     );
