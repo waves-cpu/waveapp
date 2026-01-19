@@ -94,13 +94,7 @@ export function ResellerForm({ existingReseller }: ResellerFormProps) {
         <Card>
             <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)}>
-                    <CardHeader>
-                        <CardTitle>{isEditMode ? 'Ubah Data Reseller' : 'Tambah Reseller Baru'}</CardTitle>
-                        <CardDescription>
-                            {isEditMode ? 'Ubah informasi untuk reseller yang sudah ada.' : 'Lengkapi formulir di bawah ini untuk menambahkan reseller baru.'}
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-6">
+                    <CardContent className="pt-6 space-y-6">
                         <FormField
                             control={form.control}
                             name="name"
