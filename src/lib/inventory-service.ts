@@ -1056,54 +1056,6 @@ export async function performSale(
     return transaction();
 }
 
-export async function getActiveDiscountPrice(productId: string | number, variantId: string | number | null, category: string, channel: string): Promise<number | null> {
-    const now = new Date().toISOString();
-    
-    const isOnlineSale = ['shopee', 'tiktok', 'lazada'].some(c => channel.toLowerCase().includes(c));
-
-    let channelChecks = [channel.toLowerCase()];
-    if (isOnlineSale) {
-        channelChecks.push('online');
-    }
-    const channelPlaceholders = channelChecks.map(() => '?').join(',');
-
-    const getGroupStmt = db.prepare(`
-        SELECT id FROM discount_groups 
-        WHERE category = ? 
-        AND startDate <= ? 
-        AND endDate >= ? 
-        AND lower(channel) IN (${channelPlaceholders})
-    `);
-    
-    const groups = getGroupStmt.all(category, now, now, ...channelChecks) as {id: number}[];
-
-    if (groups.length === 0) return null;
-
-    const groupIds = groups.map(g => g.id);
-    const groupPlaceholders = groupIds.map(() => '?').join(',');
-
-    const getDiscountStmt = db.prepare(`
-        SELECT dp.discountedPrice
-        FROM discounted_products dp
-        JOIN discount_groups dg ON dp.groupId = dg.id
-        WHERE dp.groupId IN (${groupPlaceholders})
-          AND dp.productId = ?
-          AND (dp.variantId = ? OR (dp.variantId IS NULL AND ? IS NULL))
-        ORDER BY
-          CASE 
-            WHEN lower(dg.channel) = ? THEN 1 -- Prioritize specific channel
-            WHEN lower(dg.channel) = 'online' THEN 2 -- Then 'online' channel
-            ELSE 3
-          END
-        LIMIT 1
-    `);
-    
-    const params: (string|number|null)[] = [...groupIds, productId, variantId ?? null, variantId ?? null, channel.toLowerCase()];
-    const result = getDiscountStmt.get(...params) as { discountedPrice: number } | undefined;
-
-    return result ? result.discountedPrice : null;
-}
-
 export async function recordSaleWithReceipt(receiptData: Omit<ShippingReceipt, 'id'>, salesData: Omit<Sale, 'id'>[]) {
     const { awb } = receiptData;
 
@@ -1212,6 +1164,7 @@ export async function fetchAllSales(): Promise<Sale[]> {
         SELECT 
             s.id, s.transactionId, s.paymentMethod, s.productId, s.variantId, s.accessoryId, s.channel, s.quantity, s.priceAtSale, s.cogsAtSale, s.saleDate, s.voucherCode, s.resellerId, s.resellerName,
             COALESCE(p.name, a.name) as productName,
+            p.releaseDate as releaseDate,
             COALESCE(p.category, a.category) as productCategory,
             p.imageUrl as parentImageUrl,
             COALESCE(v.sku, p.sku, a.sku) as sku,
@@ -1229,7 +1182,10 @@ export async function fetchAllSales(): Promise<Sale[]> {
     return sales.map(s => ({
         ...s, 
         id: s.id.toString(),
-        saleDate: s.saleDate, // Keep as string from DB
+        productId: s.productId?.toString(),
+        variantId: s.variantId?.toString(),
+        accessoryId: s.accessoryId?.toString(),
+        saleDate: s.saleDate,
     }));
 }
 
@@ -1732,6 +1688,55 @@ export async function findDiscountGroupByVoucherCode(voucherCode: string, channe
     return { ...group, products, productCount: products.length };
 }
 
+export async function getActiveDiscountPrice(productId: string | number, variantId: string | number | null, category: string, channel: string): Promise<number | null> {
+    const now = new Date().toISOString();
+    
+    const isOnlineSale = ['shopee', 'tiktok', 'lazada'].some(c => channel.toLowerCase().includes(c));
+
+    let channelChecks = [channel.toLowerCase()];
+    if (isOnlineSale) {
+        channelChecks.push('online');
+    }
+    const channelPlaceholders = channelChecks.map(() => '?').join(',');
+
+    const getGroupStmt = db.prepare(`
+        SELECT id FROM discount_groups 
+        WHERE category = ? 
+        AND startDate <= ? 
+        AND endDate >= ? 
+        AND voucherCode IS NULL
+        AND lower(channel) IN (${channelPlaceholders})
+    `);
+    
+    const groups = getGroupStmt.all(category, now, now, ...channelChecks) as {id: number}[];
+
+    if (groups.length === 0) return null;
+
+    const groupIds = groups.map(g => g.id);
+    const groupPlaceholders = groupIds.map(() => '?').join(',');
+
+    const getDiscountStmt = db.prepare(`
+        SELECT dp.discountedPrice
+        FROM discounted_products dp
+        JOIN discount_groups dg ON dp.groupId = dg.id
+        WHERE dp.groupId IN (${groupPlaceholders})
+          AND dp.productId = ?
+          AND (dp.variantId = ? OR (dp.variantId IS NULL AND ? IS NULL))
+        ORDER BY
+          CASE 
+            WHEN lower(dg.channel) = ? THEN 1 -- Prioritize specific channel
+            WHEN lower(dg.channel) = 'online' THEN 2 -- Then 'online' channel
+            ELSE 3
+          END
+        LIMIT 1
+    `);
+    
+    const params: (string|number|null)[] = [...groupIds, productId, variantId ?? null, variantId ?? null, channel.toLowerCase()];
+    const result = getDiscountStmt.get(...params) as { discountedPrice: number } | undefined;
+
+    return result ? result.discountedPrice : null;
+}
+
 export async function addAccessory(accessory: Omit<Accessory, 'id' | 'history'>): Promise<string> {
     const addStmt = db.prepare(`
         INSERT INTO accessories (name, sku, category, stock, price, costPrice, unit, quantityPerUnit)
@@ -1958,6 +1963,7 @@ export async function getVoucherUsageAnalytics(groupId: number) {
     
 
     
+
 
 
 

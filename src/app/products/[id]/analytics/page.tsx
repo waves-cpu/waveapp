@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useMemo } from 'react';
@@ -65,6 +66,10 @@ function ProductAnalyticsPage() {
         if (!product || !financeSettingsLoaded) {
             return null;
         }
+        
+        const isOnlineSale = (channel: string) => {
+            return ['shopee', 'tiktok', 'lazada'].some(c => channel.toLowerCase().includes(c));
+        }
 
         let totalUnitsSold = 0;
         let totalRevenue = 0;
@@ -102,7 +107,14 @@ function ProductAnalyticsPage() {
             }
         });
         
-        const totalMarketplaceCut = isOnlineSale(salesByChannel) ? totalRevenue * (financeSettings.marketplaceFee / 100) : 0;
+        const onlineRevenue = Object.entries(salesByChannel).reduce((acc, [channel, data]) => {
+            if (isOnlineSale(channel)) {
+                return acc + data.revenue;
+            }
+            return acc;
+        }, 0);
+
+        const totalMarketplaceCut = onlineRevenue * (financeSettings.marketplaceFee / 100);
         const netProfit = totalGrossProfit - totalMarketplaceCut;
 
         const chartData = Object.entries(salesByChannel).map(([channel, data]) => ({
