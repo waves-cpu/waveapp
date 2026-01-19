@@ -91,46 +91,39 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm = false }: Disc
   
   const isEditMode = !!existingGroup;
 
-  const defaultValues = useMemo(() => {
-    if (!isEditMode || !existingGroup) {
-      return {
-        name: '',
-        category: '',
-        channel: '',
-        voucherCode: '',
-        dateRange: { from: new Date(), to: addDays(new Date(), 7) },
-        products: [],
-        discountType: undefined,
-        discountValue: undefined,
-        maxUses: undefined,
-        minPurchase: undefined,
-      };
-    }
-    return {
-      ...existingGroup,
-      dateRange: {
-        from: new Date(existingGroup.startDate),
-        to: new Date(existingGroup.endDate),
-      },
-      products: existingGroup.products || [],
-      discountType: existingGroup.discountType || undefined,
-      discountValue: existingGroup.discountValue || undefined,
-      maxUses: existingGroup.maxUses || undefined,
-      minPurchase: existingGroup.minPurchase || undefined,
-    };
-  }, [existingGroup, isEditMode]);
-
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
-    defaultValues: defaultValues,
+    defaultValues: {
+      name: '',
+      category: '',
+      channel: '',
+      voucherCode: '',
+      dateRange: { from: new Date(), to: addDays(new Date(), 7) },
+      products: [],
+      discountType: undefined,
+      discountValue: undefined,
+      maxUses: undefined,
+      minPurchase: undefined,
+    },
   });
 
   useEffect(() => {
-    // Reset the form whenever the memoized defaultValues change.
-    // This is key to populating the form correctly on edit without causing re-render loops.
-    form.reset(defaultValues);
-  }, [defaultValues, form]);
-
+    if (existingGroup) {
+      const formValues = {
+        ...existingGroup,
+        dateRange: {
+          from: new Date(existingGroup.startDate),
+          to: new Date(existingGroup.endDate),
+        },
+        products: existingGroup.products || [],
+        discountType: existingGroup.discountType || undefined,
+        discountValue: existingGroup.discountValue || undefined,
+        maxUses: existingGroup.maxUses || undefined,
+        minPurchase: existingGroup.minPurchase || undefined,
+      };
+      form.reset(formValues);
+    }
+  }, [existingGroup, form]);
 
   const { fields, replace } = useFieldArray({
       control: form.control,
@@ -173,15 +166,20 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm = false }: Disc
   }, [items, replace]);
 
   useEffect(() => {
-    // This effect should only run for NEW forms, not when editing.
-    if (!isEditMode && selectedCategory) {
-      if (selectedCategory !== 'Semua Kategori') {
-        populateProductsByCategory(selectedCategory);
-      } else {
-        replace([]);
+    if (selectedCategory) {
+      // For new forms, load products. For edit forms, only load if user MANUALLY changes category.
+      const isManualCategoryChangeOnEdit = isEditMode && form.formState.dirtyFields.category;
+      
+      if (!isEditMode || isManualCategoryChangeOnEdit) {
+          if (selectedCategory !== 'Semua Kategori') {
+              populateProductsByCategory(selectedCategory);
+          } else {
+              replace([]);
+          }
       }
     }
-  }, [selectedCategory, isEditMode, populateProductsByCategory, replace]);
+  }, [selectedCategory, isEditMode, form.formState.dirtyFields.category, populateProductsByCategory, replace]);
+
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsSubmitting(true);
