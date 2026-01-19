@@ -1,5 +1,6 @@
 
 
+
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -63,7 +64,7 @@ function ResellerList() {
     const filteredResellers = (resellers || [])
         .filter(r => r.name.toLowerCase().includes(searchTerm.toLowerCase()))
         .map(reseller => {
-            const resellerSales = allSales.filter(sale => sale.resellerId === reseller.id && sale.status === 'Completed');
+            const resellerSales = (allSales || []).filter(sale => sale.resellerId === reseller.id && sale.status === 'Completed');
             const totalOmzet = resellerSales.reduce((sum, sale) => sum + (sale.priceAtSale * sale.quantity), 0);
             return { ...reseller, transactionCount: resellerSales.length, totalOmzet };
         })
@@ -102,7 +103,7 @@ function ResellerList() {
                         {filteredResellers.length > 0 ? filteredResellers.map(reseller => (
                             <TableRow key={reseller.id}>
                                 <TableCell className="font-medium">
-                                    <Link href={`/sales/reseller/${reseller.id}`} className="hover:underline text-primary">
+                                    <Link href={`/sales/reseller/edit/${reseller.id}`} className="hover:underline text-primary">
                                         {reseller.name}
                                     </Link>
                                 </TableCell>
