@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import { useForm, useFieldArray } from 'react-hook-form';
@@ -30,7 +29,7 @@ import { translations } from '@/types/language';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { CalendarIcon, Edit, Eye, Store, Trash2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useEffect, useMemo, useState, useRef } from 'react';
+import { useEffect, useMemo, useState, useCallback } from 'react';
 import type { DiscountGroup, DiscountedProduct, InventoryItem, InventoryItemVariant } from '@/types';
 import { categories } from '@/types';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -92,11 +91,10 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm = false }: Disc
   const [isSubmitting, setIsSubmitting] = useState(false);
   const isEditMode = !!existingGroup;
   const [bulkPrice, setBulkPrice] = useState<number | ''>('');
-  const initialCategoryRef = useRef<string | null>(null);
-
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
+  
+  const defaultValues = useMemo(() => {
+    if (!existingGroup) {
+      return {
         name: '',
         category: '',
         channel: '',
@@ -107,24 +105,33 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm = false }: Disc
         discountValue: undefined,
         maxUses: undefined,
         minPurchase: undefined,
+      };
+    }
+    return {
+      ...existingGroup,
+      dateRange: {
+        from: new Date(existingGroup.startDate),
+        to: new Date(existingGroup.endDate),
       },
+      products: existingGroup.products || [],
+      discountType: existingGroup.discountType || undefined,
+      discountValue: existingGroup.discountValue || undefined,
+    };
+  }, [existingGroup]);
+
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
+    defaultValues: isEditMode ? {} : defaultValues, // Start empty in edit mode to await reset
   });
 
+  const { reset } = form;
+
   useEffect(() => {
-      if (existingGroup) {
-        initialCategoryRef.current = existingGroup.category;
-        form.reset({
-            ...existingGroup,
-            dateRange: {
-                from: new Date(existingGroup.startDate),
-                to: new Date(existingGroup.endDate),
-            },
-            products: existingGroup.products || [],
-            discountType: existingGroup.discountType || undefined,
-            discountValue: existingGroup.discountValue || undefined,
-        });
-      }
-  }, [existingGroup, form]);
+    if (isEditMode) {
+      reset(defaultValues);
+    }
+  }, [isEditMode, defaultValues, reset]);
+
   
   const { fields, replace } = useFieldArray({
       control: form.control,
@@ -133,13 +140,8 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm = false }: Disc
   
   const selectedCategory = form.watch('category');
 
-  useEffect(() => {
-    if (isEditMode && selectedCategory === initialCategoryRef.current) {
-        return;
-    }
-
-    if (!isVoucherForm && selectedCategory && selectedCategory !== 'Semua Kategori') {
-        const productsInCategory = items.filter(item => item.category === selectedCategory && !item.isArchived);
+  const populateProductsByCategory = useCallback((category: string) => {
+        const productsInCategory = items.filter(item => item.category === category && !item.isArchived);
         const discountedProducts: DiscountedProduct[] = [];
         
         productsInCategory.forEach(product => {
@@ -169,10 +171,20 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm = false }: Disc
             }
         });
         replace(discountedProducts);
+  }, [items, replace]);
+
+
+  useEffect(() => {
+    if (isEditMode) {
+        // Do nothing on initial load for edit mode, data is set by the main useEffect
+        return;
+    }
+    if (!isVoucherForm && selectedCategory && selectedCategory !== 'Semua Kategori') {
+        populateProductsByCategory(selectedCategory);
     } else if (!isVoucherForm) {
         replace([]);
     }
-  }, [selectedCategory, items, replace, isVoucherForm, isEditMode]);
+  }, [selectedCategory, isEditMode, isVoucherForm, populateProductsByCategory, replace]);
 
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
@@ -297,7 +309,14 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm = false }: Disc
                     render={({ field }) => (
                     <FormItem>
                         <FormLabel>Kategori Produk</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value}>
+                        <Select onValueChange={(value) => {
+                            field.onChange(value);
+                            if (!isVoucherForm && value && value !== 'Semua Kategori') {
+                                populateProductsByCategory(value);
+                            } else if (!isVoucherForm) {
+                                replace([]);
+                            }
+                        }} value={field.value} defaultValue={field.value}>
                         <FormControl>
                             <SelectTrigger>
                             <SelectValue placeholder="Pilih kategori untuk diskon" />
