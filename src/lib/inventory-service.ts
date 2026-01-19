@@ -959,7 +959,7 @@ export async function performSale(
         
         sales.forEach(sale => {
             const saleDate = new Date();
-            const saleDateString = formatToWIB(saleDate, "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
+            const saleDateString = saleDate.toISOString();
             
             let saleReason: string;
             let saleStatus: string;
@@ -1959,6 +1959,7 @@ export async function getVoucherUsageAnalytics(groupId: number) {
     
 
     
+
 
 
 
