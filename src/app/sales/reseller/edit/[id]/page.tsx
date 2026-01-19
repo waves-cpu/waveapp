@@ -1,4 +1,3 @@
-
 'use client';
 
 import { AppLayout } from "@/app/components/app-layout";
@@ -14,11 +13,7 @@ import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card"
 function EditResellerPageSkeleton() {
     return (
         <Card>
-            <CardHeader>
-                <Skeleton className="h-6 w-1/2" />
-                <Skeleton className="h-4 w-3/4" />
-            </CardHeader>
-            <CardContent className="space-y-6">
+            <CardContent className="pt-6 space-y-6">
                 <div className="space-y-2">
                     <Skeleton className="h-4 w-24" />
                     <Skeleton className="h-9 w-full" />
@@ -71,7 +66,7 @@ export default function EditResellerPage() {
                     <SidebarTrigger className="md:hidden" />
                     <h1 className="text-lg font-bold">Ubah Data Reseller</h1>
                 </div>
-                <div className="max-w-2xl mx-auto">
+                <div className="max-w-4xl mx-auto">
                     {pageLoading ? (
                         <EditResellerPageSkeleton />
                     ) : reseller ? (

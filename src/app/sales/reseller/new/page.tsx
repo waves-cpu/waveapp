@@ -1,4 +1,3 @@
-
 'use client';
 
 import { AppLayout } from "@/app/components/app-layout";
@@ -13,7 +12,7 @@ export default function NewResellerPage() {
                     <SidebarTrigger className="md:hidden" />
                     <h1 className="text-lg font-bold">Tambah Reseller Baru</h1>
                 </div>
-                <div className="max-w-2xl mx-auto">
+                <div className="max-w-4xl mx-auto">
                     <ResellerForm />
                 </div>
             </main>
