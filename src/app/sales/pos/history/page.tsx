@@ -1,3 +1,4 @@
+
 'use client'
 
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
@@ -365,13 +366,13 @@ export default function PosHistoryPage() {
                                             <TableCell className="text-right font-semibold text-sm">
                                                 {group.totalAmount.toLocaleString('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 })}
                                             </TableCell>
-                                            <TableCell className="text-center">
-                                                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => {e.stopPropagation(); triggerPrint(group)}}>
+                                            <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
+                                                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => triggerPrint(group)}>
                                                     {group.resellerId ? <FileText className="h-4 w-4" /> : <Printer className="h-4 w-4" />}
                                                 </Button>
                                                 <AlertDialog>
                                                     <AlertDialogTrigger asChild>
-                                                        <Button variant="ghost" size="icon" className="text-destructive h-8 w-8" onClick={(e) => e.stopPropagation()} disabled={group.status === 'Dibatalkan'}>
+                                                        <Button variant="ghost" size="icon" className="text-destructive h-8 w-8" disabled={group.status === 'Dibatalkan'}>
                                                             <Trash2 className="h-4 w-4" />
                                                         </Button>
                                                     </AlertDialogTrigger>
