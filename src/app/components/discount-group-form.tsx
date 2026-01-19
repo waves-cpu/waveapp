@@ -30,7 +30,7 @@ import { translations } from '@/types/language';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { CalendarIcon, Edit, Eye, Store, Trash2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useRef } from 'react';
 import type { DiscountGroup, DiscountedProduct, InventoryItem, InventoryItemVariant } from '@/types';
 import { categories } from '@/types';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -92,6 +92,7 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm = false }: Disc
   const [isSubmitting, setIsSubmitting] = useState(false);
   const isEditMode = !!existingGroup;
   const [bulkPrice, setBulkPrice] = useState<number | ''>('');
+  const isInitialEditLoad = useRef(true);
 
 
   const form = useForm<z.infer<typeof formSchema> & { isVoucherForm: boolean }>({
@@ -126,6 +127,14 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm = false }: Disc
   const selectedCategory = form.watch('category');
 
   useEffect(() => {
+    // In edit mode, we don't want this effect to run on the initial load because
+    // the form is already populated with the correct product data from `existingGroup`.
+    // It should only run if the user manually changes the category after loading.
+    if (isEditMode && isInitialEditLoad.current) {
+        isInitialEditLoad.current = false; // Mark initial load as complete
+        return; // Skip the effect on the first run in edit mode
+    }
+
     if (!isVoucherForm && selectedCategory && selectedCategory !== 'Semua Kategori') {
         const productsInCategory = items.filter(item => item.category === selectedCategory && !item.isArchived);
         const discountedProducts: DiscountedProduct[] = [];
@@ -162,7 +171,7 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm = false }: Disc
     } else {
         replace([]);
     }
-  }, [selectedCategory, items, replace, isVoucherForm, existingGroup]);
+  }, [selectedCategory, items, replace, isVoucherForm, existingGroup, isEditMode]);
 
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
