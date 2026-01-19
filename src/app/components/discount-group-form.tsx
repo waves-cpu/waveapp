@@ -29,7 +29,7 @@ import { translations } from '@/types/language';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { CalendarIcon, Edit, Eye, Store, Trash2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useEffect, useMemo, useState, useCallback } from 'react';
+import { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import type { DiscountGroup, DiscountedProduct, InventoryItem, InventoryItemVariant } from '@/types';
 import { categories } from '@/types';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -109,6 +109,7 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm = false }: Disc
   });
   
   const { reset } = form;
+  const isInitialMount = useRef(true);
 
   useEffect(() => {
     if (existingGroup) {
@@ -169,9 +170,14 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm = false }: Disc
 
 
   useEffect(() => {
-    if (!isEditMode && !isVoucherForm && selectedCategory && selectedCategory !== 'Semua Kategori') {
+    if (isEditMode && isInitialMount.current) {
+        isInitialMount.current = false;
+        return;
+    }
+
+    if (!isVoucherForm && selectedCategory && selectedCategory !== 'Semua Kategori') {
         populateProductsByCategory(selectedCategory);
-    } else if (!isVoucherForm && !isEditMode) {
+    } else if (!isVoucherForm) {
         replace([]);
     }
   }, [selectedCategory, isEditMode, isVoucherForm, populateProductsByCategory, replace]);
@@ -301,11 +307,6 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm = false }: Disc
                         <FormLabel>Kategori Produk</FormLabel>
                         <Select onValueChange={(value) => {
                             field.onChange(value);
-                            if (!isVoucherForm && value && value !== 'Semua Kategori') {
-                                populateProductsByCategory(value);
-                            } else if (!isVoucherForm) {
-                                replace([]);
-                            }
                         }} value={field.value} defaultValue={field.value}>
                         <FormControl>
                             <SelectTrigger>
@@ -356,7 +357,7 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm = false }: Disc
                             render={({ field }) => (
                             <FormItem>
                                 <FormLabel>Jenis Diskon</FormLabel>
-                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value}>
                                 <FormControl>
                                     <SelectTrigger>
                                     <SelectValue placeholder="Pilih jenis diskon" />
@@ -550,4 +551,3 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm = false }: Disc
     </Card>
   );
 }
-
