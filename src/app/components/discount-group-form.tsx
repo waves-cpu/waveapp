@@ -92,44 +92,40 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm = false }: Disc
   const isEditMode = !!existingGroup;
   const [bulkPrice, setBulkPrice] = useState<number | ''>('');
   
-  const defaultValues = useMemo(() => {
-    if (!existingGroup) {
-        return {
-            name: '',
-            category: '',
-            channel: '',
-            voucherCode: '',
-            dateRange: { from: new Date(), to: addDays(new Date(), 7) },
-            products: [],
-            discountType: undefined,
-            discountValue: undefined,
-            maxUses: undefined,
-            minPurchase: undefined,
-        };
-    }
-    return {
-        ...existingGroup,
-        id: existingGroup.id,
-        dateRange: {
-            from: new Date(existingGroup.startDate),
-            to: new Date(existingGroup.endDate),
-        },
-        products: existingGroup.products || [],
-        discountType: existingGroup.discountType || undefined,
-        discountValue: existingGroup.discountValue || undefined,
-    };
-  }, [existingGroup]);
-  
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
-    defaultValues,
+    defaultValues: {
+        name: '',
+        category: '',
+        channel: '',
+        voucherCode: '',
+        dateRange: { from: new Date(), to: addDays(new Date(), 7) },
+        products: [],
+        discountType: undefined,
+        discountValue: undefined,
+        maxUses: undefined,
+        minPurchase: undefined,
+    },
   });
   
   useEffect(() => {
     if (existingGroup) {
-        form.reset(defaultValues);
+        form.reset({
+            ...existingGroup,
+            id: existingGroup.id,
+            dateRange: {
+                from: new Date(existingGroup.startDate),
+                to: new Date(existingGroup.endDate),
+            },
+            products: existingGroup.products || [],
+            discountType: existingGroup.discountType || undefined,
+            discountValue: existingGroup.discountValue || undefined,
+            maxUses: existingGroup.maxUses || undefined,
+            minPurchase: existingGroup.minPurchase || undefined,
+        });
     }
-  }, [existingGroup, defaultValues, form]);
+  }, [existingGroup?.id, form.reset]);
+
 
   const { fields, replace } = useFieldArray({
       control: form.control,
@@ -551,5 +547,3 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm = false }: Disc
     </Card>
   );
 }
-
-    
