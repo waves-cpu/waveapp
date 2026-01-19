@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useForm, useFieldArray } from 'react-hook-form';
@@ -28,7 +29,7 @@ import { translations } from '@/types/language';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { CalendarIcon, Edit, Eye, Store, Trash2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useEffect, useMemo, useState, useCallback } from 'react';
+import { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import type { DiscountGroup, DiscountedProduct, InventoryItem, InventoryItemVariant } from '@/types';
 import { categories } from '@/types';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -66,8 +67,7 @@ const formSchema = z.object({
   maxUses: z.coerce.number().optional(),
   minPurchase: z.coerce.number().optional(),
 }).refine(data => {
-    // Make discountType and discountValue required only for vouchers
-    if (data.voucherCode) { // Simplified check
+    if (data.voucherCode) {
         return !!data.discountType && data.discountValue !== undefined;
     }
     return true;
@@ -91,22 +91,9 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm = false }: Disc
   const isEditMode = !!existingGroup;
   const [bulkPrice, setBulkPrice] = useState<number | ''>('');
   
-  const defaultValues = useMemo(() => {
-    if (isEditMode && existingGroup) {
-      return {
-        ...existingGroup,
-        dateRange: {
-          from: new Date(existingGroup.startDate),
-          to: new Date(existingGroup.endDate),
-        },
-        products: existingGroup.products || [],
-        discountType: existingGroup.discountType || undefined,
-        discountValue: existingGroup.discountValue || undefined,
-        maxUses: existingGroup.maxUses || undefined,
-        minPurchase: existingGroup.minPurchase || undefined,
-      };
-    }
-    return {
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
       name: '',
       category: '',
       channel: '',
@@ -117,19 +104,29 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm = false }: Disc
       discountValue: undefined,
       maxUses: undefined,
       minPurchase: undefined,
-    };
-  }, [existingGroup, isEditMode]);
-
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
-    defaultValues: defaultValues,
+    },
   });
 
+  const { reset } = form;
+  const initializedGroupId = useRef<number | undefined>();
+
   useEffect(() => {
-    if (isEditMode && existingGroup) {
-      form.reset(defaultValues);
+    if (existingGroup && existingGroup.id !== initializedGroupId.current) {
+        reset({
+            ...existingGroup,
+            dateRange: {
+                from: new Date(existingGroup.startDate),
+                to: new Date(existingGroup.endDate),
+            },
+            products: existingGroup.products || [],
+            discountType: existingGroup.discountType || undefined,
+            discountValue: existingGroup.discountValue || undefined,
+            maxUses: existingGroup.maxUses || undefined,
+            minPurchase: existingGroup.minPurchase || undefined,
+        });
+        initializedGroupId.current = existingGroup.id;
     }
-  }, [isEditMode, existingGroup, defaultValues, form]);
+  }, [existingGroup, reset]);
 
 
   const { fields, replace } = useFieldArray({
@@ -172,19 +169,22 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm = false }: Disc
         replace(discountedProducts);
   }, [items, replace]);
 
-
+  const isFirstRender = useRef(true);
   useEffect(() => {
     if (isEditMode) {
+        isFirstRender.current = false;
         return;
     }
-
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
     if (!isVoucherForm && selectedCategory && selectedCategory !== 'Semua Kategori') {
         populateProductsByCategory(selectedCategory);
     } else if (!isVoucherForm) {
         replace([]);
     }
   }, [selectedCategory, isEditMode, isVoucherForm, populateProductsByCategory, replace]);
-
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsSubmitting(true);
