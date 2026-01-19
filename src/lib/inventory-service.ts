@@ -2,7 +2,7 @@
 
 import { db as dbProxy } from './db';
 const db = dbProxy;
-import type { InventoryItem, AdjustmentHistory, InventoryItemVariant, Sale, Accessory, ShippingReceipt, BulkImportHistory, User, ReturnedItem, DiscountGroup, DiscountedProduct, PrintedReceiptCount, ShippingReceiptCounts } from '@/types';
+import type { InventoryItem, AdjustmentHistory, InventoryItemVariant, Sale, Accessory, ShippingReceipt, BulkImportHistory, User, ReturnedItem, DiscountGroup, DiscountedProduct, PrintedReceiptCount, ShippingReceiptCounts, Reseller } from '@/types';
 import { categories as allCategories } from '@/types';
 import { format as formatDate, parseISO, startOfDay, endOfDay, subDays } from 'date-fns';
 import { formatToWIB } from './utils';
@@ -30,6 +30,36 @@ export async function addUser(username: string, password: string): Promise<User>
 export async function fetchAllUsers(): Promise<Omit<User, 'password'>[]> {
     const users = db.prepare('SELECT id, username, role FROM users').all() as Omit<User, 'password'>[];
     return users;
+}
+
+// Reseller Functions
+export async function fetchResellers(): Promise<Reseller[]> {
+    const resellers = db.prepare('SELECT * FROM resellers ORDER BY name').all() as Reseller[];
+    return resellers;
+}
+
+export async function addReseller(reseller: Omit<Reseller, 'id' | 'createdAt'>): Promise<Reseller> {
+    const result = db.prepare('INSERT INTO resellers (name, phone, address, createdAt) VALUES (?, ?, ?, ?)')
+        .run(reseller.name, reseller.phone, reseller.address, new Date().toISOString());
+    const newReseller = db.prepare('SELECT * FROM resellers WHERE id = ?').get(result.lastInsertRowid) as Reseller;
+    return newReseller;
+}
+
+export async function getResellerById(id: number): Promise<Reseller | null> {
+    const reseller = db.prepare('SELECT * FROM resellers WHERE id = ?').get(id) as Reseller | undefined;
+    return reseller || null;
+}
+
+export async function updateReseller(id: number, reseller: Partial<Omit<Reseller, 'id' | 'createdAt'>>): Promise<Reseller> {
+    db.prepare('UPDATE resellers SET name = ?, phone = ?, address = ? WHERE id = ?')
+        .run(reseller.name, reseller.phone, reseller.address, id);
+    const updatedReseller = await getResellerById(id);
+    if (!updatedReseller) throw new Error('Failed to update or find reseller.');
+    return updatedReseller;
+}
+
+export async function deleteReseller(id: number): Promise<void> {
+    db.prepare('DELETE FROM resellers WHERE id = ?').run(id);
 }
 
 
@@ -895,6 +925,8 @@ export async function performSale(
         paymentMethod?: string,
         status?: string,
         voucherCode?: string;
+        resellerId?: number;
+        resellerName?: string;
     }
 ): Promise<{ newSale: Sale, updatedItem?: InventoryItem, updatedAccessory?: Accessory }[]> {
     const { sales, ...saleOptions } = options;
@@ -976,8 +1008,8 @@ export async function performSale(
             }
 
             const saleResult = db.prepare(`
-                INSERT INTO sales (transactionId, paymentMethod, productId, variantId, accessoryId, channel, quantity, priceAtSale, cogsAtSale, saleDate, status, parentSku, productCategory, parentImageUrl, voucherCode)
-                VALUES (@transactionId, @paymentMethod, @productId, @variantId, @accessoryId, @channel, @quantity, @priceAtSale, @cogsAtSale, @saleDate, @status, @parentSku, @productCategory, @parentImageUrl, @voucherCode)
+                INSERT INTO sales (transactionId, paymentMethod, productId, variantId, accessoryId, channel, quantity, priceAtSale, cogsAtSale, saleDate, status, parentSku, productCategory, parentImageUrl, voucherCode, resellerId, resellerName)
+                VALUES (@transactionId, @paymentMethod, @productId, @variantId, @accessoryId, @channel, @quantity, @priceAtSale, @cogsAtSale, @saleDate, @status, @parentSku, @productCategory, @parentImageUrl, @voucherCode, @resellerId, @resellerName)
             `).run({
                 transactionId: saleOptions?.transactionId || `tx-${Date.now()}`, 
                 paymentMethod: saleOptions?.paymentMethod, 
@@ -993,13 +1025,15 @@ export async function performSale(
                 parentSku: parentProduct?.sku,
                 productCategory: parentProduct?.category,
                 parentImageUrl: parentProduct?.imageUrl,
-                voucherCode: saleOptions.voucherCode || null
+                voucherCode: saleOptions.voucherCode || null,
+                resellerId: saleOptions.resellerId || null,
+                resellerName: saleOptions.resellerName || null,
             });
             
             const newSaleId = saleResult.lastInsertRowid;
             const newSale = db.prepare(`
                 SELECT 
-                    s.id, s.transactionId, s.paymentMethod, s.productId, s.variantId, s.accessoryId, s.channel, s.quantity, s.priceAtSale, s.cogsAtSale, s.saleDate, s.voucherCode,
+                    s.id, s.transactionId, s.paymentMethod, s.productId, s.variantId, s.accessoryId, s.channel, s.quantity, s.priceAtSale, s.cogsAtSale, s.saleDate, s.voucherCode, s.resellerId, s.resellerName,
                     COALESCE(p.name, a.name) as productName,
                     COALESCE(p.category, a.category) as productCategory,
                     p.imageUrl as parentImageUrl,
@@ -1177,7 +1211,7 @@ export async function fetchSingleAccessory(accessoryId: string): Promise<Accesso
 export async function fetchAllSales(): Promise<Sale[]> {
      const salesQuery = db.prepare(`
         SELECT 
-            s.id, s.transactionId, s.paymentMethod, s.productId, s.variantId, s.accessoryId, s.channel, s.quantity, s.priceAtSale, s.cogsAtSale, s.saleDate, s.voucherCode,
+            s.id, s.transactionId, s.paymentMethod, s.productId, s.variantId, s.accessoryId, s.channel, s.quantity, s.priceAtSale, s.cogsAtSale, s.saleDate, s.voucherCode, s.resellerId, s.resellerName,
             COALESCE(p.name, a.name) as productName,
             COALESCE(p.category, a.category) as productCategory,
             p.imageUrl as parentImageUrl,
@@ -1852,13 +1886,14 @@ export async function getVoucherUsageAnalytics(groupId: number) {
         SELECT 
             transactionId, 
             channel,
+            resellerName,
             saleDate, 
             SUM(priceAtSale * quantity) as totalSale
         FROM sales 
         WHERE voucherCode = ? 
-        GROUP BY transactionId, channel, saleDate
+        GROUP BY transactionId, channel, saleDate, resellerName
         ORDER BY saleDate DESC
-    `).all(group.voucherCode) as { transactionId: string; channel: string; saleDate: string; totalSale: number }[];
+    `).all(group.voucherCode) as { transactionId: string; channel: string; resellerName: string | null; saleDate: string; totalSale: number }[];
 
     const totalDiscountResult = db.prepare(`
         SELECT 
@@ -1924,6 +1959,7 @@ export async function getVoucherUsageAnalytics(groupId: number) {
     
 
     
+
 
 
 

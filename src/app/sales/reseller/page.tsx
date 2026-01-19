@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -59,7 +60,7 @@ function ResellerList() {
         }
     };
     
-    const filteredResellers = resellers
+    const filteredResellers = (resellers || [])
         .filter(r => r.name.toLowerCase().includes(searchTerm.toLowerCase()))
         .map(reseller => {
             const resellerSales = allSales.filter(sale => sale.resellerId === reseller.id && sale.status === 'Completed');

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback, useMemo } from 'react';
-import type { InventoryItem, AdjustmentHistory, InventoryItemVariant, Sale, Accessory, ShippingReceipt, BulkImportHistory, User, ReturnedItem, DiscountGroup, DiscountedProduct, PrintedReceiptCount, ShippingReceiptCounts } from '@/types';
+import type { InventoryItem, AdjustmentHistory, InventoryItemVariant, Sale, Accessory, ShippingReceipt, BulkImportHistory, User, ReturnedItem, DiscountGroup, DiscountedProduct, PrintedReceiptCount, ShippingReceiptCounts, Reseller } from '@/types';
 import { categories as allCategories } from '@/types';
 import { useToast } from './use-toast';
 import { apiFetch } from '@/lib/api';
@@ -66,6 +66,12 @@ interface InventoryContextType {
   getDiscountGroup: (id: number) => Promise<DiscountGroup | null>;
   deleteDiscountGroup: (id: number) => Promise<void>;
   getActiveDiscountPrice: (productId: string | number, variantId: string | number | null, category: string, channel: string) => Promise<number | null>;
+  // Resellers
+  resellers: Reseller[];
+  addReseller: (reseller: Omit<Reseller, 'id' | 'createdAt'>) => Promise<Reseller>;
+  updateReseller: (id: number, reseller: Partial<Omit<Reseller, 'id' | 'createdAt'>>) => Promise<Reseller>;
+  deleteReseller: (id: number) => Promise<void>;
+  getResellerById: (id: number) => Promise<Reseller | null>;
 }
 
 const InventoryContext = createContext<InventoryContextType | undefined>(undefined);
@@ -94,6 +100,11 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
         queryFn: () => apiFetch<DiscountGroup[]>('/api/finance/discounts'),
     });
     
+    const { data: resellers, isLoading: isResellersLoading } = useQuery<Reseller[]>({
+        queryKey: ['resellers'],
+        queryFn: () => apiFetch('/api/resellers'),
+    });
+
     const [pendingTransaction, setPendingTransaction] = useState<Sale[] | null>(null);
     useEffect(() => {
         const storedPending = sessionStorage.getItem('pendingTransaction');
@@ -102,7 +113,7 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
         }
     }, []);
 
-    const loading = isInventoryLoading || isSalesLoading || isReceiptsLoading || isDiscountsLoading;
+    const loading = isInventoryLoading || isSalesLoading || isReceiptsLoading || isDiscountsLoading || isResellersLoading;
 
     const useApiMutation = <TData, TVariables>(
         mutationFn: (variables: TVariables) => Promise<TData>,
@@ -117,7 +128,7 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
             onSuccess: () => {
                 const keysToInvalidate: (string | number)[][] = [
                     ['inventory'], ['sales'], 
-                    ['shippingReceipts'], ['discountGroups'], 
+                    ['shippingReceipts'], ['discountGroups'], ['resellers'],
                     ...(options.invalidateQueries || [])
                 ];
                 keysToInvalidate.forEach(key => queryClient.invalidateQueries({ queryKey: key }));
@@ -190,7 +201,10 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
     const addDiscountGroupMutation = useApiMutation((group: any) => apiFetch('/api/finance/discounts', { method: 'POST', body: group }));
     const editDiscountGroupMutation = useApiMutation((vars: { id: number, group: any }) => apiFetch(`/api/finance/discounts/${vars.id}`, { method: 'PUT', body: vars.group }));
     const deleteDiscountGroupMutation = useApiMutation((id: number) => apiFetch(`/api/finance/discounts/${id}`, { method: 'DELETE' }));
-    
+    const addResellerMutation = useApiMutation((reseller: any) => apiFetch('/api/resellers', { method: 'POST', body: reseller }));
+    const updateResellerMutation = useApiMutation((vars: { id: number, reseller: any }) => apiFetch(`/api/resellers/${vars.id}`, { method: 'PUT', body: vars.reseller }));
+    const deleteResellerMutation = useApiMutation((id: number) => apiFetch(`/api/resellers/${id}`, { method: 'DELETE' }));
+
     const getHistory = useCallback(async (itemId: string) => (inventoryData?.products.find(i => i.id === itemId)?.history || []), [inventoryData]);
     const getItem = useCallback((itemId: string) => (inventoryData?.products || []).find(i => i.id === itemId), [inventoryData]);
     const fetchItems = useCallback(() => queryClient.invalidateQueries({ queryKey: ['inventory'] }), [queryClient]);
@@ -211,6 +225,7 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
     const fetchDiscountGroups = useCallback(() => queryClient.invalidateQueries({ queryKey: ['discountGroups'] }), [queryClient]);
     const getDiscountGroup = useCallback(async (id: number) => apiFetch(`/api/finance/discounts/${id}`), []);
     const getActiveDiscountPrice = useCallback(async (productId: any, variantId: any, category: any, channel: any) => (await apiFetch('/api/finance/discounts/get-active-price', { method: 'POST', body: { productId, variantId, category, channel } })).price, []);
+    const getResellerById = useCallback(async (id: number) => apiFetch(`/api/resellers/${id}`), []);
 
   return (
     <InventoryContext.Provider value={{ 
@@ -219,6 +234,7 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
         allSales: allSales || [],
         allShippingReceipts: allShippingReceipts || [],
         discountGroups: discountGroups || [],
+        resellers: resellers || [],
         loading,
         categories,
         pendingTransaction, loadPendingTransaction, clearPendingTransaction, findProductBySku,
@@ -250,6 +266,10 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
         addDiscountGroup: (group: any) => addDiscountGroupMutation.mutateAsync(group),
         editDiscountGroup: (id: number, group: any) => editDiscountGroupMutation.mutateAsync({ id, group }),
         deleteDiscountGroup: (id: number) => deleteDiscountGroupMutation.mutateAsync(id),
+        addReseller: (reseller: any) => addResellerMutation.mutateAsync(reseller),
+        updateReseller: (id: number, reseller: any) => updateResellerMutation.mutateAsync({ id, reseller }),
+        deleteReseller: (id: number) => deleteResellerMutation.mutateAsync(id),
+        getResellerById,
         // Memoized functions
         getHistory,
         getItem,
