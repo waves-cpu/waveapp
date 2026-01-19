@@ -1,4 +1,3 @@
-
 'use client'
 
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
@@ -54,6 +53,19 @@ type GroupedSale = {
     resellerId?: number;
     resellerName?: string | null;
 }
+
+const getStatusVariant = (status?: string): "default" | "secondary" | "destructive" | "outline" | "success" | "warning" => {
+    switch (status?.toLowerCase()) {
+        case 'completed':
+            return 'success';
+        case 'dibatalkan':
+            return 'destructive';
+        case 'pending':
+            return 'warning';
+        default:
+            return 'outline';
+    }
+};
 
 export default function PosHistoryPage() {
     const { cancelSaleTransaction, clearPosTransactions, loadPendingTransaction, fetchItems } = useInventory();
@@ -135,8 +147,8 @@ export default function PosHistoryPage() {
         try {
             await cancelSaleTransaction(transactionId);
             toast({
-                title: "Transaksi Dihapus & Stok Dikembalikan",
-                description: "Transaksi telah berhasil dihapus dari riwayat.",
+                title: "Transaksi Dibatalkan",
+                description: "Stok telah dikembalikan dan transaksi ditandai sebagai 'Dibatalkan'.",
             });
             await fetchHistory();
             await fetchItems();
@@ -306,6 +318,7 @@ export default function PosHistoryPage() {
                                     <TableHead className="text-xs">Waktu</TableHead>
                                     <TableHead className="text-xs">Detail Transaksi</TableHead>
                                     <TableHead className="text-xs">Metode Bayar</TableHead>
+                                    <TableHead className="text-xs">Status</TableHead>
                                     <TableHead className="text-right text-xs">Total</TableHead>
                                     <TableHead className="text-center text-xs">Aksi</TableHead>
                                 </TableRow>
@@ -316,6 +329,7 @@ export default function PosHistoryPage() {
                                         <TableRow key={i}>
                                             <TableCell><Skeleton className="h-4 w-20" /></TableCell>
                                             <TableCell><Skeleton className="h-4 w-48" /></TableCell>
+                                            <TableCell><Skeleton className="h-4 w-24" /></TableCell>
                                             <TableCell><Skeleton className="h-4 w-24" /></TableCell>
                                             <TableCell className="text-right"><Skeleton className="h-4 w-20 ml-auto" /></TableCell>
                                             <TableCell className="text-center"><Skeleton className="h-8 w-16 mx-auto" /></TableCell>
@@ -343,6 +357,11 @@ export default function PosHistoryPage() {
                                                     {group.isAccessoryUsage ? 'Pemakaian Internal' : group.paymentMethod || 'N/A'}
                                                 </Badge>
                                             </TableCell>
+                                            <TableCell>
+                                                <Badge variant={getStatusVariant(group.status)}>
+                                                    {group.status || 'Completed'}
+                                                </Badge>
+                                            </TableCell>
                                             <TableCell className="text-right font-semibold text-sm">
                                                 {group.totalAmount.toLocaleString('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 })}
                                             </TableCell>
@@ -352,21 +371,21 @@ export default function PosHistoryPage() {
                                                 </Button>
                                                 <AlertDialog>
                                                     <AlertDialogTrigger asChild>
-                                                        <Button variant="ghost" size="icon" className="text-destructive h-8 w-8" onClick={(e) => e.stopPropagation()}>
+                                                        <Button variant="ghost" size="icon" className="text-destructive h-8 w-8" onClick={(e) => e.stopPropagation()} disabled={group.status === 'Dibatalkan'}>
                                                             <Trash2 className="h-4 w-4" />
                                                         </Button>
                                                     </AlertDialogTrigger>
                                                     <AlertDialogContent>
                                                         <AlertDialogHeader>
-                                                            <AlertDialogTitle>Hapus Transaksi Ini?</AlertDialogTitle>
+                                                            <AlertDialogTitle>Batalkan Transaksi Ini?</AlertDialogTitle>
                                                             <AlertDialogDescription>
-                                                                Tindakan ini akan menghapus catatan transaksi dan mengembalikan stok. Aksi ini tidak dapat diurungkan.
+                                                                Stok untuk item dalam transaksi ini akan dikembalikan. Transaksi akan ditandai sebagai 'Dibatalkan' dan tidak dapat diubah lagi.
                                                             </AlertDialogDescription>
                                                         </AlertDialogHeader>
                                                         <AlertDialogFooter>
                                                             <AlertDialogCancel>Batal</AlertDialogCancel>
                                                             <AlertDialogAction onClick={() => handleCancelTransaction(group.transactionId)} className="bg-destructive hover:bg-destructive/90">
-                                                                Ya, Hapus & Kembalikan Stok
+                                                                Ya, Batalkan Transaksi
                                                             </AlertDialogAction>
                                                         </AlertDialogFooter>
                                                     </AlertDialogContent>
@@ -376,7 +395,7 @@ export default function PosHistoryPage() {
                                     ))
                                 ) : (
                                      <TableRow>
-                                        <TableCell colSpan={5} className="h-48 text-center">
+                                        <TableCell colSpan={6} className="h-48 text-center">
                                             <div className="flex flex-col items-center justify-center gap-4 text-muted-foreground">
                                                 <HistoryIcon className="h-12 w-12" />
                                                 <p className="font-semibold text-sm">Tidak Ada Transaksi</p>
@@ -410,3 +429,4 @@ export default function PosHistoryPage() {
     );
 }
     
+
