@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { AppLayout } from '@/app/components/app-layout';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Users, Trash2, Edit } from 'lucide-react';
+import { PlusCircle, Users, Trash2, Edit, Settings } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { useInventory } from '@/hooks/use-inventory';
 import type { Reseller, Sale } from '@/types';
@@ -160,12 +160,20 @@ export default function ResellerPage() {
                         <SidebarTrigger className="md:hidden" />
                         <h1 className="text-lg font-bold">Manajemen Reseller</h1>
                     </div>
-                    <Button asChild>
-                        <Link href="/sales/reseller/new">
-                            <PlusCircle className="mr-2 h-4 w-4" />
-                            Tambah Reseller Baru
-                        </Link>
-                    </Button>
+                    <div className="flex items-center gap-2">
+                         <Button asChild variant="outline">
+                            <Link href="/sales/settings/invoice">
+                                <Settings className="mr-2 h-4 w-4" />
+                                Pengaturan Invoice
+                            </Link>
+                        </Button>
+                        <Button asChild>
+                            <Link href="/sales/reseller/new">
+                                <PlusCircle className="mr-2 h-4 w-4" />
+                                Tambah Reseller Baru
+                            </Link>
+                        </Button>
+                    </div>
                 </div>
                 
                 <ResellerList />
