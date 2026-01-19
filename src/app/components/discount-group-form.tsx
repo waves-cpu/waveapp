@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useForm, useFieldArray } from 'react-hook-form';
@@ -29,7 +28,7 @@ import { translations } from '@/types/language';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { CalendarIcon, Edit, Eye, Store, Trash2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useEffect, useMemo, useState, useCallback, useRef } from 'react';
+import { useEffect, useMemo, useState, useCallback } from 'react';
 import type { DiscountGroup, DiscountedProduct, InventoryItem, InventoryItemVariant } from '@/types';
 import { categories } from '@/types';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -92,39 +91,45 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm = false }: Disc
   const isEditMode = !!existingGroup;
   const [bulkPrice, setBulkPrice] = useState<number | ''>('');
   
+  const defaultValues = useMemo(() => {
+    if (isEditMode && existingGroup) {
+      return {
+        ...existingGroup,
+        dateRange: {
+          from: new Date(existingGroup.startDate),
+          to: new Date(existingGroup.endDate),
+        },
+        products: existingGroup.products || [],
+        discountType: existingGroup.discountType || undefined,
+        discountValue: existingGroup.discountValue || undefined,
+        maxUses: existingGroup.maxUses || undefined,
+        minPurchase: existingGroup.minPurchase || undefined,
+      };
+    }
+    return {
+      name: '',
+      category: '',
+      channel: '',
+      voucherCode: '',
+      dateRange: { from: new Date(), to: addDays(new Date(), 7) },
+      products: [],
+      discountType: undefined,
+      discountValue: undefined,
+      maxUses: undefined,
+      minPurchase: undefined,
+    };
+  }, [existingGroup, isEditMode]);
+
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
-    defaultValues: {
-        name: '',
-        category: '',
-        channel: '',
-        voucherCode: '',
-        dateRange: { from: new Date(), to: addDays(new Date(), 7) },
-        products: [],
-        discountType: undefined,
-        discountValue: undefined,
-        maxUses: undefined,
-        minPurchase: undefined,
-    },
+    defaultValues: defaultValues,
   });
-  
+
   useEffect(() => {
-    if (existingGroup) {
-        form.reset({
-            ...existingGroup,
-            id: existingGroup.id,
-            dateRange: {
-                from: new Date(existingGroup.startDate),
-                to: new Date(existingGroup.endDate),
-            },
-            products: existingGroup.products || [],
-            discountType: existingGroup.discountType || undefined,
-            discountValue: existingGroup.discountValue || undefined,
-            maxUses: existingGroup.maxUses || undefined,
-            minPurchase: existingGroup.minPurchase || undefined,
-        });
+    if (isEditMode && existingGroup) {
+      form.reset(defaultValues);
     }
-  }, [existingGroup?.id, form.reset]);
+  }, [isEditMode, existingGroup, defaultValues, form]);
 
 
   const { fields, replace } = useFieldArray({
