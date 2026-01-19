@@ -13,6 +13,10 @@ import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card"
 function EditResellerPageSkeleton() {
     return (
         <Card>
+             <CardHeader>
+                <Skeleton className="h-6 w-1/2" />
+                <Skeleton className="h-4 w-3/4" />
+            </CardHeader>
             <CardContent className="pt-6 space-y-6">
                 <div className="space-y-2">
                     <Skeleton className="h-4 w-24" />
@@ -62,11 +66,10 @@ export default function EditResellerPage() {
     return (
         <AppLayout>
             <main className="flex-1 p-4 md:p-10">
-                <div className="flex items-center gap-4 mb-6">
+                 <div className="flex items-center gap-4 mb-6">
                     <SidebarTrigger className="md:hidden" />
-                    <h1 className="text-lg font-bold">Ubah Data Reseller</h1>
                 </div>
-                <div className="max-w-4xl mx-auto">
+                <div className="max-w-2xl mx-auto">
                     {pageLoading ? (
                         <EditResellerPageSkeleton />
                     ) : reseller ? (
