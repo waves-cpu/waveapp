@@ -26,7 +26,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { CalendarIcon } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useRef } from 'react';
 import type { DiscountGroup, DiscountedProduct, InventoryItem } from '@/types';
 import { categories } from '@/types';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -36,8 +36,8 @@ import { format } from 'date-fns';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import Image from 'next/image';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Label } from "@/components/ui/label";
 
-// Schema for the main details form
 const detailsSchema = z.object({
   id: z.number().optional(),
   name: z.string().min(2, { message: 'Nama grup diskon minimal 2 karakter.' }),
@@ -48,7 +48,6 @@ const detailsSchema = z.object({
   }),
 });
 
-// Schema for the pricing form
 const pricingSchema = z.object({
     products: z.array(z.object({
         productId: z.number(),
@@ -74,27 +73,27 @@ export function DiscountGroupForm({ existingGroup }: DiscountGroupEditorProps) {
     const [isSavingDetails, setIsSavingDetails] = useState(false);
     const [isSavingPrices, setIsSavingPrices] = useState(false);
     const [bulkPrice, setBulkPrice] = useState<number | ''>('');
+    const initializedRef = useRef(false);
     
-    // Form for Details Card
+    // Memoize the default values to stabilize them
+    const defaultDetails = useMemo(() => ({
+        id: existingGroup.id,
+        name: existingGroup.name,
+        channel: existingGroup.channel,
+        dateRange: {
+            from: new Date(existingGroup.startDate),
+            to: new Date(existingGroup.endDate),
+        }
+    }), [existingGroup]);
+    
     const detailsForm = useForm<z.infer<typeof detailsSchema>>({
         resolver: zodResolver(detailsSchema),
-        defaultValues: {
-            id: existingGroup.id,
-            name: existingGroup.name,
-            channel: existingGroup.channel,
-            dateRange: {
-                from: new Date(existingGroup.startDate),
-                to: new Date(existingGroup.endDate),
-            }
-        }
+        defaultValues: defaultDetails,
     });
     
-    // Form for Pricing Card
     const pricingForm = useForm<z.infer<typeof pricingSchema>>({
         resolver: zodResolver(pricingSchema),
-        defaultValues: {
-            products: []
-        }
+        defaultValues: { products: [] }
     });
 
     const { fields, replace } = useFieldArray({
@@ -102,44 +101,47 @@ export function DiscountGroupForm({ existingGroup }: DiscountGroupEditorProps) {
         name: "products"
     });
 
-    // Effect to populate the pricing form when the component mounts
     useEffect(() => {
-        const productsInCategory = items.filter(item => item.category === existingGroup.category && !item.isArchived);
-        const productList: DiscountedProduct[] = [];
+        if (existingGroup && !initializedRef.current) {
+            detailsForm.reset(defaultDetails);
+            
+            const productsInCategory = items.filter(item => item.category === existingGroup.category && !item.isArchived);
+            const productList: DiscountedProduct[] = [];
 
-        productsInCategory.forEach(product => {
-            const baseProductInfo = {
-                productId: Number(product.id),
-                productName: product.name,
-                sku: product.sku,
-                imageUrl: product.imageUrl,
-            };
+            productsInCategory.forEach(product => {
+                const baseProductInfo = {
+                    productId: Number(product.id),
+                    productName: product.name,
+                    sku: product.sku,
+                    imageUrl: product.imageUrl,
+                };
 
-            if (product.variants && product.variants.length > 0) {
-                product.variants.forEach(variant => {
-                    const existingDiscount = existingGroup.products.find(p => p.variantId === Number(variant.id));
+                if (product.variants && product.variants.length > 0) {
+                    product.variants.forEach(variant => {
+                        const existingDiscount = existingGroup.products.find(p => p.variantId === Number(variant.id));
+                        productList.push({
+                            ...baseProductInfo,
+                            variantId: Number(variant.id),
+                            variantName: variant.name,
+                            sku: variant.sku,
+                            originalPrice: variant.price,
+                            discountedPrice: existingDiscount ? existingDiscount.discountedPrice : variant.price,
+                        });
+                    });
+                } else {
+                    const existingDiscount = existingGroup.products.find(p => p.productId === Number(product.id) && !p.variantId);
                     productList.push({
                         ...baseProductInfo,
-                        variantId: Number(variant.id),
-                        variantName: variant.name,
-                        sku: variant.sku,
-                        originalPrice: variant.price,
-                        discountedPrice: existingDiscount ? existingDiscount.discountedPrice : variant.price,
+                        originalPrice: product.price ?? null,
+                        discountedPrice: existingDiscount ? existingDiscount.discountedPrice : (product.price || 0),
                     });
-                });
-            } else {
-                 const existingDiscount = existingGroup.products.find(p => p.productId === Number(product.id) && !p.variantId);
-                 productList.push({
-                    ...baseProductInfo,
-                    originalPrice: product.price ?? null,
-                    discountedPrice: existingDiscount ? existingDiscount.discountedPrice : (product.price || 0),
-                });
-            }
-        });
-        
-        replace(productList);
-
-    }, [items, existingGroup, replace]);
+                }
+            });
+            replace(productList);
+            pricingForm.reset({ products: productList });
+            initializedRef.current = true;
+        }
+    }, [existingGroup, items, replace, detailsForm, pricingForm, defaultDetails]);
 
 
     async function onSaveDetails(values: z.infer<typeof detailsSchema>) {
