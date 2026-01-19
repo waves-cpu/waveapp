@@ -65,6 +65,14 @@ const createSchema = () => {
         role TEXT NOT NULL DEFAULT 'user'
     );
 
+    CREATE TABLE IF NOT EXISTS resellers (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        phone TEXT,
+        address TEXT,
+        createdAt TEXT NOT NULL
+    );
+
     CREATE TABLE IF NOT EXISTS products (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT NOT NULL,
@@ -143,6 +151,8 @@ const createSchema = () => {
         productId INTEGER,
         variantId INTEGER,
         accessoryId INTEGER,
+        resellerId INTEGER,
+        resellerName TEXT,
         parentSku TEXT,
         parentImageUrl TEXT,
         productCategory TEXT,
@@ -155,7 +165,8 @@ const createSchema = () => {
         voucherCode TEXT,
         FOREIGN KEY (productId) REFERENCES products(id) ON DELETE CASCADE,
         FOREIGN KEY (variantId) REFERENCES variants(id) ON DELETE CASCADE,
-        FOREIGN KEY (accessoryId) REFERENCES accessories(id) ON DELETE CASCADE
+        FOREIGN KEY (accessoryId) REFERENCES accessories(id) ON DELETE CASCADE,
+        FOREIGN KEY (resellerId) REFERENCES resellers(id) ON DELETE SET NULL
     );
 
     CREATE TABLE IF NOT EXISTS settings (
@@ -283,6 +294,9 @@ const runMigrations = () => {
     addColumn('sales', 'productCategory', 'TEXT');
     addColumn('sales', 'parentImageUrl', 'TEXT');
     addColumn('sales', 'voucherCode', 'TEXT');
+    addColumn('sales', 'resellerId', 'INTEGER');
+    addColumn('sales', 'resellerName', 'TEXT');
+
 
     // Product Migrations
     addColumn('products', 'costPrice', 'REAL');

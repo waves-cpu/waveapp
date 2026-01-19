@@ -101,6 +101,8 @@ export interface Sale {
   productId?: string;
   variantId?: string;
   accessoryId?: string;
+  resellerId?: number;
+  resellerName?: string;
   parentSku?: string;
   channel: string;
   quantity: number;
@@ -199,4 +201,12 @@ export interface Voucher extends DiscountGroup {
     voucherCode: string;
     discountType: 'fixed' | 'percentage';
     discountValue: number;
+}
+
+export interface Reseller {
+    id: number;
+    name: string;
+    phone?: string;
+    address?: string;
+    createdAt: string;
 }
