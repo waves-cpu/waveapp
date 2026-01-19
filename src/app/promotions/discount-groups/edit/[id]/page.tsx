@@ -1,7 +1,7 @@
 'use client';
 
 import { AppLayout } from "@/app/components/app-layout";
-import { DiscountGroupEditor } from "@/app/components/discount-group-form";
+import { DiscountGroupForm } from "@/app/components/discount-group-form";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { useInventory } from "@/hooks/use-inventory";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -54,7 +54,7 @@ export default function EditDiscountGroupPage() {
                     {pageLoading ? (
                         <EditDiscountPageSkeleton />
                     ) : group ? (
-                        <DiscountGroupEditor existingGroup={group} />
+                        <DiscountGroupForm existingGroup={group} isVoucherForm={false} />
                     ) : (
                         <p>Grup diskon tidak ditemukan.</p>
                     )}
