@@ -2,44 +2,41 @@
 
 'use client';
 
-import React, { useState, useMemo } from 'react';
-import { useInventory } from '@/hooks/use-inventory';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableFooter,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import { AppLayout } from '@/app/components/app-layout';
+import { SidebarTrigger } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
-import { Search, Calendar as CalendarIcon, Eye, ShoppingCart, ShoppingBag, FileDown, Tags, Loader2 } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from '@/components/ui/table';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { FileDown, Truck, PackageCheck, Undo2, Ban, History, Loader2, BarChart3, List, AlertCircle, Search, Calendar as CalendarIcon, Eye, ShoppingCart, ShoppingBag, Tags } from 'lucide-react';
+import { useInventory } from '@/hooks/use-inventory';
 import type { InventoryItem, AdjustmentHistory, InventoryItemVariant, Sale } from '@/types';
+import { parseISO, startOfMonth, endOfMonth, eachDayOfInterval } from 'date-fns';
+import { id as localeId } from 'date-fns/locale';
+import * as XLSX from 'xlsx';
+import { saveAs } from 'file-saver';
 import { useLanguage } from '@/hooks/use-language';
 import { translations } from '@/types/language';
-import { SidebarTrigger } from '@/components/ui/sidebar';
+import {
+  ChartConfig,
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+  ChartLegend,
+  ChartLegendContent,
+} from "@/components/ui/chart"
+import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts"
+import { useToast } from '@/hooks/use-toast';
+import { formatToWIB, cn } from '@/lib/utils';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { DateRange } from 'react-day-picker';
-import { format, startOfDay } from 'date-fns';
-import { cn } from '@/lib/utils';
-import { Badge } from '@/components/ui/badge';
-import Image from 'next/image';
 import { DailySalesDetailDialog } from '@/app/components/daily-sales-detail-dialog';
 import { AppLayout } from '@/app/components/app-layout';
 import { Pagination } from '@/components/ui/pagination';
-import * as XLSX from 'xlsx';
-import { saveAs } from 'file-saver';
-import { useToast } from '@/hooks/use-toast';
+import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
 
 type HistoryEntry = {
     type: 'adjustment';
@@ -169,7 +166,7 @@ export default function AccessoryHistoryPage() {
         const headers = ['Tanggal', 'Nama Produk', 'Varian', 'SKU', 'Kategori', 'Alasan', 'Perubahan', 'Stok Akhir'];
         const data = filteredHistory.map(entry => {
             return [
-                format(entry.date, 'yyyy-MM-dd HH:mm:ss'),
+                formatToWIB(entry.date, 'yyyy-MM-dd HH:mm:ss'),
                 entry.itemName || '',
                 entry.variantName || '',
                 entry.variantSku || '',
@@ -233,9 +230,9 @@ export default function AccessoryHistoryPage() {
                             <CalendarIcon className="mr-2 h-4 w-4" />
                             {dateRange?.from ? (
                             dateRange.to ? (
-                                <>{format(dateRange.from, "LLL dd, y")} - {format(dateRange.to, "LLL dd, y")}</>
+                                <>{formatToWIB(dateRange.from, "LLL dd, y")} - {formatToWIB(dateRange.to, "LLL dd, y")}</>
                             ) : (
-                                format(dateRange.from, "LLL dd, y")
+                                formatToWIB(dateRange.from, "LLL dd, y")
                             )
                             ) : (
                             <span>{t.stockHistory.dateRange}</span>
@@ -309,7 +306,7 @@ export default function AccessoryHistoryPage() {
                                 </div>
                             </div>
                         </TableCell>
-                        <TableCell>{format(new Date(entry.date), 'PP')}</TableCell>
+                        <TableCell>{formatToWIB(new Date(entry.date), 'PP')}</TableCell>
                         <TableCell>
                             <Badge variant={entry.change >= 0 ? 'default' : 'destructive'} className={cn(entry.change >= 0 ? 'bg-green-600' : 'bg-red-600', 'text-white')}>
                             {entry.change > 0 ? `+${entry.change}` : entry.change}

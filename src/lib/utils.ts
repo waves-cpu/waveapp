@@ -11,16 +11,20 @@ export function formatToWIB(date: Date | string | number, formatString: string, 
   if (!date) return '';
   const dateObj = typeof date === 'string' || typeof date === 'number' ? new Date(date) : date;
   
-  // Create a new date object with the same time value to avoid modifying the original
-  const localDate = new Date(dateObj.getTime());
+  // Get original UTC timestamp
+  const originalTime = dateObj.getTime();
+
+  // Get client's timezone offset in milliseconds from UTC.
+  const localOffsetInMs = dateObj.getTimezoneOffset() * 60 * 1000;
   
-  // Get the timezone offset in minutes and convert it to milliseconds
-  const timezoneOffset = localDate.getTimezoneOffset() * 60000;
+  // WIB is UTC+7, so its offset in milliseconds is +7 hours.
+  const wibOffsetInMs = 7 * 60 * 60 * 1000;
+
+  // Create a new timestamp that is adjusted to show WIB time in the user's local timezone.
+  // We add the WIB offset and the user's local offset to the original UTC time.
+  const adjustedTime = originalTime + wibOffsetInMs + localOffsetInMs;
   
-  // Adjust to UTC by adding the offset, then add the WIB offset (7 hours)
-  const wibTime = localDate.getTime() + timezoneOffset + (7 * 3600 * 1000);
-  
-  const wibDate = new Date(wibTime);
-  
-  return formatFns(wibDate, formatString, { locale: id });
+  const adjustedDate = new Date(adjustedTime);
+
+  return formatFns(adjustedDate, formatString, { locale: id });
 }
