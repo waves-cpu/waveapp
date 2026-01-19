@@ -69,7 +69,7 @@ const formSchema = z.object({
   minPurchase: z.coerce.number().optional(),
 }).refine(data => {
     // Make discountType and discountValue required only for vouchers
-    if (data.voucherCode && (data as any).isVoucherForm) {
+    if (data.voucherCode) { // Simplified check
         return !!data.discountType && data.discountValue !== undefined;
     }
     return true;
@@ -92,44 +92,39 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm = false }: Disc
   const [isSubmitting, setIsSubmitting] = useState(false);
   const isEditMode = !!existingGroup;
   const [bulkPrice, setBulkPrice] = useState<number | ''>('');
+  const initialCategoryRef = useRef<string | null>(null);
 
-  const defaultValues = useMemo(() => {
-    if (!existingGroup) {
-      return {
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
         name: '',
         category: '',
         channel: '',
         voucherCode: '',
-        isVoucherForm: isVoucherForm,
         dateRange: { from: new Date(), to: addDays(new Date(), 7) },
         products: [],
         discountType: undefined,
         discountValue: undefined,
         maxUses: undefined,
         minPurchase: undefined,
-      };
-    }
-    return {
-      ...existingGroup,
-      isVoucherForm: isVoucherForm,
-      dateRange: {
-          from: new Date(existingGroup.startDate),
-          to: new Date(existingGroup.endDate),
       },
-      products: existingGroup.products,
-      discountType: existingGroup.discountType || undefined,
-      discountValue: existingGroup.discountValue || undefined,
-    }
-  }, [existingGroup, isVoucherForm]);
-
-  const form = useForm<z.infer<typeof formSchema> & { isVoucherForm: boolean }>({
-    resolver: zodResolver(formSchema),
-    defaultValues: defaultValues,
   });
 
   useEffect(() => {
-      form.reset(defaultValues);
-  }, [defaultValues, form]);
+      if (existingGroup) {
+        initialCategoryRef.current = existingGroup.category;
+        form.reset({
+            ...existingGroup,
+            dateRange: {
+                from: new Date(existingGroup.startDate),
+                to: new Date(existingGroup.endDate),
+            },
+            products: existingGroup.products || [],
+            discountType: existingGroup.discountType || undefined,
+            discountValue: existingGroup.discountValue || undefined,
+        });
+      }
+  }, [existingGroup, form]);
   
   const { fields, replace } = useFieldArray({
       control: form.control,
@@ -139,7 +134,7 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm = false }: Disc
   const selectedCategory = form.watch('category');
 
   useEffect(() => {
-    if (isEditMode && selectedCategory === defaultValues.category) {
+    if (isEditMode && selectedCategory === initialCategoryRef.current) {
         return;
     }
 
@@ -177,7 +172,7 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm = false }: Disc
     } else if (!isVoucherForm) {
         replace([]);
     }
-  }, [selectedCategory, items, replace, isVoucherForm, isEditMode, defaultValues.category]);
+  }, [selectedCategory, items, replace, isVoucherForm, isEditMode]);
 
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
@@ -427,7 +422,7 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm = false }: Disc
                             variant={"outline"}
                             className={cn(
                                 "w-full md:w-[300px] justify-start text-left font-normal",
-                                !field.value.from && "text-muted-foreground"
+                                !field.value?.from && "text-muted-foreground"
                             )}
                             >
                             <CalendarIcon className="mr-2 h-4 w-4" />
