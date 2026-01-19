@@ -465,7 +465,9 @@ export function InventoryTable({ onUpdateStock, isAccessoryTable = false }: Inve
                                             data-ai-hint="product image"
                                         />
                                         <div>
-                                            <div className="font-medium text-primary text-sm hover:underline truncate max-w-xs">{item.name}</div>
+                                            <Link href={`/products/${item.id}/analytics`}>
+                                                <div className="font-medium text-primary text-sm hover:underline truncate max-w-xs">{item.name}</div>
+                                            </Link>
                                             <div className="text-xs text-muted-foreground truncate">SKU: {item.sku}</div>
                                         </div>
                                     </div>
@@ -562,7 +564,9 @@ export function InventoryTable({ onUpdateStock, isAccessoryTable = false }: Inve
                                         />
                                     )}
                                     <div>
-                                        <div className="font-medium text-sm truncate max-w-xs">{item.name}</div>
+                                         <Link href={`/products/${item.id}/analytics`}>
+                                            <div className="font-medium text-primary text-sm hover:underline truncate max-w-xs">{item.name}</div>
+                                        </Link>
                                         <div className="text-xs text-muted-foreground truncate">SKU: {item.sku}</div>
                                     </div>
                                 </div>
@@ -681,3 +685,6 @@ export function InventoryTable({ onUpdateStock, isAccessoryTable = false }: Inve
 
 
 
+
+
+    
