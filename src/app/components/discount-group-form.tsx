@@ -69,7 +69,7 @@ const formSchema = z.object({
   minPurchase: z.coerce.number().optional(),
 }).refine(data => {
     // Make discountType and discountValue required only for vouchers
-    if (data.voucherCode && data.isVoucherForm) {
+    if (data.voucherCode && (data as any).isVoucherForm) {
         return !!data.discountType && data.discountValue !== undefined;
     }
     return true;
@@ -92,32 +92,44 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm = false }: Disc
   const [isSubmitting, setIsSubmitting] = useState(false);
   const isEditMode = !!existingGroup;
   const [bulkPrice, setBulkPrice] = useState<number | ''>('');
-  const isInitialEditLoad = useRef(true);
 
+  const defaultValues = useMemo(() => {
+    if (!existingGroup) {
+      return {
+        name: '',
+        category: '',
+        channel: '',
+        voucherCode: '',
+        isVoucherForm: isVoucherForm,
+        dateRange: { from: new Date(), to: addDays(new Date(), 7) },
+        products: [],
+        discountType: undefined,
+        discountValue: undefined,
+        maxUses: undefined,
+        minPurchase: undefined,
+      };
+    }
+    return {
+      ...existingGroup,
+      isVoucherForm: isVoucherForm,
+      dateRange: {
+          from: new Date(existingGroup.startDate),
+          to: new Date(existingGroup.endDate),
+      },
+      products: existingGroup.products,
+      discountType: existingGroup.discountType || undefined,
+      discountValue: existingGroup.discountValue || undefined,
+    }
+  }, [existingGroup, isVoucherForm]);
 
   const form = useForm<z.infer<typeof formSchema> & { isVoucherForm: boolean }>({
     resolver: zodResolver(formSchema),
-    defaultValues: isEditMode ? {
-        ...existingGroup,
-        isVoucherForm: isVoucherForm,
-        dateRange: {
-            from: new Date(existingGroup.startDate),
-            to: new Date(existingGroup.endDate),
-        },
-        discountType: existingGroup.discountType || undefined,
-        discountValue: existingGroup.discountValue || undefined,
-    } : {
-      name: '',
-      category: '',
-      channel: '',
-      voucherCode: '',
-      isVoucherForm: isVoucherForm,
-      dateRange: { from: new Date(), to: addDays(new Date(), 7) },
-      products: [],
-      discountType: undefined,
-      discountValue: undefined
-    },
+    defaultValues: defaultValues,
   });
+
+  useEffect(() => {
+      form.reset(defaultValues);
+  }, [defaultValues, form]);
   
   const { fields, replace } = useFieldArray({
       control: form.control,
@@ -127,12 +139,8 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm = false }: Disc
   const selectedCategory = form.watch('category');
 
   useEffect(() => {
-    // In edit mode, we don't want this effect to run on the initial load because
-    // the form is already populated with the correct product data from `existingGroup`.
-    // It should only run if the user manually changes the category after loading.
-    if (isEditMode && isInitialEditLoad.current) {
-        isInitialEditLoad.current = false; // Mark initial load as complete
-        return; // Skip the effect on the first run in edit mode
+    if (isEditMode && selectedCategory === defaultValues.category) {
+        return;
     }
 
     if (!isVoucherForm && selectedCategory && selectedCategory !== 'Semua Kategori') {
@@ -148,30 +156,28 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm = false }: Disc
             };
             if (product.variants && product.variants.length > 0) {
                 product.variants.forEach(variant => {
-                    const existingDiscount = existingGroup?.products.find(p => p.variantId === Number(variant.id));
                     discountedProducts.push({
                         ...baseProductInfo,
                         variantId: Number(variant.id),
                         variantName: variant.name,
                         sku: variant.sku,
                         originalPrice: variant.price,
-                        discountedPrice: existingDiscount?.discountedPrice ?? variant.price,
+                        discountedPrice: variant.price,
                     });
                 });
             } else {
-                const existingDiscount = existingGroup?.products.find(p => p.productId === Number(product.id) && !p.variantId);
                 discountedProducts.push({
                     ...baseProductInfo,
                     originalPrice: product.price ?? null,
-                    discountedPrice: existingDiscount?.discountedPrice ?? (product.price || 0),
+                    discountedPrice: product.price || 0,
                 });
             }
         });
         replace(discountedProducts);
-    } else {
+    } else if (!isVoucherForm) {
         replace([]);
     }
-  }, [selectedCategory, items, replace, isVoucherForm, existingGroup, isEditMode]);
+  }, [selectedCategory, items, replace, isVoucherForm, isEditMode, defaultValues.category]);
 
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
@@ -227,7 +233,7 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm = false }: Disc
   const applyBulkPrice = () => {
     if (typeof bulkPrice === 'number' && bulkPrice >= 0) {
         fields.forEach((field, index) => {
-            form.setValue(`products.${index}.discountedPrice`, bulkPrice);
+            form.setValue(`products.${index}.discountedPrice`, bulkPrice, { shouldDirty: true });
         });
         toast({
             title: 'Harga Diterapkan',
@@ -531,7 +537,7 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm = false }: Disc
           </CardContent>
           <CardFooter className="justify-end gap-2 pt-6 border-t">
               <Button type="button" variant="ghost" onClick={() => router.push(isVoucherForm ? '/promotions/vouchers' : '/promotions/discount-groups')} disabled={isSubmitting}>{t.common.cancel}</Button>
-              <Button type="submit" disabled={isSubmitting}>
+              <Button type="submit" disabled={isSubmitting || (isEditMode && !form.formState.isDirty)}>
                   {isSubmitting ? t.common.saving : (isEditMode ? "Simpan Perubahan" : (isVoucherForm ? "Buat Voucher" : "Buat Grup Diskon"))}
               </Button>
           </CardFooter>
