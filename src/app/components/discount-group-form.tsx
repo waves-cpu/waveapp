@@ -92,9 +92,9 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm = false }: Disc
   const isEditMode = !!existingGroup;
   const [bulkPrice, setBulkPrice] = useState<number | ''>('');
   
-  const defaultValues = useMemo(() => {
-    if (!existingGroup) {
-      return {
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
         name: '',
         category: '',
         channel: '',
@@ -105,32 +105,26 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm = false }: Disc
         discountValue: undefined,
         maxUses: undefined,
         minPurchase: undefined,
-      };
-    }
-    return {
-      ...existingGroup,
-      dateRange: {
-        from: new Date(existingGroup.startDate),
-        to: new Date(existingGroup.endDate),
-      },
-      products: existingGroup.products || [],
-      discountType: existingGroup.discountType || undefined,
-      discountValue: existingGroup.discountValue || undefined,
-    };
-  }, [existingGroup]);
-
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
-    defaultValues: defaultValues, 
+    }, 
   });
   
   const { reset } = form;
 
   useEffect(() => {
-    if (isEditMode && existingGroup) {
-      reset(defaultValues);
+    if (existingGroup) {
+      const formValues = {
+        ...existingGroup,
+        dateRange: {
+          from: new Date(existingGroup.startDate),
+          to: new Date(existingGroup.endDate),
+        },
+        products: existingGroup.products || [],
+        discountType: existingGroup.discountType || undefined,
+        discountValue: existingGroup.discountValue || undefined,
+      };
+      reset(formValues);
     }
-  }, [isEditMode, existingGroup, defaultValues, reset]);
+  }, [existingGroup, reset]);
 
   
   const { fields, replace } = useFieldArray({
@@ -556,3 +550,4 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm = false }: Disc
     </Card>
   );
 }
+
