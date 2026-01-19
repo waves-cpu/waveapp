@@ -39,12 +39,11 @@ export function useReceiptPageLogic(salesChannel: 'Shopee' | 'Tiktok' | 'Lazada'
     
     const [receiptForSale, setReceiptForSale] = useState<Omit<ShippingReceipt, 'id'> | ShippingReceipt | null>(null);
     const [isSaleDialogOpen, setIsSaleDialogOpen] = useState(false);
+    const prevIsSaleDialogOpen = useRef(isSaleDialogOpen);
     
     const refocusInput = useCallback(() => {
-        if (!isSaleDialogOpen) {
-            setTimeout(() => awbInputRef.current?.focus(), 100);
-        }
-    }, [isSaleDialogOpen]);
+        setTimeout(() => awbInputRef.current?.focus(), 100);
+    }, []);
 
     const loadReceipts = useCallback(async () => {
         if (!selectedDate) return;
@@ -96,8 +95,13 @@ export function useReceiptPageLogic(salesChannel: 'Shopee' | 'Tiktok' | 'Lazada'
     }, [shippingChannel, salesChannel, itemsPerPage, playNotificationSound]);
 
     useEffect(() => {
-        refocusInput();
-    }, [refocusInput, receipts, isSaleDialogOpen]);
+        // Only refocus when the dialog has just closed.
+        if (prevIsSaleDialogOpen.current && !isSaleDialogOpen) {
+            refocusInput();
+        }
+        // Update the ref to the current value for the next render.
+        prevIsSaleDialogOpen.current = isSaleDialogOpen;
+    }, [isSaleDialogOpen, refocusInput]);
     
     const handleAwbSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
