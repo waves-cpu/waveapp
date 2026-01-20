@@ -2,7 +2,9 @@
 // It uses BroadcastChannel, which is available in modern Node.js environments and serverless functions on some platforms.
 // This allows, for example, the POST /api/sales/online route to notify the GET /api/stream route that new data is available.
 
-let channel: BroadcastChannel;
+type BCEventType = keyof BroadcastChannelEventMap;
+
+let channel: BroadcastChannel | null = null;
 
 try {
   channel = new BroadcastChannel('sse-global-channel');
@@ -14,23 +16,25 @@ try {
 
 export const sseChannel = {
   postMessage: (message: any) => {
-    if (channel) {
-      channel.postMessage(message);
-    }
+    channel?.postMessage(message);
   },
-  addEventListener: (type: string, listener: (event: MessageEvent) => void) => {
-    if (channel) {
-      channel.addEventListener(type, listener);
-    }
+  
+  addEventListener: <K extends BCEventType>(
+    type: K, 
+    listener: (this: BroadcastChannel, ev: BroadcastChannelEventMap[K]) => any
+  ) => {
+    channel?.addEventListener(type, listener);
   },
-  removeEventListener: (type: string, listener: (event: MessageEvent) => void) => {
-    if (channel) {
-      channel.removeEventListener(type, listener);
-    }
+
+  removeEventListener: <K extends BCEventType>(
+    type: K, 
+    listener: (this: BroadcastChannel, ev: BroadcastChannelEventMap[K]) => any
+  ) => {
+    channel?.removeEventListener(type, listener);
   },
+
   close: () => {
-    if (channel) {
-      channel.close();
-    }
+    channel?.close();
+    channel = null;
   }
 };
