@@ -1,6 +1,7 @@
 
 import { fetchSingleShippingReceipt, updateShippingReceiptStatus, deleteShippingReceipt } from '@/lib/inventory-service';
 import { NextRequest, NextResponse } from 'next/server';
+import { sseChannel } from '@/lib/sse-channel';
 
 type RouteParams = {
   params: Promise<{ id: string }>;
@@ -41,6 +42,8 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
         }
 
         await updateShippingReceiptStatus(id, status);
+        sseChannel.postMessage({ type: 'receipt-update' });
+
         return NextResponse.json({ message: 'Receipt status updated successfully' });
     } catch (error: any) {
         console.error(`API Error updating receipt:`, error);
@@ -61,6 +64,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
             return NextResponse.json({ message: 'Invalid receipt ID' }, { status: 400 });
         }
         await deleteShippingReceipt(id);
+        sseChannel.postMessage({ type: 'receipt-update' });
         return NextResponse.json({ message: 'Receipt deleted successfully' });
     } catch (error) {
         console.error(`API Error deleting receipt:`, error);

@@ -1,6 +1,7 @@
 
 import { findShippingReceiptByAwb, updateShippingReceiptStatus } from '@/lib/inventory-service';
 import { NextRequest, NextResponse } from 'next/server';
+import { sseChannel } from '@/lib/sse-channel';
 
 export async function POST(request: NextRequest) {
   try {
@@ -29,6 +30,8 @@ export async function POST(request: NextRequest) {
     }
 
     await updateShippingReceiptStatus(receipt.id, 'Siap Kirim');
+    sseChannel.postMessage({ type: 'receipt-update' });
+    
     const updatedReceipt = { ...receipt, status: 'Siap Kirim' };
     
     return NextResponse.json({ message: 'Berhasil diubah menjadi "Siap Kirim".', receipt: updatedReceipt });

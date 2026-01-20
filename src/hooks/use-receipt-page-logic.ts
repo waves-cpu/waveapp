@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
@@ -80,10 +81,9 @@ export function useReceiptPageLogic(salesChannel: 'Shopee' | 'Tiktok' | 'Lazada'
 
       eventSource.onmessage = (event) => {
         const data = JSON.parse(event.data);
-        if (data.type === 'new-receipt' && data.channel === shippingChannel && data.salesChannel === salesChannel) {
-          playNotificationSound();
-          setReceipts(prev => [data.payload, ...prev].slice(0, itemsPerPage));
-          setTotalReceipts(prev => prev + 1);
+        if (data.type === 'new-receipt' || data.type === 'receipt-update') {
+            playNotificationSound();
+            loadReceipts();
         }
       };
 
@@ -92,7 +92,7 @@ export function useReceiptPageLogic(salesChannel: 'Shopee' | 'Tiktok' | 'Lazada'
       return () => {
         eventSource.close();
       };
-    }, [shippingChannel, salesChannel, itemsPerPage, playNotificationSound]);
+    }, [loadReceipts, playNotificationSound]);
 
     useEffect(() => {
         // Only refocus when the dialog has just closed.
