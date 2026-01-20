@@ -638,9 +638,6 @@ export function InventoryTable({ onUpdateStock, isAccessoryTable = false }: Inve
           </TableBody>
         </Table>
         <div className="flex items-center justify-end p-4 border-t gap-4">
-             <div className="text-xs text-muted-foreground">
-                Menampilkan {paginatedItems.length} dari {filteredItems.length} produk.
-             </div>
             <Pagination
                 totalPages={totalPages}
                 currentPage={currentPage}
