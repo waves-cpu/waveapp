@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useMemo, useState } from 'react';
@@ -298,7 +299,7 @@ function ProductAnalyticsPage() {
                     <div className="lg:col-span-2">
                         <Card>
                              <CardHeader>
-                                <CardTitle>Performa Varian</CardTitle>
+                                <CardTitle className="text-base">Performa Varian</CardTitle>
                                 <CardDescription>Rincian penjualan untuk setiap varian produk ini.</CardDescription>
                             </CardHeader>
                             <CardContent>
@@ -316,7 +317,7 @@ function ProductAnalyticsPage() {
                      <div className="lg:col-span-1">
                         <Card>
                             <CardHeader>
-                                <CardTitle>Penjualan per Kanal</CardTitle>
+                                <CardTitle className="text-base">Penjualan per Kanal</CardTitle>
                             </CardHeader>
                             <CardContent>
                                {analytics && analytics.chartData.length > 0 ? (
@@ -345,3 +346,5 @@ function ProductAnalyticsPage() {
 }
 
 export default ProductAnalyticsPage;
+
+    
