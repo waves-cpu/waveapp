@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useForm } from "react-hook-form";
@@ -59,19 +58,13 @@ export function FinanceSettingsForm() {
         <Card>
             <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)}>
-                    <CardHeader>
-                        <CardTitle className="text-base">Biaya Marketplace</CardTitle>
-                        <CardDescription>
-                            Atur persentase potongan biaya (fee) dari marketplace seperti Shopee, Tiktok, dll. Ini akan digunakan untuk menghitung laba bersih.
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent>
+                    <CardContent className="pt-6">
                         <FormField
                             control={form.control}
                             name="marketplaceFee"
                             render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel>Persentase Biaya</FormLabel>
+                                    <FormLabel>Persentase Biaya Marketplace</FormLabel>
                                     <div className="relative">
                                         <FormControl>
                                             <Input 
@@ -84,7 +77,7 @@ export function FinanceSettingsForm() {
                                         <Percent className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
                                     </div>
                                     <FormDescription>
-                                        Masukkan nilai persentase. Contoh: untuk 3.2%, masukkan 3.2
+                                        Atur persentase potongan biaya (fee) dari marketplace seperti Shopee, Tiktok, dll. Ini akan digunakan untuk menghitung laba bersih. Contoh: untuk 3.2%, masukkan 3.2
                                     </FormDescription>
                                     <FormMessage />
                                 </FormItem>
