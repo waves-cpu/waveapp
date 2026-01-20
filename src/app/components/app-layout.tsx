@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useMemo } from 'react';
@@ -88,7 +87,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     <div className="flex h-full">
       <SidebarProvider>
           <Sidebar>
-          <SidebarHeader>
+          <SidebarHeader className="pb-4">
               <Logo />
           </SidebarHeader>
           <SidebarContent>
