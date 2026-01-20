@@ -637,35 +637,33 @@ export function InventoryTable({ onUpdateStock, isAccessoryTable = false }: Inve
             )}
           </TableBody>
         </Table>
-        <div className="flex items-center justify-between p-4 border-t">
+        <div className="flex items-center justify-end p-4 border-t gap-4">
              <div className="text-xs text-muted-foreground">
-                Menampilkan {Math.min(itemsPerPage, filteredItems.length)} dari {filteredItems.length} produk.
+                Menampilkan {paginatedItems.length} dari {filteredItems.length} produk.
              </div>
-            <div className="flex items-center gap-4">
-                <Pagination
-                    totalPages={totalPages}
-                    currentPage={currentPage}
-                    onPageChange={setCurrentPage}
-                />
-                 <Select
-                    value={`${itemsPerPage}`}
-                    onValueChange={(value) => {
-                        setItemsPerPage(Number(value))
-                        setCurrentPage(1)
-                    }}
-                    >
-                    <SelectTrigger className="h-8 w-[200px]">
-                        <SelectValue placeholder={itemsPerPage} />
-                    </SelectTrigger>
-                    <SelectContent side="top">
-                        {[10, 20, 50, 100].map((pageSize) => (
-                        <SelectItem key={pageSize} value={`${pageSize}`}>
-                            {`${pageSize} / ${t.productSelectionDialog.page}`}
-                        </SelectItem>
-                        ))}
-                    </SelectContent>
-                </Select>
-            </div>
+            <Pagination
+                totalPages={totalPages}
+                currentPage={currentPage}
+                onPageChange={setCurrentPage}
+            />
+             <Select
+                value={`${itemsPerPage}`}
+                onValueChange={(value) => {
+                    setItemsPerPage(Number(value))
+                    setCurrentPage(1)
+                }}
+                >
+                <SelectTrigger className="h-8 w-[150px]">
+                    <SelectValue placeholder={itemsPerPage} />
+                </SelectTrigger>
+                <SelectContent side="top">
+                    {[10, 20, 50, 100].map((pageSize) => (
+                    <SelectItem key={pageSize} value={`${pageSize}`}>
+                        {`${pageSize} / halaman`}
+                    </SelectItem>
+                    ))}
+                </SelectContent>
+            </Select>
         </div>
       </div>
     </div>
@@ -679,12 +677,3 @@ export function InventoryTable({ onUpdateStock, isAccessoryTable = false }: Inve
     </>
   );
 }
-
-
-
-
-
-
-
-
-    
