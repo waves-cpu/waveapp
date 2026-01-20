@@ -14,13 +14,12 @@ export default function FinanceSettingsPage() {
 
     return (
         <AppLayout>
-            <main className="flex-1 p-4 md:p-10">
-                <div className="flex items-center gap-4 mb-6">
-                    <SidebarTrigger className="md:hidden" />
-                    <h1 className="text-lg font-bold">Pengaturan Keuangan</h1>
-                </div>
-
-                <div className="max-w-4xl mx-auto">
+            <main className="flex flex-col items-center flex-1 p-4 md:p-10">
+                <div className="w-full max-w-4xl">
+                    <div className="flex items-center gap-4 mb-6">
+                        <SidebarTrigger className="md:hidden" />
+                        <h1 className="text-lg font-bold">Pengaturan Keuangan</h1>
+                    </div>
                     <FinanceSettingsForm />
                 </div>
             </main>
