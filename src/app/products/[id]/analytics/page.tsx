@@ -1,12 +1,12 @@
 'use client';
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { AppLayout } from '@/app/components/app-layout';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { ArrowLeft, BarChart2, DollarSign, Package, ShoppingCart } from 'lucide-react';
+import { ArrowLeft, BarChart2, DollarSign, Package, ShoppingCart, Calendar as CalendarIcon } from 'lucide-react';
 import { useParams, useRouter } from 'next/navigation';
 import { useInventory } from '@/hooks/use-inventory';
 import { useFinanceSettings } from '@/hooks/use-finance-settings';
@@ -20,6 +20,12 @@ import {
   ChartTooltipContent,
 } from "@/components/ui/chart"
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Tooltip as RechartsTooltip, Legend, Cell } from "recharts"
+import { DateRange } from 'react-day-picker';
+import { isWithinInterval, parseISO, startOfDay, endOfDay, startOfMonth, endOfMonth, subDays, startOfYear } from 'date-fns';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { cn, formatToWIB } from '@/lib/utils';
+
 
 const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('id-ID', {
@@ -32,11 +38,9 @@ const formatCurrency = (amount: number) => {
 const chartConfig = {
   units: {
     label: "Unit",
-    color: "hsl(var(--chart-1))",
   },
   revenue: {
     label: "Omzet",
-    color: "hsl(var(--chart-2))",
   },
 } satisfies ChartConfig
 
@@ -47,22 +51,44 @@ function ProductAnalyticsPage() {
     const { settings: financeSettings, isLoaded: financeSettingsLoaded } = useFinanceSettings();
     const id = typeof params.id === 'string' ? params.id : '';
 
+    const [date, setDate] = useState<DateRange | undefined>({
+        from: startOfMonth(new Date()),
+        to: endOfMonth(new Date()),
+    });
+
+    const isOnlineSale = (channel: string) => {
+        return ['shopee', 'tiktok', 'lazada'].some(c => channel.toLowerCase().includes(c));
+    }
+
     const { product, productSales } = useMemo(() => {
         if (!id || inventoryLoading) return { product: null, productSales: [] };
         const foundProduct = items.find(i => i.id === id);
         if (!foundProduct) return { product: null, productSales: [] };
         
-        const sales = allSales.filter(sale => sale.productId === id && sale.status && ['Completed', 'Siap Kirim', 'Selesai', 'Terproses', 'Diantar'].includes(sale.status));
+        const sales = allSales.filter(sale => {
+            const isProductMatch = sale.productId === id;
+            if (!isProductMatch) return false;
+
+            const isStatusMatch = sale.status && ['Completed', 'Siap Kirim', 'Selesai', 'Terproses', 'Diantar'].includes(sale.status);
+            if (!isStatusMatch) return false;
+
+            if (date?.from) {
+                const saleDate = parseISO(sale.saleDate);
+                const toDate = date.to || date.from;
+                if (!isWithinInterval(saleDate, { start: startOfDay(date.from), end: endOfDay(toDate) })) {
+                    return false;
+                }
+            }
+            
+            return true;
+        });
+
         return { product: foundProduct, productSales: sales };
-    }, [id, items, allSales, inventoryLoading]);
+    }, [id, items, allSales, inventoryLoading, date]);
 
     const analytics = useMemo(() => {
         if (!product || !financeSettingsLoaded) {
             return null;
-        }
-        
-        const isOnlineSale = (channel: string) => {
-            return ['shopee', 'tiktok', 'lazada'].some(c => channel.toLowerCase().includes(c));
         }
 
         let totalUnitsSold = 0;
@@ -128,6 +154,13 @@ function ProductAnalyticsPage() {
         };
 
     }, [product, productSales, financeSettings, financeSettingsLoaded]);
+
+     const datePresets = [
+        { label: "Hari Ini", range: { from: new Date(), to: new Date() } },
+        { label: "Bulan Ini", range: { from: startOfMonth(new Date()), to: endOfMonth(new Date()) } },
+        { label: "Tahun Ini", range: { from: startOfYear(new Date()), to: endOfYear(new Date()) } },
+        { label: "30 Hari Terakhir", range: { from: subDays(new Date(), 29), to: new Date() } },
+    ];
     
     if (inventoryLoading || !financeSettingsLoaded) {
         return (
@@ -156,15 +189,58 @@ function ProductAnalyticsPage() {
     return (
         <AppLayout>
             <main className="flex-1 p-4 md:p-10">
-                 <div className="flex items-center gap-4 mb-6">
-                    <SidebarTrigger className="md:hidden" />
-                     <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => router.back()}>
-                        <ArrowLeft className="h-4 w-4" />
-                    </Button>
-                    <div>
-                        <h1 className="text-lg font-bold">Analisis Produk</h1>
-                        <p className="text-sm text-muted-foreground">{product.name}</p>
+                 <div className="flex items-center justify-between gap-4 mb-6">
+                    <div className="flex items-center gap-4">
+                        <SidebarTrigger className="md:hidden" />
+                        <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => router.back()}>
+                            <ArrowLeft className="h-4 w-4" />
+                        </Button>
+                        <div>
+                            <h1 className="text-lg font-bold">Analisis Produk</h1>
+                            <p className="text-sm text-muted-foreground">{product.name}</p>
+                        </div>
                     </div>
+                    <Popover>
+                        <PopoverTrigger asChild>
+                            <Button
+                                id="date"
+                                variant={"outline"}
+                                className={cn(
+                                    "w-[260px] justify-start text-left font-normal",
+                                    !date && "text-muted-foreground"
+                                )}
+                            >
+                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                {date?.from ? (
+                                    date.to ? (
+                                        <>
+                                            {formatToWIB(date.from, "d LLL, y")} -{" "}
+                                            {formatToWIB(date.to, "d LLL, y")}
+                                        </>
+                                    ) : (
+                                        formatToWIB(date.from, "d LLL, y")
+                                    )
+                                ) : (
+                                    <span>Pilih periode</span>
+                                )}
+                            </Button>
+                        </PopoverTrigger>
+                         <PopoverContent className="flex w-auto flex-row" align="end">
+                            <div className="flex flex-col gap-1 pr-4 border-r">
+                                {datePresets.map(preset => (
+                                    <Button key={preset.label} variant="ghost" className="justify-start" onClick={() => setDate(preset.range)}>{preset.label}</Button>
+                                ))}
+                            </div>
+                            <Calendar
+                                initialFocus
+                                mode="range"
+                                defaultMonth={date?.from}
+                                selected={date}
+                                onSelect={setDate}
+                                numberOfMonths={1}
+                            />
+                        </PopoverContent>
+                    </Popover>
                 </div>
 
                 <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 mb-6">
@@ -233,7 +309,7 @@ function ProductAnalyticsPage() {
                                             <Legend />
                                             <Bar dataKey="units" name="Unit" radius={4}>
                                                 {analytics.chartData.map((_entry, index) => (
-                                                    <Cell key={`cell-${index}`} fill={`hsl(var(--chart-${(index % 5) + 1}))`} />
+                                                    <Cell key={`cell-${index}`} fill={`var(--color-chart-${(index % 5) + 1})`} />
                                                 ))}
                                             </Bar>
                                         </BarChart>
