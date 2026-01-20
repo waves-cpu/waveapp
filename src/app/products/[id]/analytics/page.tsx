@@ -1,5 +1,3 @@
-
-
 'use client';
 
 import React, { useMemo } from 'react';
@@ -21,7 +19,7 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart"
-import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Tooltip as RechartsTooltip, Legend } from "recharts"
+import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Tooltip as RechartsTooltip, Legend, Cell } from "recharts"
 
 const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('id-ID', {
@@ -57,10 +55,6 @@ function ProductAnalyticsPage() {
         const sales = allSales.filter(sale => sale.productId === id && sale.status && ['Completed', 'Siap Kirim', 'Selesai', 'Terproses', 'Diantar'].includes(sale.status));
         return { product: foundProduct, productSales: sales };
     }, [id, items, allSales, inventoryLoading]);
-
-    const isOnlineSale = (salesByChannel: Record<string, any>) => {
-        return Object.keys(salesByChannel).some(channel => ['shopee', 'tiktok', 'lazada'].includes(channel.toLowerCase()));
-    }
 
     const analytics = useMemo(() => {
         if (!product || !financeSettingsLoaded) {
@@ -237,7 +231,11 @@ function ProductAnalyticsPage() {
                                             <XAxis type="number" hide />
                                             <RechartsTooltip cursor={false} content={<ChartTooltipContent indicator="dot" />} />
                                             <Legend />
-                                            <Bar dataKey="units" name="Unit" fill="var(--color-units)" radius={4} />
+                                            <Bar dataKey="units" name="Unit" radius={4}>
+                                                {analytics.chartData.map((_entry, index) => (
+                                                    <Cell key={`cell-${index}`} fill={`hsl(var(--chart-${(index % 5) + 1}))`} />
+                                                ))}
+                                            </Bar>
                                         </BarChart>
                                     </ChartContainer>
                                ) : <p className="text-sm text-muted-foreground text-center py-10">Tidak ada data penjualan.</p>}
