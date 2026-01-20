@@ -18,14 +18,14 @@ export function Logo() {
     return (
       <div className="flex items-center gap-2 font-bold text-xl text-foreground">
         <div className="h-8 w-8" />
-        <span className="font-headline">Waveblast</span>
+        <Image src="/icons/logos.png" alt="Waveblast" width={140} height={32} />
       </div>
     );
   }
 
   const logoSrc = resolvedTheme === 'dark' 
-    ? "/icons/apple-touch-icon_light" 
-    : "/icons/apple-touch-icon_dark";
+    ? "/icons/apple-touch-icon_light.png" 
+    : "/icons/apple-touch-icon_dark.png";
 
   return (
     <div className="flex items-center gap-2 font-bold text-xl text-foreground">
@@ -36,7 +36,7 @@ export function Logo() {
         height={32}
         className="h-8 w-8"
       />
-      <span className="font-headline">Waveblast</span>
+      <Image src="/icons/logos.png" alt="Waveblast" width={140} height={32} />
     </div>
   );
 }
