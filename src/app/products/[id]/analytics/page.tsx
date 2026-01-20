@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/chart"
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Tooltip as RechartsTooltip, Legend, Cell } from "recharts"
 import { DateRange } from 'react-day-picker';
-import { isWithinInterval, parseISO, startOfDay, endOfDay, startOfMonth, endOfMonth, subDays, startOfYear } from 'date-fns';
+import { isWithinInterval, parseISO, startOfDay, endOfDay, startOfMonth, endOfMonth, subDays, startOfYear, endOfYear } from 'date-fns';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { cn, formatToWIB } from '@/lib/utils';
@@ -42,6 +42,26 @@ const chartConfig = {
   revenue: {
     label: "Omzet",
   },
+  pos: {
+    label: "POS",
+    color: "hsl(var(--chart-1))",
+  },
+  shopee: {
+    label: "Shopee",
+    color: "hsl(var(--chart-2))",
+  },
+  tiktok: {
+    label: "Tiktok",
+    color: "hsl(var(--chart-3))",
+  },
+  reseller: {
+    label: "Reseller",
+    color: "hsl(var(--chart-4))",
+  },
+  lazada: {
+    label: "Lazada",
+    color: "hsl(var(--chart-5))",
+  },
 } satisfies ChartConfig
 
 function ProductAnalyticsPage() {
@@ -55,7 +75,7 @@ function ProductAnalyticsPage() {
         from: startOfMonth(new Date()),
         to: endOfMonth(new Date()),
     });
-
+    
     const isOnlineSale = (channel: string) => {
         return ['shopee', 'tiktok', 'lazada'].some(c => channel.toLowerCase().includes(c));
     }
@@ -308,8 +328,8 @@ function ProductAnalyticsPage() {
                                             <RechartsTooltip cursor={false} content={<ChartTooltipContent indicator="dot" />} />
                                             <Legend />
                                             <Bar dataKey="units" name="Unit" radius={4}>
-                                                {analytics.chartData.map((_entry, index) => (
-                                                    <Cell key={`cell-${index}`} fill={`var(--color-chart-${(index % 5) + 1})`} />
+                                                {analytics.chartData.map((entry) => (
+                                                    <Cell key={`cell-${entry.channel}`} fill={chartConfig[entry.channel.toLowerCase() as keyof typeof chartConfig]?.color || "hsl(var(--chart-1))" } />
                                                 ))}
                                             </Bar>
                                         </BarChart>
