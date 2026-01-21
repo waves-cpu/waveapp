@@ -77,9 +77,9 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
     const router = useRouter();
     const { addDiscountGroup, editDiscountGroup, items } = useInventory();
     const [isSaving, setIsSaving] = useState(false);
-    const [bulkPrice, setBulkPrice] = useState<number | ''>('');
     const [isProductSelectorOpen, setProductSelectorOpen] = useState(false);
     const isEditMode = !!existingGroup;
+    const [groupBulkPrices, setGroupBulkPrices] = useState<Record<string, number | ''>>({});
 
     const defaultDetails = useMemo(() => {
         if (!isEditMode || !existingGroup) {
@@ -217,13 +217,28 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
             setIsSaving(false);
         }
     }
+    
+    const handleGroupBulkPriceChange = (productId: string, value: string) => {
+        setGroupBulkPrices(prev => ({
+            ...prev,
+            [productId]: value === '' ? '' : Number(value)
+        }));
+    };
 
-    const applyBulkPrice = () => {
-        if (typeof bulkPrice === 'number' && bulkPrice >= 0) {
-            fields.forEach((_, index) => {
-                form.setValue(`products.${index}.discountedPrice`, bulkPrice, { shouldDirty: true });
+    const applyGroupBulkPrice = (productId: string) => {
+        const price = groupBulkPrices[productId];
+        if (typeof price === 'number' && price >= 0) {
+            const indicesToUpdate: number[] = [];
+            fields.forEach((field, index) => {
+                if (field.productId.toString() === productId) {
+                    indicesToUpdate.push(index);
+                }
             });
-            toast({ title: 'Harga Diterapkan', description: 'Harga diskon massal telah diterapkan ke semua produk.' });
+
+            indicesToUpdate.forEach(index => {
+                form.setValue(`products.${index}.discountedPrice`, price, { shouldDirty: true });
+            });
+            toast({ title: 'Harga Varian Diterapkan' });
         } else {
             toast({ variant: 'destructive', title: 'Harga Tidak Valid' });
         }
@@ -375,10 +390,6 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
                              )}
                         </CardHeader>
                         <CardContent>
-                           <div className="flex items-center gap-2 mb-4">
-                                <Input type="number" placeholder="Masukkan harga massal" value={bulkPrice} onChange={(e) => setBulkPrice(e.target.value === '' ? '' : Number(e.target.value))} className="h-9"/>
-                                <Button type="button" variant="outline" onClick={applyBulkPrice}>Terapkan ke Semua</Button>
-                           </div>
                            <ScrollArea className="h-96 border rounded-md">
                                <Table>
                                    <TableHeader className="sticky top-0 bg-background">
@@ -433,7 +444,31 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
                                                                 </div>
                                                             </div>
                                                         </TableCell>
-                                                        <TableCell colSpan={2}></TableCell>
+                                                        <TableCell></TableCell>
+                                                         <TableCell>
+                                                            <div className="flex items-center gap-2">
+                                                                <Input 
+                                                                    type="number" 
+                                                                    placeholder="Harga Massal" 
+                                                                    className="h-8 bg-background"
+                                                                    value={groupBulkPrices[group.productId.toString()] ?? ''}
+                                                                    onChange={(e) => handleGroupBulkPriceChange(group.productId.toString(), e.target.value)}
+                                                                    onClick={(e) => e.stopPropagation()}
+                                                                />
+                                                                <Button 
+                                                                    type="button" 
+                                                                    variant="outline" 
+                                                                    size="sm" 
+                                                                    className="h-8"
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        applyGroupBulkPrice(group.productId.toString())
+                                                                    }}
+                                                                >
+                                                                    Terapkan
+                                                                </Button>
+                                                            </div>
+                                                        </TableCell>
                                                         <TableCell className="text-right">
                                                             <Button type="button" variant="ghost" size="icon" className="text-destructive hover:text-destructive-foreground hover:bg-destructive" onClick={() => handleRemoveGroup(group)}>
                                                                 <Trash2 className="h-4 w-4" />
