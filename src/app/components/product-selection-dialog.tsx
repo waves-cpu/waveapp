@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useMemo, useEffect, useRef } from 'react';
@@ -160,19 +159,21 @@ export function ProductSelectionDialog({
                 className="pl-10 w-full"
                 />
             </div>
-             <Select onValueChange={(value) => setCategoryFilter(value === 'all' ? null : value)} defaultValue="all">
-                <SelectTrigger className="w-full md:w-[220px]">
-                <SelectValue placeholder={t.productSelectionDialog.categoryPlaceholder} />
-                </SelectTrigger>
-                <SelectContent>
-                <SelectItem value="all">{t.inventoryTable.allCategories}</SelectItem>
-                {categories.map((category) => (
-                    <SelectItem key={category} value={category}>
-                    {category}
-                    </SelectItem>
-                ))}
-                </SelectContent>
-            </Select>
+            {categories.length > 0 && (
+                <Select onValueChange={(value) => setCategoryFilter(value === 'all' ? null : value)} defaultValue="all">
+                    <SelectTrigger className="w-full md:w-[220px]">
+                    <SelectValue placeholder={t.productSelectionDialog.categoryPlaceholder} />
+                    </SelectTrigger>
+                    <SelectContent>
+                    <SelectItem value="all">{t.inventoryTable.allCategories}</SelectItem>
+                    {categories.map((category) => (
+                        <SelectItem key={category} value={category}>
+                        {category}
+                        </SelectItem>
+                    ))}
+                    </SelectContent>
+                </Select>
+            )}
         </div>
         <div className="flex-grow flex flex-col overflow-hidden border rounded-md">
            <ScrollArea className="h-full" viewportRef={scrollViewportRef}>
@@ -235,7 +236,7 @@ export function ProductSelectionDialog({
                                             />
                                         </TableCell>
                                         <TableCell>
-                                            <div className="flex items-center gap-4">
+                                            <div className="flex items-center gap-4 pl-8">
                                                 <div className="flex h-10 w-10 items-center justify-center rounded-sm">
                                                     <Store className="h-5 w-5 text-gray-400" />
                                                 </div>
