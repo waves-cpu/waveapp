@@ -26,7 +26,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { CalendarIcon, PlusCircle, Pencil, Trash2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState, useMemo, useCallback } from 'react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import type { DiscountGroup, DiscountedProduct, InventoryItem } from '@/types';
 import { categories } from '@/types';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -81,10 +81,6 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
     const [isProductSelectorOpen, setProductSelectorOpen] = useState(false);
     const isEditMode = !!existingGroup;
 
-    // Pagination State
-    const [currentPage, setCurrentPage] = useState(1);
-    const itemsPerPage = 10;
-
     const defaultDetails = useMemo(() => {
         if (!isEditMode || !existingGroup) {
             return {
@@ -130,11 +126,6 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
         control: form.control,
         name: "products"
     });
-
-    // Pagination Logic
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    const paginatedFields = fields.slice(startIndex, startIndex + itemsPerPage);
-    const totalPages = Math.ceil(fields.length / itemsPerPage);
 
     const selectedCategory = form.watch('category');
 
@@ -239,6 +230,55 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
     };
     
     const availableItemsForSelection = useMemo(() => items.filter(i => i.category === selectedCategory), [items, selectedCategory]);
+
+    // Grouping and Pagination Logic
+    const groupedProducts = useMemo(() => {
+        const groups: Record<string, {
+            productId: number;
+            productName: string;
+            sku?: string;
+            imageUrl?: string;
+            isSimpleProduct: boolean;
+            variants: (typeof fields[0] & { originalIndex: number })[];
+        }> = {};
+
+        fields.forEach((field, index) => {
+            const { productId } = field;
+            if (!groups[productId]) {
+                const parent = items.find(i => i.id === productId.toString());
+                groups[productId] = {
+                    productId: productId,
+                    productName: parent?.name || field.productName,
+                    sku: parent?.sku,
+                    imageUrl: parent?.imageUrl,
+                    isSimpleProduct: false, // will be determined next
+                    variants: [],
+                };
+            }
+            groups[productId].variants.push({ ...field, originalIndex: index });
+        });
+        
+        Object.values(groups).forEach(group => {
+            group.isSimpleProduct = group.variants.length === 1 && !group.variants[0].variantId;
+        });
+
+        return Object.values(groups);
+    }, [fields, items]);
+    
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 10;
+
+    const paginatedGroups = useMemo(() => {
+        const startIndex = (currentPage - 1) * itemsPerPage;
+        return groupedProducts.slice(startIndex, startIndex + itemsPerPage);
+    }, [groupedProducts, currentPage, itemsPerPage]);
+
+    const totalPages = Math.ceil(groupedProducts.length / itemsPerPage);
+
+    const handleRemoveGroup = (group: { variants: { originalIndex: number }[] }) => {
+        const indicesToRemove = group.variants.map(v => v.originalIndex);
+        remove(indicesToRemove);
+    };
 
     return (
         <>
@@ -350,32 +390,87 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
                                     </TableRow>
                                    </TableHeader>
                                    <TableBody>
-                                       {paginatedFields.length > 0 ? paginatedFields.map((field, index) => {
-                                           const originalIndex = startIndex + index;
-                                           return (
-                                           <TableRow key={field.id}>
-                                               <TableCell>
-                                                   <div className="flex items-center gap-3">
-                                                        <Image src={field.imageUrl || 'https://placehold.co/40x40.png'} alt={field.productName} width={32} height={32} className="rounded-sm" />
-                                                        <div><p className="font-medium text-sm">{field.productName}</p><p className="text-xs text-muted-foreground">{field.variantName || 'Produk utama'}</p></div>
-                                                   </div>
-                                               </TableCell>
-                                               <TableCell>
-                                                   <p className="text-sm text-muted-foreground line-through">{field.originalPrice ? new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(field.originalPrice) : 'N/A'}</p>
-                                               </TableCell>
-                                               <TableCell>
-                                                   <FormField control={form.control} name={`products.${originalIndex}.discountedPrice`} render={({ field }) => (
-                                                       <FormItem><FormControl><Input type="number" {...field} className="h-8" /></FormControl><FormMessage /></FormItem>
-                                                   )}/>
-                                               </TableCell>
-                                               <TableCell className="text-right">
-                                                    <Button type="button" variant="ghost" size="icon" className="text-destructive hover:text-destructive-foreground hover:bg-destructive" onClick={() => remove(originalIndex)}>
-                                                        <Trash2 className="h-4 w-4" />
-                                                    </Button>
-                                               </TableCell>
-                                           </TableRow>
-                                           )
-                                       }) : (<TableRow><TableCell colSpan={4} className="h-24 text-center">Pilih kategori untuk menambahkan produk.</TableCell></TableRow>)}
+                                        {paginatedGroups.length > 0 ? paginatedGroups.map((group) => {
+                                            if (group.isSimpleProduct) {
+                                                const field = group.variants[0];
+                                                const originalIndex = field.originalIndex;
+                                                return (
+                                                    <TableRow key={field.id}>
+                                                        <TableCell>
+                                                            <div className="flex items-center gap-3">
+                                                                <Image src={field.imageUrl || 'https://placehold.co/40x40.png'} alt={field.productName} width={32} height={32} className="rounded-sm" />
+                                                                <div>
+                                                                    <p className="font-medium text-sm">{field.productName}</p>
+                                                                    <p className="text-xs text-muted-foreground">SKU: {field.sku || 'Produk utama'}</p>
+                                                                </div>
+                                                            </div>
+                                                        </TableCell>
+                                                        <TableCell>
+                                                            <p className="text-sm text-muted-foreground line-through">{field.originalPrice ? new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(field.originalPrice) : 'N/A'}</p>
+                                                        </TableCell>
+                                                        <TableCell>
+                                                            <FormField control={form.control} name={`products.${originalIndex}.discountedPrice`} render={({ field }) => (
+                                                                <FormItem><FormControl><Input type="number" {...field} className="h-8" /></FormControl><FormMessage /></FormItem>
+                                                            )}/>
+                                                        </TableCell>
+                                                        <TableCell className="text-right">
+                                                            <Button type="button" variant="ghost" size="icon" className="text-destructive hover:text-destructive-foreground hover:bg-destructive" onClick={() => remove(originalIndex)}>
+                                                                <Trash2 className="h-4 w-4" />
+                                                            </Button>
+                                                        </TableCell>
+                                                    </TableRow>
+                                                );
+                                            }
+                                            return (
+                                                <React.Fragment key={group.productId}>
+                                                    <TableRow className="bg-muted/20 hover:bg-muted/40 font-semibold">
+                                                        <TableCell>
+                                                             <div className="flex items-center gap-3">
+                                                                <Image src={group.imageUrl || 'https://placehold.co/40x40.png'} alt={group.productName} width={32} height={32} className="rounded-sm" />
+                                                                <div>
+                                                                    <p className="text-sm text-primary">{group.productName}</p>
+                                                                    <p className="text-xs text-muted-foreground font-normal">SKU: {group.sku}</p>
+                                                                </div>
+                                                            </div>
+                                                        </TableCell>
+                                                        <TableCell colSpan={2}></TableCell>
+                                                        <TableCell className="text-right">
+                                                            <Button type="button" variant="ghost" size="icon" className="text-destructive hover:text-destructive-foreground hover:bg-destructive" onClick={() => handleRemoveGroup(group)}>
+                                                                <Trash2 className="h-4 w-4" />
+                                                            </Button>
+                                                        </TableCell>
+                                                    </TableRow>
+                                                    {group.variants.map((field) => {
+                                                        const originalIndex = field.originalIndex;
+                                                        return (
+                                                            <TableRow key={field.id}>
+                                                                <TableCell className="pl-12">
+                                                                    <div className="flex items-center gap-3">
+                                                                        <div>
+                                                                            <p className="font-medium text-sm">{field.variantName}</p>
+                                                                            <p className="text-xs text-muted-foreground">{field.sku}</p>
+                                                                        </div>
+                                                                    </div>
+                                                                </TableCell>
+                                                                <TableCell>
+                                                                    <p className="text-sm text-muted-foreground line-through">{field.originalPrice ? new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(field.originalPrice) : 'N/A'}</p>
+                                                                </TableCell>
+                                                                <TableCell>
+                                                                    <FormField control={form.control} name={`products.${originalIndex}.discountedPrice`} render={({ field }) => (
+                                                                        <FormItem><FormControl><Input type="number" {...field} className="h-8" /></FormControl><FormMessage /></FormItem>
+                                                                    )}/>
+                                                                </TableCell>
+                                                                <TableCell className="text-right">
+                                                                    <Button type="button" variant="ghost" size="icon" className="text-destructive hover:text-destructive-foreground hover:bg-destructive" onClick={() => remove(originalIndex)}>
+                                                                        <Trash2 className="h-4 w-4" />
+                                                                    </Button>
+                                                                </TableCell>
+                                                            </TableRow>
+                                                        );
+                                                    })}
+                                                </React.Fragment>
+                                            );
+                                        }) : (<TableRow><TableCell colSpan={4} className="h-24 text-center">Pilih kategori untuk menambahkan produk.</TableCell></TableRow>)}
                                    </TableBody>
                                </Table>
                            </ScrollArea>
