@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useForm, useFieldArray } from 'react-hook-form';
@@ -129,7 +130,7 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
 
     const selectedCategory = form.watch('category');
 
-    const getProductsForForm = useCallback((productsToAdd: InventoryItem[], existingDiscounts: DiscountedProduct[] = []) => {
+    const getProductsForForm = useCallback((productsToAdd: InventoryItem[], selectedIds: Set<string>, existingDiscounts: DiscountedProduct[] = []) => {
         const productList: Omit<DiscountedProduct, 'originalPrice'> & { originalPrice: number | null, discountedPrice: number }[] = [];
         productsToAdd.forEach(product => {
             const baseProductInfo = {
@@ -141,24 +142,28 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
 
             if (product.variants && product.variants.length > 0) {
                 product.variants.forEach(variant => {
-                    const existingDiscount = existingDiscounts.find(p => p.variantId === Number(variant.id));
+                    if (selectedIds.has(variant.id)) { // Only add if it was selected
+                        const existingDiscount = existingDiscounts.find(p => p.variantId === Number(variant.id));
+                        productList.push({
+                            ...baseProductInfo,
+                            variantId: Number(variant.id),
+                            variantName: variant.name,
+                            sku: variant.sku,
+                            originalPrice: variant.price,
+                            discountedPrice: existingDiscount ? existingDiscount.discountedPrice : variant.price,
+                        });
+                    }
+                });
+            } else { // This is a simple product
+                 if (selectedIds.has(product.id)) {
+                    if (product.price === null || product.price === undefined) return;
+                    const existingDiscount = existingDiscounts.find(p => p.productId === Number(product.id) && !p.variantId);
                     productList.push({
                         ...baseProductInfo,
-                        variantId: Number(variant.id),
-                        variantName: variant.name,
-                        sku: variant.sku,
-                        originalPrice: variant.price,
-                        discountedPrice: existingDiscount ? existingDiscount.discountedPrice : variant.price,
+                        originalPrice: product.price ?? null,
+                        discountedPrice: existingDiscount ? existingDiscount.discountedPrice : (product.price || 0),
                     });
-                });
-            } else {
-                 if (product.price === null || product.price === undefined) return;
-                 const existingDiscount = existingDiscounts.find(p => p.productId === Number(product.id) && !p.variantId);
-                 productList.push({
-                    ...baseProductInfo,
-                    originalPrice: product.price ?? null,
-                    discountedPrice: existingDiscount ? existingDiscount.discountedPrice : (product.price || 0),
-                });
+                }
             }
         });
         return productList;
@@ -166,28 +171,32 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
 
     useEffect(() => {
         form.reset(defaultDetails);
-    }, [defaultDetails, form]);
-    
-    useEffect(() => {
-        if (isEditMode && existingGroup && items.length > 0) {
-            const productIdsInGroup = new Set(existingGroup.products.map(p => p.productId.toString()));
-            const productsInGroup = items.filter(item => productIdsInGroup.has(item.id));
-
-            const productList = getProductsForForm(productsInGroup, existingGroup.products);
-            replace(productList);
+        if (isEditMode && existingGroup?.products) {
+            const productListForForm = existingGroup.products.map(p => ({
+                productId: p.productId,
+                variantId: p.variantId,
+                productName: p.productName,
+                variantName: p.variantName,
+                sku: p.sku,
+                imageUrl: p.imageUrl,
+                originalPrice: p.originalPrice,
+                discountedPrice: p.discountedPrice,
+            }));
+            replace(productListForForm);
         }
-    }, [existingGroup, items, isEditMode, replace, getProductsForForm]);
+    }, [defaultDetails, form, isEditMode, existingGroup, replace]);
     
     const handleSelectProducts = (selectedItemIds: string[]) => {
+        const selectedIdsSet = new Set(selectedItemIds);
         const itemsToAdd = items.filter(item => {
-            if (selectedItemIds.includes(item.id)) return true;
-            return item.variants?.some(v => selectedItemIds.includes(v.id));
+            if (selectedIdsSet.has(item.id)) return true; // It's a simple product
+            return item.variants?.some(v => selectedIdsSet.has(v.id)); // It's a parent of a selected variant
         });
         
-        const newProducts = getProductsForForm(itemsToAdd);
+        const newProducts = getProductsForForm(itemsToAdd, selectedIdsSet, fields);
         
-        const currentProductIds = new Set(fields.map(f => `${f.productId}-${f.variantId || 'base'}`));
-        const productsToAppend = newProducts.filter(p => !currentProductIds.has(`${p.productId}-${p.variantId || 'base'}`));
+        const currentProductAndVariantIds = new Set(fields.map(f => f.variantId ? f.variantId.toString() : f.productId.toString()));
+        const productsToAppend = newProducts.filter(p => !currentProductAndVariantIds.has(p.variantId?.toString() || p.productId.toString()));
 
         append(productsToAppend);
     };

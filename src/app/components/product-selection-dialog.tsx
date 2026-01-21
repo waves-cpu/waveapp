@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useMemo, useEffect, useRef } from 'react';
@@ -135,6 +136,33 @@ export function ProductSelectionDialog({
 
   const isPageAllSelected = selectableItemIdsOnPage.length > 0 && selectableItemIdsOnPage.every(id => selectedIds.has(id));
   const isPagePartiallySelected = selectableItemIdsOnPage.some(id => selectedIds.has(id)) && !isPageAllSelected;
+
+  const displayCount = useMemo(() => {
+    if (selectedIds.size === 0) return 0;
+
+    const variantToParentMap = new Map<string, string>();
+    availableItems.forEach(item => {
+        if (item.variants) {
+            item.variants.forEach(variant => {
+                variantToParentMap.set(variant.id, item.id);
+            });
+        }
+    });
+
+    const parentIds = new Set<string>();
+    for (const selectedId of selectedIds) {
+        const parentId = variantToParentMap.get(selectedId);
+        if (parentId) {
+            parentIds.add(parentId);
+        } else {
+            // Check if this ID is a simple product ID that exists in availableItems
+            if (availableItems.some(item => item.id === selectedId && (!item.variants || item.variants.length === 0))) {
+                parentIds.add(selectedId);
+            }
+        }
+    }
+    return parentIds.size;
+  }, [selectedIds, availableItems]);
 
 
   return (
@@ -320,7 +348,7 @@ export function ProductSelectionDialog({
             </div>
             <div className="flex gap-2 justify-end">
                 <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>{t.common.cancel}</Button>
-                <Button type="button" onClick={handleSave}>{t.productSelectionDialog.addItems.replace('{count}', selectedIds.size.toString())}</Button>
+                <Button type="button" onClick={handleSave}>{t.productSelectionDialog.addItems.replace('{count}', displayCount.toString())}</Button>
             </div>
         </div>
       </DialogContent>
