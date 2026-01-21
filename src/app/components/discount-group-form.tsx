@@ -24,9 +24,9 @@ import {
 import { useInventory } from '@/hooks/use-inventory';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
-import { CalendarIcon, PlusCircle, Pencil } from 'lucide-react';
+import { CalendarIcon, PlusCircle, Pencil, Trash2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useCallback } from 'react';
 import type { DiscountGroup, DiscountedProduct, InventoryItem } from '@/types';
 import { categories } from '@/types';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -39,6 +39,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Label } from "@/components/ui/label";
 import { ProductSelectionDialog } from './product-selection-dialog';
 import { Separator } from '@/components/ui/separator';
+import { Pagination } from '@/components/ui/pagination';
 
 const formSchema = z.object({
   id: z.number().optional(),
@@ -80,7 +81,10 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
     const [isProductSelectorOpen, setProductSelectorOpen] = useState(false);
     const isEditMode = !!existingGroup;
 
-    // Memoize the default values to stabilize them
+    // Pagination State
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 10;
+
     const defaultDetails = useMemo(() => {
         if (!isEditMode || !existingGroup) {
             return {
@@ -127,21 +131,14 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
         name: "products"
     });
 
+    // Pagination Logic
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const paginatedFields = fields.slice(startIndex, startIndex + itemsPerPage);
+    const totalPages = Math.ceil(fields.length / itemsPerPage);
+
     const selectedCategory = form.watch('category');
 
-    useEffect(() => {
-        form.reset(defaultDetails);
-    }, [defaultDetails, form]);
-    
-    useEffect(() => {
-        if (isEditMode && existingGroup && items.length > 0) {
-             const productsInCategory = items.filter(item => item.category === existingGroup.category && !item.isArchived);
-             const productList = getProductsForForm(productsInCategory, existingGroup.products);
-             replace(productList);
-        }
-    }, [existingGroup, items, isEditMode, replace]);
-    
-    const getProductsForForm = (productsToAdd: InventoryItem[], existingDiscounts: DiscountedProduct[] = []) => {
+    const getProductsForForm = useCallback((productsToAdd: InventoryItem[], existingDiscounts: DiscountedProduct[] = []) => {
         const productList: Omit<DiscountedProduct, 'originalPrice'> & { originalPrice: number | null, discountedPrice: number }[] = [];
         productsToAdd.forEach(product => {
             const baseProductInfo = {
@@ -174,7 +171,21 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
             }
         });
         return productList;
-    };
+    }, []);
+
+    useEffect(() => {
+        form.reset(defaultDetails);
+    }, [defaultDetails, form]);
+    
+    useEffect(() => {
+        if (isEditMode && existingGroup && items.length > 0) {
+            const productIdsInGroup = new Set(existingGroup.products.map(p => p.productId.toString()));
+            const productsInGroup = items.filter(item => productIdsInGroup.has(item.id));
+
+            const productList = getProductsForForm(productsInGroup, existingGroup.products);
+            replace(productList);
+        }
+    }, [existingGroup, items, isEditMode, replace, getProductsForForm]);
     
     const handleSelectProducts = (selectedItemIds: string[]) => {
         const itemsToAdd = items.filter(item => {
@@ -330,26 +341,54 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
                            </div>
                            <ScrollArea className="h-96 border rounded-md">
                                <Table>
-                                   <TableHeader className="sticky top-0 bg-background"><TableRow><TableHead className="w-[50%]">Produk</TableHead><TableHead>Harga Asli</TableHead><TableHead>Harga Diskon</TableHead></TableRow></TableHeader>
+                                   <TableHeader className="sticky top-0 bg-background">
+                                    <TableRow>
+                                        <TableHead className="w-[50%]">Produk</TableHead>
+                                        <TableHead>Harga Asli</TableHead>
+                                        <TableHead>Harga Diskon</TableHead>
+                                        <TableHead className="text-right">Aksi</TableHead>
+                                    </TableRow>
+                                   </TableHeader>
                                    <TableBody>
-                                       {fields.length > 0 ? fields.map((field, index) => (
-                                           <TableRow key={field.id}><TableCell>
-                                               <div className="flex items-center gap-3">
-                                                    <Image src={field.imageUrl || 'https://placehold.co/40x40.png'} alt={field.productName} width={32} height={32} className="rounded-sm" />
-                                                    <div><p className="font-medium text-sm">{field.productName}</p><p className="text-xs text-muted-foreground">{field.variantName || 'Produk utama'}</p></div>
-                                               </div>
-                                           </TableCell><TableCell>
-                                               <p className="text-sm text-muted-foreground line-through">{field.originalPrice ? new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(field.originalPrice) : 'N/A'}</p>
-                                           </TableCell><TableCell>
-                                               <FormField control={form.control} name={`products.${index}.discountedPrice`} render={({ field }) => (
-                                                   <FormItem><FormControl><Input type="number" {...field} className="h-8" /></FormControl><FormMessage /></FormItem>
-                                               )}/>
-                                           </TableCell></TableRow>
-                                       )) : (<TableRow><TableCell colSpan={3} className="h-24 text-center">Pilih kategori untuk menambahkan produk.</TableCell></TableRow>)}
+                                       {paginatedFields.length > 0 ? paginatedFields.map((field, index) => {
+                                           const originalIndex = startIndex + index;
+                                           return (
+                                           <TableRow key={field.id}>
+                                               <TableCell>
+                                                   <div className="flex items-center gap-3">
+                                                        <Image src={field.imageUrl || 'https://placehold.co/40x40.png'} alt={field.productName} width={32} height={32} className="rounded-sm" />
+                                                        <div><p className="font-medium text-sm">{field.productName}</p><p className="text-xs text-muted-foreground">{field.variantName || 'Produk utama'}</p></div>
+                                                   </div>
+                                               </TableCell>
+                                               <TableCell>
+                                                   <p className="text-sm text-muted-foreground line-through">{field.originalPrice ? new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(field.originalPrice) : 'N/A'}</p>
+                                               </TableCell>
+                                               <TableCell>
+                                                   <FormField control={form.control} name={`products.${originalIndex}.discountedPrice`} render={({ field }) => (
+                                                       <FormItem><FormControl><Input type="number" {...field} className="h-8" /></FormControl><FormMessage /></FormItem>
+                                                   )}/>
+                                               </TableCell>
+                                               <TableCell className="text-right">
+                                                    <Button type="button" variant="ghost" size="icon" className="text-destructive hover:text-destructive-foreground hover:bg-destructive" onClick={() => remove(originalIndex)}>
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </Button>
+                                               </TableCell>
+                                           </TableRow>
+                                           )
+                                       }) : (<TableRow><TableCell colSpan={4} className="h-24 text-center">Pilih kategori untuk menambahkan produk.</TableCell></TableRow>)}
                                    </TableBody>
                                </Table>
                            </ScrollArea>
                         </CardContent>
+                        {totalPages > 1 && (
+                            <CardFooter>
+                                <Pagination
+                                    totalPages={totalPages}
+                                    currentPage={currentPage}
+                                    onPageChange={setCurrentPage}
+                                />
+                            </CardFooter>
+                        )}
                     </Card>
                     <div className="flex justify-end gap-2">
                         <Button type="button" variant="ghost" onClick={() => router.back()} disabled={isSaving}>Batal</Button>
@@ -364,7 +403,7 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
                 onOpenChange={setProductSelectorOpen}
                 onSelect={handleSelectProducts}
                 availableItems={availableItemsForSelection}
-                categories={[]} // Hide category filter inside dialog
+                categories={[]}
                 initialSelectedIds={new Set(fields.map(f => f.variantId?.toString() || f.productId.toString()))}
                 title="Pilih Produk untuk Diskon"
                 description={`Pilih produk dari kategori "${selectedCategory}" untuk ditambahkan ke grup diskon ini.`}
