@@ -25,7 +25,7 @@ import {
 import { useInventory } from '@/hooks/use-inventory';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
-import { CalendarIcon, PlusCircle, Pencil, Trash2 } from 'lucide-react';
+import { CalendarIcon, PlusCircle, Pencil, Trash2, ChevronDown } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import type { DiscountGroup, DiscountedProduct, InventoryItem } from '@/types';
@@ -122,82 +122,57 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
         resolver: zodResolver(formSchema),
         defaultValues: defaultDetails,
     });
+    
+    useEffect(() => {
+        if (existingGroup) {
+            form.reset(defaultDetails);
+        }
+    }, [existingGroup, defaultDetails, form]);
 
-    const { fields, append, remove, replace } = useFieldArray({
+    const { fields, append, remove } = useFieldArray({
         control: form.control,
         name: "products"
     });
 
     const selectedCategory = form.watch('category');
-
-    const getProductsForForm = useCallback((productsToAdd: InventoryItem[], selectedIds: Set<string>) => {
+    
+    const handleSelectProducts = (selectedItemIds: string[]) => {
         const productList: Omit<DiscountedProduct, 'originalPrice'> & { originalPrice: number | null, discountedPrice: number }[] = [];
 
-        productsToAdd.forEach(product => {
-            const baseProductInfo = {
-                productId: Number(product.id),
-                productName: product.name,
-                sku: product.sku,
-                imageUrl: product.imageUrl,
-            };
-
-            const existingProductInForm = fields.find(f => f.productId === Number(product.id));
-
-            if (product.variants && product.variants.length > 0) {
-                product.variants.forEach(variant => {
-                    if (selectedIds.has(variant.id)) {
-                        const existingVariantInForm = existingProductInForm?.variantId === Number(variant.id) ? existingProductInForm : undefined;
+        selectedItemIds.forEach(selectedId => {
+            for (const product of items) {
+                if (product.variants && product.variants.length > 0) {
+                    const variant = product.variants.find(v => v.id === selectedId);
+                    if (variant) {
                         productList.push({
-                            ...baseProductInfo,
+                            productId: Number(product.id),
+                            productName: product.name,
+                            sku: product.sku,
+                            imageUrl: product.imageUrl,
                             variantId: Number(variant.id),
                             variantName: variant.name,
-                            sku: variant.sku,
                             originalPrice: variant.price,
-                            discountedPrice: existingVariantInForm ? existingVariantInForm.discountedPrice : variant.price,
+                            discountedPrice: variant.price,
                         });
+                        break;
                     }
-                });
-            } else {
-                 if (selectedIds.has(product.id)) {
-                    if (product.price === null || product.price === undefined) return;
-                    productList.push({
-                        ...baseProductInfo,
+                } else if (product.id === selectedId) {
+                    if (product.price === null || product.price === undefined) continue;
+                     productList.push({
+                        productId: Number(product.id),
+                        productName: product.name,
+                        sku: product.sku,
+                        imageUrl: product.imageUrl,
                         originalPrice: product.price ?? null,
-                        discountedPrice: existingProductInForm ? existingProductInForm.discountedPrice : (product.price || 0),
+                        discountedPrice: product.price || 0,
                     });
+                    break;
                 }
             }
         });
-        return productList;
-    }, [fields]);
 
-    useEffect(() => {
-        if (isEditMode && existingGroup?.products) {
-            const productsToAdd = items.filter(item => existingGroup.products.some(p => p.productId === Number(item.id)));
-            const selectedIds = new Set(existingGroup.products.map(p => p.variantId ? p.variantId.toString() : p.productId.toString()));
-            const productListForForm = getProductsForForm(productsToAdd, selectedIds);
-            
-            // Map existing prices
-            const finalProductList = productListForForm.map(p => {
-                const existing = existingGroup.products.find(ep => (p.variantId && ep.variantId === p.variantId) || (!p.variantId && ep.productId === p.productId));
-                return existing ? { ...p, discountedPrice: existing.discountedPrice } : p;
-            });
-
-            replace(finalProductList);
-        }
-    }, [defaultDetails, form, isEditMode, existingGroup, replace, getProductsForForm, items]);
-    
-    const handleSelectProducts = (selectedItemIds: string[]) => {
-        const selectedIdsSet = new Set(selectedItemIds);
-        const itemsToAdd = items.filter(item => {
-            if (selectedIdsSet.has(item.id)) return true;
-            return item.variants?.some(v => selectedIdsSet.has(v.id));
-        });
-        
-        const newProducts = getProductsForForm(itemsToAdd, selectedIdsSet);
-        
         const currentProductAndVariantIds = new Set(fields.map(f => f.variantId ? f.variantId.toString() : f.productId.toString()));
-        const productsToAppend = newProducts.filter(p => !currentProductAndVariantIds.has(p.variantId?.toString() || p.productId.toString()));
+        const productsToAppend = productList.filter(p => !currentProductAndVariantIds.has(p.variantId?.toString() || p.productId.toString()));
 
         append(productsToAppend);
     };
