@@ -130,8 +130,9 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
 
     const selectedCategory = form.watch('category');
 
-    const getProductsForForm = useCallback((productsToAdd: InventoryItem[], selectedIds: Set<string>, existingDiscounts: DiscountedProduct[] = []) => {
+    const getProductsForForm = useCallback((productsToAdd: InventoryItem[], selectedIds: Set<string>) => {
         const productList: Omit<DiscountedProduct, 'originalPrice'> & { originalPrice: number | null, discountedPrice: number }[] = [];
+
         productsToAdd.forEach(product => {
             const baseProductInfo = {
                 productId: Number(product.id),
@@ -140,60 +141,60 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
                 imageUrl: product.imageUrl,
             };
 
+            const existingProductInForm = fields.find(f => f.productId === Number(product.id));
+
             if (product.variants && product.variants.length > 0) {
                 product.variants.forEach(variant => {
-                    if (selectedIds.has(variant.id)) { // Only add if it was selected
-                        const existingDiscount = existingDiscounts.find(p => p.variantId === Number(variant.id));
+                    if (selectedIds.has(variant.id)) {
+                        const existingVariantInForm = existingProductInForm?.variantId === Number(variant.id) ? existingProductInForm : undefined;
                         productList.push({
                             ...baseProductInfo,
                             variantId: Number(variant.id),
                             variantName: variant.name,
                             sku: variant.sku,
                             originalPrice: variant.price,
-                            discountedPrice: existingDiscount ? existingDiscount.discountedPrice : variant.price,
+                            discountedPrice: existingVariantInForm ? existingVariantInForm.discountedPrice : variant.price,
                         });
                     }
                 });
-            } else { // This is a simple product
+            } else {
                  if (selectedIds.has(product.id)) {
                     if (product.price === null || product.price === undefined) return;
-                    const existingDiscount = existingDiscounts.find(p => p.productId === Number(product.id) && !p.variantId);
                     productList.push({
                         ...baseProductInfo,
                         originalPrice: product.price ?? null,
-                        discountedPrice: existingDiscount ? existingDiscount.discountedPrice : (product.price || 0),
+                        discountedPrice: existingProductInForm ? existingProductInForm.discountedPrice : (product.price || 0),
                     });
                 }
             }
         });
         return productList;
-    }, []);
+    }, [fields]);
 
     useEffect(() => {
-        form.reset(defaultDetails);
         if (isEditMode && existingGroup?.products) {
-            const productListForForm = existingGroup.products.map(p => ({
-                productId: p.productId,
-                variantId: p.variantId,
-                productName: p.productName,
-                variantName: p.variantName,
-                sku: p.sku,
-                imageUrl: p.imageUrl,
-                originalPrice: p.originalPrice,
-                discountedPrice: p.discountedPrice,
-            }));
-            replace(productListForForm);
+            const productsToAdd = items.filter(item => existingGroup.products.some(p => p.productId === Number(item.id)));
+            const selectedIds = new Set(existingGroup.products.map(p => p.variantId ? p.variantId.toString() : p.productId.toString()));
+            const productListForForm = getProductsForForm(productsToAdd, selectedIds);
+            
+            // Map existing prices
+            const finalProductList = productListForForm.map(p => {
+                const existing = existingGroup.products.find(ep => (p.variantId && ep.variantId === p.variantId) || (!p.variantId && ep.productId === p.productId));
+                return existing ? { ...p, discountedPrice: existing.discountedPrice } : p;
+            });
+
+            replace(finalProductList);
         }
-    }, [defaultDetails, form, isEditMode, existingGroup, replace]);
+    }, [defaultDetails, form, isEditMode, existingGroup, replace, getProductsForForm, items]);
     
     const handleSelectProducts = (selectedItemIds: string[]) => {
         const selectedIdsSet = new Set(selectedItemIds);
         const itemsToAdd = items.filter(item => {
-            if (selectedIdsSet.has(item.id)) return true; // It's a simple product
-            return item.variants?.some(v => selectedIdsSet.has(v.id)); // It's a parent of a selected variant
+            if (selectedIdsSet.has(item.id)) return true;
+            return item.variants?.some(v => selectedIdsSet.has(v.id));
         });
         
-        const newProducts = getProductsForForm(itemsToAdd, selectedIdsSet, fields);
+        const newProducts = getProductsForForm(itemsToAdd, selectedIdsSet);
         
         const currentProductAndVariantIds = new Set(fields.map(f => f.variantId ? f.variantId.toString() : f.productId.toString()));
         const productsToAppend = newProducts.filter(p => !currentProductAndVariantIds.has(p.variantId?.toString() || p.productId.toString()));
@@ -255,7 +256,6 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
     
     const availableItemsForSelection = useMemo(() => items.filter(i => i.category === selectedCategory), [items, selectedCategory]);
 
-    // Grouping and Pagination Logic
     const groupedProducts = useMemo(() => {
         const groups: Record<string, {
             productId: number;
@@ -275,7 +275,7 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
                     productName: parent?.name || field.productName,
                     sku: parent?.sku,
                     imageUrl: parent?.imageUrl,
-                    isSimpleProduct: false, // will be determined next
+                    isSimpleProduct: false,
                     variants: [],
                 };
             }
@@ -300,7 +300,7 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
     const totalPages = Math.ceil(groupedProducts.length / itemsPerPage);
 
     const handleRemoveGroup = (group: { variants: { originalIndex: number }[] }) => {
-        const indicesToRemove = group.variants.map(v => v.originalIndex);
+        const indicesToRemove = group.variants.map(v => v.originalIndex).sort((a, b) => b - a);
         remove(indicesToRemove);
     };
 
@@ -399,7 +399,7 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
                              )}
                         </CardHeader>
                         <CardContent>
-                           <ScrollArea className="h-96 border rounded-md">
+                           <ScrollArea className="border rounded-md">
                                <Table>
                                    <TableHeader className="sticky top-0 bg-background">
                                     <TableRow>
@@ -415,7 +415,7 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
                                                 const field = group.variants[0];
                                                 const originalIndex = field.originalIndex;
                                                 return (
-                                                    <TableRow key={field.id}>
+                                                    <TableRow key={field.productId}>
                                                         <TableCell>
                                                             <div className="flex items-center gap-3">
                                                                 <Image src={field.imageUrl || 'https://placehold.co/40x40.png'} alt={field.productName} width={32} height={32} className="rounded-sm" />
@@ -444,7 +444,7 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
                                             return (
                                                 <React.Fragment key={group.productId}>
                                                     <TableRow className="bg-muted/20 hover:bg-muted/40 font-semibold">
-                                                        <TableCell>
+                                                        <TableCell colSpan={2}>
                                                              <div className="flex items-center gap-3">
                                                                 <Image src={group.imageUrl || 'https://placehold.co/40x40.png'} alt={group.productName} width={32} height={32} className="rounded-sm" />
                                                                 <div>
@@ -453,7 +453,6 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
                                                                 </div>
                                                             </div>
                                                         </TableCell>
-                                                        <TableCell></TableCell>
                                                          <TableCell>
                                                             <div className="flex items-center gap-2">
                                                                 <Input 
@@ -487,7 +486,7 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
                                                     {group.variants.map((field) => {
                                                         const originalIndex = field.originalIndex;
                                                         return (
-                                                            <TableRow key={field.id}>
+                                                            <TableRow key={field.variantId}>
                                                                 <TableCell className="pl-12">
                                                                     <div className="flex items-center gap-3">
                                                                         <div>
