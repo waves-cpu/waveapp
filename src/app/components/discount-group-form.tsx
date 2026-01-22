@@ -276,7 +276,6 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
             productName: string;
             sku?: string;
             imageUrl?: string;
-            isSimpleProduct: boolean;
             variants: (typeof fields[0] & { originalIndex: number })[];
         }> = {};
 
@@ -289,15 +288,10 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
                     productName: parent?.name || field.productName,
                     sku: parent?.sku,
                     imageUrl: parent?.imageUrl,
-                    isSimpleProduct: false,
                     variants: [],
                 };
             }
             groups[productId].variants.push({ ...field, originalIndex: index });
-        });
-        
-        Object.values(groups).forEach(group => {
-            group.isSimpleProduct = group.variants.length === 1 && !group.variants[0].variantId;
         });
 
         return Object.values(groups).sort((a,b) => a.productName.localeCompare(b.productName));
@@ -411,14 +405,14 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
                             </Button>
                         </CardHeader>
                         <CardContent>
-                            <div className="flex justify-center mb-6">
-                                <div className="flex items-center gap-2 p-2 border rounded-md bg-muted/50 w-auto">
+                             <div className="flex justify-center mb-6">
+                                <div className="flex items-center gap-2">
                                     <Label htmlFor="global-bulk-price" className="text-sm font-medium shrink-0">Harga Massal Global:</Label>
                                     <Input
                                         id="global-bulk-price"
                                         type="number"
                                         placeholder="cth. 99000"
-                                        className="h-9 w-40"
+                                        className="h-9 w-48"
                                         value={globalBulkPrice}
                                         onChange={(e) => setGlobalBulkPrice(e.target.value === '' ? '' : Number(e.target.value))}
                                     />
@@ -437,17 +431,21 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
                                    </TableHeader>
                                    <TableBody>
                                         {paginatedGroups.length > 0 ? paginatedGroups.map((group) => {
-                                            if (group.isSimpleProduct) {
+                                            if (group.variants.length === 1) {
                                                 const field = group.variants[0];
                                                 const originalIndex = field.originalIndex;
+                                                const displayName = field.variantName ? `${field.productName} - ${field.variantName}` : field.productName;
+                                                const displaySku = field.sku || group.sku || 'N/A';
+                                                const displayImageUrl = field.imageUrl || group.imageUrl || 'https://placehold.co/40x40.png';
+
                                                 return (
                                                     <TableRow key={field.productId}>
                                                         <TableCell>
                                                             <div className="flex items-center gap-3">
-                                                                <Image src={field.imageUrl || 'https://placehold.co/40x40.png'} alt={field.productName} width={32} height={32} className="rounded-sm" />
+                                                                <Image src={displayImageUrl} alt={displayName} width={32} height={32} className="rounded-sm" />
                                                                 <div>
-                                                                    <p className="font-medium text-sm">{field.productName}</p>
-                                                                    <p className="text-xs text-muted-foreground">SKU: {field.sku || 'Produk utama'}</p>
+                                                                    <p className="font-medium text-sm">{displayName}</p>
+                                                                    <p className="text-xs text-muted-foreground">SKU: {displaySku}</p>
                                                                 </div>
                                                             </div>
                                                         </TableCell>
@@ -455,8 +453,8 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
                                                             <p className="text-sm text-muted-foreground line-through">{field.originalPrice ? new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(field.originalPrice) : 'N/A'}</p>
                                                         </TableCell>
                                                         <TableCell>
-                                                            <FormField control={form.control} name={`products.${originalIndex}.discountedPrice`} render={({ field }) => (
-                                                                <FormItem><FormControl><Input type="number" {...field} className="h-8 w-32" /></FormControl><FormMessage /></FormItem>
+                                                            <FormField control={form.control} name={`products.${originalIndex}.discountedPrice`} render={({ field: formField }) => (
+                                                                <FormItem><FormControl><Input type="number" {...formField} onChange={e => formField.onChange(Number(e.target.value))} className="h-8 w-32" /></FormControl><FormMessage /></FormItem>
                                                             )}/>
                                                         </TableCell>
                                                         <TableCell>
@@ -532,8 +530,8 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
                                                                     <p className="text-sm text-muted-foreground line-through">{field.originalPrice ? new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(field.originalPrice) : 'N/A'}</p>
                                                                 </TableCell>
                                                                 <TableCell>
-                                                                    <FormField control={form.control} name={`products.${originalIndex}.discountedPrice`} render={({ field }) => (
-                                                                        <FormItem><FormControl><Input type="number" {...field} className="h-8 w-32" /></FormControl><FormMessage /></FormItem>
+                                                                    <FormField control={form.control} name={`products.${originalIndex}.discountedPrice`} render={({ field: formField }) => (
+                                                                        <FormItem><FormControl><Input type="number" {...formField} onChange={e => formField.onChange(Number(e.target.value))} className="h-8 w-32" /></FormControl><FormMessage /></FormItem>
                                                                     )}/>
                                                                 </TableCell>
                                                                 <TableCell>
