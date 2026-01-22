@@ -407,11 +407,11 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
                                     Pilih Produk
                                 </Button>
                                 {groupedProducts.length > 1 && (
-                                    <div className="flex items-center gap-2 w-full max-w-md">
+                                    <div className="flex items-center gap-2 w-full max-w-sm">
                                         <Input
                                             id="global-bulk-price"
                                             type="number"
-                                            placeholder="Isi harga untuk semua produk di bawah"
+                                            placeholder="Ubah Harga"
                                             className="h-9 flex-grow"
                                             value={globalBulkPrice}
                                             onChange={(e) => setGlobalBulkPrice(e.target.value === '' ? '' : Number(e.target.value))}
@@ -496,10 +496,10 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
                                                             {/* Empty for alignment */}
                                                         </TableCell>
                                                         <TableCell className="py-1" colSpan={2}>
-                                                            <div className="flex items-center gap-2 w-full max-w-xs">
+                                                            <div className="flex items-center gap-2 w-full max-w-sm">
                                                                 <Input
                                                                     type="number"
-                                                                    placeholder="Harga massal untuk varian..."
+                                                                    placeholder="Harga massal untuk varian"
                                                                     className="h-8 w-full"
                                                                     value={masterPrices[group.productId.toString()] ?? ''}
                                                                     onChange={e => setMasterPrices(prev => ({...prev, [group.productId.toString()]: e.target.value === '' ? '' : Number(e.target.value)}))}
