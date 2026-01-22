@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useForm, useFieldArray } from 'react-hook-form';
@@ -84,6 +85,37 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
     const [masterQuantities, setMasterQuantities] = useState<Record<string, number | ''>>({});
 
 
+    const getProductsForForm = useCallback((products: any[]): any[] => {
+        return products.map(p => {
+             const parent = items.find(i => i.id === p.productId.toString());
+            
+            if (p.variantId) {
+                const variant = parent?.variants?.find(v => v.id === p.variantId.toString());
+                return {
+                    productId: p.productId,
+                    variantId: p.variantId,
+                    productName: parent?.name || 'Unknown Product',
+                    variantName: variant?.name || 'Unknown Variant',
+                    sku: variant?.sku || '',
+                    imageUrl: parent?.imageUrl || '',
+                    originalPrice: variant?.price || 0,
+                    discountedPrice: p.discountedPrice
+                };
+            } else {
+                 return {
+                    productId: p.productId,
+                    variantId: undefined,
+                    productName: parent?.name || 'Unknown Product',
+                    variantName: undefined,
+                    sku: parent?.sku || '',
+                    imageUrl: parent?.imageUrl || '',
+                    originalPrice: parent?.price || 0,
+                    discountedPrice: p.discountedPrice
+                };
+            }
+        });
+    }, [items]);
+
     const defaultDetails = useMemo(() => {
         if (!isEditMode || !existingGroup) {
             return {
@@ -102,6 +134,9 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
                 minPurchase: 0,
             };
         }
+
+        const finalProductList = getProductsForForm(existingGroup.products || []);
+
         return {
             id: existingGroup.id,
             name: existingGroup.name,
@@ -111,14 +146,14 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
                 from: new Date(existingGroup.startDate),
                 to: new Date(existingGroup.endDate),
             },
-            products: existingGroup.products.map(p => ({...p, originalPrice: p.originalPrice ?? null})),
+            products: finalProductList,
             voucherCode: existingGroup.voucherCode || '',
             discountType: existingGroup.discountType || 'percentage',
             discountValue: existingGroup.discountValue || undefined,
             maxUses: existingGroup.maxUses === null ? undefined : existingGroup.maxUses,
             minPurchase: existingGroup.minPurchase || 0,
         };
-    }, [isEditMode, existingGroup]);
+    }, [isEditMode, existingGroup, getProductsForForm]);
     
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
@@ -131,7 +166,7 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
         }
     }, [existingGroup, defaultDetails, form]);
 
-    const { fields, append, remove, update } = useFieldArray({
+    const { fields, append, remove } = useFieldArray({
         control: form.control,
         name: "products"
     });
@@ -143,7 +178,7 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
 
         selectedItemIds.forEach(selectedId => {
             for (const product of items) {
-                if (product.variants && product.variants.length > 0) {
+                 if (product.variants && product.variants.length > 0) {
                     const variant = product.variants.find(v => v.id === selectedId);
                     if (variant) {
                         productList.push({
@@ -158,24 +193,29 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
                         });
                     }
                 } else if (product.id === selectedId) {
-                    if (product.price === null || product.price === undefined) continue;
-                     productList.push({
-                        productId: Number(product.id),
-                        productName: product.name,
-                        sku: product.sku,
-                        imageUrl: product.imageUrl,
-                        originalPrice: product.price ?? null,
-                        discountedPrice: product.price || 0,
-                    });
+                    if (product.price !== null && product.price !== undefined) {
+                         productList.push({
+                            productId: Number(product.id),
+                            productName: product.name,
+                            sku: product.sku,
+                            imageUrl: product.imageUrl,
+                            originalPrice: product.price,
+                            discountedPrice: product.price,
+                        });
+                    }
                 }
             }
         });
 
         const currentProductAndVariantIds = new Set(fields.map(f => f.variantId ? f.variantId.toString() : f.productId.toString()));
-        const productsToAppend = productList.filter(p => !currentProductAndVariantIds.has(p.variantId?.toString() || p.productId.toString()));
+        const productsToAppend = productList.filter(p => {
+             const idToCheck = p.variantId?.toString() || p.productId.toString();
+             return !currentProductAndVariantIds.has(idToCheck);
+        });
 
         append(productsToAppend);
     }, [items, fields, append]);
+
 
     async function onSubmit(values: z.infer<typeof formSchema>) {
         setIsSaving(true);
@@ -262,7 +302,7 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
             group.isSimpleProduct = group.variants.length === 1 && !group.variants[0].variantId;
         });
 
-        return Object.values(groups);
+        return Object.values(groups).sort((a,b) => a.productName.localeCompare(b.productName));
     }, [fields, items]);
     
     const [currentPage, setCurrentPage] = useState(1);
@@ -363,16 +403,24 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
 
                     <Card>
                         <CardHeader className="flex-row items-center">
-                            <div className="flex-grow">
-                                <CardTitle className="text-lg">Pengaturan Harga Produk</CardTitle>
+                             <div className="flex-grow">
+                                <CardTitle className="text-base">Pengaturan Harga Produk</CardTitle>
                                 <CardDescription>Atur harga diskon untuk produk dalam kategori '{selectedCategory || "..."}'.</CardDescription>
                             </div>
-                             {!isVoucherForm && (
+                            <div className="flex items-center gap-2">
+                                <Input
+                                    type="number"
+                                    placeholder="Harga massal global"
+                                    className="h-9 w-40"
+                                    value={globalBulkPrice}
+                                    onChange={(e) => setGlobalBulkPrice(e.target.value === '' ? '' : Number(e.target.value))}
+                                />
+                                <Button type="button" size="sm" onClick={applyGlobalBulkPrice}>Terapkan ke Semua</Button>
                                 <Button type="button" onClick={() => setProductSelectorOpen(true)} disabled={!selectedCategory}>
                                     <PlusCircle className="mr-2 h-4 w-4" />
                                     Pilih Produk
                                 </Button>
-                             )}
+                            </div>
                         </CardHeader>
                         <CardContent>
                             <ScrollArea>
@@ -463,8 +511,9 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
                                                         const originalIndex = field.originalIndex;
                                                         return (
                                                             <TableRow key={field.variantId}>
-                                                                <TableCell className="pl-8">
+                                                                <TableCell>
                                                                     <div className="flex items-center gap-3">
+                                                                         <div className="w-4 shrink-0" />
                                                                         <div className="flex h-8 w-8 items-center justify-center rounded-sm shrink-0">
                                                                             <Store className="h-5 w-5 text-gray-400" />
                                                                         </div>
@@ -528,4 +577,5 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
         </>
     );
 }
+
 
