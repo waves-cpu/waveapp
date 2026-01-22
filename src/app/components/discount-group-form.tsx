@@ -319,7 +319,7 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                      <Card>
                           <CardHeader>
-                            <CardTitle>{isEditMode ? 'Ubah Detail' : 'Detail Baru'}</CardTitle>
+                            <CardTitle className="text-base">{isEditMode ? 'Ubah Detail' : 'Detail Baru'}</CardTitle>
                           </CardHeader>
                           <CardContent className="space-y-6">
                              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -395,20 +395,18 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
                      </Card>
 
                     <Card>
-                        <CardHeader className="flex-row items-center justify-between">
-                             <div>
-                                <CardTitle className="text-base">Pengaturan Harga Produk</CardTitle>
-                                <CardDescription>Atur harga diskon untuk produk dalam kategori '{selectedCategory || "..."}'.</CardDescription>
-                            </div>
-                            <Button type="button" onClick={() => setProductSelectorOpen(true)} disabled={!selectedCategory}>
-                                <PlusCircle className="mr-2 h-4 w-4" />
-                                Pilih Produk
-                            </Button>
+                        <CardHeader>
+                            <CardTitle className="text-base">Pengaturan Harga Produk</CardTitle>
+                            <CardDescription>Atur harga diskon untuk produk dalam kategori '{selectedCategory || "..."}'.</CardDescription>
                         </CardHeader>
                         <CardContent>
-                             {groupedProducts.length > 1 && (
-                                <div className="flex justify-center mb-6">
-                                    <div className="flex items-center gap-2">
+                             <div className="flex justify-between items-center mb-6">
+                                <Button type="button" onClick={() => setProductSelectorOpen(true)} disabled={!selectedCategory}>
+                                    <PlusCircle className="mr-2 h-4 w-4" />
+                                    Pilih Produk
+                                </Button>
+                                {groupedProducts.length > 1 && (
+                                     <div className="flex items-center gap-2">
                                         <Label htmlFor="global-bulk-price" className="text-sm font-medium shrink-0">Harga Massal Global:</Label>
                                         <Input
                                             id="global-bulk-price"
@@ -420,8 +418,8 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
                                         />
                                         <Button type="button" size="sm" onClick={applyGlobalBulkPrice}>Terapkan ke Semua</Button>
                                     </div>
-                                </div>
-                            )}
+                                )}
+                            </div>
                                <Table>
                                    <TableHeader>
                                     <TableRow>
@@ -518,7 +516,7 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
                                                         return (
                                                             <TableRow key={field.variantId}>
                                                                 <TableCell>
-                                                                    <div className="flex items-center gap-3 pl-8">
+                                                                    <div className="flex items-center gap-3 pl-4">
                                                                          <div className="w-8 shrink-0" />
                                                                         <div className="flex h-8 w-8 items-center justify-center rounded-sm shrink-0">
                                                                             <Store className="h-5 w-5 text-gray-400" />
@@ -596,4 +594,3 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
         </>
     );
 }
-
