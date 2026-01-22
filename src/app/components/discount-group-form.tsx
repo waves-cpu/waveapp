@@ -25,7 +25,7 @@ import {
 import { useInventory } from '@/hooks/use-inventory';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
-import { CalendarIcon, PlusCircle, Pencil, Trash2, ChevronDown } from 'lucide-react';
+import { CalendarIcon, PlusCircle, Pencil, Trash2, ChevronDown, Store } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import type { DiscountGroup, DiscountedProduct, InventoryItem } from '@/types';
@@ -81,6 +81,7 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
     const [isProductSelectorOpen, setProductSelectorOpen] = useState(false);
     const isEditMode = !!existingGroup;
     const [globalBulkPrice, setGlobalBulkPrice] = useState<number | ''>('');
+    const [masterQuantities, setMasterQuantities] = useState<Record<string, number | ''>>({});
 
 
     const defaultDetails = useMemo(() => {
@@ -110,7 +111,7 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
                 from: new Date(existingGroup.startDate),
                 to: new Date(existingGroup.endDate),
             },
-            products: existingGroup.products,
+            products: existingGroup.products.map(p => ({...p, originalPrice: p.originalPrice ?? null})),
             voucherCode: existingGroup.voucherCode || '',
             discountType: existingGroup.discountType || 'percentage',
             discountValue: existingGroup.discountValue || undefined,
@@ -130,14 +131,14 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
         }
     }, [existingGroup, defaultDetails, form]);
 
-    const { fields, append, remove } = useFieldArray({
+    const { fields, append, remove, update } = useFieldArray({
         control: form.control,
         name: "products"
     });
 
     const selectedCategory = form.watch('category');
     
-    const handleSelectProducts = (selectedItemIds: string[]) => {
+    const handleSelectProducts = useCallback((selectedItemIds: string[]) => {
         const productList: Omit<DiscountedProduct, 'originalPrice'> & { originalPrice: number | null, discountedPrice: number }[] = [];
 
         selectedItemIds.forEach(selectedId => {
@@ -155,7 +156,6 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
                             originalPrice: variant.price,
                             discountedPrice: variant.price,
                         });
-                        break;
                     }
                 } else if (product.id === selectedId) {
                     if (product.price === null || product.price === undefined) continue;
@@ -167,7 +167,6 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
                         originalPrice: product.price ?? null,
                         discountedPrice: product.price || 0,
                     });
-                    break;
                 }
             }
         });
@@ -176,7 +175,7 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
         const productsToAppend = productList.filter(p => !currentProductAndVariantIds.has(p.variantId?.toString() || p.productId.toString()));
 
         append(productsToAppend);
-    };
+    }, [items, fields, append]);
 
     async function onSubmit(values: z.infer<typeof formSchema>) {
         setIsSaving(true);
@@ -213,6 +212,22 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
         } else {
             toast({ variant: 'destructive', title: 'Harga Tidak Valid' });
         }
+    };
+    
+    const applyMasterQuantity = (parentName: string, price: number | '') => {
+        if (typeof price !== 'number' || price < 0) {
+            toast({ variant: "destructive", title: "Harga tidak valid" });
+            return;
+        }
+        
+        groupedProducts.forEach(group => {
+            if (group.productName === parentName) {
+                group.variants.forEach(variant => {
+                    form.setValue(`products.${variant.originalIndex}.discountedPrice`, price, { shouldDirty: true });
+                });
+            }
+        });
+        toast({ title: "Harga diterapkan untuk varian" });
     };
     
     const availableItemsForSelection = useMemo(() => items.filter(i => i.category === selectedCategory), [items, selectedCategory]);
@@ -347,8 +362,8 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
                      </Card>
 
                     <Card>
-                        <CardHeader className="flex-row justify-between items-center">
-                            <div>
+                        <CardHeader className="flex-row items-center">
+                            <div className="flex-grow">
                                 <CardTitle className="text-lg">Pengaturan Harga Produk</CardTitle>
                                 <CardDescription>Atur harga diskon untuk produk dalam kategori '{selectedCategory || "..."}'.</CardDescription>
                             </div>
@@ -360,27 +375,9 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
                              )}
                         </CardHeader>
                         <CardContent>
-                             <div className="flex items-center gap-2 pb-4">
-                                <Input
-                                    type="number"
-                                    placeholder="Harga massal untuk semua produk di bawah"
-                                    className="h-8"
-                                    value={globalBulkPrice}
-                                    onChange={(e) => setGlobalBulkPrice(e.target.value === '' ? '' : Number(e.target.value))}
-                                />
-                                <Button
-                                    type="button"
-                                    variant="secondary"
-                                    size="sm"
-                                    className="h-8"
-                                    onClick={applyGlobalBulkPrice}
-                                >
-                                    Terapkan ke Semua
-                                </Button>
-                            </div>
-                           <ScrollArea className="border rounded-md">
+                            <ScrollArea>
                                <Table>
-                                   <TableHeader className="sticky top-0 bg-background">
+                                   <TableHeader>
                                     <TableRow>
                                         <TableHead className="w-[50%]">Produk</TableHead>
                                         <TableHead>Harga Asli</TableHead>
@@ -425,6 +422,9 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
                                                     <TableRow className="bg-muted/20 hover:bg-muted/40 font-semibold">
                                                         <TableCell>
                                                              <div className="flex items-center gap-3">
+                                                                <div className="w-4 shrink-0">
+                                                                    <ChevronDown className={cn("h-4 w-4 transition-transform", false && "rotate-180")} />
+                                                                </div>
                                                                 <Image src={group.imageUrl || 'https://placehold.co/40x40.png'} alt={group.productName} width={32} height={32} className="rounded-sm" />
                                                                 <div>
                                                                     <p className="text-sm text-primary">{group.productName}</p>
@@ -433,7 +433,26 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
                                                             </div>
                                                         </TableCell>
                                                         <TableCell></TableCell>
-                                                        <TableCell></TableCell>
+                                                        <TableCell>
+                                                             <div className="flex items-center gap-2">
+                                                                <Input
+                                                                    type="number"
+                                                                    placeholder="Harga massal"
+                                                                    className="h-8"
+                                                                    value={masterQuantities[group.productName] ?? ''}
+                                                                    onChange={(e) => setMasterQuantities(prev => ({ ...prev, [group.productName]: e.target.value === '' ? '' : Number(e.target.value) }))}
+                                                                />
+                                                                <Button
+                                                                    type="button"
+                                                                    variant="secondary"
+                                                                    size="sm"
+                                                                    className="h-8"
+                                                                    onClick={() => applyMasterQuantity(group.productName, masterQuantities[group.productName] ?? '')}
+                                                                >
+                                                                    Terapkan
+                                                                </Button>
+                                                            </div>
+                                                        </TableCell>
                                                         <TableCell className="text-right">
                                                             <Button type="button" variant="ghost" size="icon" className="text-destructive hover:text-destructive-foreground hover:bg-destructive" onClick={() => handleRemoveGroup(group)}>
                                                                 <Trash2 className="h-4 w-4" />
@@ -444,8 +463,11 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
                                                         const originalIndex = field.originalIndex;
                                                         return (
                                                             <TableRow key={field.variantId}>
-                                                                <TableCell className="pl-12">
+                                                                <TableCell className="pl-8">
                                                                     <div className="flex items-center gap-3">
+                                                                        <div className="flex h-8 w-8 items-center justify-center rounded-sm shrink-0">
+                                                                            <Store className="h-5 w-5 text-gray-400" />
+                                                                        </div>
                                                                         <div>
                                                                             <p className="font-medium text-sm">{field.variantName}</p>
                                                                             <p className="text-xs text-muted-foreground">{field.sku}</p>
@@ -506,3 +528,4 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
         </>
     );
 }
+
