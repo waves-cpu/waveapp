@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useForm, useFieldArray } from 'react-hook-form';
@@ -317,7 +318,7 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
             <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                      <Card>
-                          <CardHeader>
+                          <CardHeader className="p-6">
                             <CardTitle className="text-base">{isEditMode ? 'Ubah Detail' : 'Detail Baru'}</CardTitle>
                           </CardHeader>
                           <CardContent className="space-y-6">
@@ -397,15 +398,9 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
                         <CardHeader>
                             <CardTitle className="text-base">Pengaturan Harga Produk</CardTitle>
                             <CardDescription>Atur harga diskon untuk produk dalam kategori '{selectedCategory || "..."}'.</CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                             <div className="flex justify-between items-center mb-6">
-                                <Button type="button" onClick={() => setProductSelectorOpen(true)} disabled={!selectedCategory}>
-                                    <PlusCircle className="mr-2 h-4 w-4" />
-                                    Pilih Produk
-                                </Button>
-                                {groupedProducts.length > 1 && (
-                                     <div className="flex items-center gap-2">
+                             {groupedProducts.length > 1 && (
+                                <div className="flex items-center justify-center pt-4">
+                                    <div className="flex items-center gap-2">
                                         <Input
                                             id="global-bulk-price"
                                             type="number"
@@ -416,7 +411,15 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
                                         />
                                         <Button type="button" size="sm" onClick={applyGlobalBulkPrice}>Terapkan ke Semua</Button>
                                     </div>
-                                )}
+                                </div>
+                            )}
+                        </CardHeader>
+                        <CardContent>
+                             <div className="flex justify-start items-center mb-6">
+                                <Button type="button" onClick={() => setProductSelectorOpen(true)} disabled={!selectedCategory}>
+                                    <PlusCircle className="mr-2 h-4 w-4" />
+                                    Pilih Produk
+                                </Button>
                             </div>
                                <Table>
                                    <TableHeader>
@@ -430,7 +433,7 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
                                    </TableHeader>
                                    <TableBody>
                                         {paginatedGroups.length > 0 ? paginatedGroups.map((group) => {
-                                            if (group.variants.length === 1) {
+                                            if (group.variants.length === 1 && !isEditMode) {
                                                 const field = group.variants[0];
                                                 const originalIndex = field.originalIndex;
                                                 const displayName = field.variantName ? `${field.productName} - ${field.variantName}` : field.productName;
@@ -481,9 +484,8 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
                                             return (
                                                 <React.Fragment key={group.productId}>
                                                     <TableRow className="bg-muted/20 hover:bg-muted/40 font-semibold">
-                                                         <TableCell>
-                                                             <div className="flex items-center gap-3">
-                                                                <div className="w-8 shrink-0" />
+                                                        <TableCell>
+                                                            <div className="flex items-center gap-3">
                                                                 <Image src={group.imageUrl || 'https://placehold.co/40x40.png'} alt={group.productName} width={32} height={32} className="rounded-sm" />
                                                                 <div>
                                                                     <p className="text-sm text-primary">{group.productName}</p>
@@ -491,17 +493,20 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
                                                                 </div>
                                                             </div>
                                                         </TableCell>
-                                                         <TableCell colSpan={3}>
-                                                            <div className="flex items-center gap-2">
-                                                                <Input
-                                                                    type="number"
-                                                                    placeholder="Harga massal untuk varian"
-                                                                    className="h-8 w-40"
-                                                                    value={masterPrices[group.productId.toString()] ?? ''}
-                                                                    onChange={e => setMasterPrices(prev => ({...prev, [group.productId.toString()]: e.target.value === '' ? '' : Number(e.target.value)}))}
-                                                                />
-                                                                <Button type="button" size="sm" onClick={() => applyMasterPrice(group.productId)}>Terapkan</Button>
-                                                            </div>
+                                                        <TableCell>
+                                                            {/* Empty for alignment */}
+                                                        </TableCell>
+                                                        <TableCell>
+                                                            <Input
+                                                                type="number"
+                                                                placeholder="Harga massal varian"
+                                                                className="h-8 w-32"
+                                                                value={masterPrices[group.productId.toString()] ?? ''}
+                                                                onChange={e => setMasterPrices(prev => ({...prev, [group.productId.toString()]: e.target.value === '' ? '' : Number(e.target.value)}))}
+                                                            />
+                                                        </TableCell>
+                                                        <TableCell>
+                                                            <Button type="button" size="sm" onClick={() => applyMasterPrice(group.productId)}>Terapkan</Button>
                                                         </TableCell>
                                                         <TableCell className="text-right">
                                                             <Button type="button" variant="ghost" size="icon" className="text-destructive hover:text-destructive-foreground hover:bg-destructive" onClick={() => handleRemoveGroup(group)}>
@@ -514,8 +519,7 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
                                                         return (
                                                             <TableRow key={field.variantId}>
                                                                 <TableCell>
-                                                                    <div className="flex items-center gap-3 pl-4">
-                                                                         <div className="w-8 shrink-0" />
+                                                                    <div className="flex items-center gap-3 pl-12">
                                                                         <div className="flex h-8 w-8 items-center justify-center rounded-sm shrink-0">
                                                                             <Store className="h-5 w-5 text-gray-400" />
                                                                         </div>
@@ -592,3 +596,4 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
         </>
     );
 }
+
