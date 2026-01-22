@@ -167,18 +167,18 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
         }
     }, [existingGroup, defaultDetails, form]);
 
-    const { fields, append, remove } = useFieldArray({
+    const { fields, append, remove, replace } = useFieldArray({
         control: form.control,
         name: "products"
     });
 
     const selectedCategory = form.watch('category');
     
-    const handleSelectProducts = useCallback((selectedItemIds: string[]) => {
+    const handleSelectProducts = useCallback((selectedIds: string[]) => {
         const productList: Omit<DiscountedProduct, 'originalPrice'> & { originalPrice: number | null, discountedPrice: number }[] = [];
 
         const currentProductAndVariantIds = new Set(fields.map(f => f.variantId ? f.variantId.toString() : f.productId.toString()));
-        const uniqueSelectedItemIds = Array.from(new Set(selectedItemIds));
+        const uniqueSelectedItemIds = Array.from(new Set(selectedIds));
 
         uniqueSelectedItemIds.forEach(selectedId => {
             if (currentProductAndVariantIds.has(selectedId)) return;
@@ -256,22 +256,6 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
         } else {
             toast({ variant: 'destructive', title: 'Harga Tidak Valid' });
         }
-    };
-    
-    const applyMasterQuantity = (parentName: string, price: number | '') => {
-        if (typeof price !== 'number' || price < 0) {
-            toast({ variant: "destructive", title: "Harga tidak valid" });
-            return;
-        }
-        
-        groupedProducts.forEach(group => {
-            if (group.productName === parentName) {
-                group.variants.forEach(variant => {
-                    form.setValue(`products.${variant.originalIndex}.discountedPrice`, price, { shouldDirty: true });
-                });
-            }
-        });
-        toast({ title: "Harga diterapkan untuk varian" });
     };
     
     const availableItemsForSelection = useMemo(() => items.filter(i => i.category === selectedCategory), [items, selectedCategory]);
@@ -407,7 +391,7 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
 
                     <Card>
                          <CardHeader className="flex-row items-center">
-                             <div className="flex-grow">
+                            <div className="flex-grow">
                                 <CardTitle className="text-lg">Pengaturan Harga Produk</CardTitle>
                                 <CardDescription>Atur harga diskon untuk produk dalam kategori '{selectedCategory || "..."}'.</CardDescription>
                             </div>
@@ -430,11 +414,11 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
                                <Table>
                                    <TableHeader>
                                     <TableRow>
-                                        <TableHead className="w-[45%]">Produk</TableHead>
-                                        <TableHead>Harga Asli</TableHead>
-                                        <TableHead>Harga Diskon</TableHead>
-                                        <TableHead>Diskon</TableHead>
-                                        <TableHead className="text-right">Aksi</TableHead>
+                                        <TableHead className="w-[40%]">Produk</TableHead>
+                                        <TableHead className="w-[15%]">Harga Asli</TableHead>
+                                        <TableHead className="w-[15%]">Harga Diskon</TableHead>
+                                        <TableHead className="w-[15%]">Diskon</TableHead>
+                                        <TableHead className="w-[15%] text-right">Aksi</TableHead>
                                     </TableRow>
                                    </TableHeader>
                                    <TableBody>
@@ -495,28 +479,7 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
                                                                 </div>
                                                             </div>
                                                         </TableCell>
-                                                        <TableCell></TableCell>
-                                                        <TableCell>
-                                                             <div className="flex items-center gap-2">
-                                                                <Input
-                                                                    type="number"
-                                                                    placeholder="Harga massal"
-                                                                    className="h-8 w-32"
-                                                                    value={masterQuantities[group.productName] ?? ''}
-                                                                    onChange={(e) => setMasterQuantities(prev => ({ ...prev, [group.productName]: e.target.value === '' ? '' : Number(e.target.value) }))}
-                                                                />
-                                                                <Button
-                                                                    type="button"
-                                                                    variant="secondary"
-                                                                    size="sm"
-                                                                    className="h-8"
-                                                                    onClick={() => applyMasterQuantity(group.productName, masterQuantities[group.productName] ?? '')}
-                                                                >
-                                                                    Terapkan
-                                                                </Button>
-                                                            </div>
-                                                        </TableCell>
-                                                        <TableCell></TableCell>
+                                                        <TableCell colSpan={3}></TableCell>
                                                         <TableCell className="text-right">
                                                             <Button type="button" variant="ghost" size="icon" className="text-destructive hover:text-destructive-foreground hover:bg-destructive" onClick={() => handleRemoveGroup(group)}>
                                                                 <Trash2 className="h-4 w-4" />
