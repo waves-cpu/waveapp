@@ -1,5 +1,3 @@
-
-
 'use client';
 
 import { useForm, useFieldArray } from 'react-hook-form';
@@ -83,7 +81,7 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
     const [isProductSelectorOpen, setProductSelectorOpen] = useState(false);
     const isEditMode = !!existingGroup;
     const [globalBulkPrice, setGlobalBulkPrice] = useState<number | ''>('');
-    const [masterQuantities, setMasterQuantities] = useState<Record<string, number | ''>>({});
+    const [masterPrices, setMasterPrices] = useState<Record<string, number | ''>>({});
 
 
     const getProductsForForm = useCallback((products: any[]): any[] => {
@@ -166,6 +164,7 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
             form.reset(defaultDetails);
         }
     }, [existingGroup, defaultDetails, form]);
+
 
     const { fields, append, remove, replace } = useFieldArray({
         control: form.control,
@@ -255,6 +254,17 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
             toast({ title: 'Harga Massal Diterapkan' });
         } else {
             toast({ variant: 'destructive', title: 'Harga Tidak Valid' });
+        }
+    };
+    
+    const applyMasterPrice = (productId: number) => {
+        const price = masterPrices[productId.toString()];
+        if (typeof price === 'number' && price >= 0) {
+            fields.forEach((field, index) => {
+                if (field.productId === productId) {
+                    form.setValue(`products.${index}.discountedPrice`, price, { shouldDirty: true });
+                }
+            });
         }
     };
     
@@ -390,24 +400,28 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
                      </Card>
 
                     <Card>
-                         <CardHeader className="flex-row items-center">
-                            <div className="flex-grow">
-                                <CardTitle className="text-lg">Pengaturan Harga Produk</CardTitle>
-                                <CardDescription>Atur harga diskon untuk produk dalam kategori '{selectedCategory || "..."}'.</CardDescription>
+                         <CardHeader>
+                            <div className="flex justify-between items-start">
+                                <div>
+                                    <CardTitle className="text-lg">Pengaturan Harga Produk</CardTitle>
+                                    <CardDescription>Atur harga diskon untuk produk dalam kategori '{selectedCategory || "..."}'.</CardDescription>
+                                </div>
+                                <Button type="button" onClick={() => setProductSelectorOpen(true)} disabled={!selectedCategory}>
+                                    <PlusCircle className="mr-2 h-4 w-4" />
+                                    Pilih Produk
+                                </Button>
                             </div>
-                            <div className="flex items-center gap-2">
+                             <div className="flex items-center gap-2 pt-4 border-t mt-4">
+                                <Label htmlFor="global-bulk-price" className="text-sm font-medium shrink-0">Harga Massal Global:</Label>
                                 <Input
+                                    id="global-bulk-price"
                                     type="number"
-                                    placeholder="Harga massal global"
+                                    placeholder="cth. 99000"
                                     className="h-9 w-40"
                                     value={globalBulkPrice}
                                     onChange={(e) => setGlobalBulkPrice(e.target.value === '' ? '' : Number(e.target.value))}
                                 />
                                 <Button type="button" size="sm" onClick={applyGlobalBulkPrice}>Terapkan ke Semua</Button>
-                                <Button type="button" onClick={() => setProductSelectorOpen(true)} disabled={!selectedCategory}>
-                                    <PlusCircle className="mr-2 h-4 w-4" />
-                                    Pilih Produk
-                                </Button>
                             </div>
                         </CardHeader>
                         <CardContent>
@@ -467,11 +481,9 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
                                             return (
                                                 <React.Fragment key={group.productId}>
                                                     <TableRow className="bg-muted/20 hover:bg-muted/40 font-semibold">
-                                                        <TableCell>
+                                                         <TableCell>
                                                              <div className="flex items-center gap-3">
-                                                                <div className="w-8 shrink-0">
-                                                                    <ChevronDown className={cn("h-4 w-4 transition-transform", false && "rotate-180")} />
-                                                                </div>
+                                                                <div className="w-8 shrink-0" />
                                                                 <Image src={group.imageUrl || 'https://placehold.co/40x40.png'} alt={group.productName} width={32} height={32} className="rounded-sm" />
                                                                 <div>
                                                                     <p className="text-sm text-primary">{group.productName}</p>
@@ -479,8 +491,19 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
                                                                 </div>
                                                             </div>
                                                         </TableCell>
-                                                        <TableCell colSpan={3}></TableCell>
-                                                        <TableCell className="text-right">
+                                                         <TableCell colSpan={2}>
+                                                            <div className="flex items-center gap-2">
+                                                                <Input
+                                                                    type="number"
+                                                                    placeholder="Harga varian"
+                                                                    className="h-8 w-32"
+                                                                    value={masterPrices[group.productId.toString()] ?? ''}
+                                                                    onChange={e => setMasterPrices(prev => ({...prev, [group.productId.toString()]: e.target.value === '' ? '' : Number(e.target.value)}))}
+                                                                />
+                                                                <Button type="button" size="sm" onClick={() => applyMasterPrice(group.productId)}>Terapkan</Button>
+                                                            </div>
+                                                        </TableCell>
+                                                        <TableCell colSpan={2} className="text-right">
                                                             <Button type="button" variant="ghost" size="icon" className="text-destructive hover:text-destructive-foreground hover:bg-destructive" onClick={() => handleRemoveGroup(group)}>
                                                                 <Trash2 className="h-4 w-4" />
                                                             </Button>
