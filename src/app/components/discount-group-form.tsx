@@ -400,21 +400,19 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
                      </Card>
 
                     <Card>
-                         <CardHeader>
-                            <div className="flex justify-between items-start">
-                                <div>
-                                    <h3 className="text-lg font-medium">Pengaturan Harga Produk</h3>
-                                    <p className="text-sm text-muted-foreground">Atur harga diskon untuk produk dalam kategori '{selectedCategory || "..."}'.</p>
-                                </div>
-                                <Button type="button" onClick={() => setProductSelectorOpen(true)} disabled={!selectedCategory}>
-                                    <PlusCircle className="mr-2 h-4 w-4" />
-                                    Pilih Produk
-                                </Button>
+                        <CardHeader className="flex-row items-center justify-between">
+                             <div>
+                                <CardTitle className="text-base">Pengaturan Harga Produk</CardTitle>
+                                <CardDescription>Atur harga diskon untuk produk dalam kategori '{selectedCategory || "..."}'.</CardDescription>
                             </div>
+                            <Button type="button" onClick={() => setProductSelectorOpen(true)} disabled={!selectedCategory}>
+                                <PlusCircle className="mr-2 h-4 w-4" />
+                                Pilih Produk
+                            </Button>
                         </CardHeader>
                         <CardContent>
                             <div className="flex justify-center mb-6">
-                                <div className="flex items-center gap-2 p-2 border rounded-md bg-muted/50">
+                                <div className="flex items-center gap-2 p-2 border rounded-md bg-muted/50 w-auto">
                                     <Label htmlFor="global-bulk-price" className="text-sm font-medium shrink-0">Harga Massal Global:</Label>
                                     <Input
                                         id="global-bulk-price"
@@ -463,11 +461,14 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
                                                         </TableCell>
                                                         <TableCell>
                                                             {(() => {
-                                                                const discountedPrice = form.watch(`products.${originalIndex}.discountedPrice`);
+                                                                const discountedPriceValue = form.watch(`products.${originalIndex}.discountedPrice`);
+                                                                const discountedPrice = Number(discountedPriceValue);
                                                                 const originalPrice = field.originalPrice;
-                                                                if (originalPrice && originalPrice > 0 && typeof discountedPrice === 'number' && discountedPrice < originalPrice) {
+                                                                if (originalPrice && originalPrice > 0 && !isNaN(discountedPrice) && discountedPrice < originalPrice) {
                                                                     const discountPercentage = ((originalPrice - discountedPrice) / originalPrice) * 100;
-                                                                    return <Badge variant="destructive">{Math.round(discountPercentage)}%</Badge>;
+                                                                    if (discountPercentage > 0) {
+                                                                        return <Badge variant="destructive">{Math.round(discountPercentage)}%</Badge>;
+                                                                    }
                                                                 }
                                                                 return null;
                                                             })()}
@@ -537,11 +538,14 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
                                                                 </TableCell>
                                                                 <TableCell>
                                                                     {(() => {
-                                                                        const discountedPrice = form.watch(`products.${originalIndex}.discountedPrice`);
+                                                                        const discountedPriceValue = form.watch(`products.${originalIndex}.discountedPrice`);
+                                                                        const discountedPrice = Number(discountedPriceValue);
                                                                         const originalPrice = field.originalPrice;
-                                                                        if (originalPrice && originalPrice > 0 && typeof discountedPrice === 'number' && discountedPrice < originalPrice) {
+                                                                        if (originalPrice && originalPrice > 0 && !isNaN(discountedPrice) && discountedPrice < originalPrice) {
                                                                             const discountPercentage = ((originalPrice - discountedPrice) / originalPrice) * 100;
-                                                                            return <Badge variant="destructive">{Math.round(discountPercentage)}%</Badge>;
+                                                                            if (discountPercentage > 0) {
+                                                                                return <Badge variant="destructive">{Math.round(discountPercentage)}%</Badge>;
+                                                                            }
                                                                         }
                                                                         return null;
                                                                     })()}
