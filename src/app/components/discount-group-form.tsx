@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useForm, useFieldArray } from 'react-hook-form';
@@ -405,20 +406,22 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
                             </Button>
                         </CardHeader>
                         <CardContent>
-                             <div className="flex justify-center mb-6">
-                                <div className="flex items-center gap-2">
-                                    <Label htmlFor="global-bulk-price" className="text-sm font-medium shrink-0">Harga Massal Global:</Label>
-                                    <Input
-                                        id="global-bulk-price"
-                                        type="number"
-                                        placeholder="cth. 99000"
-                                        className="h-9 w-48"
-                                        value={globalBulkPrice}
-                                        onChange={(e) => setGlobalBulkPrice(e.target.value === '' ? '' : Number(e.target.value))}
-                                    />
-                                    <Button type="button" size="sm" onClick={applyGlobalBulkPrice}>Terapkan ke Semua</Button>
+                             {groupedProducts.length > 1 && (
+                                <div className="flex justify-center mb-6">
+                                    <div className="flex items-center gap-2">
+                                        <Label htmlFor="global-bulk-price" className="text-sm font-medium shrink-0">Harga Massal Global:</Label>
+                                        <Input
+                                            id="global-bulk-price"
+                                            type="number"
+                                            placeholder="cth. 99000"
+                                            className="h-9 w-48"
+                                            value={globalBulkPrice}
+                                            onChange={(e) => setGlobalBulkPrice(e.target.value === '' ? '' : Number(e.target.value))}
+                                        />
+                                        <Button type="button" size="sm" onClick={applyGlobalBulkPrice}>Terapkan ke Semua</Button>
+                                    </div>
                                 </div>
-                            </div>
+                            )}
                                <Table>
                                    <TableHeader>
                                     <TableRow>
@@ -593,3 +596,4 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
         </>
     );
 }
+
