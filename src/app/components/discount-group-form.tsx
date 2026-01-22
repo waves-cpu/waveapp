@@ -42,6 +42,7 @@ import { Label } from "@/components/ui/label";
 import { ProductSelectionDialog } from './product-selection-dialog';
 import { Separator } from '@/components/ui/separator';
 import { Pagination } from '@/components/ui/pagination';
+import { Badge } from "@/components/ui/badge";
 
 const formSchema = z.object({
   id: z.number().optional(),
@@ -176,7 +177,12 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
     const handleSelectProducts = useCallback((selectedItemIds: string[]) => {
         const productList: Omit<DiscountedProduct, 'originalPrice'> & { originalPrice: number | null, discountedPrice: number }[] = [];
 
-        selectedItemIds.forEach(selectedId => {
+        const currentProductAndVariantIds = new Set(fields.map(f => f.variantId ? f.variantId.toString() : f.productId.toString()));
+        const uniqueSelectedItemIds = Array.from(new Set(selectedItemIds));
+
+        uniqueSelectedItemIds.forEach(selectedId => {
+            if (currentProductAndVariantIds.has(selectedId)) return;
+
             for (const product of items) {
                  if (product.variants && product.variants.length > 0) {
                     const variant = product.variants.find(v => v.id === selectedId);
@@ -191,6 +197,7 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
                             originalPrice: variant.price,
                             discountedPrice: variant.price,
                         });
+                        return;
                     }
                 } else if (product.id === selectedId) {
                     if (product.price !== null && product.price !== undefined) {
@@ -203,17 +210,14 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
                             discountedPrice: product.price,
                         });
                     }
+                    return;
                 }
             }
         });
 
-        const currentProductAndVariantIds = new Set(fields.map(f => f.variantId ? f.variantId.toString() : f.productId.toString()));
-        const productsToAppend = productList.filter(p => {
-             const idToCheck = p.variantId?.toString() || p.productId.toString();
-             return !currentProductAndVariantIds.has(idToCheck);
-        });
-
-        append(productsToAppend);
+        if (productList.length > 0) {
+            append(productList);
+        }
     }, [items, fields, append]);
 
 
@@ -402,7 +406,7 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
                      </Card>
 
                     <Card>
-                        <CardHeader className="flex-row items-center">
+                         <CardHeader className="flex-row items-center">
                              <div className="flex-grow">
                                 <CardTitle className="text-base">Pengaturan Harga Produk</CardTitle>
                                 <CardDescription>Atur harga diskon untuk produk dalam kategori '{selectedCategory || "..."}'.</CardDescription>
@@ -423,13 +427,13 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
                             </div>
                         </CardHeader>
                         <CardContent>
-                            <ScrollArea>
                                <Table>
                                    <TableHeader>
                                     <TableRow>
-                                        <TableHead className="w-[50%]">Produk</TableHead>
+                                        <TableHead className="w-[45%]">Produk</TableHead>
                                         <TableHead>Harga Asli</TableHead>
                                         <TableHead>Harga Diskon</TableHead>
+                                        <TableHead>Diskon</TableHead>
                                         <TableHead className="text-right">Aksi</TableHead>
                                     </TableRow>
                                    </TableHeader>
@@ -457,6 +461,17 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
                                                                 <FormItem><FormControl><Input type="number" {...field} className="h-8" /></FormControl><FormMessage /></FormItem>
                                                             )}/>
                                                         </TableCell>
+                                                        <TableCell>
+                                                            {(() => {
+                                                                const discountedPrice = form.watch(`products.${originalIndex}.discountedPrice`);
+                                                                const originalPrice = field.originalPrice;
+                                                                if (originalPrice && originalPrice > 0 && typeof discountedPrice === 'number' && discountedPrice < originalPrice) {
+                                                                    const discountPercentage = ((originalPrice - discountedPrice) / originalPrice) * 100;
+                                                                    return <Badge variant="destructive">{Math.round(discountPercentage)}%</Badge>;
+                                                                }
+                                                                return null;
+                                                            })()}
+                                                        </TableCell>
                                                         <TableCell className="text-right">
                                                             <Button type="button" variant="ghost" size="icon" className="text-destructive hover:text-destructive-foreground hover:bg-destructive" onClick={() => remove(originalIndex)}>
                                                                 <Trash2 className="h-4 w-4" />
@@ -470,7 +485,7 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
                                                     <TableRow className="bg-muted/20 hover:bg-muted/40 font-semibold">
                                                         <TableCell>
                                                              <div className="flex items-center gap-3">
-                                                                <div className="w-4 shrink-0">
+                                                                <div className="w-8 shrink-0">
                                                                     <ChevronDown className={cn("h-4 w-4 transition-transform", false && "rotate-180")} />
                                                                 </div>
                                                                 <Image src={group.imageUrl || 'https://placehold.co/40x40.png'} alt={group.productName} width={32} height={32} className="rounded-sm" />
@@ -501,6 +516,7 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
                                                                 </Button>
                                                             </div>
                                                         </TableCell>
+                                                        <TableCell></TableCell>
                                                         <TableCell className="text-right">
                                                             <Button type="button" variant="ghost" size="icon" className="text-destructive hover:text-destructive-foreground hover:bg-destructive" onClick={() => handleRemoveGroup(group)}>
                                                                 <Trash2 className="h-4 w-4" />
@@ -513,7 +529,7 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
                                                             <TableRow key={field.variantId}>
                                                                 <TableCell>
                                                                     <div className="flex items-center gap-3">
-                                                                         <div className="w-4 shrink-0" />
+                                                                         <div className="w-8 shrink-0" />
                                                                         <div className="flex h-8 w-8 items-center justify-center rounded-sm shrink-0">
                                                                             <Store className="h-5 w-5 text-gray-400" />
                                                                         </div>
@@ -531,6 +547,17 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
                                                                         <FormItem><FormControl><Input type="number" {...field} className="h-8" /></FormControl><FormMessage /></FormItem>
                                                                     )}/>
                                                                 </TableCell>
+                                                                <TableCell>
+                                                                    {(() => {
+                                                                        const discountedPrice = form.watch(`products.${originalIndex}.discountedPrice`);
+                                                                        const originalPrice = field.originalPrice;
+                                                                        if (originalPrice && originalPrice > 0 && typeof discountedPrice === 'number' && discountedPrice < originalPrice) {
+                                                                            const discountPercentage = ((originalPrice - discountedPrice) / originalPrice) * 100;
+                                                                            return <Badge variant="destructive">{Math.round(discountPercentage)}%</Badge>;
+                                                                        }
+                                                                        return null;
+                                                                    })()}
+                                                                </TableCell>
                                                                 <TableCell className="text-right">
                                                                     <Button type="button" variant="ghost" size="icon" className="text-destructive hover:text-destructive-foreground hover:bg-destructive" onClick={() => remove(originalIndex)}>
                                                                         <Trash2 className="h-4 w-4" />
@@ -541,10 +568,9 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
                                                     })}
                                                 </React.Fragment>
                                             );
-                                        }) : (<TableRow><TableCell colSpan={4} className="h-24 text-center">Pilih kategori untuk menambahkan produk.</TableCell></TableRow>)}
+                                        }) : (<TableRow><TableCell colSpan={5} className="h-24 text-center">Pilih kategori untuk menambahkan produk.</TableCell></TableRow>)}
                                    </TableBody>
                                </Table>
-                           </ScrollArea>
                         </CardContent>
                         {totalPages > 1 && (
                             <CardFooter>
@@ -577,5 +603,3 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
         </>
     );
 }
-
-
