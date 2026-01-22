@@ -399,8 +399,14 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
                         <CardHeader>
                             <CardTitle className="text-base">Pengaturan Harga Produk</CardTitle>
                             <CardDescription>Atur harga diskon untuk produk dalam kategori '{selectedCategory || "..."}'.</CardDescription>
-                            {groupedProducts.length > 1 && (
-                                <div className="flex items-center justify-center pt-4">
+                        </CardHeader>
+                        <CardContent>
+                             <div className="flex justify-between items-center mb-6">
+                                <Button type="button" onClick={() => setProductSelectorOpen(true)} disabled={!selectedCategory}>
+                                    <PlusCircle className="mr-2 h-4 w-4" />
+                                    Pilih Produk
+                                </Button>
+                                {groupedProducts.length > 1 && (
                                     <div className="flex items-center gap-2 w-full max-w-md">
                                         <Input
                                             id="global-bulk-price"
@@ -412,15 +418,7 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
                                         />
                                         <Button type="button" size="sm" variant="secondary" onClick={applyGlobalBulkPrice}>Terapkan ke Semua</Button>
                                     </div>
-                                </div>
-                            )}
-                        </CardHeader>
-                        <CardContent>
-                             <div className="flex justify-start items-center mb-6">
-                                <Button type="button" onClick={() => setProductSelectorOpen(true)} disabled={!selectedCategory}>
-                                    <PlusCircle className="mr-2 h-4 w-4" />
-                                    Pilih Produk
-                                </Button>
+                                )}
                             </div>
                                <Table>
                                    <TableHeader>
@@ -501,7 +499,7 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
                                                             <div className="flex items-center gap-2 w-full max-w-xs">
                                                                 <Input
                                                                     type="number"
-                                                                    placeholder="Isi harga untuk semua varian"
+                                                                    placeholder="Harga massal untuk varian..."
                                                                     className="h-8 w-full"
                                                                     value={masterPrices[group.productId.toString()] ?? ''}
                                                                     onChange={e => setMasterPrices(prev => ({...prev, [group.productId.toString()]: e.target.value === '' ? '' : Number(e.target.value)}))}
@@ -521,6 +519,7 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
                                                             <TableRow key={field.variantId}>
                                                                 <TableCell>
                                                                     <div className="flex items-center gap-3 pl-4">
+                                                                        <div className="w-8 shrink-0" />
                                                                         <div className="flex h-8 w-8 items-center justify-center rounded-sm shrink-0">
                                                                             <Store className="h-5 w-5 text-gray-400" />
                                                                         </div>
