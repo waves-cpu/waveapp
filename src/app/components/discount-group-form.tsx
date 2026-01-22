@@ -408,7 +408,7 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
                     <Card>
                          <CardHeader className="flex-row items-center">
                              <div className="flex-grow">
-                                <CardTitle className="text-base">Pengaturan Harga Produk</CardTitle>
+                                <CardTitle className="text-lg">Pengaturan Harga Produk</CardTitle>
                                 <CardDescription>Atur harga diskon untuk produk dalam kategori '{selectedCategory || "..."}'.</CardDescription>
                             </div>
                             <div className="flex items-center gap-2">
@@ -458,7 +458,7 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
                                                         </TableCell>
                                                         <TableCell>
                                                             <FormField control={form.control} name={`products.${originalIndex}.discountedPrice`} render={({ field }) => (
-                                                                <FormItem><FormControl><Input type="number" {...field} className="h-8" /></FormControl><FormMessage /></FormItem>
+                                                                <FormItem><FormControl><Input type="number" {...field} className="h-8 w-32" /></FormControl><FormMessage /></FormItem>
                                                             )}/>
                                                         </TableCell>
                                                         <TableCell>
@@ -501,7 +501,7 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
                                                                 <Input
                                                                     type="number"
                                                                     placeholder="Harga massal"
-                                                                    className="h-8"
+                                                                    className="h-8 w-32"
                                                                     value={masterQuantities[group.productName] ?? ''}
                                                                     onChange={(e) => setMasterQuantities(prev => ({ ...prev, [group.productName]: e.target.value === '' ? '' : Number(e.target.value) }))}
                                                                 />
@@ -544,7 +544,7 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
                                                                 </TableCell>
                                                                 <TableCell>
                                                                     <FormField control={form.control} name={`products.${originalIndex}.discountedPrice`} render={({ field }) => (
-                                                                        <FormItem><FormControl><Input type="number" {...field} className="h-8" /></FormControl><FormMessage /></FormItem>
+                                                                        <FormItem><FormControl><Input type="number" {...field} className="h-8 w-32" /></FormControl><FormMessage /></FormItem>
                                                                     )}/>
                                                                 </TableCell>
                                                                 <TableCell>
