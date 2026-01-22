@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useForm, useFieldArray } from 'react-hook-form';
@@ -128,7 +127,7 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
                 },
                 products: [],
                 voucherCode: '',
-                discountType: 'percentage',
+                discountType: 'percentage' as const,
                 discountValue: 10,
                 maxUses: undefined,
                 minPurchase: 0,
@@ -407,11 +406,10 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
                                 </Button>
                                 {groupedProducts.length > 1 && (
                                      <div className="flex items-center gap-2">
-                                        <Label htmlFor="global-bulk-price" className="text-sm font-medium shrink-0">Harga Massal Global:</Label>
                                         <Input
                                             id="global-bulk-price"
                                             type="number"
-                                            placeholder="cth. 99000"
+                                            placeholder="Harga Massal Global"
                                             className="h-9 w-48"
                                             value={globalBulkPrice}
                                             onChange={(e) => setGlobalBulkPrice(e.target.value === '' ? '' : Number(e.target.value))}
