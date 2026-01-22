@@ -248,9 +248,10 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
     }
     
     const applyGlobalBulkPrice = () => {
-        if (typeof globalBulkPrice === 'number' && globalBulkPrice >= 0) {
+        const priceValue = typeof globalBulkPrice === 'string' ? parseFloat(globalBulkPrice) : globalBulkPrice;
+        if (typeof priceValue === 'number' && priceValue >= 0) {
             fields.forEach((_, index) => {
-                form.setValue(`products.${index}.discountedPrice`, globalBulkPrice, { shouldDirty: true });
+                form.setValue(`products.${index}.discountedPrice`, priceValue, { shouldDirty: true });
             });
             toast({ title: 'Harga Massal Diterapkan' });
         } else {
@@ -259,7 +260,8 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
     };
     
     const applyMasterPrice = (productId: number) => {
-        const price = masterPrices[productId.toString()];
+        const priceValue = masterPrices[productId.toString()];
+        const price = typeof priceValue === 'string' ? parseFloat(priceValue) : priceValue;
         if (typeof price === 'number' && price >= 0) {
             fields.forEach((field, index) => {
                 if (field.productId === productId) {
@@ -398,7 +400,7 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
                         <CardHeader>
                             <CardTitle className="text-base">Pengaturan Harga Produk</CardTitle>
                             <CardDescription>Atur harga diskon untuk produk dalam kategori '{selectedCategory || "..."}'.</CardDescription>
-                             {groupedProducts.length > 1 && (
+                            {groupedProducts.length > 1 && (
                                 <div className="flex items-center justify-center pt-4">
                                     <div className="flex items-center gap-2">
                                         <Input
@@ -500,7 +502,7 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
                                                             <Input
                                                                 type="number"
                                                                 placeholder="Harga massal varian"
-                                                                className="h-8 w-32"
+                                                                className="h-8 w-full"
                                                                 value={masterPrices[group.productId.toString()] ?? ''}
                                                                 onChange={e => setMasterPrices(prev => ({...prev, [group.productId.toString()]: e.target.value === '' ? '' : Number(e.target.value)}))}
                                                             />
@@ -518,8 +520,8 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
                                                         const originalIndex = field.originalIndex;
                                                         return (
                                                             <TableRow key={field.variantId}>
-                                                                <TableCell>
-                                                                    <div className="flex items-center gap-3 pl-12">
+                                                                <TableCell className="pl-12">
+                                                                    <div className="flex items-center gap-3">
                                                                         <div className="flex h-8 w-8 items-center justify-center rounded-sm shrink-0">
                                                                             <Store className="h-5 w-5 text-gray-400" />
                                                                         </div>
@@ -596,4 +598,3 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
         </>
     );
 }
-
