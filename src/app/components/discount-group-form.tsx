@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useForm, useFieldArray } from 'react-hook-form';
@@ -408,12 +409,12 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
                                     Pilih Produk
                                 </Button>
                                 {groupedProducts.length > 1 && (
-                                     <div className="flex items-center justify-center pt-4">
+                                    <div className="flex items-center justify-center pt-4">
                                         <div className="flex items-center gap-2 w-full max-w-sm">
                                             <Input
                                                 id="global-bulk-price"
                                                 type="number"
-                                                placeholder="Ubah Harga"
+                                                placeholder="Isi harga untuk semua produk di bawah"
                                                 className="h-9 flex-grow"
                                                 value={globalBulkPrice}
                                                 onChange={(e) => setGlobalBulkPrice(e.target.value === '' ? '' : Number(e.target.value))}
@@ -488,7 +489,6 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
                                                     <TableRow className="bg-muted/20 hover:bg-muted/40 font-semibold">
                                                          <TableCell>
                                                             <div className="flex items-center gap-3">
-                                                                <div className="w-8 shrink-0" />
                                                                 <Image src={group.imageUrl || 'https://placehold.co/40x40.png'} alt={group.productName} width={32} height={32} className="rounded-sm" />
                                                                 <div>
                                                                     <p className="text-sm text-primary">{group.productName}</p>
