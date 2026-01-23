@@ -409,19 +409,19 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
                                     Pilih Produk
                                 </Button>
                                 {groupedProducts.length > 1 && (
-                                    <div className="flex items-center justify-center pt-4">
-                                        <div className="flex items-center gap-2 w-full max-w-sm">
-                                            <Input
-                                                id="global-bulk-price"
-                                                type="number"
-                                                placeholder="Isi harga untuk semua produk di bawah"
-                                                className="h-9 flex-grow"
-                                                value={globalBulkPrice}
-                                                onChange={(e) => setGlobalBulkPrice(e.target.value === '' ? '' : Number(e.target.value))}
-                                            />
-                                            <Button type="button" size="sm" variant="secondary" onClick={applyGlobalBulkPrice}>Terapkan ke Semua</Button>
-                                        </div>
-                                    </div>
+                                     <div className="flex items-center justify-center pt-4">
+                                         <div className="flex items-center gap-2 w-full max-w-sm">
+                                             <Input
+                                                 id="global-bulk-price"
+                                                 type="number"
+                                                 placeholder="Ubah Harga"
+                                                 className="h-9 flex-grow"
+                                                 value={globalBulkPrice}
+                                                 onChange={(e) => setGlobalBulkPrice(e.target.value === '' ? '' : Number(e.target.value))}
+                                             />
+                                             <Button type="button" size="sm" variant="secondary" onClick={applyGlobalBulkPrice}>Terapkan ke Semua</Button>
+                                         </div>
+                                     </div>
                                 )}
                             </div>
                                <Table>
@@ -500,7 +500,7 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
                                                             <div className="flex items-center gap-2 w-full max-w-sm">
                                                                 <Input
                                                                     type="number"
-                                                                    placeholder="Ubah harga untuk semua varian"
+                                                                    placeholder="Ubah harga varian..."
                                                                     className="h-8 w-full"
                                                                     value={masterPrices[group.productId.toString()] ?? ''}
                                                                     onChange={e => setMasterPrices(prev => ({...prev, [group.productId.toString()]: e.target.value === '' ? '' : Number(e.target.value)}))}
@@ -520,7 +520,7 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
                                                         const originalIndex = field.originalIndex;
                                                         return (
                                                             <TableRow key={field.variantId}>
-                                                                <TableCell className="pl-8">
+                                                                <TableCell>
                                                                     <div className="flex items-center gap-3">
                                                                         <div className="flex h-8 w-8 items-center justify-center rounded-sm shrink-0">
                                                                             <Store className="h-5 w-5 text-gray-400" />
