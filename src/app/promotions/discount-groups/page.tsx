@@ -1,5 +1,3 @@
-
-
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -8,7 +6,7 @@ import { SidebarTrigger } from '@/components/ui/sidebar';
 import { useLanguage } from '@/hooks/use-language';
 import { translations } from '@/types/language';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Tags, Trash2, Calendar, MoreVertical, Edit } from 'lucide-react';
+import { PlusCircle, Tags, Trash2, Calendar, MoreVertical, Edit, Search } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { useInventory } from '@/hooks/use-inventory';
 import type { DiscountGroup } from '@/types';
@@ -33,6 +31,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useToast } from '@/hooks/use-toast';
 import { formatToWIB } from '@/lib/utils';
+import { Input } from '@/components/ui/input';
 
 function getStatus(startDate: string, endDate: string): { text: string; variant: 'default' | 'secondary' | 'outline' } {
     const now = new Date();
@@ -54,12 +53,15 @@ export default function DiscountGroupPage() {
     const { discountGroups, fetchDiscountGroups, deleteDiscountGroup, loading } = useInventory();
     const { toast } = useToast();
     const [groupToDelete, setGroupToDelete] = useState<DiscountGroup | null>(null);
+    const [searchTerm, setSearchTerm] = useState('');
 
     useEffect(() => {
         fetchDiscountGroups();
     }, [fetchDiscountGroups]);
 
-    const filteredDiscountGroups = discountGroups.filter(g => !g.voucherCode);
+    const filteredDiscountGroups = discountGroups
+        .filter(g => !g.voucherCode)
+        .filter(g => g.name.toLowerCase().includes(searchTerm.toLowerCase()));
     
     const handleDelete = async () => {
         if (!groupToDelete) return;
@@ -89,12 +91,23 @@ export default function DiscountGroupPage() {
                         <SidebarTrigger className="md:hidden" />
                         <h1 className="text-lg font-bold">Grup Diskon Otomatis</h1>
                     </div>
-                    <Button asChild>
-                        <Link href="/promotions/discount-groups/new">
-                            <PlusCircle className="mr-2 h-4 w-4" />
-                            Buat Grup Diskon Baru
-                        </Link>
-                    </Button>
+                    <div className="flex items-center gap-2">
+                        <div className="relative">
+                            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                            <Input
+                                placeholder="Cari grup diskon..."
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                className="pl-8 sm:w-[300px] h-9"
+                            />
+                        </div>
+                        <Button asChild>
+                            <Link href="/promotions/discount-groups/new">
+                                <PlusCircle className="mr-2 h-4 w-4" />
+                                Buat Grup Diskon Baru
+                            </Link>
+                        </Button>
+                    </div>
                 </div>
                 
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -151,8 +164,8 @@ export default function DiscountGroupPage() {
                     {!loading && filteredDiscountGroups.length === 0 && (
                          <div className="col-span-full text-center py-12 text-muted-foreground border-2 border-dashed rounded-lg">
                             <Tags className="mx-auto h-12 w-12" />
-                            <h3 className="mt-4 text-lg font-semibold">Belum Ada Grup Diskon</h3>
-                            <p className="mt-1 text-sm">Buat grup diskon pertama Anda untuk memulai promosi otomatis.</p>
+                            <h3 className="mt-4 text-lg font-semibold">{searchTerm ? 'Tidak Ditemukan' : 'Belum Ada Grup Diskon'}</h3>
+                            <p className="mt-1 text-sm">{searchTerm ? `Tidak ada grup diskon yang cocok dengan pencarian "${searchTerm}".` : 'Buat grup diskon pertama Anda untuk memulai promosi otomatis.'}</p>
                              <Button asChild className="mt-4">
                                 <Link href="/promotions/discount-groups/new">
                                     <PlusCircle className="mr-2 h-4 w-4" />
