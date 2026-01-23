@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useMemo, useEffect, useCallback, useDeferredValue } from 'react';
@@ -7,10 +8,10 @@ import { SidebarTrigger } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Undo2, Truck, CheckCircle, Package, Search, Send, Ban, History, MoreVertical, Trash2, Calendar as CalendarIcon } from 'lucide-react';
+import { Undo2, Truck, CheckCircle, Package, Search, Send, Ban, History, MoreVertical, Trash2, Calendar as CalendarIcon, Eye } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { useInventory } from '@/hooks/use-inventory';
-import type { ShippingReceipt, ReturnedItem } from '@/types';
+import type { ShippingReceipt, ReturnedItem, Sale } from '@/types';
 import { parseISO, startOfDay, endOfDay, isWithinInterval, startOfMonth, endOfMonth, subDays, startOfYear, subMonths, endOfYear } from 'date-fns';
 import { id as localeId } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
@@ -28,6 +29,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { DateRange } from 'react-day-picker';
 import { Separator } from '@/components/ui/separator';
 import { CancelShipmentDialog } from '@/app/components/cancel-shipment-dialog';
+import { DailySalesDetailDialog } from '@/app/components/daily-sales-detail-dialog';
 
 const SHIPPING_CHANNEL_OPTIONS = ['Semua Jasa Kirim', 'SPX', 'J&T', 'JNE', 'INSTANT', 'CARGO'];
 
@@ -52,7 +54,8 @@ const STATUS_FLOW = {
     RETURN: 'Return',
     RETURN_SELESAI: 'Return Selesai',
     DIBATALKAN: 'Dibatalkan',
-    DELETE: 'Delete'
+    DELETE: 'Delete',
+    VIEW_DETAILS: 'View Details'
 } as const;
 
 type StatusTab = 'Terproses' | 'Siap Kirim' | 'Selesai' | 'Return' | 'Return Selesai' | 'Dibatalkan';
@@ -63,6 +66,10 @@ const DropdownAction = ({ receipt, onAction }: { receipt: ShippingReceipt, onAct
             <Button variant="ghost" size="icon" className="h-8 w-8"><MoreVertical className="h-4 w-4" /></Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-48">
+            <DropdownMenuItem onClick={() => onAction(receipt, STATUS_FLOW.VIEW_DETAILS)}>
+                <Eye className="mr-2 h-4 w-4" /> Lihat Detail Pesanan
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
             {receipt.status === STATUS_FLOW.TERPROSES && <DropdownMenuItem onClick={() => onAction(receipt, STATUS_FLOW.SIAP_KIRIM)}><Send className="mr-2 h-4 w-4" /> Tandai Siap Kirim</DropdownMenuItem>}
             {receipt.status === STATUS_FLOW.SIAP_KIRIM && (
                 <>
@@ -232,11 +239,13 @@ const ReceiptTable = ({
 
 
 export default function ManageReceiptsPage() {
-    const { allShippingReceipts, updateShippingReceiptStatus, updateShippingReceiptsStatus, deleteShippingReceipt, returnSaleTransaction, cancelSaleTransaction, loading } = useInventory();
+    const { allShippingReceipts, updateShippingReceiptStatus, updateShippingReceiptsStatus, deleteShippingReceipt, returnSaleTransaction, cancelSaleTransaction, loading, allSales } = useInventory();
     const { toast } = useToast();
     const [receiptToProcess, setReceiptToProcess] = useState<ShippingReceipt | null>(null);
     const [receiptToCancel, setReceiptToCancel] = useState<ShippingReceipt | null>(null);
     const [isProcessing, setIsProcessing] = useState(false);
+    const [detailItems, setDetailItems] = useState<Sale[]>([]);
+    const [isDetailOpen, setIsDetailOpen] = useState(false);
     
     const [date, setDate] = useState<DateRange | undefined>({
         from: new Date(),
@@ -266,6 +275,18 @@ export default function ManageReceiptsPage() {
             } catch (error) {
                 toast({ variant: 'destructive', title: 'Gagal Menghapus' });
             }
+        } else if (newStatus === STATUS_FLOW.VIEW_DETAILS) {
+            const items = allSales.filter(s => s.transactionId === receipt.transactionId);
+            if (items.length > 0) {
+                setDetailItems(items);
+                setIsDetailOpen(true);
+            } else {
+                toast({
+                    title: "Tidak ada detail",
+                    description: "Tidak ada produk yang tercatat untuk resi ini.",
+                    variant: "destructive"
+                });
+            }
         } else {
             try {
                 await updateShippingReceiptStatus(receipt.id, newStatus);
@@ -274,7 +295,7 @@ export default function ManageReceiptsPage() {
                 toast({ variant: 'destructive', title: 'Gagal Memperbarui Status' });
             }
         }
-    }, [updateShippingReceiptStatus, deleteShippingReceipt, toast]);
+    }, [updateShippingReceiptStatus, deleteShippingReceipt, toast, allSales]);
     
     const handleBulkAction = useCallback(async (ids: number[], newStatus: string) => {
         setIsProcessing(true);
@@ -467,6 +488,12 @@ export default function ManageReceiptsPage() {
                 onOpenChange={(isOpen) => !isOpen && setReceiptToCancel(null)}
                 onProcessCancellation={handleProcessCancellation}
                 receipt={receiptToCancel}
+            />
+            <DailySalesDetailDialog
+                open={isDetailOpen}
+                onOpenChange={setIsDetailOpen}
+                sales={detailItems}
+                title="Detail Pesanan"
             />
         </AppLayout>
     );
