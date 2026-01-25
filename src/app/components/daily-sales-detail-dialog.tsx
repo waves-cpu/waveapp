@@ -27,6 +27,7 @@ import { Search } from 'lucide-react';
 import { id as localeId } from 'date-fns/locale';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { formatToWIB } from '@/lib/utils';
+import { useFinanceSettings } from '@/hooks/use-finance-settings';
 
 interface DailySalesDetailDialogProps {
   open: boolean;
@@ -60,6 +61,7 @@ const formatCurrency = (amount: number) => {
 export function DailySalesDetailDialog({ open, onOpenChange, sales, title, description }: DailySalesDetailDialogProps) {
     const [searchTerm, setSearchTerm] = useState('');
     const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
+    const { settings: financeSettings } = useFinanceSettings();
 
     useEffect(() => {
         if (!open) {
@@ -67,6 +69,12 @@ export function DailySalesDetailDialog({ open, onOpenChange, sales, title, descr
             setCategoryFilter(null);
         }
     }, [open]);
+
+    const isOnlineSale = useMemo(() => {
+        if (!sales || sales.length === 0) return false;
+        const onlineChannels = ['shopee', 'tiktok', 'lazada'];
+        return sales.some(sale => onlineChannels.includes(sale.channel.toLowerCase()));
+    }, [sales]);
 
     const uniqueCategories = useMemo(() => {
         if (!sales) return [];
@@ -124,6 +132,16 @@ export function DailySalesDetailDialog({ open, onOpenChange, sales, title, descr
 
         return { aggregatedSales: filteredSales, totalQuantity, totalRevenue };
     }, [sales, searchTerm, categoryFilter]);
+    
+    const marketplaceCut = useMemo(() => {
+        if (!isOnlineSale || !financeSettings) return 0;
+        return totalRevenue * (financeSettings.marketplaceFee / 100);
+    }, [isOnlineSale, totalRevenue, financeSettings]);
+
+    const netRevenue = useMemo(() => {
+        return totalRevenue - marketplaceCut;
+    }, [totalRevenue, marketplaceCut]);
+
 
     const salesDate = useMemo(() => {
         if (sales && sales.length > 0) {
@@ -210,6 +228,26 @@ export function DailySalesDetailDialog({ open, onOpenChange, sales, title, descr
                           <TableCell className="text-center font-bold">{totalQuantity}</TableCell>
                           <TableCell colSpan={2} className="text-right font-bold">{formatCurrency(totalRevenue)}</TableCell>
                       </TableRow>
+                      {isOnlineSale && (
+                        <>
+                            <TableRow>
+                                <TableCell colSpan={4} className="text-right text-sm">
+                                    Potongan Admin Marketplace ({financeSettings.marketplaceFee}%)
+                                </TableCell>
+                                <TableCell className="text-right text-sm text-destructive">
+                                    -{formatCurrency(marketplaceCut)}
+                                </TableCell>
+                            </TableRow>
+                             <TableRow className="font-bold bg-muted/50">
+                                <TableCell colSpan={4} className="text-right">
+                                    Pendapatan Bersih
+                                </TableCell>
+                                <TableCell className="text-right">
+                                    {formatCurrency(netRevenue)}
+                                </TableCell>
+                            </TableRow>
+                        </>
+                      )}
                   </TableFooter>
               </Table>
           </ScrollArea>
