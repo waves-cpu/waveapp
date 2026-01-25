@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useMemo, useState } from 'react';
@@ -26,6 +27,8 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { cn, formatToWIB } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 
 const formatCurrency = (amount: number) => {
@@ -77,7 +80,7 @@ function ProductAnalyticsPage() {
         to: endOfMonth(new Date()),
     });
     
-    const [showAllHistory, setShowAllHistory] = useState(false);
+    const [isHistoryDialogOpen, setIsHistoryDialogOpen] = useState(false);
     
     const isOnlineSale = (channel: string) => {
         return ['shopee', 'tiktok', 'lazada'].some(c => channel.toLowerCase().includes(c));
@@ -242,11 +245,8 @@ function ProductAnalyticsPage() {
     
     const displayedAdjustments = useMemo(() => {
         if (!analytics) return [];
-        if (showAllHistory) {
-            return analytics.manualAdjustments;
-        }
-        return analytics.manualAdjustments.slice(0, 10);
-    }, [analytics, showAllHistory]);
+        return analytics.manualAdjustments.slice(0, 5);
+    }, [analytics]);
     
     if (inventoryLoading || !financeSettingsLoaded) {
         return (
@@ -346,44 +346,13 @@ function ProductAnalyticsPage() {
                                  </div>
                             </CardContent>
                         </Card>
-                         <Card>
-                            <CardHeader>
-                                <CardTitle className="text-base">Riwayat Stok Manual</CardTitle>
-                            </CardHeader>
-                            <CardContent className="px-0">
-                                <div className="overflow-y-auto">
-                                    <Table>
-                                        <TableBody>
-                                            {analytics && displayedAdjustments.length > 0 ? displayedAdjustments.map((adj, i) => (
-                                                <TableRow key={i}>
-                                                    <TableCell className="text-xs">{formatToWIB(new Date(adj.date), 'dd/MM/yy HH:mm')}</TableCell>
-                                                    <TableCell className="text-xs truncate">{adj.reason}</TableCell>
-                                                    <TableCell className="text-right">
-                                                        <Badge variant={adj.change > 0 ? 'default' : 'destructive'} className={cn(adj.change > 0 ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800")}>
-                                                            {adj.change > 0 ? '+' : ''}{adj.change}
-                                                        </Badge>
-                                                    </TableCell>
-                                                </TableRow>
-                                            )) : <TableRow><TableCell colSpan={3} className="text-center text-sm text-muted-foreground py-10">Tidak ada penyesuaian manual.</TableCell></TableRow>}
-                                        </TableBody>
-                                    </Table>
-                                </div>
-                            </CardContent>
-                            {analytics && analytics.manualAdjustments.length > 10 && (
-                                <CardFooter className="justify-center py-2 border-t">
-                                    <Button variant="link" size="sm" onClick={() => setShowAllHistory(!showAllHistory)}>
-                                        {showAllHistory ? 'Lihat lebih sedikit' : 'Lihat semua'}
-                                    </Button>
-                                </CardFooter>
-                            )}
-                        </Card>
                     </div>
 
                     <div className="lg:col-span-2 space-y-6">
-                        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-2">
+                        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                             <Card>
                                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                    <CardTitle className="text-sm font-medium">Total Omzet</CardTitle>
+                                    <CardTitle className="text-sm font-medium">Omzet</CardTitle>
                                     <DollarSign className="h-4 w-4 text-muted-foreground" />
                                 </CardHeader>
                                 <CardContent><div className="text-2xl font-bold">{formatCurrency(analytics?.totalRevenue || 0)}</div></CardContent>
@@ -402,12 +371,33 @@ function ProductAnalyticsPage() {
                                 </CardHeader>
                                 <CardContent><div className="text-2xl font-bold">{analytics?.totalUnitsSold.toLocaleString('id-ID') || 0}</div></CardContent>
                             </Card>
-                             <Card>
+                            <Card>
                                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                    <CardTitle className="text-sm font-medium">Produk Diretur</CardTitle>
+                                    <CardTitle className="text-sm font-medium">Diretur</CardTitle>
                                     <Undo2 className="h-4 w-4 text-orange-500" />
                                 </CardHeader>
                                 <CardContent><div className="text-2xl font-bold">{analytics?.totalReturnedUnits.toLocaleString('id-ID') || 0}</div></CardContent>
+                            </Card>
+                             <Card>
+                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                    <CardTitle className="text-sm font-medium">Dibatalkan</CardTitle>
+                                    <Ban className="h-4 w-4 text-destructive" />
+                                </CardHeader>
+                                <CardContent><div className="text-2xl font-bold">{analytics?.totalCancelledUnits.toLocaleString('id-ID') || 0}</div></CardContent>
+                            </Card>
+                             <Card>
+                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                    <CardTitle className="text-sm font-medium">Stok Masuk</CardTitle>
+                                    <ArrowUpCircle className="h-4 w-4 text-green-500" />
+                                </CardHeader>
+                                <CardContent><div className="text-2xl font-bold">{analytics?.totalStockIn.toLocaleString('id-ID') || 0}</div></CardContent>
+                            </Card>
+                             <Card>
+                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                    <CardTitle className="text-sm font-medium">Stok Keluar</CardTitle>
+                                    <ArrowDownCircle className="h-4 w-4 text-red-500" />
+                                </CardHeader>
+                                <CardContent><div className="text-2xl font-bold">{analytics?.totalStockOut.toLocaleString('id-ID') || 0}</div></CardContent>
                             </Card>
                         </div>
                         
@@ -451,10 +441,76 @@ function ProductAnalyticsPage() {
                                 </Table>
                             </CardContent>
                         </Card>
+
+                         <Card>
+                            <CardHeader>
+                                <CardTitle className="text-base">Riwayat Stok Manual</CardTitle>
+                            </CardHeader>
+                            <CardContent className="px-0">
+                                <Table>
+                                    <TableBody>
+                                        {analytics && displayedAdjustments.length > 0 ? displayedAdjustments.map((adj, i) => (
+                                            <TableRow key={i}>
+                                                <TableCell className="text-xs">{formatToWIB(new Date(adj.date), 'dd/MM/yy HH:mm')}</TableCell>
+                                                <TableCell className="text-xs truncate">{adj.reason}</TableCell>
+                                                <TableCell className="text-right">
+                                                    <Badge variant={adj.change > 0 ? 'default' : 'destructive'} className={cn(adj.change > 0 ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800")}>
+                                                        {adj.change > 0 ? '+' : ''}{adj.change}
+                                                    </Badge>
+                                                </TableCell>
+                                            </TableRow>
+                                        )) : <TableRow><TableCell colSpan={3} className="text-center text-sm text-muted-foreground py-10">Tidak ada penyesuaian manual.</TableCell></TableRow>}
+                                    </TableBody>
+                                </Table>
+                            </CardContent>
+                            {analytics && analytics.manualAdjustments.length > 5 && (
+                                <CardFooter className="justify-center py-2 border-t">
+                                    <Button variant="link" size="sm" onClick={() => setIsHistoryDialogOpen(true)}>
+                                        Lihat semua
+                                    </Button>
+                                </CardFooter>
+                            )}
+                        </Card>
                         
                     </div>
                  </div>
             </main>
+            <Dialog open={isHistoryDialogOpen} onOpenChange={setIsHistoryDialogOpen}>
+                <DialogContent className="max-w-3xl">
+                    <DialogHeader>
+                        <DialogTitle>Riwayat Stok Manual: {product.name}</DialogTitle>
+                        <DialogDescription>
+                            Menampilkan semua penyesuaian stok manual untuk produk ini.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <ScrollArea className="max-h-[60vh] border rounded-md">
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Tanggal</TableHead>
+                                    <TableHead>Varian</TableHead>
+                                    <TableHead>Alasan</TableHead>
+                                    <TableHead className="text-right">Perubahan</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {analytics?.manualAdjustments.map((adj, i) => (
+                                    <TableRow key={i}>
+                                        <TableCell className="text-xs">{formatToWIB(new Date(adj.date), 'dd/MM/yy HH:mm')}</TableCell>
+                                        <TableCell className="text-xs font-medium">{adj.variantName || '-'}</TableCell>
+                                        <TableCell className="text-xs">{adj.reason}</TableCell>
+                                        <TableCell className="text-right">
+                                            <Badge variant={adj.change > 0 ? 'default' : 'destructive'} className={cn(adj.change > 0 ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800")}>
+                                                {adj.change > 0 ? '+' : ''}{adj.change}
+                                            </Badge>
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </ScrollArea>
+                </DialogContent>
+            </Dialog>
         </AppLayout>
     );
 }
