@@ -273,7 +273,6 @@ function ProductAnalyticsPage() {
                         </Button>
                         <div>
                             <h1 className="text-lg font-bold">Analisis Produk</h1>
-                            <p className="text-sm text-muted-foreground">{product.name}</p>
                         </div>
                     </div>
                     <Popover>
@@ -318,87 +317,26 @@ function ProductAnalyticsPage() {
                         </PopoverContent>
                     </Popover>
                 </div>
-
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
-                    <Card>
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">Total Omzet</CardTitle>
-                            <DollarSign className="h-4 w-4 text-muted-foreground" />
-                        </CardHeader>
-                        <CardContent><div className="text-2xl font-bold">{formatCurrency(analytics?.totalRevenue || 0)}</div></CardContent>
-                    </Card>
-                    <Card>
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">Laba Bersih</CardTitle>
-                            <BarChart2 className="h-4 w-4 text-muted-foreground" />
-                        </CardHeader>
-                        <CardContent><div className="text-2xl font-bold">{formatCurrency(analytics?.netProfit || 0)}</div></CardContent>
-                    </Card>
-                    <Card>
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">Unit Terjual</CardTitle>
-                            <Package className="h-4 w-4 text-muted-foreground" />
-                        </CardHeader>
-                        <CardContent><div className="text-2xl font-bold">{analytics?.totalUnitsSold.toLocaleString('id-ID') || 0}</div></CardContent>
-                    </Card>
-                     <Card>
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">Total Stok Saat Ini</CardTitle>
-                            <ShoppingCart className="h-4 w-4 text-muted-foreground" />
-                        </CardHeader>
-                        <CardContent><div className="text-2xl font-bold">{product.variants ? product.variants.reduce((sum, v) => sum + v.stock, 0) : product.stock}</div></CardContent>
-                    </Card>
-                    <Card>
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">Stok Masuk (Manual)</CardTitle>
-                            <ArrowUpCircle className="h-4 w-4 text-green-600" />
-                        </CardHeader>
-                        <CardContent><div className="text-2xl font-bold">{analytics?.totalStockIn.toLocaleString('id-ID') || 0}</div></CardContent>
-                    </Card>
-                     <Card>
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">Stok Keluar (Manual)</CardTitle>
-                            <ArrowDownCircle className="h-4 w-4 text-red-600" />
-                        </CardHeader>
-                        <CardContent><div className="text-2xl font-bold">{analytics?.totalStockOut.toLocaleString('id-ID') || 0}</div></CardContent>
-                    </Card>
-                     <Card>
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">Produk Diretur</CardTitle>
-                            <Undo2 className="h-4 w-4 text-orange-500" />
-                        </CardHeader>
-                        <CardContent><div className="text-2xl font-bold">{analytics?.totalReturnedUnits.toLocaleString('id-ID') || 0}</div></CardContent>
-                    </Card>
-                     <Card>
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">Produk Dibatalkan</CardTitle>
-                            <Ban className="h-4 w-4 text-destructive" />
-                        </CardHeader>
-                        <CardContent><div className="text-2xl font-bold">{analytics?.totalCancelledUnits.toLocaleString('id-ID') || 0}</div></CardContent>
-                    </Card>
-                </div>
                 
-                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    <div className="lg:col-span-2">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+                    <div className="lg:col-span-1 space-y-6">
                         <Card>
-                             <CardHeader>
-                                <CardTitle className="text-base">Performa Varian</CardTitle>
-                                <CardDescription>Rincian penjualan untuk setiap varian produk ini.</CardDescription>
+                            <CardHeader>
+                                <Image src={product.imageUrl || 'https://placehold.co/400x400.png'} alt={product.name} width={400} height={400} className="rounded-lg w-full aspect-square object-cover" />
                             </CardHeader>
                             <CardContent>
-                                <Table>
-                                    <TableHeader><TableRow><TableHead>Varian</TableHead><TableHead className="text-right">Unit Terjual</TableHead><TableHead className="text-right">Omzet</TableHead><TableHead className="text-right">Laba Kotor</TableHead></TableRow></TableHeader>
-                                    <TableBody>
-                                        {product.variants && Object.values(analytics?.variantsPerformance || {}).length > 0 ? Object.values(analytics!.variantsPerformance).map(v => (
-                                            <TableRow key={v.sku}><TableCell className="font-medium">{v.name}<p className="text-xs text-muted-foreground font-mono">{v.sku}</p></TableCell><TableCell className="text-right">{v.unitsSold.toLocaleString('id-ID')}</TableCell><TableCell className="text-right">{formatCurrency(v.revenue)}</TableCell><TableCell className="text-right">{formatCurrency(v.grossProfit)}</TableCell></TableRow>
-                                        )) : <TableRow><TableCell colSpan={4} className="text-center h-24">Tidak ada data penjualan varian atau produk ini tidak memiliki varian.</TableCell></TableRow>}
-                                    </TableBody>
-                                </Table>
+                                <h2 className="text-xl font-bold">{product.name}</h2>
+                                <p className="text-sm text-muted-foreground">{product.category}</p>
+                                <p className="text-sm font-mono bg-muted px-2 py-1 rounded-md inline-block mt-2">SKU: {product.sku || 'N/A'}</p>
+                                 <div className="mt-4 border-t pt-4">
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-muted-foreground">Total Stok Saat Ini:</span>
+                                        <span className="font-bold text-lg">{product.variants ? product.variants.reduce((sum, v) => sum + v.stock, 0) : product.stock}</span>
+                                    </div>
+                                 </div>
                             </CardContent>
                         </Card>
-                    </div>
-                     <div className="lg:col-span-1 space-y-6">
-                        <Card>
+                         <Card>
                             <CardHeader>
                                 <CardTitle className="text-base">Riwayat Stok Manual</CardTitle>
                             </CardHeader>
@@ -422,6 +360,57 @@ function ProductAnalyticsPage() {
                                 </div>
                             </CardContent>
                         </Card>
+                    </div>
+
+                    <div className="lg:col-span-2 space-y-6">
+                        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-2">
+                            <Card>
+                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                    <CardTitle className="text-sm font-medium">Total Omzet</CardTitle>
+                                    <DollarSign className="h-4 w-4 text-muted-foreground" />
+                                </CardHeader>
+                                <CardContent><div className="text-2xl font-bold">{formatCurrency(analytics?.totalRevenue || 0)}</div></CardContent>
+                            </Card>
+                            <Card>
+                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                    <CardTitle className="text-sm font-medium">Laba Bersih</CardTitle>
+                                    <BarChart2 className="h-4 w-4 text-muted-foreground" />
+                                </CardHeader>
+                                <CardContent><div className="text-2xl font-bold">{formatCurrency(analytics?.netProfit || 0)}</div></CardContent>
+                            </Card>
+                            <Card>
+                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                    <CardTitle className="text-sm font-medium">Unit Terjual</CardTitle>
+                                    <Package className="h-4 w-4 text-muted-foreground" />
+                                </CardHeader>
+                                <CardContent><div className="text-2xl font-bold">{analytics?.totalUnitsSold.toLocaleString('id-ID') || 0}</div></CardContent>
+                            </Card>
+                             <Card>
+                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                    <CardTitle className="text-sm font-medium">Produk Diretur</CardTitle>
+                                    <Undo2 className="h-4 w-4 text-orange-500" />
+                                </CardHeader>
+                                <CardContent><div className="text-2xl font-bold">{analytics?.totalReturnedUnits.toLocaleString('id-ID') || 0}</div></CardContent>
+                            </Card>
+                        </div>
+
+                        <Card>
+                             <CardHeader>
+                                <CardTitle className="text-base">Performa Varian</CardTitle>
+                                <CardDescription>Rincian penjualan untuk setiap varian produk ini.</CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <Table>
+                                    <TableHeader><TableRow><TableHead>Varian</TableHead><TableHead className="text-right">Unit Terjual</TableHead><TableHead className="text-right">Omzet</TableHead><TableHead className="text-right">Laba Kotor</TableHead></TableRow></TableHeader>
+                                    <TableBody>
+                                        {product.variants && Object.values(analytics?.variantsPerformance || {}).length > 0 ? Object.values(analytics!.variantsPerformance).map(v => (
+                                            <TableRow key={v.sku}><TableCell className="font-medium">{v.name}<p className="text-xs text-muted-foreground font-mono">{v.sku}</p></TableCell><TableCell className="text-right">{v.unitsSold.toLocaleString('id-ID')}</TableCell><TableCell className="text-right">{formatCurrency(v.revenue)}</TableCell><TableCell className="text-right">{formatCurrency(v.grossProfit)}</TableCell></TableRow>
+                                        )) : <TableRow><TableCell colSpan={4} className="text-center h-24">Tidak ada data penjualan varian atau produk ini tidak memiliki varian.</TableCell></TableRow>}
+                                    </TableBody>
+                                </Table>
+                            </CardContent>
+                        </Card>
+                        
                         <Card>
                             <CardHeader>
                                 <CardTitle className="text-base">Penjualan per Kanal</CardTitle>
@@ -453,3 +442,5 @@ function ProductAnalyticsPage() {
 }
 
 export default ProductAnalyticsPage;
+
+    
