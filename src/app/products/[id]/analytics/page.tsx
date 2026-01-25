@@ -4,7 +4,7 @@ import React, { useMemo, useState } from 'react';
 import { AppLayout } from '@/app/components/app-layout';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ArrowLeft, BarChart2, DollarSign, Package, ShoppingCart, Calendar as CalendarIcon, ArrowUpCircle, ArrowDownCircle, Ban, Undo2 } from 'lucide-react';
 import { useParams, useRouter } from 'next/navigation';
@@ -76,6 +76,8 @@ function ProductAnalyticsPage() {
         from: startOfMonth(new Date()),
         to: endOfMonth(new Date()),
     });
+    
+    const [showAllHistory, setShowAllHistory] = useState(false);
     
     const isOnlineSale = (channel: string) => {
         return ['shopee', 'tiktok', 'lazada'].some(c => channel.toLowerCase().includes(c));
@@ -238,6 +240,14 @@ function ProductAnalyticsPage() {
         { label: "30 Hari Terakhir", range: { from: subDays(new Date(), 29), to: new Date() } },
     ];
     
+    const displayedAdjustments = useMemo(() => {
+        if (!analytics) return [];
+        if (showAllHistory) {
+            return analytics.manualAdjustments;
+        }
+        return analytics.manualAdjustments.slice(0, 10);
+    }, [analytics, showAllHistory]);
+    
     if (inventoryLoading || !financeSettingsLoaded) {
         return (
             <AppLayout>
@@ -341,10 +351,10 @@ function ProductAnalyticsPage() {
                                 <CardTitle className="text-base">Riwayat Stok Manual</CardTitle>
                             </CardHeader>
                             <CardContent className="px-0">
-                                <div className="max-h-48 overflow-y-auto">
+                                <div className="overflow-y-auto">
                                     <Table>
                                         <TableBody>
-                                            {analytics && analytics.manualAdjustments.length > 0 ? analytics.manualAdjustments.map((adj, i) => (
+                                            {analytics && displayedAdjustments.length > 0 ? displayedAdjustments.map((adj, i) => (
                                                 <TableRow key={i}>
                                                     <TableCell className="text-xs">{formatToWIB(new Date(adj.date), 'dd/MM/yy HH:mm')}</TableCell>
                                                     <TableCell className="text-xs truncate">{adj.reason}</TableCell>
@@ -354,11 +364,18 @@ function ProductAnalyticsPage() {
                                                         </Badge>
                                                     </TableCell>
                                                 </TableRow>
-                                            )) : <p className="text-sm text-muted-foreground text-center py-10">Tidak ada penyesuaian manual.</p>}
+                                            )) : <TableRow><TableCell colSpan={3} className="text-center text-sm text-muted-foreground py-10">Tidak ada penyesuaian manual.</TableCell></TableRow>}
                                         </TableBody>
                                     </Table>
                                 </div>
                             </CardContent>
+                            {analytics && analytics.manualAdjustments.length > 10 && (
+                                <CardFooter className="justify-center py-2 border-t">
+                                    <Button variant="link" size="sm" onClick={() => setShowAllHistory(!showAllHistory)}>
+                                        {showAllHistory ? 'Lihat lebih sedikit' : 'Lihat semua'}
+                                    </Button>
+                                </CardFooter>
+                            )}
                         </Card>
                     </div>
 
@@ -393,23 +410,6 @@ function ProductAnalyticsPage() {
                                 <CardContent><div className="text-2xl font-bold">{analytics?.totalReturnedUnits.toLocaleString('id-ID') || 0}</div></CardContent>
                             </Card>
                         </div>
-
-                        <Card>
-                             <CardHeader>
-                                <CardTitle className="text-base">Performa Varian</CardTitle>
-                                <CardDescription>Rincian penjualan untuk setiap varian produk ini.</CardDescription>
-                            </CardHeader>
-                            <CardContent>
-                                <Table>
-                                    <TableHeader><TableRow><TableHead>Varian</TableHead><TableHead className="text-right">Unit Terjual</TableHead><TableHead className="text-right">Omzet</TableHead><TableHead className="text-right">Laba Kotor</TableHead></TableRow></TableHeader>
-                                    <TableBody>
-                                        {product.variants && Object.values(analytics?.variantsPerformance || {}).length > 0 ? Object.values(analytics!.variantsPerformance).map(v => (
-                                            <TableRow key={v.sku}><TableCell className="font-medium">{v.name}<p className="text-xs text-muted-foreground font-mono">{v.sku}</p></TableCell><TableCell className="text-right">{v.unitsSold.toLocaleString('id-ID')}</TableCell><TableCell className="text-right">{formatCurrency(v.revenue)}</TableCell><TableCell className="text-right">{formatCurrency(v.grossProfit)}</TableCell></TableRow>
-                                        )) : <TableRow><TableCell colSpan={4} className="text-center h-24">Tidak ada data penjualan varian atau produk ini tidak memiliki varian.</TableCell></TableRow>}
-                                    </TableBody>
-                                </Table>
-                            </CardContent>
-                        </Card>
                         
                         <Card>
                             <CardHeader>
@@ -434,6 +434,24 @@ function ProductAnalyticsPage() {
                                ) : <p className="text-sm text-muted-foreground text-center py-10">Tidak ada data penjualan.</p>}
                             </CardContent>
                         </Card>
+
+                        <Card>
+                             <CardHeader>
+                                <CardTitle className="text-base">Performa Varian</CardTitle>
+                                <CardDescription>Rincian penjualan untuk setiap varian produk ini.</CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <Table>
+                                    <TableHeader><TableRow><TableHead>Varian</TableHead><TableHead className="text-right">Unit Terjual</TableHead><TableHead className="text-right">Omzet</TableHead><TableHead className="text-right">Laba Kotor</TableHead></TableRow></TableHeader>
+                                    <TableBody>
+                                        {product.variants && Object.values(analytics?.variantsPerformance || {}).length > 0 ? Object.values(analytics!.variantsPerformance).map(v => (
+                                            <TableRow key={v.sku}><TableCell className="font-medium">{v.name}<p className="text-xs text-muted-foreground font-mono">{v.sku}</p></TableCell><TableCell className="text-right">{v.unitsSold.toLocaleString('id-ID')}</TableCell><TableCell className="text-right">{formatCurrency(v.revenue)}</TableCell><TableCell className="text-right">{formatCurrency(v.grossProfit)}</TableCell></TableRow>
+                                        )) : <TableRow><TableCell colSpan={4} className="text-center h-24">Tidak ada data penjualan varian atau produk ini tidak memiliki varian.</TableCell></TableRow>}
+                                    </TableBody>
+                                </Table>
+                            </CardContent>
+                        </Card>
+                        
                     </div>
                  </div>
             </main>
@@ -442,5 +460,3 @@ function ProductAnalyticsPage() {
 }
 
 export default ProductAnalyticsPage;
-
-    
