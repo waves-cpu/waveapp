@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState } from 'react';
@@ -37,26 +36,31 @@ export default function StockOutPage() {
             });
             return;
         }
-        setTransactionData(data);
+        const itemsToProcess = data.transactionItems.filter(item => item.quantity > 0);
+        if(itemsToProcess.length === 0) {
+            toast({
+                variant: 'destructive',
+                title: "Tidak ada kuantitas",
+                description: "Silakan masukkan jumlah untuk setidaknya satu produk.",
+            });
+            return;
+        }
+        
+        setTransactionData({ ...data, transactionItems: itemsToProcess });
         setConfirmOpen(true);
     };
 
     const handleFinalConfirm = async (reason: string) => {
         if (!transactionData) return;
 
-        const stockOutItems = transactionData.transactionItems.map(item => ({
-            ...item,
-            quantity: -Math.abs(item.quantity)
-        }));
-
         try {
-            const response = await fetch('/api/products/stock-in', {
+            const response = await fetch('/api/products/stock-out', {
                 method: 'POST',
                 headers: { 
                     'Content-Type': 'application/json',
                     'X-API-Key': process.env.NEXT_PUBLIC_API_KEY || 'secret-api-key-for-waveapp',
                 },
-                body: JSON.stringify({ items: stockOutItems, reason })
+                body: JSON.stringify({ items: transactionData.transactionItems, reason })
             });
 
             if (!response.ok) {
