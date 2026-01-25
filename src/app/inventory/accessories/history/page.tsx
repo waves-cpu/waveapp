@@ -33,7 +33,6 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { DateRange } from 'react-day-picker';
 import { DailySalesDetailDialog } from '@/app/components/daily-sales-detail-dialog';
-import { AppLayout } from '@/app/components/app-layout';
 import { Pagination } from '@/components/ui/pagination';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';

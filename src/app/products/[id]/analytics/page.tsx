@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useMemo, useState } from 'react';
@@ -7,11 +6,11 @@ import { SidebarTrigger } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { ArrowLeft, BarChart2, DollarSign, Package, ShoppingCart, Calendar as CalendarIcon } from 'lucide-react';
+import { ArrowLeft, BarChart2, DollarSign, Package, ShoppingCart, Calendar as CalendarIcon, ArrowUpCircle, ArrowDownCircle, Ban, Undo2 } from 'lucide-react';
 import { useParams, useRouter } from 'next/navigation';
 import { useInventory } from '@/hooks/use-inventory';
 import { useFinanceSettings } from '@/hooks/use-finance-settings';
-import type { InventoryItem, Sale, InventoryItemVariant } from '@/types';
+import type { InventoryItem, Sale, InventoryItemVariant, AdjustmentHistory } from '@/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import Image from 'next/image';
 import {
@@ -26,6 +25,7 @@ import { isWithinInterval, parseISO, startOfDay, endOfDay, startOfMonth, endOfMo
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { cn, formatToWIB } from '@/lib/utils';
+import { Badge } from '@/components/ui/badge';
 
 
 const formatCurrency = (amount: number) => {
@@ -81,36 +81,47 @@ function ProductAnalyticsPage() {
         return ['shopee', 'tiktok', 'lazada'].some(c => channel.toLowerCase().includes(c));
     }
 
-    const { product, productSales } = useMemo(() => {
-        if (!id || inventoryLoading) return { product: null, productSales: [] };
+    const { product, productAllSalesInDateRange } = useMemo(() => {
+        if (!id || inventoryLoading) return { product: null, productAllSalesInDateRange: [] };
+
         const foundProduct = items.find(i => i.id === id);
-        if (!foundProduct) return { product: null, productSales: [] };
+        if (!foundProduct) return { product: null, productAllSalesInDateRange: [] };
         
         const sales = allSales.filter(sale => {
             const isProductMatch = sale.productId === id;
             if (!isProductMatch) return false;
 
-            const isStatusMatch = sale.status && ['Completed', 'Siap Kirim', 'Selesai', 'Terproses', 'Diantar'].includes(sale.status);
-            if (!isStatusMatch) return false;
-
             if (date?.from) {
                 const saleDate = parseISO(sale.saleDate);
                 const toDate = date.to || date.from;
-                if (!isWithinInterval(saleDate, { start: startOfDay(date.from), end: endOfDay(toDate) })) {
-                    return false;
-                }
+                return isWithinInterval(saleDate, { start: startOfDay(date.from), end: endOfDay(toDate) });
             }
             
             return true;
         });
 
-        return { product: foundProduct, productSales: sales };
+        return { product: foundProduct, productAllSalesInDateRange: sales };
     }, [id, items, allSales, inventoryLoading, date]);
 
     const analytics = useMemo(() => {
         if (!product || !financeSettingsLoaded) {
             return null;
         }
+
+        const productSales = productAllSalesInDateRange.filter(sale =>
+            sale.status && ['Completed', 'Siap Kirim', 'Selesai', 'Terproses', 'Diantar'].includes(sale.status)
+        );
+
+        const cancelledSales = productAllSalesInDateRange.filter(sale =>
+            sale.status && ['Cancelled', 'Dibatalkan'].includes(sale.status)
+        );
+
+        const returnedSales = productAllSalesInDateRange.filter(sale =>
+            sale.status && ['Return', 'Return Selesai'].includes(sale.status)
+        );
+
+        const totalCancelledUnits = cancelledSales.reduce((sum, sale) => sum + sale.quantity, 0);
+        const totalReturnedUnits = returnedSales.reduce((sum, sale) => sum + sale.quantity, 0);
 
         let totalUnitsSold = 0;
         let totalRevenue = 0;
@@ -132,7 +143,6 @@ function ProductAnalyticsPage() {
             const saleProfit = saleRevenue - ((sale.cogsAtSale ?? 0) * sale.quantity);
             totalGrossProfit += saleProfit;
 
-            // Channel analytics
             const channel = sale.channel || 'Unknown';
             if (!salesByChannel[channel]) {
                 salesByChannel[channel] = { unitsSold: 0, revenue: 0 };
@@ -140,7 +150,6 @@ function ProductAnalyticsPage() {
             salesByChannel[channel].unitsSold += sale.quantity;
             salesByChannel[channel].revenue += saleRevenue;
 
-            // Variant analytics
             if (sale.variantId && variantsPerformance[sale.variantId]) {
                 variantsPerformance[sale.variantId].unitsSold += sale.quantity;
                 variantsPerformance[sale.variantId].revenue += saleRevenue;
@@ -164,6 +173,47 @@ function ProductAnalyticsPage() {
             revenue: data.revenue
         }));
 
+        let totalStockIn = 0;
+        let totalStockOut = 0;
+        const manualAdjustments: (AdjustmentHistory & {itemName?: string, variantName?: string})[] = [];
+
+        const processHistory = (history: AdjustmentHistory[], parent: InventoryItem, variant?: InventoryItemVariant) => {
+            history.forEach(entry => {
+                const entryDate = parseISO(entry.date as any);
+                const toDate = date?.to || date?.from;
+                
+                if (date?.from && toDate && isWithinInterval(entryDate, { start: startOfDay(date.from), end: endOfDay(toDate) })) {
+                    const reason = entry.reason.toLowerCase();
+                    const isSaleRelated = reason.includes('sale') || reason.includes('pemakaian aksesoris') || reason.includes('penjualan') || reason.includes('cancelled');
+                    
+                    if (!isSaleRelated) {
+                        if (entry.change > 0) {
+                            totalStockIn += entry.change;
+                        } else if (entry.change < 0) {
+                            totalStockOut += Math.abs(entry.change);
+                        }
+                        manualAdjustments.push({
+                            ...entry,
+                            itemName: parent.name,
+                            variantName: variant?.name,
+                        });
+                    }
+                }
+            });
+        };
+
+        if (product.variants && product.variants.length > 0) {
+            product.variants.forEach(variant => {
+                if (variant.history) {
+                    processHistory(variant.history, product, variant);
+                }
+            });
+        } else if (product.history) {
+            processHistory(product.history, product);
+        }
+        
+        manualAdjustments.sort((a, b) => new Date(b.date as any).getTime() - new Date(a.date as any).getTime());
+
         return {
             totalUnitsSold,
             totalRevenue,
@@ -171,10 +221,15 @@ function ProductAnalyticsPage() {
             netProfit,
             variantsPerformance,
             salesByChannel,
-            chartData
+            chartData,
+            totalCancelledUnits,
+            totalReturnedUnits,
+            totalStockIn,
+            totalStockOut,
+            manualAdjustments,
         };
 
-    }, [product, productSales, financeSettings, financeSettingsLoaded]);
+    }, [product, productAllSalesInDateRange, financeSettings, financeSettingsLoaded, date]);
 
      const datePresets = [
         { label: "Hari Ini", range: { from: new Date(), to: new Date() } },
@@ -264,7 +319,7 @@ function ProductAnalyticsPage() {
                     </Popover>
                 </div>
 
-                <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 mb-6">
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
                     <Card>
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                             <CardTitle className="text-sm font-medium">Total Omzet</CardTitle>
@@ -288,10 +343,38 @@ function ProductAnalyticsPage() {
                     </Card>
                      <Card>
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">Total Stok</CardTitle>
+                            <CardTitle className="text-sm font-medium">Total Stok Saat Ini</CardTitle>
                             <ShoppingCart className="h-4 w-4 text-muted-foreground" />
                         </CardHeader>
                         <CardContent><div className="text-2xl font-bold">{product.variants ? product.variants.reduce((sum, v) => sum + v.stock, 0) : product.stock}</div></CardContent>
+                    </Card>
+                    <Card>
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-sm font-medium">Stok Masuk (Manual)</CardTitle>
+                            <ArrowUpCircle className="h-4 w-4 text-green-600" />
+                        </CardHeader>
+                        <CardContent><div className="text-2xl font-bold">{analytics?.totalStockIn.toLocaleString('id-ID') || 0}</div></CardContent>
+                    </Card>
+                     <Card>
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-sm font-medium">Stok Keluar (Manual)</CardTitle>
+                            <ArrowDownCircle className="h-4 w-4 text-red-600" />
+                        </CardHeader>
+                        <CardContent><div className="text-2xl font-bold">{analytics?.totalStockOut.toLocaleString('id-ID') || 0}</div></CardContent>
+                    </Card>
+                     <Card>
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-sm font-medium">Produk Diretur</CardTitle>
+                            <Undo2 className="h-4 w-4 text-orange-500" />
+                        </CardHeader>
+                        <CardContent><div className="text-2xl font-bold">{analytics?.totalReturnedUnits.toLocaleString('id-ID') || 0}</div></CardContent>
+                    </Card>
+                     <Card>
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-sm font-medium">Produk Dibatalkan</CardTitle>
+                            <Ban className="h-4 w-4 text-destructive" />
+                        </CardHeader>
+                        <CardContent><div className="text-2xl font-bold">{analytics?.totalCancelledUnits.toLocaleString('id-ID') || 0}</div></CardContent>
                     </Card>
                 </div>
                 
@@ -314,7 +397,31 @@ function ProductAnalyticsPage() {
                             </CardContent>
                         </Card>
                     </div>
-                     <div className="lg:col-span-1">
+                     <div className="lg:col-span-1 space-y-6">
+                        <Card>
+                            <CardHeader>
+                                <CardTitle className="text-base">Riwayat Stok Manual</CardTitle>
+                            </CardHeader>
+                            <CardContent className="px-0">
+                                <div className="max-h-48 overflow-y-auto">
+                                    <Table>
+                                        <TableBody>
+                                            {analytics && analytics.manualAdjustments.length > 0 ? analytics.manualAdjustments.map((adj, i) => (
+                                                <TableRow key={i}>
+                                                    <TableCell className="text-xs">{formatToWIB(new Date(adj.date), 'dd/MM/yy HH:mm')}</TableCell>
+                                                    <TableCell className="text-xs truncate">{adj.reason}</TableCell>
+                                                    <TableCell className="text-right">
+                                                        <Badge variant={adj.change > 0 ? 'default' : 'destructive'} className={cn(adj.change > 0 ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800")}>
+                                                            {adj.change > 0 ? '+' : ''}{adj.change}
+                                                        </Badge>
+                                                    </TableCell>
+                                                </TableRow>
+                                            )) : <p className="text-sm text-muted-foreground text-center py-10">Tidak ada penyesuaian manual.</p>}
+                                        </TableBody>
+                                    </Table>
+                                </div>
+                            </CardContent>
+                        </Card>
                         <Card>
                             <CardHeader>
                                 <CardTitle className="text-base">Penjualan per Kanal</CardTitle>
@@ -346,5 +453,3 @@ function ProductAnalyticsPage() {
 }
 
 export default ProductAnalyticsPage;
-
-    
