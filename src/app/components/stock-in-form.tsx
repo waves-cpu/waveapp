@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useMemo, useCallback } from 'react';
@@ -26,10 +27,10 @@ import { BulkStockInDialog } from '@/app/components/bulk-stock-in-dialog';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ProductSelectionDialog } from './product-selection-dialog';
 
-const transactionItemSchema = z.object({
+const baseTransactionItemSchema = z.object({
     itemId: z.string(),
     itemName: z.string(),
-    quantity: z.coerce.number().int().min(0, "Quantity must be at least 0."),
+    quantity: z.coerce.number().int().min(0, "Jumlah harus minimal 0."),
     parentName: z.string().optional(),
     parentSku: z.string().optional(),
     parentImageUrl: z.string().optional(),
@@ -38,14 +39,12 @@ const transactionItemSchema = z.object({
     isVariant: z.boolean(),
 });
 
-type TransactionItem = z.infer<typeof transactionItemSchema>;
+type TransactionItem = z.infer<typeof baseTransactionItemSchema>;
 
-const formSchema = z.object({
-  transactionItems: z.array(transactionItemSchema),
-  masterQuantities: z.record(z.coerce.number().int().optional())
-});
-
-export type TransactionSubmitData = z.infer<typeof formSchema>;
+export type TransactionSubmitData = {
+  transactionItems: TransactionItem[],
+  masterQuantities: Record<string, number | undefined>
+};
 
 interface TransactionFormProps {
     transactionType: 'in' | 'out';
@@ -74,6 +73,39 @@ export function TransactionForm({
   const { items, categories } = useInventory();
   const router = useRouter();
 
+  const stockMap = useMemo(() => {
+    const map = new Map<string, number>();
+    (items || []).forEach(item => {
+        if (item.variants && item.variants.length > 0) {
+            item.variants.forEach(variant => {
+                map.set(variant.id, variant.stock);
+            });
+        } else if (item.stock !== undefined) {
+            map.set(item.id, item.stock);
+        }
+    });
+    return map;
+  }, [items]);
+
+  const formSchema = useMemo(() => {
+    const transactionItemSchema = baseTransactionItemSchema.refine(data => {
+        if (transactionType === 'out') {
+            const currentStock = stockMap.get(data.itemId) ?? 0;
+            return data.quantity <= currentStock;
+        }
+        return true;
+    }, {
+        message: "Jumlah keluar melebihi stok.",
+        path: ['quantity'],
+    });
+
+    return z.object({
+      transactionItems: z.array(transactionItemSchema),
+      masterQuantities: z.record(z.coerce.number().int().optional())
+    });
+  }, [transactionType, stockMap]);
+
+
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -88,20 +120,6 @@ export function TransactionForm({
   });
   
   const existingItemIds = useMemo(() => new Set(fields.map(field => field.itemId)), [fields]);
-
-  const stockMap = useMemo(() => {
-    const map = new Map<string, number>();
-    (items || []).forEach(item => {
-        if (item.variants && item.variants.length > 0) {
-            item.variants.forEach(variant => {
-                map.set(variant.id, variant.stock);
-            });
-        } else if (item.stock !== undefined) {
-            map.set(item.id, item.stock);
-        }
-    });
-    return map;
-  }, [items]);
 
 
   const handleSelectItems = (selectedItemIds: string[]) => {
@@ -203,7 +221,7 @@ export function TransactionForm({
                 items: []
             };
         }
-        acc[key].items.push({ ...field, originalIndex: index });
+        acc[key].items.push({ ...(field as any), originalIndex: index });
         return acc;
     }, {} as Record<string, { parentName?: string; parentSku?: string; parentImageUrl?: string; isParent: boolean; items: (TransactionItem & { originalIndex: number })[] }>);
   }, [fields]);
@@ -226,7 +244,7 @@ export function TransactionForm({
   }
 
   const onSubmit = (values: z.infer<typeof formSchema>) => {
-    onFinalSubmit(values);
+    onFinalSubmit(values as TransactionSubmitData);
   };
 
   return (
