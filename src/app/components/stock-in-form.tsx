@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useMemo, useCallback } from 'react';
@@ -26,6 +25,7 @@ import Image from 'next/image';
 import { BulkStockInDialog } from '@/app/components/bulk-stock-in-dialog';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ProductSelectionDialog } from './product-selection-dialog';
+import { useToast } from '@/hooks/use-toast';
 
 const baseTransactionItemSchema = z.object({
     itemId: z.string(),
@@ -72,6 +72,7 @@ export function TransactionForm({
   const TStockForm = transactionType === 'in' ? t.stockInForm : t.stockOutForm;
   const { items, categories } = useInventory();
   const router = useRouter();
+  const { toast } = useToast();
 
   const stockMap = useMemo(() => {
     const map = new Map<string, number>();
@@ -88,22 +89,11 @@ export function TransactionForm({
   }, [items]);
 
   const formSchema = useMemo(() => {
-    const transactionItemSchema = baseTransactionItemSchema.refine(data => {
-        if (transactionType === 'out') {
-            const currentStock = stockMap.get(data.itemId) ?? 0;
-            return data.quantity <= currentStock;
-        }
-        return true;
-    }, {
-        message: "Jumlah keluar melebihi stok.",
-        path: ['quantity'],
-    });
-
     return z.object({
-      transactionItems: z.array(transactionItemSchema),
+      transactionItems: z.array(baseTransactionItemSchema),
       masterQuantities: z.record(z.coerce.number().int().optional())
     });
-  }, [transactionType, stockMap]);
+  }, []);
 
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -353,7 +343,22 @@ export function TransactionForm({
                                                                                 placeholder="0"
                                                                                 {...formField}
                                                                                 value={formField.value || ''}
-                                                                                onChange={e => formField.onChange(e.target.valueAsNumber || 0)}
+                                                                                onChange={e => {
+                                                                                    const newQuantity = e.target.valueAsNumber;
+                                                                                    if (isNaN(newQuantity) || newQuantity < 0) {
+                                                                                        formField.onChange(0);
+                                                                                        return;
+                                                                                    }
+                                                                                    if (transactionType === 'out' && newQuantity > currentStock) {
+                                                                                        formField.onChange(currentStock);
+                                                                                        toast({
+                                                                                            title: "Stok Maksimal Tercapai",
+                                                                                            description: `Jumlah keluar disesuaikan dengan stok yang ada: ${currentStock}.`,
+                                                                                        });
+                                                                                    } else {
+                                                                                        formField.onChange(newQuantity);
+                                                                                    }
+                                                                                }}
                                                                                 min="0"
                                                                             />
                                                                         </FormControl>
@@ -395,7 +400,22 @@ export function TransactionForm({
                                                                             placeholder="0"
                                                                             {...formField}
                                                                             value={formField.value || ''}
-                                                                            onChange={e => formField.onChange(e.target.valueAsNumber || 0)}
+                                                                            onChange={e => {
+                                                                                const newQuantity = e.target.valueAsNumber;
+                                                                                if (isNaN(newQuantity) || newQuantity < 0) {
+                                                                                    formField.onChange(0);
+                                                                                    return;
+                                                                                }
+                                                                                if (transactionType === 'out' && newQuantity > currentStock) {
+                                                                                    formField.onChange(currentStock);
+                                                                                    toast({
+                                                                                        title: "Stok Maksimal Tercapai",
+                                                                                        description: `Jumlah keluar disesuaikan dengan stok yang ada: ${currentStock}.`,
+                                                                                    });
+                                                                                } else {
+                                                                                    formField.onChange(newQuantity);
+                                                                                }
+                                                                            }}
                                                                             min="0"
                                                                         />
                                                                     </FormControl>
