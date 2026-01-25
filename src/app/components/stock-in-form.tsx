@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useMemo, useCallback } from 'react';
@@ -117,7 +116,7 @@ export function TransactionForm({
             itemsToAdd.push({
               itemId: variant.id,
               itemName: product.name,
-              quantity: 1,
+              quantity: 0,
               parentName: product.name,
               parentSku: product.sku,
               parentImageUrl: product.imageUrl,
@@ -131,7 +130,7 @@ export function TransactionForm({
           itemsToAdd.push({
             itemId: product.id,
             itemName: product.name,
-            quantity: 1,
+            quantity: 0,
             parentName: product.name,
             parentSku: product.sku,
             parentImageUrl: product.imageUrl,
