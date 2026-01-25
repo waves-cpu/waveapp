@@ -328,7 +328,19 @@ export function TransactionForm({
                                                                 </TableCell>
                                                                 <TableCell className="text-center">{currentStock}</TableCell>
                                                                 <TableCell><FormField control={form.control} name={`transactionItems.${field.originalIndex}.quantity`} render={({ field: formField }) => (
-                                                                    <FormItem><FormControl><Input type="number" placeholder="0" {...formField}/></FormControl><FormMessage/></FormItem>
+                                                                    <FormItem>
+                                                                        <FormControl>
+                                                                            <Input
+                                                                                type="number"
+                                                                                placeholder="0"
+                                                                                {...formField}
+                                                                                value={formField.value || ''}
+                                                                                onChange={e => formField.onChange(e.target.valueAsNumber || 0)}
+                                                                                min="0"
+                                                                            />
+                                                                        </FormControl>
+                                                                        <FormMessage/>
+                                                                    </FormItem>
                                                                 )}/></TableCell>
                                                                 <TableCell className="text-center">{finalStock}</TableCell>
                                                                 <TableCell><Button type="button" variant="ghost" size="icon" className="text-destructive hover:text-destructive-foreground hover:bg-destructive" onClick={() => remove(field.originalIndex)}><Trash2 className="h-4 w-4"/></Button></TableCell>
@@ -358,7 +370,19 @@ export function TransactionForm({
                                                             </TableCell>
                                                             <TableCell className="text-center">{currentStock}</TableCell>
                                                             <TableCell><FormField control={form.control} name={`transactionItems.${field.originalIndex}.quantity`} render={({ field: formField }) => (
-                                                                <FormItem><FormControl><Input type="number" placeholder="0" {...formField}/></FormControl><FormMessage/></FormItem>
+                                                                <FormItem>
+                                                                    <FormControl>
+                                                                        <Input
+                                                                            type="number"
+                                                                            placeholder="0"
+                                                                            {...formField}
+                                                                            value={formField.value || ''}
+                                                                            onChange={e => formField.onChange(e.target.valueAsNumber || 0)}
+                                                                            min="0"
+                                                                        />
+                                                                    </FormControl>
+                                                                    <FormMessage/>
+                                                                </FormItem>
                                                             )}/></TableCell>
                                                             <TableCell className="text-center">{finalStock}</TableCell>
                                                             <TableCell><Button type="button" variant="ghost" size="icon" className="text-destructive hover:text-destructive-foreground hover:bg-destructive" onClick={() => remove(field.originalIndex)}><Trash2 className="h-4 w-4"/></Button></TableCell>
