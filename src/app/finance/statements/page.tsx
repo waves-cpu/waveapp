@@ -14,7 +14,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { Calendar as CalendarIcon, Package, ArrowDownRight, DollarSign, BarChart2, Star, TrendingUp, Eye, ChevronDown, FileDown, Loader2, Search } from 'lucide-react';
 import { DateRange } from 'react-day-picker';
-import { subDays, startOfMonth, endOfMonth, startOfYear, endOfYear, isWithinInterval, parseISO, startOfDay, endOfDay, subMonths } from 'date-fns';
+import { subDays, startOfMonth, endOfMonth, startOfYear, endOfYear, isWithinInterval, parseISO, startOfDay, endOfDay, subMonths, isSameDay } from 'date-fns';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -500,9 +500,19 @@ export default function StatementsPage() {
                         </PopoverTrigger>
                         <PopoverContent className="flex w-auto flex-row" align="end">
                             <div className="flex flex-col gap-1 pr-4 border-r">
-                                {datePresets.map(preset => (
-                                    <Button key={preset.label} variant="ghost" className="justify-start" onClick={() => setDate(preset.range)}>{preset.label}</Button>
-                                ))}
+                                {datePresets.map(preset => {
+                                    const isActive = date?.from && date.to && isSameDay(date.from, preset.range.from) && isSameDay(date.to, preset.range.to);
+                                    return (
+                                        <Button
+                                            key={preset.label}
+                                            variant={isActive ? "secondary" : "ghost"}
+                                            className="justify-start"
+                                            onClick={() => setDate(preset.range)}
+                                        >
+                                            {preset.label}
+                                        </Button>
+                                    );
+                                })}
                             </div>
                             <Calendar
                                 initialFocus

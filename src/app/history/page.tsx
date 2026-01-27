@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
@@ -26,7 +25,7 @@ import type { InventoryItem, AdjustmentHistory, InventoryItemVariant, Sale } fro
 import { useLanguage } from '@/hooks/use-language';
 import { translations } from '@/types/language';
 import { SidebarTrigger } from '@/components/ui/sidebar';
-import { parseISO, isWithinInterval, startOfMonth, endOfMonth, startOfWeek, endOfWeek, startOfDay, endOfDay, startOfYear, endOfYear } from 'date-fns';
+import { parseISO, isWithinInterval, startOfMonth, endOfMonth, startOfWeek, endOfWeek, startOfDay, endOfDay, startOfYear, endOfYear, isSameDay } from 'date-fns';
 import { id as localeId } from 'date-fns/locale';
 import { cn, formatToWIB } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
@@ -85,11 +84,13 @@ export default function HistoryPage() {
   const [isExporting, setIsExporting] = useState(false);
 
   useEffect(() => {
+    // Initialize date on client to avoid hydration mismatch
     setDate({
       from: startOfMonth(new Date()),
       to: endOfMonth(new Date()),
     });
   }, []);
+
 
   const allHistory = useMemo((): HistoryEntry[] => {
     if (!date?.from || loading) return [];
@@ -409,9 +410,19 @@ export default function HistoryPage() {
                             </PopoverTrigger>
                             <PopoverContent className="flex w-auto flex-row" align="end">
                                 <div className="flex flex-col gap-1 pr-4 border-r">
-                                    {datePresets.map(preset => (
-                                        <Button key={preset.label} variant="ghost" className="justify-start" onClick={() => setDate(preset.range)}>{preset.label}</Button>
-                                    ))}
+                                    {datePresets.map(preset => {
+                                        const isActive = date?.from && date.to && isSameDay(date.from, preset.range.from) && isSameDay(date.to, preset.range.to);
+                                        return (
+                                            <Button 
+                                                key={preset.label} 
+                                                variant={isActive ? 'secondary' : 'ghost'} 
+                                                className="justify-start" 
+                                                onClick={() => setDate(preset.range)}
+                                            >
+                                                {preset.label}
+                                            </Button>
+                                        )
+                                    })}
                                 </div>
                                 <Calendar
                                     initialFocus
@@ -572,4 +583,3 @@ export default function HistoryPage() {
     </AppLayout>
   );
 }
-
