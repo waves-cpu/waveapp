@@ -27,6 +27,7 @@ import { id as localeId } from 'date-fns/locale';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { formatToWIB } from '@/lib/utils';
 import { useFinanceSettings } from '@/hooks/use-finance-settings';
+import Image from 'next/image';
 
 interface DailySalesDetailDialogProps {
   open: boolean;
@@ -46,6 +47,7 @@ interface AggregatedSale {
     priceAtSale: number;
     size?: string;
     totalRevenue: number;
+    imageUrl?: string;
 }
 
 const formatCurrency = (amount: number) => {
@@ -105,6 +107,7 @@ export function DailySalesDetailDialog({ open, onOpenChange, sales, title, descr
                     priceAtSale: sale.priceAtSale,
                     size: sale.variantName,
                     totalRevenue: sale.quantity * sale.priceAtSale,
+                    imageUrl: sale.parentImageUrl,
                 });
             }
         });
@@ -202,8 +205,20 @@ export function DailySalesDetailDialog({ open, onOpenChange, sales, title, descr
                           aggregatedSales.map((sale, index) => (
                               <TableRow key={`${sale.sku}-${index}` || `${sale.productName}-${index}`}>
                                   <TableCell>
-                                      <div className="font-medium truncate whitespace-nowrap">{sale.productName}</div>
-                                      {sale.sku && <div className="text-xs text-muted-foreground">SKU: {sale.sku}</div>}
+                                      <div className="flex items-center gap-3">
+                                          <Image
+                                            src={sale.imageUrl || 'https://placehold.co/40x40.png'}
+                                            alt={sale.productName}
+                                            width={40}
+                                            height={40}
+                                            className="rounded-md"
+                                            data-ai-hint="product image"
+                                          />
+                                          <div>
+                                              <div className="font-medium truncate whitespace-nowrap">{sale.productName}</div>
+                                              {sale.sku && <div className="text-xs text-muted-foreground">SKU: {sale.sku}</div>}
+                                          </div>
+                                      </div>
                                   </TableCell>
                                   <TableCell>
                                       {sale.size || '-'}
