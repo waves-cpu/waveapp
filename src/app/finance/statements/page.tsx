@@ -624,7 +624,7 @@ export default function StatementsPage() {
                     <Card className="md:col-span-2">
                         <CardHeader className="flex flex-row items-center justify-between">
                             <CardTitle>{t.bestsellers}</CardTitle>
-                            {bestsellers.length > 5 && (
+                            {bestsellers.length > 10 && (
                                 <Button variant="outline" size="sm" onClick={() => setBestsellerDialogOpen(true)}>{t.viewAll}</Button>
                             )}
                         </CardHeader>
@@ -640,7 +640,7 @@ export default function StatementsPage() {
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                        {bestsellers.slice(0, 5).map(p => (
+                                        {bestsellers.slice(0, 10).map(p => (
                                             <React.Fragment key={p.productId}>
                                                 <TableRow onClick={() => p.variants.length > 0 && toggleRow(p.productId)} className={cn(p.variants.length > 0 && "cursor-pointer", expandedRows.has(p.productId) && "bg-muted/50")}>
                                                     <TableCell>
