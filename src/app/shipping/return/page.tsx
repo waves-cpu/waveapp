@@ -19,10 +19,10 @@ import {
   TableRow,
   TableFooter,
 } from '@/components/ui/table';
-import { Undo2, Truck, CheckCircle, Package, Trash2, Search, FileDown, Loader2 } from 'lucide-react';
+import { Undo2, Truck, CheckCircle, Package, Trash2, Search, FileDown, Loader2, Eye } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { useInventory } from '@/hooks/use-inventory';
-import type { ShippingReceipt, ReturnedItem } from '@/types';
+import type { ShippingReceipt, ReturnedItem, Sale } from '@/types';
 import { parseISO, startOfMonth, endOfMonth } from 'date-fns';
 import { id as localeId } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
@@ -47,6 +47,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { translations } from '@/types/language';
 import { formatToWIB } from '@/lib/utils';
+import { DailySalesDetailDialog } from '@/app/components/daily-sales-detail-dialog';
 
 
 const getStatusVariant = (status: string) => {
@@ -201,7 +202,7 @@ const ReturnProductDialog = ({
 
 
 export default function ReturnPage() {
-    const { loading: inventoryLoading, allShippingReceipts, updateShippingReceiptStatus, deleteShippingReceipt, returnSaleTransaction } = useInventory();
+    const { loading: inventoryLoading, allShippingReceipts, updateShippingReceiptStatus, deleteShippingReceipt, returnSaleTransaction, allSales } = useInventory();
     const [loading, setLoading] = useState(true);
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(25);
@@ -218,6 +219,9 @@ export default function ReturnPage() {
     const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
     const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
     const [isDownloading, setIsDownloading] = useState(false);
+
+    const [detailItems, setDetailItems] = useState<Sale[]>([]);
+    const [isDetailOpen, setIsDetailOpen] = useState(false);
 
     const years = useMemo(() => {
         const currentYear = new Date().getFullYear();
@@ -302,6 +306,20 @@ export default function ReturnPage() {
         }
         setSelectedReceipt(receipt);
         setIsProductSelectionDialogOpen(true);
+    };
+    
+    const handleViewDetails = (receipt: ShippingReceipt) => {
+        const items = allSales.filter(s => s.transactionId === receipt.transactionId);
+        if (items.length > 0) {
+            setDetailItems(items);
+            setIsDetailOpen(true);
+        } else {
+            toast({
+                title: "Tidak ada detail",
+                description: "Tidak ada produk yang tercatat untuk resi ini.",
+                variant: "destructive"
+            });
+        }
     };
     
     const handleProcessReturn = async (transactionId: string, returnedItems: ReturnedItem[]) => {
@@ -475,6 +493,9 @@ export default function ReturnPage() {
                                                 <Badge variant={getStatusVariant(item.status)}>{item.status}</Badge>
                                             </TableCell>
                                             <TableCell className="text-center">
+                                                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleViewDetails(item)}>
+                                                    <Eye className="h-4 w-4" />
+                                                </Button>
                                                 {(item.status === 'Return' || item.status === 'Diantar' || item.status === 'Tidak Sampai') && (
                                                     <Button variant="outline" size="sm" onClick={() => handleActionClick(item)}>
                                                         <Package className="mr-2 h-3 w-3" />
@@ -546,6 +567,12 @@ export default function ReturnPage() {
                 dialogTitle={selectedReceipt?.status === 'Dibatalkan' ? 'Proses Pembatalan' : 'Proses Barang Return'}
                 dialogDescription={selectedReceipt?.status === 'Dibatalkan' ? 'Periksa barang yang stoknya akan dikembalikan' : 'Periksa barang yang telah kembali ke gudang'}
                 submitText={selectedReceipt?.status === 'Dibatalkan' ? 'Proses Pembatalan' : 'Proses Pengembalian'}
+            />
+            <DailySalesDetailDialog
+                open={isDetailOpen}
+                onOpenChange={setIsDetailOpen}
+                sales={detailItems}
+                title="Detail Pesanan"
             />
         </AppLayout>
     );
