@@ -201,7 +201,7 @@ function AllBestsellersDialog({ open, onOpenChange, products, filters }: { open:
                                 setCurrentPage(1);
                             }}
                         >
-                            <SelectTrigger className="h-8 w-[150px]">
+                            <SelectTrigger className="h-8 w-[180px]">
                                 <SelectValue placeholder={`${itemsPerPage} / halaman`} />
                             </SelectTrigger>
                             <SelectContent side="top">
