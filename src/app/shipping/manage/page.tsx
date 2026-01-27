@@ -64,6 +64,10 @@ const DropdownAction = ({ receipt, onAction }: { receipt: ShippingReceipt, onAct
     <DropdownMenu>
         <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8"><MoreVertical className="h-4 w-4" /></Button></DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-48">
+            <DropdownMenuItem onClick={() => onAction(receipt, STATUS_FLOW.VIEW_DETAILS)}>
+                <Eye className="mr-2 h-4 w-4" /> Lihat Detail
+            </DropdownMenuItem>
+            <Separator className="my-1" />
             {receipt.status === STATUS_FLOW.TERPROSES && <DropdownMenuItem onClick={() => onAction(receipt, STATUS_FLOW.SIAP_KIRIM)}><Send className="mr-2 h-4 w-4" /> Tandai Siap Kirim</DropdownMenuItem>}
             {receipt.status === STATUS_FLOW.SIAP_KIRIM && (
                 <>
@@ -205,9 +209,6 @@ const ReceiptTable = ({
                                 <TableCell><Badge variant="outline">{receipt.channel}</Badge></TableCell>
                                 <TableCell><Badge variant={getStatusVariant(receipt.status)}>{receipt.status}</Badge></TableCell>
                                 <TableCell className="text-right">
-                                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onAction(receipt, STATUS_FLOW.VIEW_DETAILS)}>
-                                        <Eye className="h-4 w-4" />
-                                    </Button>
                                     <DropdownAction receipt={receipt} onAction={onAction} />
                                 </TableCell>
                             </TableRow>

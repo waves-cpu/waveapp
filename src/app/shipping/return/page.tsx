@@ -19,7 +19,7 @@ import {
   TableRow,
   TableFooter,
 } from '@/components/ui/table';
-import { Undo2, Truck, CheckCircle, Package, Trash2, Search, FileDown, Loader2, Eye } from 'lucide-react';
+import { Undo2, Truck, CheckCircle, Package, Trash2, Search, FileDown, Loader2, Eye, MoreVertical } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { useInventory } from '@/hooks/use-inventory';
 import type { ShippingReceipt, ReturnedItem, Sale } from '@/types';
@@ -48,6 +48,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { translations } from '@/types/language';
 import { formatToWIB } from '@/lib/utils';
 import { DailySalesDetailDialog } from '@/app/components/daily-sales-detail-dialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
 
 
 const getStatusVariant = (status: string) => {
@@ -493,44 +500,57 @@ export default function ReturnPage() {
                                                 <Badge variant={getStatusVariant(item.status)}>{item.status}</Badge>
                                             </TableCell>
                                             <TableCell className="text-center">
-                                                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleViewDetails(item)}>
-                                                    <Eye className="h-4 w-4" />
-                                                </Button>
-                                                {(item.status === 'Return' || item.status === 'Diantar' || item.status === 'Tidak Sampai') && (
-                                                    <Button variant="outline" size="sm" onClick={() => handleActionClick(item)}>
-                                                        <Package className="mr-2 h-3 w-3" />
-                                                        Proses Barang Sampai
-                                                    </Button>
-                                                )}
-                                                {item.status === 'Dibatalkan' && (
-                                                    <Button variant="outline" size="sm" onClick={() => handleActionClick(item)}>
-                                                        <Undo2 className="mr-2 h-3 w-3" />
-                                                        Proses Pembatalan
-                                                    </Button>
-                                                )}
-                                                {['Return Selesai', 'Selesai'].includes(item.status) && (
-                                                     <AlertDialog>
-                                                        <AlertDialogTrigger asChild>
-                                                             <Button variant="ghost" size="icon" className="text-destructive h-8 w-8">
-                                                                <Trash2 className="h-4 w-4" />
-                                                             </Button>
-                                                        </AlertDialogTrigger>
-                                                        <AlertDialogContent>
-                                                            <AlertDialogHeader>
-                                                                <AlertDialogTitle>{t.deleteConfirmTitle}</AlertDialogTitle>
-                                                                <AlertDialogDescription>
-                                                                    {t.deleteConfirmDesc.replace('{awb}', item.awb)}
-                                                                </AlertDialogDescription>
-                                                            </AlertDialogHeader>
-                                                            <AlertDialogFooter>
-                                                                <AlertDialogCancel>{tCommon.cancel}</AlertDialogCancel>
-                                                                <AlertDialogAction onClick={() => handleDelete(item)} className="bg-destructive hover:bg-destructive/90">
-                                                                    {t.deleteConfirmAction}
-                                                                </AlertDialogAction>
-                                                            </AlertDialogFooter>
-                                                        </AlertDialogContent>
-                                                    </AlertDialog>
-                                                )}
+                                                 <DropdownMenu>
+                                                    <DropdownMenuTrigger asChild>
+                                                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                                                            <MoreVertical className="h-4 w-4" />
+                                                        </Button>
+                                                    </DropdownMenuTrigger>
+                                                    <DropdownMenuContent align="end">
+                                                        <DropdownMenuItem onClick={() => handleViewDetails(item)}>
+                                                            <Eye className="mr-2 h-4 w-4" /> Lihat Detail
+                                                        </DropdownMenuItem>
+                                                        {(item.status === 'Return' || item.status === 'Diantar' || item.status === 'Tidak Sampai') && (
+                                                             <DropdownMenuItem onClick={() => handleActionClick(item)}>
+                                                                <Package className="mr-2 h-4 w-4" />
+                                                                Proses Barang Sampai
+                                                            </DropdownMenuItem>
+                                                        )}
+                                                        {item.status === 'Dibatalkan' && (
+                                                             <DropdownMenuItem onClick={() => handleActionClick(item)}>
+                                                                <Undo2 className="mr-2 h-4 w-4" />
+                                                                Proses Pembatalan
+                                                            </DropdownMenuItem>
+                                                        )}
+                                                        {['Return Selesai', 'Selesai'].includes(item.status) && (
+                                                            <>
+                                                                <DropdownMenuSeparator />
+                                                                <AlertDialog>
+                                                                    <AlertDialogTrigger asChild>
+                                                                         <DropdownMenuItem onSelect={e => e.preventDefault()} className="text-destructive">
+                                                                            <Trash2 className="mr-2 h-4 w-4" />
+                                                                            {t.deleteConfirmAction}
+                                                                        </DropdownMenuItem>
+                                                                    </AlertDialogTrigger>
+                                                                    <AlertDialogContent>
+                                                                        <AlertDialogHeader>
+                                                                            <AlertDialogTitle>{t.deleteConfirmTitle}</AlertDialogTitle>
+                                                                            <AlertDialogDescription>
+                                                                                {t.deleteConfirmDesc.replace('{awb}', item.awb)}
+                                                                            </AlertDialogDescription>
+                                                                        </AlertDialogHeader>
+                                                                        <AlertDialogFooter>
+                                                                            <AlertDialogCancel>{tCommon.cancel}</AlertDialogCancel>
+                                                                            <AlertDialogAction onClick={() => handleDelete(item)} className="bg-destructive hover:bg-destructive/90">
+                                                                                {t.deleteConfirmAction}
+                                                                            </AlertDialogAction>
+                                                                        </AlertDialogFooter>
+                                                                    </AlertDialogContent>
+                                                                </AlertDialog>
+                                                            </>
+                                                        )}
+                                                    </DropdownMenuContent>
+                                                </DropdownMenu>
                                             </TableCell>
                                         </TableRow>
                                     )) : (
@@ -568,7 +588,7 @@ export default function ReturnPage() {
                 dialogDescription={selectedReceipt?.status === 'Dibatalkan' ? 'Periksa barang yang stoknya akan dikembalikan' : 'Periksa barang yang telah kembali ke gudang'}
                 submitText={selectedReceipt?.status === 'Dibatalkan' ? 'Proses Pembatalan' : 'Proses Pengembalian'}
             />
-            <DailySalesDetailDialog
+             <DailySalesDetailDialog
                 open={isDetailOpen}
                 onOpenChange={setIsDetailOpen}
                 sales={detailItems}
