@@ -1,4 +1,3 @@
-
 'use client';
 
 import {
@@ -155,7 +154,7 @@ export function DailySalesDetailDialog({ open, onOpenChange, sales, title, descr
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl">
+      <DialogContent className="max-w-5xl h-[85vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>{title || defaultTitle}</DialogTitle>
           <DialogDescription>
@@ -186,8 +185,8 @@ export function DailySalesDetailDialog({ open, onOpenChange, sales, title, descr
             </Select>
         </div>
 
-        <div className="border rounded-md">
-          <ScrollArea className="h-96">
+        <div className="flex-grow overflow-hidden border rounded-md">
+          <ScrollArea className="h-full">
               <Table className="table-fixed">
                   <TableHeader className="sticky top-0 bg-card">
                       <TableRow>
