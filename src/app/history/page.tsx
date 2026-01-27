@@ -22,7 +22,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Search, Calendar as CalendarIcon, Eye, ShoppingCart, ShoppingBag, FileDown, History, ExternalLink, Loader2 } from 'lucide-react';
+import { Search, Calendar as CalendarIcon, Eye, ShoppingCart, ShoppingBag, FileDown, History, ExternalLink, Loader2, ArrowUpCircle, ArrowDownCircle } from 'lucide-react';
 import type { InventoryItem, AdjustmentHistory, InventoryItemVariant, Sale } from '@/types';
 import { useLanguage } from '@/hooks/use-language';
 import { translations } from '@/types/language';
@@ -36,7 +36,7 @@ import { DailySalesDetailDialog } from '@/app/components/daily-sales-detail-dial
 import { AppLayout } from '../components/app-layout';
 import { Pagination } from '@/components/ui/pagination';
 import Link from 'next/link';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardFooter } from '@/components/ui/card';
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
 import { useToast } from '@/hooks/use-toast';
@@ -425,131 +425,97 @@ export default function HistoryPage() {
                 </div>
             </CardHeader>
             <CardContent className="p-0 flex-grow">
-                <Table>
-                <TableHeader>
-                    <TableRow>
-                        <TableHead className="min-w-[250px]">{t.inventoryTable.name}</TableHead>
-                        <TableHead>{t.stockHistory.date}</TableHead>
-                        <TableHead className="text-center">{t.stockHistory.change}</TableHead>
-                        <TableHead className="text-center">{t.stockHistory.newTotal}</TableHead>
-                        <TableHead>{t.stockHistory.reason}</TableHead>
-                    </TableRow>
-                </TableHeader>
-                <TableBody>
-                    {loading ? (
-                        <TableRow>
-                            <TableCell colSpan={5} className="h-24 text-center">Memuat riwayat...</TableCell>
-                        </TableRow>
-                    ) : paginatedHistory.length > 0 ? (
-                    paginatedHistory.map((entry, index) => (
-                        <TableRow key={index}>
-                        {entry.type === 'adjustment' ? (
-                            <>
-                            <TableCell>
-                                <div className="flex items-center gap-4">
-                                    {entry.imageUrl ? (
-                                    <Image 
-                                        src={entry.imageUrl} 
-                                        alt={entry.itemName!} 
-                                        width={36} height={36} 
-                                        className="rounded-sm" 
-                                        data-ai-hint="product image"
-                                    />
-                                    ) : (
-                                    <div className="flex h-10 w-10 items-center justify-center rounded-sm bg-muted">
-                                        <ShoppingBag className="h-5 w-5 text-muted-foreground" />
+               <div className="p-6">
+                {loading ? (
+                    <div className="h-48 flex items-center justify-center text-muted-foreground">Memuat riwayat...</div>
+                ) : paginatedHistory.length > 0 ? (
+                     <div className="relative pl-6">
+                         {paginatedHistory.map((entry, index) => {
+                            const isFirst = index === 0;
+                            const isLast = index === paginatedHistory.length - 1;
+                            const isSale = entry.type === 'sales';
+                            const isStockIn = !isSale && entry.change > 0;
+                            const isStockOut = !isSale && entry.change < 0;
+
+                            const Icon = isSale ? ShoppingCart : (isStockIn ? ArrowUpCircle : ArrowDownCircle);
+                            const iconColor = isSale ? 'text-blue-500' : (isStockIn ? 'text-green-500' : 'text-red-500');
+
+                            return (
+                                <div key={index} className="relative flex items-start pb-8">
+                                    {!isLast && <div className="absolute left-3 -bottom-8 h-full w-px bg-border" />}
+                                    <div className="absolute left-0 top-0">
+                                        <span className="flex h-6 w-6 items-center justify-center rounded-full bg-background ring-4 ring-background">
+                                            <Icon className={`h-6 w-6 ${iconColor}`} />
+                                        </span>
                                     </div>
-                                    )}
-                                    <div>
-                                        <div className="font-medium text-sm truncate">{entry.itemName}</div>
-                                        {entry.variantName && (
-                                            <div className="text-xs text-muted-foreground truncate">
-                                                {entry.variantName}
-                                                {entry.variantSku && ` (SKU: ${entry.variantSku})`}
+                                    <div className="ml-12 w-full">
+                                        {entry.type === 'adjustment' ? (
+                                             <div className="flex justify-between items-start">
+                                                <div className="flex items-start gap-4">
+                                                    <Image src={entry.imageUrl || 'https://placehold.co/40x40.png'} alt={entry.itemName || ''} width={40} height={40} className="rounded-md" />
+                                                    <div>
+                                                        <p className="font-medium text-sm">{entry.itemName} {entry.variantName && <span className="text-muted-foreground">({entry.variantName})</span>}</p>
+                                                        <p className="text-xs text-muted-foreground">{entry.reason}</p>
+                                                    </div>
+                                                </div>
+                                                <div className="text-right">
+                                                     <Badge variant={isStockIn ? 'default' : 'destructive'} className={cn(isStockIn ? 'bg-green-100 text-green-800 border-green-200' : 'bg-red-100 text-red-800 border-red-200')}>
+                                                        {entry.change > 0 ? `+${entry.change}` : entry.change}
+                                                    </Badge>
+                                                    <p className="text-xs text-muted-foreground mt-1">Stok Akhir: {entry.newStockLevel}</p>
+                                                     <p className="text-xs text-muted-foreground mt-1">{formatToWIB(new Date(entry.date), 'd MMM, HH:mm')}</p>
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <div className="flex justify-between items-center">
+                                                <div>
+                                                    <p className="font-medium text-sm capitalize">Penjualan {entry.channel}</p>
+                                                    <p className="text-xs text-muted-foreground">{entry.totalItems} item terjual</p>
+                                                </div>
+                                                <div className="text-right">
+                                                    <Button variant="link" size="sm" className="h-auto p-0" onClick={() => handleShowSalesDetail(entry.sales)}>Lihat Detail</Button>
+                                                    <p className="text-xs text-muted-foreground mt-1">{formatToWIB(new Date(entry.date), 'd MMM yyyy')}</p>
+                                                </div>
                                             </div>
                                         )}
                                     </div>
                                 </div>
-                            </TableCell>
-                            <TableCell>{formatToWIB(new Date(entry.date), 'd MMM yyyy, HH:mm')}</TableCell>
-                            <TableCell className="text-center">
-                                <Badge variant={entry.change >= 0 ? 'default' : 'destructive'} className={cn(entry.change >= 0 ? 'bg-green-600' : 'bg-red-600', 'text-white')}>
-                                {entry.change > 0 ? `+${entry.change}` : entry.change}
-                                </Badge>
-                            </TableCell>
-                            <TableCell className="text-center">{entry.newStockLevel ?? '-'}</TableCell>
-                            <TableCell>
-                                <p className="truncate">{entry.reason}</p>
-                            </TableCell>
-                            </>
-                        ) : (
-                            <>
-                            <TableCell>
-                                <div className="flex items-center gap-4">
-                                    <div className="flex h-10 w-10 items-center justify-center rounded-sm bg-muted">
-                                        <ShoppingCart className="h-5 w-5 text-muted-foreground" />
-                                    </div>
-                                    <div>
-                                        <div className="font-medium text-sm capitalize">Penjualan {entry.channel}</div>
-                                        <button onClick={() => handleShowSalesDetail(entry.sales)} className="flex items-center text-xs text-primary hover:underline">
-                                            Lihat Detail
-                                            <Eye className="ml-1 h-3 w-3" />
-                                        </button>
-                                    </div>
-                                </div>
-                            </TableCell>
-                            <TableCell>{formatToWIB(new Date(entry.date), 'd MMM yyyy')}</TableCell>
-                            <TableCell className="text-center">
-                                <Badge variant='destructive' className="bg-red-600 text-white">
-                                    -{entry.totalItems}
-                                </Badge>
-                            </TableCell>
-                            <TableCell className="text-center">-</TableCell>
-                            <TableCell>
-                                <p className="truncate">Total {entry.totalItems} item terjual dari channel {entry.channel}.</p>
-                            </TableCell>
-                            </>
-                        )}
-                        </TableRow>
-                    ))
-                    ) : (
-                    <TableRow className='h-full'>
-                        <TableCell colSpan={5} className="h-full text-center">
-                            <div className="flex flex-col items-center justify-center gap-4 text-muted-foreground h-full py-24">
-                                <History className="h-16 w-16" />
-                                <div className="text-center">
-                                    <p className="font-semibold">Tidak Ada Riwayat</p>
-                                    <p className="text-sm">Coba ubah filter atau periode tanggal.</p>
-                                </div>
-                            </div>
-                        </TableCell>
-                    </TableRow>
-                    )}
-                </TableBody>
-                {paginatedHistory.length > 0 && (
-                    <TableFooter>
-                        <TableRow>
-                            <TableCell colSpan={3} className="font-semibold text-left">Total Perubahan Bulan Ini:</TableCell>
-                            <TableCell colSpan={2} className="font-semibold">
-                                <div className="flex items-center justify-between flex-wrap gap-y-1">
-                                    <span className="text-green-600">Masuk: {historyTotals.totalIn.toLocaleString('id-ID')}</span>
-                                    <span className="text-red-600">Keluar: {historyTotals.totalOut.toLocaleString('id-ID')}</span>
-                                    <span>Net: 
-                                        <span className={cn(historyTotals.netChange >= 0 ? "text-green-600" : "text-red-600", "ml-1")}>
-                                            {historyTotals.netChange > 0 && '+'}{historyTotals.netChange.toLocaleString('id-ID')}
-                                        </span>
-                                    </span>
-                                </div>
-                            </TableCell>
-                        </TableRow>
-                    </TableFooter>
+                            )
+                        })}
+                    </div>
+                ) : (
+                    <div className="h-48 flex flex-col items-center justify-center gap-4 text-muted-foreground">
+                        <History className="h-16 w-16" />
+                        <div className="text-center">
+                            <p className="font-semibold">Tidak Ada Riwayat</p>
+                            <p className="text-sm">Coba ubah filter atau periode tanggal.</p>
+                        </div>
+                    </div>
                 )}
-                </Table>
+               </div>
             </CardContent>
           {paginatedHistory.length > 0 && (
+            <>
+            <CardFooter className="bg-muted/50 p-3">
+                 <div className="flex items-center justify-between w-full">
+                    <div className="text-xs text-muted-foreground">
+                        Menampilkan {paginatedHistory.length} dari {filteredHistory.length} entri.
+                    </div>
+                     <div className="flex items-center gap-x-4 gap-y-1 flex-wrap text-sm">
+                        <span className="font-medium">Total Bulan Ini:</span>
+                        <span className="text-green-600 font-medium">Masuk: {historyTotals.totalIn.toLocaleString('id-ID')}</span>
+                        <span className="text-red-600 font-medium">Keluar: {historyTotals.totalOut.toLocaleString('id-ID')}</span>
+                        <span className="font-bold">Net: 
+                            <span className={cn(historyTotals.netChange >= 0 ? "text-green-600" : "text-red-600", "ml-1")}>
+                                {historyTotals.netChange > 0 && '+'}{historyTotals.netChange.toLocaleString('id-ID')}
+                            </span>
+                        </span>
+                    </div>
+                 </div>
+            </CardFooter>
             <div className="flex items-center justify-between p-4 border-t">
-                 <div className="text-xs text-muted-foreground">
-                    Menampilkan {Math.min(itemsPerPage, filteredHistory.length)} dari {filteredHistory.length} entri.
+                 <div className="text-xs text-muted-foreground invisible">
+                    Menampilkan {paginatedHistory.length} dari {filteredHistory.length} entri.
                  </div>
                 <div className="flex items-center gap-4">
                     <Pagination
@@ -577,6 +543,7 @@ export default function HistoryPage() {
                     </Select>
                 </div>
             </div>
+            </>
           )}
         </Card>
       </main>
@@ -588,5 +555,4 @@ export default function HistoryPage() {
     </AppLayout>
   );
 }
-
 
