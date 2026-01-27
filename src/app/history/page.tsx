@@ -1,5 +1,3 @@
-
-
 'use client';
 
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
@@ -77,10 +75,7 @@ export default function HistoryPage() {
   
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
-  const [date, setDate] = useState<DateRange | undefined>({
-    from: startOfMonth(new Date()),
-    to: endOfMonth(new Date()),
-  });
+  const [date, setDate] = useState<DateRange | undefined>(undefined);
   const [adjustmentTypeFilter, setAdjustmentTypeFilter] = useState<'all' | 'in' | 'out'>('all');
   const [selectedSales, setSelectedSales] = useState<Sale[]>([]);
   const [isSalesDetailOpen, setSalesDetailOpen] = useState(false);
@@ -88,6 +83,12 @@ export default function HistoryPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [isExporting, setIsExporting] = useState(false);
 
+  useEffect(() => {
+    setDate({
+      from: startOfMonth(new Date()),
+      to: endOfMonth(new Date()),
+    });
+  }, []);
 
   const allHistory = useMemo((): HistoryEntry[] => {
     if (!date?.from || loading) return [];
@@ -334,7 +335,7 @@ export default function HistoryPage() {
         const dateFrom = date?.from ? formatToWIB(date.from, 'dd-MM-yy') : 'start';
         const dateTo = date?.to ? formatToWIB(date.to, 'dd-MM-yy') : 'end';
         const fileName = `Riwayat_Stok_${dateFrom}_sampai_${dateTo}.xlsx`;
-        saveAs(blob, fileName);
+        saveAs(new Blob([excelBuffer], {type:"application/octet-stream"}), fileName);
         
         update({
             id,
@@ -570,4 +571,3 @@ export default function HistoryPage() {
     </AppLayout>
   );
 }
-
