@@ -12,7 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-import { Calendar as CalendarIcon, Package, ArrowDownRight, DollarSign, BarChart2, Star, TrendingUp, Eye, ChevronDown, FileDown, Loader2 } from 'lucide-react';
+import { Calendar as CalendarIcon, Package, ArrowDownRight, DollarSign, BarChart2, Star, TrendingUp, Eye, ChevronDown, FileDown, Loader2, Search } from 'lucide-react';
 import { DateRange } from 'react-day-picker';
 import { subDays, startOfMonth, endOfMonth, startOfYear, endOfYear, isWithinInterval, parseISO, startOfDay, endOfDay, subMonths } from 'date-fns';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -29,6 +29,7 @@ import { useFinanceSettings } from '@/hooks/use-finance-settings';
 import { Skeleton } from '@/components/ui/skeleton';
 import { id as localeId } from 'date-fns/locale';
 import { Separator } from '@/components/ui/separator';
+import { Input } from '@/components/ui/input';
 
 const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('id-ID', {
@@ -72,6 +73,7 @@ function AllBestsellersDialog({ open, onOpenChange, products, filters }: { open:
     const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(20);
+    const [searchTerm, setSearchTerm] = useState('');
 
     const toggleRow = (id: string) => {
         setExpandedRows(prev => {
@@ -89,14 +91,24 @@ function AllBestsellersDialog({ open, onOpenChange, products, filters }: { open:
         if (!open) {
             setExpandedRows(new Set());
             setCurrentPage(1);
+            setSearchTerm('');
         }
     }, [open]);
 
-    const totalPages = Math.ceil(products.length / itemsPerPage);
+    const filteredProducts = useMemo(() => {
+        if (!searchTerm) return products;
+        const lowercasedTerm = searchTerm.toLowerCase();
+        return products.filter(p => 
+            p.name.toLowerCase().includes(lowercasedTerm) || 
+            (p.sku && p.sku.toLowerCase().includes(lowercasedTerm))
+        );
+    }, [products, searchTerm]);
+
+    const totalPages = Math.ceil(filteredProducts.length / itemsPerPage);
     const paginatedProducts = useMemo(() => {
         const startIndex = (currentPage - 1) * itemsPerPage;
-        return products.slice(startIndex, startIndex + itemsPerPage);
-    }, [products, currentPage, itemsPerPage]);
+        return filteredProducts.slice(startIndex, startIndex + itemsPerPage);
+    }, [filteredProducts, currentPage, itemsPerPage]);
 
 
     return (
@@ -108,6 +120,18 @@ function AllBestsellersDialog({ open, onOpenChange, products, filters }: { open:
                         Menampilkan semua produk terlaris untuk periode yang dipilih.
                     </DialogDescription>
                 </DialogHeader>
+                <div className="relative">
+                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Input
+                        placeholder="Cari produk atau SKU..."
+                        value={searchTerm}
+                        onChange={(e) => {
+                            setSearchTerm(e.target.value);
+                            setCurrentPage(1);
+                        }}
+                        className="pl-8"
+                    />
+                </div>
                 <div className="flex-grow overflow-hidden flex flex-col">
                     <ScrollArea className="flex-grow">
                         <Table>
@@ -160,15 +184,36 @@ function AllBestsellersDialog({ open, onOpenChange, products, filters }: { open:
                         </Table>
                     </ScrollArea>
                 </div>
-                {totalPages > 1 && (
-                     <DialogFooter className="pt-4 border-t">
+                 <DialogFooter className="pt-4 border-t flex justify-between items-center">
+                    <div className="text-xs text-muted-foreground">
+                       Menampilkan {paginatedProducts.length} dari {filteredProducts.length} produk.
+                    </div>
+                    <div className="flex items-center gap-2">
                         <Pagination 
                             totalPages={totalPages}
                             currentPage={currentPage}
                             onPageChange={setCurrentPage}
                         />
-                    </DialogFooter>
-                )}
+                         <Select
+                            value={`${itemsPerPage}`}
+                            onValueChange={(value) => {
+                                setItemsPerPage(Number(value));
+                                setCurrentPage(1);
+                            }}
+                        >
+                            <SelectTrigger className="h-8 w-[150px]">
+                                <SelectValue placeholder={`${itemsPerPage} / halaman`} />
+                            </SelectTrigger>
+                            <SelectContent side="top">
+                                {[10, 20, 50, 100].map((pageSize) => (
+                                <SelectItem key={pageSize} value={`${pageSize}`}>
+                                    {`${pageSize} / halaman`}
+                                </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                </DialogFooter>
             </DialogContent>
         </Dialog>
     );
