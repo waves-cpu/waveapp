@@ -27,7 +27,7 @@ import type { InventoryItem, AdjustmentHistory, InventoryItemVariant, Sale } fro
 import { useLanguage } from '@/hooks/use-language';
 import { translations } from '@/types/language';
 import { SidebarTrigger } from '@/components/ui/sidebar';
-import { parseISO, isWithinInterval, startOfMonth, endOfMonth, subMonths } from 'date-fns';
+import { parseISO, isWithinInterval, startOfMonth, endOfMonth, startOfYear, endOfYear, startOfWeek, endOfWeek } from 'date-fns';
 import { id as localeId } from 'date-fns/locale';
 import { cn, formatToWIB } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
@@ -40,6 +40,9 @@ import { Card, CardContent, CardHeader, CardFooter } from '@/components/ui/card'
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
 import { useToast } from '@/hooks/use-toast';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { DateRange } from 'react-day-picker';
 
 type AdjustmentEntry = {
     type: 'adjustment';
@@ -74,8 +77,10 @@ export default function HistoryPage() {
   
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
-  const [selectedMonth, setSelectedMonth] = useState<number>(new Date().getMonth());
-  const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
+  const [date, setDate] = useState<DateRange | undefined>({
+    from: startOfMonth(new Date()),
+    to: endOfMonth(new Date()),
+  });
   const [adjustmentTypeFilter, setAdjustmentTypeFilter] = useState<'all' | 'in' | 'out'>('all');
   const [selectedSales, setSelectedSales] = useState<Sale[]>([]);
   const [isSalesDetailOpen, setSalesDetailOpen] = useState(false);
@@ -84,14 +89,11 @@ export default function HistoryPage() {
   const [isExporting, setIsExporting] = useState(false);
 
 
-  const allHistoryForMonth = useMemo((): HistoryEntry[] => {
-    if (selectedMonth === undefined || selectedYear === undefined) return [];
-    if (loading) return [];
-
-    // Correctly create a date in the local timezone for the start of the month
-    const dateForMonth = new Date(selectedYear, selectedMonth, 1);
-    const startDate = startOfMonth(dateForMonth);
-    const endDate = endOfMonth(dateForMonth);
+  const allHistory = useMemo((): HistoryEntry[] => {
+    if (!date?.from || loading) return [];
+    
+    const startDate = startOfDay(date.from);
+    const endDate = endOfDay(date.to || date.from);
     
     const historyList: HistoryEntry[] = [];
 
@@ -173,19 +175,18 @@ export default function HistoryPage() {
     });
 
     return historyList.sort((a, b) => b.date.getTime() - a.date.getTime());
-  }, [items, allSales, selectedMonth, selectedYear, loading]);
-
-  const years = useMemo(() => {
-    const currentYear = new Date().getFullYear();
-    // Show current year and next 4 years
-    return Array.from({ length: 5 }, (_, i) => currentYear + i).concat(
-         Array.from({ length: 6 }, (_, i) => currentYear - i)
-    ).filter((v, i, a) => a.indexOf(v) === i).sort((a,b) => b-a);
-  }, []);
+  }, [items, allSales, date, loading]);
+  
+  const datePresets = [
+    { label: "Hari Ini", range: { from: new Date(), to: new Date() } },
+    { label: "Minggu Ini", range: { from: startOfWeek(new Date(), { locale: localeId }), to: endOfWeek(new Date(), { locale: localeId }) } },
+    { label: "Bulan Ini", range: { from: startOfMonth(new Date()), to: endOfMonth(new Date()) } },
+    { label: "Tahun Ini", range: { from: startOfYear(new Date()), to: endOfYear(new Date()) } },
+  ];
 
 
   const baseFilteredHistory = useMemo(() => {
-    return allHistoryForMonth
+    return allHistory
       .filter(entry => {
         if (!categoryFilter) return true;
         if (entry.type === 'adjustment') return entry.itemCategory === categoryFilter;
@@ -204,7 +205,7 @@ export default function HistoryPage() {
             entry.reason.toLowerCase().includes(lowerSearchTerm)
         );
       });
-  }, [allHistoryForMonth, categoryFilter, searchTerm]);
+  }, [allHistory, categoryFilter, searchTerm]);
 
   const adjustmentCounts = useMemo(() => {
     const counts = { all: 0, in: 0, out: 0 };
@@ -330,8 +331,9 @@ export default function HistoryPage() {
         XLSX.utils.book_append_sheet(workbook, worksheet, 'Riwayat Stok');
 
         const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
-        const fileName = 'riwayat_stok.xlsx';
-        const blob = new Blob([excelBuffer], { type: 'application/octet-stream' });
+        const dateFrom = date?.from ? formatToWIB(date.from, 'dd-MM-yy') : 'start';
+        const dateTo = date?.to ? formatToWIB(date.to, 'dd-MM-yy') : 'end';
+        const fileName = `Riwayat_Stok_${dateFrom}_sampai_${dateTo}.xlsx`;
         saveAs(blob, fileName);
         
         update({
@@ -378,34 +380,47 @@ export default function HistoryPage() {
                             ))}
                             </SelectContent>
                         </Select>
-                        {selectedMonth !== undefined && (
-                        <Select value={selectedMonth.toString()} onValueChange={(value) => setSelectedMonth(parseInt(value))}>
-                            <SelectTrigger className="w-full md:w-[180px]">
-                                <SelectValue placeholder="Pilih Bulan" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {Array.from({ length: 12 }).map((_, i) => (
-                                    <SelectItem key={i} value={i.toString()}>
-                                        {formatToWIB(new Date(2000, i), 'MMMM', { locale: localeId })}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                        )}
-                        {selectedYear !== undefined && (
-                        <Select value={selectedYear.toString()} onValueChange={(value) => setSelectedYear(parseInt(value))}>
-                            <SelectTrigger className="w-full md:w-[120px]">
-                                <SelectValue placeholder="Pilih Tahun" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {years.map(year => (
-                                    <SelectItem key={year} value={year.toString()}>
-                                        {year}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                        )}
+                        <Popover>
+                            <PopoverTrigger asChild>
+                                <Button
+                                    id="date"
+                                    variant={"outline"}
+                                    className={cn(
+                                        "w-full md:w-[260px] justify-start text-left font-normal",
+                                        !date && "text-muted-foreground"
+                                    )}
+                                >
+                                    <CalendarIcon className="mr-2 h-4 w-4" />
+                                    {date?.from ? (
+                                        date.to ? (
+                                            <>
+                                                {formatToWIB(date.from, "d LLL, y")} -{" "}
+                                                {formatToWIB(date.to, "d LLL, y")}
+                                            </>
+                                        ) : (
+                                            formatToWIB(date.from, "d LLL, y")
+                                        )
+                                    ) : (
+                                        <span>Pilih periode</span>
+                                    )}
+                                </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="flex w-auto flex-row" align="end">
+                                <div className="flex flex-col gap-1 pr-4 border-r">
+                                    {datePresets.map(preset => (
+                                        <Button key={preset.label} variant="ghost" className="justify-start" onClick={() => setDate(preset.range)}>{preset.label}</Button>
+                                    ))}
+                                </div>
+                                <Calendar
+                                    initialFocus
+                                    mode="range"
+                                    defaultMonth={date?.from}
+                                    selected={date}
+                                    onSelect={setDate}
+                                    numberOfMonths={1}
+                                />
+                            </PopoverContent>
+                        </Popover>
                         <Button onClick={downloadExcel} variant="outline" size="sm" disabled={isExporting}>
                             {isExporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileDown className="mr-2 h-4 w-4" />}
                             {isExporting ? "Mengekspor..." : t.inventoryTable.exportCsv.replace('CSV', 'Excel')}
