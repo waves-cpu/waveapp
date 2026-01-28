@@ -41,6 +41,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { DateRange } from 'react-day-picker';
+import { Separator } from '@/components/ui/separator';
 
 type AdjustmentEntry = {
     type: 'adjustment';
@@ -76,6 +77,7 @@ export default function HistoryPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
   const [date, setDate] = useState<DateRange | undefined>(undefined);
+  const [historyTypeFilter, setHistoryTypeFilter] = useState<'all' | 'sales' | 'adjustments'>('all');
   const [adjustmentTypeFilter, setAdjustmentTypeFilter] = useState<'all' | 'in' | 'out'>('all');
   const [selectedSales, setSelectedSales] = useState<Sale[]>([]);
   const [isSalesDetailOpen, setSalesDetailOpen] = useState(false);
@@ -90,6 +92,13 @@ export default function HistoryPage() {
       to: endOfMonth(new Date()),
     });
   }, []);
+
+  const handleHistoryTypeChange = (type: 'all' | 'sales' | 'adjustments') => {
+    setHistoryTypeFilter(type);
+    if (type === 'sales' && adjustmentTypeFilter === 'in') {
+      setAdjustmentTypeFilter('all');
+    }
+  };
 
 
   const allHistory = useMemo((): HistoryEntry[] => {
@@ -191,6 +200,11 @@ export default function HistoryPage() {
   const baseFilteredHistory = useMemo(() => {
     return allHistory
       .filter(entry => {
+        if (historyTypeFilter === 'sales') return entry.type === 'sales';
+        if (historyTypeFilter === 'adjustments') return entry.type === 'adjustment';
+        return true;
+      })
+      .filter(entry => {
         if (!categoryFilter) return true;
         if (entry.type === 'adjustment') return entry.itemCategory === categoryFilter;
         if (entry.type === 'sales') return entry.productCategories.includes(categoryFilter);
@@ -208,7 +222,7 @@ export default function HistoryPage() {
             entry.reason.toLowerCase().includes(lowerSearchTerm)
         );
       });
-  }, [allHistory, categoryFilter, searchTerm]);
+  }, [allHistory, categoryFilter, searchTerm, historyTypeFilter]);
 
   const adjustmentCounts = useMemo(() => {
     const counts = { all: 0, in: 0, out: 0 };
@@ -225,20 +239,20 @@ export default function HistoryPage() {
   }, [baseFilteredHistory]);
   
   const filteredHistory = useMemo((): HistoryEntry[] => {
-    if (adjustmentTypeFilter === 'all') {
-      return baseFilteredHistory;
+    let results = baseFilteredHistory;
+    if (adjustmentTypeFilter !== 'all') {
+        results = baseFilteredHistory.filter(entry => {
+            if (adjustmentTypeFilter === 'in') {
+                return entry.type === 'adjustment' && entry.change > 0;
+            } else if (adjustmentTypeFilter === 'out') {
+                return (entry.type === 'adjustment' && entry.change < 0) || entry.type === 'sales';
+            }
+            return false;
+        });
     }
-    const filtered: HistoryEntry[] = baseFilteredHistory.filter(entry => {
-        if (adjustmentTypeFilter === 'in') {
-            return entry.type === 'adjustment' && entry.change > 0;
-        } else if (adjustmentTypeFilter === 'out') {
-            return (entry.type === 'adjustment' && entry.change < 0) || entry.type === 'sales';
-        }
-        return false;
-    });
     
     setCurrentPage(1);
-    return filtered;
+    return results;
 
   }, [baseFilteredHistory, adjustmentTypeFilter]);
 
@@ -387,7 +401,7 @@ export default function HistoryPage() {
                             <PopoverTrigger asChild>
                                 <Button
                                     id="date"
-                                    variant={"outline"}
+                                    variant={'outline'}
                                     className={cn(
                                         "w-full md:w-[260px] justify-start text-left font-normal",
                                         !date && "text-muted-foreground"
@@ -440,16 +454,32 @@ export default function HistoryPage() {
                         </Button>
                     </div>
                 </div>
-                <div className="px-1 py-2 flex items-center gap-2 border-b border-dashed -mb-4">
-                    <Button variant={adjustmentTypeFilter === 'all' ? 'secondary' : 'ghost'} size="sm" onClick={() => setAdjustmentTypeFilter('all')}>
-                        Semua <Badge variant="secondary" className="ml-2">{adjustmentCounts.all}</Badge>
-                    </Button>
-                    <Button variant={adjustmentTypeFilter === 'in' ? 'secondary' : 'ghost'} size="sm" onClick={() => setAdjustmentTypeFilter('in')}>
-                        Stok Masuk <Badge variant="secondary" className="ml-2">{adjustmentCounts.in}</Badge>
-                    </Button>
-                    <Button variant={adjustmentTypeFilter === 'out' ? 'secondary' : 'ghost'} size="sm" onClick={() => setAdjustmentTypeFilter('out')}>
-                        Stok Keluar <Badge variant="secondary" className="ml-2">{adjustmentCounts.out}</Badge>
-                    </Button>
+                <div className="flex flex-col md:flex-row gap-2 border-b border-dashed -mb-4 pb-2">
+                    <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-sm font-medium text-muted-foreground">Jenis:</span>
+                        <Button variant={historyTypeFilter === 'all' ? 'secondary' : 'ghost'} size="sm" onClick={() => handleHistoryTypeChange('all')}>
+                            Semua
+                        </Button>
+                        <Button variant={historyTypeFilter === 'sales' ? 'secondary' : 'ghost'} size="sm" onClick={() => handleHistoryTypeChange('sales')}>
+                            Penjualan
+                        </Button>
+                        <Button variant={historyTypeFilter === 'adjustments' ? 'secondary' : 'ghost'} size="sm" onClick={() => handleHistoryTypeChange('adjustments')}>
+                            Penyesuaian
+                        </Button>
+                    </div>
+                    <Separator orientation="vertical" className="h-auto mx-2 hidden md:block" />
+                    <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-sm font-medium text-muted-foreground">Arah Stok:</span>
+                        <Button variant={adjustmentTypeFilter === 'all' ? 'secondary' : 'ghost'} size="sm" onClick={() => setAdjustmentTypeFilter('all')}>
+                            Semua <Badge variant="secondary" className="ml-2">{adjustmentCounts.all}</Badge>
+                        </Button>
+                        <Button variant={adjustmentTypeFilter === 'in' ? 'secondary' : 'ghost'} size="sm" onClick={() => setAdjustmentTypeFilter('in')} disabled={historyTypeFilter === 'sales'}>
+                            Stok Masuk <Badge variant="secondary" className="ml-2">{adjustmentCounts.in}</Badge>
+                        </Button>
+                        <Button variant={adjustmentTypeFilter === 'out' ? 'secondary' : 'ghost'} size="sm" onClick={() => setAdjustmentTypeFilter('out')}>
+                            Stok Keluar <Badge variant="secondary" className="ml-2">{adjustmentCounts.out}</Badge>
+                        </Button>
+                    </div>
                 </div>
             </CardHeader>
             <CardContent className="p-0 flex-grow">
