@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useEffect, useState } from 'react';
@@ -7,7 +6,7 @@ import type { Reseller } from '@/types';
 import { formatToWIB } from '@/lib/utils';
 import { useInvoiceSettings, type InvoiceSettings } from '@/hooks/use-invoice-settings';
 import { Logo } from './logo';
-import { Table, TableBody, TableCell, TableHeader, TableRow, TableHead, TableFooter } from '@/components/ui/table';
+import { Table, TableBody, TableCell, TableHeader, TableRow, TableHead } from '@/components/ui/table';
 
 export type InvoiceData = {
     items: CartItem[];
@@ -33,8 +32,6 @@ export const ResellerInvoice = React.forwardRef<HTMLDivElement, ResellerInvoiceP
         setDisplayDate(formatToWIB(new Date(), 'dd MMMM yyyy'));
     }, []);
 
-    const totalItems = invoice.items.reduce((sum, item) => sum + item.quantity, 0);
-
     return (
         <div ref={ref} id={`invoice-${invoice.transactionId}`} className="bg-white text-black p-8 font-sans a4-page">
             <style type="text/css" media="print">
@@ -55,8 +52,8 @@ export const ResellerInvoice = React.forwardRef<HTMLDivElement, ResellerInvoiceP
             </style>
             <header className="flex justify-between items-start pb-4 border-b-2 border-black">
                 <div>
-                    <h1 className="text-3xl font-bold uppercase tracking-wider">Invoice</h1>
-                    <p className="text-sm text-gray-600 mt-1">No: INV-{invoice.transactionId.slice(-8)}</p>
+                    <h1 className="text-2xl font-bold uppercase tracking-wider">Invoice</h1>
+                    <p className="text-base text-gray-600 mt-1">No: INV-{invoice.transactionId.slice(-8)}</p>
                 </div>
                 <div className="text-right">
                     <Logo />
@@ -68,9 +65,9 @@ export const ResellerInvoice = React.forwardRef<HTMLDivElement, ResellerInvoiceP
             <section className="my-8 grid grid-cols-2 gap-8">
                 <div>
                     <h2 className="text-sm font-semibold uppercase mb-2 text-gray-600">Ditagihkan Kepada:</h2>
-                    <p className="font-bold">{invoice.reseller.name}</p>
-                    <p className="text-sm">{invoice.reseller.address || 'Alamat tidak tersedia'}</p>
-                    <p className="text-sm">{invoice.reseller.phone || 'No. HP tidak tersedia'}</p>
+                    <p className="text-lg font-bold">{invoice.reseller.name}</p>
+                    <p className="text-xs text-gray-600">{invoice.reseller.address || 'Alamat tidak tersedia'}</p>
+                    <p className="text-xs text-gray-600">{invoice.reseller.phone || 'No. HP tidak tersedia'}</p>
                 </div>
                 <div className="text-right">
                     <h2 className="text-sm font-semibold uppercase mb-2 text-gray-600">Tanggal Faktur</h2>
@@ -79,40 +76,45 @@ export const ResellerInvoice = React.forwardRef<HTMLDivElement, ResellerInvoiceP
             </section>
             
             <section>
-                <Table>
+                <Table className="border">
                     <TableHeader>
-                        <TableRow className="border-b-2 border-black">
-                            <TableHead className="w-[60%] text-black font-semibold">Deskripsi Barang</TableHead>
-                            <TableHead className="text-center text-black font-semibold">Jumlah</TableHead>
-                            <TableHead className="text-right text-black font-semibold">Harga Satuan</TableHead>
-                            <TableHead className="text-right text-black font-semibold">Total</TableHead>
+                        <TableRow className="bg-gray-50 border-b-2 border-black">
+                            <TableHead className="w-[5%] text-xs text-gray-500 uppercase tracking-wider font-medium">No.</TableHead>
+                            <TableHead className="w-[55%] text-xs text-gray-500 uppercase tracking-wider font-medium">Deskripsi Barang</TableHead>
+                            <TableHead className="text-center text-xs text-gray-500 uppercase tracking-wider font-medium">Jumlah</TableHead>
+                            <TableHead className="text-right text-xs text-gray-500 uppercase tracking-wider font-medium">Harga Satuan</TableHead>
+                            <TableHead className="text-right text-xs text-gray-500 uppercase tracking-wider font-medium">Total</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {invoice.items.map(item => (
+                        {invoice.items.map((item, index) => (
                             <TableRow key={item.id} className="border-b">
+                                <TableCell className="text-center text-sm">{index + 1}</TableCell>
                                 <TableCell className="py-3">
-                                    <p className="font-medium">{item.productName}</p>
+                                    <p className="font-medium text-sm">{item.productName}</p>
                                     <p className="text-xs text-gray-600">{item.variantName ? `Varian: ${item.variantName}` : ''} (SKU: {item.sku})</p>
                                 </TableCell>
-                                <TableCell className="text-center">{item.quantity}</TableCell>
-                                <TableCell className="text-right">{formatCurrency(item.price)}</TableCell>
-                                <TableCell className="text-right">{formatCurrency(item.quantity * item.price)}</TableCell>
+                                <TableCell className="text-center text-sm">{item.quantity}</TableCell>
+                                <TableCell className="text-right text-sm">{formatCurrency(item.price)}</TableCell>
+                                <TableCell className="text-right text-sm font-medium">{formatCurrency(item.quantity * item.price)}</TableCell>
                             </TableRow>
                         ))}
+                        
                         <TableRow>
-                            <TableCell colSpan={3} className="text-right pt-4 font-medium">Subtotal</TableCell>
+                            <TableCell colSpan={4} className="text-right pt-4 font-medium">Subtotal</TableCell>
                             <TableCell className="text-right pt-4">{formatCurrency(invoice.subtotal)}</TableCell>
                         </TableRow>
+                        
                         {invoice.discount > 0 && (
                             <TableRow>
-                                <TableCell colSpan={3} className="text-right font-medium">Diskon</TableCell>
-                                <TableCell className="text-right">-{formatCurrency(invoice.discount)}</TableCell>
+                                <TableCell colSpan={4} className="text-right font-medium">Diskon</TableCell>
+                                <TableCell className="text-right text-destructive">-{formatCurrency(invoice.discount)}</TableCell>
                             </TableRow>
                         )}
-                        <TableRow className="font-bold text-lg">
-                            <TableCell colSpan={3} className="text-right border-t-2 border-black">Total</TableCell>
-                            <TableCell className="text-right border-t-2 border-black">{formatCurrency(invoice.total)}</TableCell>
+                        
+                        <TableRow className="font-bold text-base bg-gray-50">
+                            <TableCell colSpan={4} className="text-right">Total Tagihan</TableCell>
+                            <TableCell className="text-right">{formatCurrency(invoice.total)}</TableCell>
                         </TableRow>
                     </TableBody>
                 </Table>
