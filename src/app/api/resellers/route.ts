@@ -5,9 +5,9 @@ export async function GET() {
     try {
         const resellers = await fetchResellers();
         return NextResponse.json(resellers);
-    } catch (error) {
+    } catch (error: any) {
         console.error("API Error fetching resellers:", error);
-        return NextResponse.json({ message: 'Internal Server Error' }, { status: 500 });
+        return NextResponse.json({ message: error.message || 'Internal Server Error' }, { status: 500 });
     }
 }
 
@@ -20,9 +20,10 @@ export async function POST(request: NextRequest) {
         const newReseller = await addReseller(body);
         return NextResponse.json(newReseller, { status: 201 });
     } catch (error: any) {
+        console.error("API Error adding reseller:", error);
         if (error instanceof SyntaxError) {
             return NextResponse.json({ message: 'Invalid JSON body' }, { status: 400 });
         }
-        return NextResponse.json({ message: 'Internal Server Error' }, { status: 500 });
+        return NextResponse.json({ message: error.message || 'Internal Server Error' }, { status: 500 });
     }
 }
