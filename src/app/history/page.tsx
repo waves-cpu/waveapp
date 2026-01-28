@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
@@ -454,7 +455,7 @@ export default function HistoryPage() {
                         </Button>
                     </div>
                 </div>
-                <div className="flex flex-col md:flex-row gap-2 border-b border-dashed -mb-4 pb-2">
+                <div className="flex flex-col md:flex-row gap-2 pt-4 border-t border-dashed">
                     <div className="flex items-center gap-2 flex-wrap">
                         <span className="text-sm font-medium text-muted-foreground">Jenis:</span>
                         <Button variant={historyTypeFilter === 'all' ? 'secondary' : 'ghost'} size="sm" onClick={() => handleHistoryTypeChange('all')}>
