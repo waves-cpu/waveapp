@@ -100,23 +100,21 @@ export const ResellerInvoice = React.forwardRef<HTMLDivElement, ResellerInvoiceP
                                 <TableCell className="text-right">{formatCurrency(item.quantity * item.price)}</TableCell>
                             </TableRow>
                         ))}
-                    </TableBody>
-                    <TableFooter>
                         <TableRow>
-                            <TableCell colSpan={3} className="text-right">Subtotal</TableCell>
-                            <TableCell className="text-right">{formatCurrency(invoice.subtotal)}</TableCell>
+                            <TableCell colSpan={3} className="text-right pt-4 font-medium">Subtotal</TableCell>
+                            <TableCell className="text-right pt-4">{formatCurrency(invoice.subtotal)}</TableCell>
                         </TableRow>
                         {invoice.discount > 0 && (
                             <TableRow>
-                                <TableCell colSpan={3} className="text-right">Diskon</TableCell>
+                                <TableCell colSpan={3} className="text-right font-medium">Diskon</TableCell>
                                 <TableCell className="text-right">-{formatCurrency(invoice.discount)}</TableCell>
                             </TableRow>
                         )}
-                        <TableRow className="font-bold text-lg border-t-2 border-black">
-                            <TableCell colSpan={3} className="text-right">Total</TableCell>
-                            <TableCell className="text-right">{formatCurrency(invoice.total)}</TableCell>
+                        <TableRow className="font-bold text-lg">
+                            <TableCell colSpan={3} className="text-right border-t-2 border-black">Total</TableCell>
+                            <TableCell className="text-right border-t-2 border-black">{formatCurrency(invoice.total)}</TableCell>
                         </TableRow>
-                    </TableFooter>
+                    </TableBody>
                 </Table>
             </section>
 
