@@ -344,14 +344,11 @@ export default function PosHistoryPage() {
                                             </TableCell>
                                             <TableCell>
                                                 <div className="font-medium text-sm">
-                                                    {group.isAccessoryUsage ? 'Pemakaian Aksesoris' : (group.resellerName ? `Reseller: ${group.resellerName}` : group.items[0]?.productName || 'N/A')}
-                                                    {!group.isAccessoryUsage && !group.resellerName && ` ${group.items[0]?.variantName || ''}`}
+                                                    {group.isAccessoryUsage ? 'Pemakaian Aksesoris' : (group.resellerName ? `Reseller: ${group.resellerName}` : 'Pelanggan Umum')}
                                                 </div>
-                                                {group.items.length > 1 && (
-                                                    <div className="text-xs text-muted-foreground">
-                                                        + {group.items.length - 1} {group.isAccessoryUsage ? 'aksesoris' : 'produk'} lainnya
-                                                    </div>
-                                                )}
+                                                <div className="text-xs text-muted-foreground">
+                                                    {group.totalItems} item
+                                                </div>
                                             </TableCell>
                                             <TableCell>
                                                 <Badge variant="outline">
