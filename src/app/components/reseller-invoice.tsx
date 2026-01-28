@@ -114,7 +114,7 @@ export const ResellerInvoice = React.forwardRef<HTMLDivElement, ResellerInvoiceP
                         
                         <TableRow className="font-bold text-base bg-gray-50">
                             <TableCell colSpan={4} className="text-right">Total Tagihan</TableCell>
-                            <TableCell className="text-right">{formatCurrency(invoice.total)}</TableCell>
+                            <TableCell className="text-right whitespace-nowrap">{formatCurrency(invoice.total)}</TableCell>
                         </TableRow>
                     </TableBody>
                 </Table>
