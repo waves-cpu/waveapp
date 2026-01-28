@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useEffect, useState } from 'react';
@@ -51,14 +52,14 @@ export const ResellerInvoice = React.forwardRef<HTMLDivElement, ResellerInvoiceP
                 `}
             </style>
             <header className="flex justify-between items-start pb-4 border-b-2 border-black">
-                <div>
-                    <h1 className="text-2xl font-bold uppercase tracking-wider">Invoice</h1>
-                    <p className="text-base text-gray-600 mt-1">No: INV-{invoice.transactionId.slice(-8)}</p>
-                </div>
-                <div className="text-right">
+                <div className="text-left">
                     <Logo />
                     <p className="text-xs mt-2">{invoiceSettings.address}</p>
                     <p className="text-xs">{invoiceSettings.phone}</p>
+                </div>
+                <div className="text-right">
+                    <h1 className="text-2xl font-bold uppercase tracking-wider">Invoice</h1>
+                    <p className="text-base text-gray-600 mt-1">No: INV-{invoice.transactionId.slice(-8)}</p>
                 </div>
             </header>
 
