@@ -472,8 +472,8 @@ export default function HistoryPage() {
                             </PopoverContent>
                         </Popover>
                          <Button onClick={downloadExcel} variant="outline" size="sm" disabled={isExporting} className="h-9">
-                            {isDownloading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileDown className="mr-2 h-4 w-4" />}
-                            {isDownloading ? "Mengekspor..." : t.inventoryTable.exportCsv.replace('CSV', 'Excel')}
+                            {isExporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileDown className="mr-2 h-4 w-4" />}
+                            {isExporting ? "Mengekspor..." : t.inventoryTable.exportCsv.replace('CSV', 'Excel')}
                         </Button>
                     </div>
                 </div>
