@@ -87,89 +87,98 @@ export function PosCart({ onVoucherApplied, activeVoucher }: PosCartProps) {
 
     useEffect(() => {
         setIsClient(true);
-        try {
-            if (pendingTransaction) {
-                if (inventoryLoading) return; // Don't process until inventory is loaded
-
-                 const aggregatedCart = new Map<string, CartItem>();
-                pendingTransaction.forEach(saleItem => {
-                    const id = saleItem.accessoryId?.toString() || saleItem.variantId?.toString() || saleItem.productId!.toString();
-                    const type = saleItem.accessoryId ? 'accessory' : 'product';
-                    const key = `${type}-${id}`;
-                    
-                    let maxStock = 0;
-                    if (type === 'accessory') {
-                        const accessory = accessories.find(a => a.id === id);
-                        maxStock = accessory?.stock || 0;
-                    } else { // product
-                        const product = inventoryItems.find(p => p.id === saleItem.productId);
-                        if (product) {
-                            if (saleItem.variantId) {
-                                const variant = product.variants?.find(v => v.id === saleItem.variantId);
-                                maxStock = variant?.stock || 0;
-                            } else {
-                                maxStock = product.stock || 0;
-                            }
-                        }
-                    }
-
-                    const existing = aggregatedCart.get(key);
-                    if (existing) {
-                        existing.quantity += saleItem.quantity;
-                    } else {
-                        aggregatedCart.set(key, {
-                            id,
-                            type,
-                            productId: saleItem.productId?.toString() || saleItem.accessoryId!.toString(),
-                            productName: saleItem.productName,
-                            variantName: saleItem.variantName,
-                            sku: saleItem.sku!,
-                            quantity: saleItem.quantity,
-                            price: saleItem.priceAtSale,
-                            originalPrice: saleItem.priceAtSale,
-                            category: saleItem.productCategory,
-                            imageUrl: saleItem.parentImageUrl,
-                            maxStock: maxStock,
-                        });
-                    }
-                });
-
-                const cartItems = Array.from(aggregatedCart.values());
-                let stockError = false;
-                
-                cartItems.forEach(item => {
-                    if (item.quantity > item.maxStock) {
-                        toast({
-                            variant: 'destructive',
-                            title: 'Stok Tidak Cukup',
-                            description: `Stok untuk ${item.productName} ${item.variantName || ''} telah berubah. Hanya ${item.maxStock} tersedia, dibutuhkan ${item.quantity}. Kuantitas disesuaikan.`,
-                            duration: 7000,
-                        });
-                        item.quantity = item.maxStock;
-                        stockError = true;
-                    }
-                });
-                
-                if (stockError) {
-                    playErrorSound();
-                }
-
-                const finalCartItems = cartItems.filter(item => item.quantity > 0);
-
-                setCart(finalCartItems);
-                setPendingTransactionId(pendingTransaction[0]?.transactionId || null);
-                clearPendingTransaction();
-            } else {
+        // On initial client mount, if there's no pending transaction in session storage,
+        // try to load cart from local storage.
+        if (!sessionStorage.getItem('pendingTransaction')) {
+            try {
                 const savedCart = localStorage.getItem(LOCAL_STORAGE_KEY);
                 if (savedCart) {
                     setCart(JSON.parse(savedCart));
                 }
+            } catch (error) {
+                console.error("Failed to load cart from localStorage", error);
+                localStorage.removeItem(LOCAL_STORAGE_KEY);
             }
-        } catch (error) {
-            console.error("Failed to load cart from localStorage", error);
+        }
+    }, []);
+
+    // This effect specifically handles a pending transaction when it's available.
+    useEffect(() => {
+        if (pendingTransaction) {
+            if (inventoryLoading) return; // Don't process until inventory is loaded
+
+            const aggregatedCart = new Map<string, CartItem>();
+            pendingTransaction.forEach(saleItem => {
+                const id = saleItem.accessoryId?.toString() || saleItem.variantId?.toString() || saleItem.productId!.toString();
+                const type = saleItem.accessoryId ? 'accessory' : 'product';
+                const key = `${type}-${id}`;
+                
+                let maxStock = 0;
+                if (type === 'accessory') {
+                    const accessory = accessories.find(a => a.id === id);
+                    maxStock = accessory?.stock || 0;
+                } else { // product
+                    const product = inventoryItems.find(p => p.id === saleItem.productId);
+                    if (product) {
+                        if (saleItem.variantId) {
+                            const variant = product.variants?.find(v => v.id === saleItem.variantId);
+                            maxStock = variant?.stock || 0;
+                        } else {
+                            maxStock = product.stock || 0;
+                        }
+                    }
+                }
+
+                const existing = aggregatedCart.get(key);
+                if (existing) {
+                    existing.quantity += saleItem.quantity;
+                } else {
+                    aggregatedCart.set(key, {
+                        id,
+                        type,
+                        productId: saleItem.productId?.toString() || saleItem.accessoryId!.toString(),
+                        productName: saleItem.productName,
+                        variantName: saleItem.variantName,
+                        sku: saleItem.sku!,
+                        quantity: saleItem.quantity,
+                        price: saleItem.priceAtSale,
+                        originalPrice: saleItem.priceAtSale,
+                        category: saleItem.productCategory,
+                        imageUrl: saleItem.parentImageUrl,
+                        maxStock: maxStock,
+                    });
+                }
+            });
+
+            const cartItems = Array.from(aggregatedCart.values());
+            let stockError = false;
+            
+            cartItems.forEach(item => {
+                if (item.quantity > item.maxStock) {
+                    toast({
+                        variant: 'destructive',
+                        title: 'Stok Tidak Cukup',
+                        description: `Stok untuk ${item.productName} ${item.variantName || ''} telah berubah. Hanya ${item.maxStock} tersedia, dibutuhkan ${item.quantity}. Kuantitas disesuaikan.`,
+                        duration: 7000,
+                    });
+                    item.quantity = item.maxStock;
+                    stockError = true;
+                }
+            });
+            
+            if (stockError) {
+                playErrorSound();
+            }
+
+            const finalCartItems = cartItems.filter(item => item.quantity > 0);
+
+            setCart(finalCartItems);
+            setPendingTransactionId(pendingTransaction[0]?.transactionId || null);
+            clearPendingTransaction();
         }
     }, [pendingTransaction, clearPendingTransaction, inventoryItems, accessories, inventoryLoading, toast, playErrorSound]);
 
+    // This effect syncs the cart state to local storage.
     useEffect(() => {
         if (isClient) {
             try {
