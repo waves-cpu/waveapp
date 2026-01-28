@@ -1193,7 +1193,7 @@ export async function getPosSalesByDate(date: Date): Promise<Sale[]> {
     const dateString = formatToWIB(date, 'yyyy-MM-dd');
     const salesQuery = db.prepare(`
         SELECT 
-            s.id, s.transactionId, s.paymentMethod, s.productId, s.variantId, s.accessoryId, s.channel, s.quantity, s.priceAtSale, s.cogsAtSale, s.saleDate,
+            s.id, s.transactionId, s.paymentMethod, s.productId, s.variantId, s.accessoryId, s.channel, s.quantity, s.priceAtSale, s.cogsAtSale, s.saleDate, s.resellerId, s.resellerName,
             COALESCE(p.name, a.name) as productName,
             COALESCE(p.category, a.category) as productCategory,
             p.imageUrl as parentImageUrl,
@@ -1221,7 +1221,7 @@ export async function getPosSalesByDate(date: Date): Promise<Sale[]> {
 export async function getSalesByTransactionId(transactionId: string): Promise<Sale[]> {
     const salesQuery = db.prepare(`
         SELECT 
-            s.id, s.transactionId, s.paymentMethod, s.productId, s.variantId, s.accessoryId, s.channel, s.quantity, s.priceAtSale, s.cogsAtSale, s.saleDate,
+            s.id, s.transactionId, s.paymentMethod, s.productId, s.variantId, s.accessoryId, s.channel, s.quantity, s.priceAtSale, s.cogsAtSale, s.saleDate, s.resellerId, s.resellerName,
             COALESCE(p.name, a.name) as productName,
             COALESCE(p.category, a.category) as productCategory,
             p.imageUrl as parentImageUrl,
@@ -1963,6 +1963,7 @@ export async function getVoucherUsageAnalytics(groupId: number) {
     
 
     
+
 
 
 
