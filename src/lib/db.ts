@@ -284,6 +284,9 @@ const runMigrations = () => {
     // User Migrations
     addColumn('users', 'password', "TEXT NOT NULL DEFAULT ''");
     addColumn('users', 'role', "TEXT NOT NULL DEFAULT 'user'");
+    
+    // Reseller Migrations
+    addColumn('resellers', 'createdAt', "TEXT NOT NULL DEFAULT ''");
 
     // Sales Migrations
     addColumn('sales', 'transactionId', 'TEXT');
