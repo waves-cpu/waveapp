@@ -78,7 +78,7 @@ interface DiscountGroupEditorProps {
 export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGroupEditorProps) {
     const { toast } = useToast();
     const router = useRouter();
-    const { addDiscountGroup, editDiscountGroup, items } = useInventory();
+    const { addDiscountGroup, editDiscountGroup, items, discountGroups } = useInventory();
     const [isSaving, setIsSaving] = useState(false);
     const [isProductSelectorOpen, setProductSelectorOpen] = useState(false);
     const isEditMode = !!existingGroup;
@@ -174,6 +174,7 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
     });
 
     const selectedCategory = form.watch('category');
+    const selectedChannel = form.watch('channel');
     
     const handleSelectProducts = useCallback((selectedIds: string[]) => {
         const productList: Omit<DiscountedProduct, 'originalPrice'> & { originalPrice: number | null, discountedPrice: number }[] = [];
@@ -590,12 +591,13 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
                 onOpenChange={setProductSelectorOpen}
                 onSelect={handleSelectProducts}
                 availableItems={availableItemsForSelection}
-                categories={[]}
                 initialSelectedIds={new Set(fields.map(f => f.variantId?.toString() || f.productId.toString()))}
                 title="Pilih Produk untuk Diskon"
                 description={`Pilih produk dari kategori "${selectedCategory}" untuk ditambahkan ke grup diskon ini.`}
+                discountGroups={discountGroups || []}
+                formChannel={selectedChannel}
+                editingGroupId={existingGroup?.id}
             />
         </>
     );
 }
-

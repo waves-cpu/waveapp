@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useMemo, useEffect, useRef } from 'react';
@@ -17,21 +18,26 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Store, Search } from 'lucide-react';
-import type { InventoryItem } from '@/types';
+import type { InventoryItem, DiscountGroup } from '@/types';
 import { useLanguage } from '@/hooks/use-language';
 import { translations } from '@/types/language';
 import Image from 'next/image';
 import { Pagination } from '@/components/ui/pagination';
+import { isWithinInterval, endOfDay, parseISO } from 'date-fns';
+import { Badge } from '@/components/ui/badge';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface ProductSelectionDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSelect: (selectedIds: string[]) => void;
   availableItems: InventoryItem[];
-  categories: string[];
   initialSelectedIds?: Set<string>;
   title: string;
   description: string;
+  discountGroups: DiscountGroup[];
+  formChannel: string;
+  editingGroupId?: number;
 }
 
 const ITEMS_PER_PAGE = 10;
@@ -41,10 +47,12 @@ export function ProductSelectionDialog({
     onOpenChange, 
     onSelect, 
     availableItems, 
-    categories, 
     initialSelectedIds = new Set(),
     title, 
-    description 
+    description,
+    discountGroups,
+    formChannel,
+    editingGroupId,
 }: ProductSelectionDialogProps) {
   const { language } = useLanguage();
   const t = translations[language];
@@ -65,6 +73,37 @@ export function ProductSelectionDialog({
         setItemsPerPage(ITEMS_PER_PAGE);
       }
   }, [open, initialSelectedIds])
+
+  const activePromotionsMap = useMemo(() => {
+    const promoMap = new Map<string, { name: string; channel: string }>();
+    if (!discountGroups || !formChannel) return promoMap;
+
+    const now = new Date();
+
+    discountGroups.forEach(group => {
+        if(editingGroupId && group.id === editingGroupId) return;
+
+        const startDate = parseISO(group.startDate);
+        const endDate = endOfDay(parseISO(group.endDate));
+        const isGroupActive = isWithinInterval(now, { start: startDate, end: endDate });
+
+        const channelsConflict = 
+            group.channel === formChannel || 
+            group.channel.toLowerCase() === 'online' && ['shopee', 'tiktok', 'lazada'].includes(formChannel.toLowerCase()) || 
+            formChannel.toLowerCase() === 'online' && ['shopee', 'tiktok', 'lazada'].includes(group.channel.toLowerCase());
+
+        if (isGroupActive && channelsConflict) {
+            group.products.forEach(product => {
+                const id = product.variantId ? product.variantId.toString() : product.productId.toString();
+                if (!promoMap.has(id)) {
+                    promoMap.set(id, { name: group.name, channel: group.channel });
+                }
+            });
+        }
+    });
+    return promoMap;
+  }, [discountGroups, formChannel, editingGroupId]);
+
 
   const filteredItems = useMemo(() => {
     return availableItems
@@ -97,7 +136,11 @@ export function ProductSelectionDialog({
   const handleSelectAllOnPage = (checked: boolean | 'indeterminate') => {
     const newSelectedIds = new Set(selectedIds);
     if (checked === true) {
-      selectableItemIdsOnPage.forEach(id => newSelectedIds.add(id));
+      selectableItemIdsOnPage.forEach(id => {
+        if (!activePromotionsMap.has(id)) {
+          newSelectedIds.add(id);
+        }
+      });
     } else {
       selectableItemIdsOnPage.forEach(id => newSelectedIds.delete(id));
     }
@@ -111,7 +154,11 @@ export function ProductSelectionDialog({
         : (item.stock !== undefined ? [item.id] : []);
     
     if (checked) {
-      idsToToggle.forEach(id => id && newSelectedIds.add(id));
+      idsToToggle.forEach(id => {
+        if (id && !activePromotionsMap.has(id)) {
+          newSelectedIds.add(id);
+        }
+      });
     } else {
       idsToToggle.forEach(id => id && newSelectedIds.delete(id));
     }
@@ -134,7 +181,7 @@ export function ProductSelectionDialog({
     onOpenChange(false);
   };
 
-  const isPageAllSelected = selectableItemIdsOnPage.length > 0 && selectableItemIdsOnPage.every(id => selectedIds.has(id));
+  const isPageAllSelected = selectableItemIdsOnPage.length > 0 && selectableItemIdsOnPage.every(id => selectedIds.has(id) || activePromotionsMap.has(id));
   const isPagePartiallySelected = selectableItemIdsOnPage.some(id => selectedIds.has(id)) && !isPageAllSelected;
 
   const displayCount = useMemo(() => {
@@ -155,7 +202,6 @@ export function ProductSelectionDialog({
         if (parentId) {
             parentIds.add(parentId);
         } else {
-            // Check if this ID is a simple product ID that exists in availableItems
             if (availableItems.some(item => item.id === selectedId && (!item.variants || item.variants.length === 0))) {
                 parentIds.add(selectedId);
             }
@@ -187,21 +233,6 @@ export function ProductSelectionDialog({
                 className="pl-10 w-full"
                 />
             </div>
-            {categories.length > 0 && (
-                <Select onValueChange={(value) => setCategoryFilter(value === 'all' ? null : value)} defaultValue="all">
-                    <SelectTrigger className="w-full md:w-[220px]">
-                    <SelectValue placeholder={t.productSelectionDialog.categoryPlaceholder} />
-                    </SelectTrigger>
-                    <SelectContent>
-                    <SelectItem value="all">{t.inventoryTable.allCategories}</SelectItem>
-                    {categories.map((category) => (
-                        <SelectItem key={category} value={category}>
-                        {category}
-                        </SelectItem>
-                    ))}
-                    </SelectContent>
-                </Select>
-            )}
         </div>
         <div className="flex-grow flex flex-col overflow-hidden border rounded-md">
            <ScrollArea className="h-full" viewportRef={scrollViewportRef}>
@@ -225,16 +256,19 @@ export function ProductSelectionDialog({
                         if (item.variants && item.variants.length > 0) {
                             const variantIds = item.variants.map(v => v.id);
                             const selectedCount = variantIds.filter(id => selectedIds.has(id)).length;
+                            const allVariantsInPromo = item.variants.every(v => activePromotionsMap.has(v.id));
+                            const isParentDisabled = allVariantsInPromo;
                             const isAllSelected = selectedCount === variantIds.length;
                             const isPartiallySelected = selectedCount > 0 && !isAllSelected;
 
                             return [
                                 <TableRow key={`product-${item.id}`} className="bg-muted/20 hover:bg-muted/40 font-semibold" data-state={isAllSelected ? "selected" : ""}>
                                     <TableCell>
-                                            <Checkbox
+                                        <Checkbox
                                             checked={isAllSelected ? true : (isPartiallySelected ? 'indeterminate' : false)}
-                                            onCheckedChange={(checked) => handleSelectRow(item, !!checked)}
+                                            onCheckedChange={(checked) => !isParentDisabled && handleSelectRow(item, !!checked)}
                                             aria-label={`Select ${item.name}`}
+                                            disabled={isParentDisabled}
                                         />
                                     </TableCell>
                                     <TableCell>
@@ -254,37 +288,59 @@ export function ProductSelectionDialog({
                                     </TableCell>
                                     <TableCell className='text-center'></TableCell>
                                 </TableRow>,
-                                ...item.variants.map(variant => (
-                                    <TableRow key={`variant-${variant.id}`} data-state={selectedIds.has(variant.id) ? "selected" : ""}>
-                                        <TableCell>
+                                ...item.variants.map(variant => {
+                                    const variantPromo = activePromotionsMap.get(variant.id);
+                                    const isVariantDisabled = !!variantPromo;
+                                    return (
+                                        <TableRow key={`variant-${variant.id}`} data-state={selectedIds.has(variant.id) ? "selected" : ""}>
+                                            <TableCell>
                                                 <Checkbox
-                                                checked={selectedIds.has(variant.id)}
-                                                onCheckedChange={(checked) => handleSelectVariant(variant.id, !!checked)}
-                                                aria-label={`Select ${variant.name}`}
-                                            />
-                                        </TableCell>
-                                        <TableCell>
-                                            <div className="flex items-center gap-4">
-                                                <div className="flex h-10 w-10 items-center justify-center rounded-sm"><Store className="h-5 w-5 text-gray-400" /></div>
-                                                <div>
-                                                    <div className="font-medium text-sm">{variant.name}</div>
-                                                    <div className="text-xs text-muted-foreground">SKU: {variant.sku}</div>
+                                                    checked={selectedIds.has(variant.id)}
+                                                    onCheckedChange={(checked) => !isVariantDisabled && handleSelectVariant(variant.id, !!checked)}
+                                                    aria-label={`Select ${variant.name}`}
+                                                    disabled={isVariantDisabled}
+                                                />
+                                            </TableCell>
+                                            <TableCell>
+                                                <div className="flex items-center gap-4">
+                                                    <div className="flex h-10 w-10 items-center justify-center rounded-sm"><Store className="h-5 w-5 text-gray-400" /></div>
+                                                    <div>
+                                                        <div className="font-medium text-sm">{variant.name}</div>
+                                                        <div className="text-xs text-muted-foreground">SKU: {variant.sku}</div>
+                                                         {variantPromo && (
+                                                            <TooltipProvider>
+                                                                <Tooltip>
+                                                                    <TooltipTrigger asChild>
+                                                                        <Badge variant="outline" className="mt-1 border-amber-500 text-amber-600">
+                                                                            Di promosi: {variantPromo.name}
+                                                                        </Badge>
+                                                                    </TooltipTrigger>
+                                                                    <TooltipContent>
+                                                                        <p>Sudah ada di promosi '{variantPromo.name}' di kanal '{variantPromo.channel}'.</p>
+                                                                    </TooltipContent>
+                                                                </Tooltip>
+                                                            </TooltipProvider>
+                                                        )}
+                                                    </div>
                                                 </div>
-                                            </div>
-                                        </TableCell>
-                                        <TableCell className="text-center">{variant.stock}</TableCell>
-                                    </TableRow>
-                                ))
+                                            </TableCell>
+                                            <TableCell className="text-center">{variant.stock}</TableCell>
+                                        </TableRow>
+                                    );
+                                })
                             ];
                         }
+                        const simplePromo = activePromotionsMap.get(item.id);
+                        const isSimpleDisabled = !!simplePromo;
+
                         return (
                             <TableRow key={`product-${item.id}`} data-state={selectedIds.has(item.id) ? "selected" : ""}>
                                 <TableCell>
                                     <Checkbox
                                         checked={selectedIds.has(item.id)}
-                                        onCheckedChange={(checked) => handleSelectRow(item, !!checked)}
+                                        onCheckedChange={(checked) => !isSimpleDisabled && handleSelectRow(item, !!checked)}
                                         aria-label={`Select ${item.name}`}
-                                        disabled={item.stock === undefined}
+                                        disabled={isSimpleDisabled || item.stock === undefined}
                                     />
                                 </TableCell>
                                 <TableCell>
@@ -299,6 +355,20 @@ export function ProductSelectionDialog({
                                         <div>
                                             <div className="font-medium text-sm">{item.name}</div>
                                             <div className="text-xs text-muted-foreground">SKU: {item.sku}</div>
+                                             {simplePromo && (
+                                                <TooltipProvider>
+                                                    <Tooltip>
+                                                        <TooltipTrigger asChild>
+                                                            <Badge variant="outline" className="mt-1 border-amber-500 text-amber-600">
+                                                                Di promosi: {simplePromo.name}
+                                                            </Badge>
+                                                        </TooltipTrigger>
+                                                        <TooltipContent>
+                                                            <p>Sudah ada di promosi '{simplePromo.name}' di kanal '{simplePromo.channel}'.</p>
+                                                        </TooltipContent>
+                                                    </Tooltip>
+                                                </TooltipProvider>
+                                            )}
                                         </div>
                                     </div>
                                 </TableCell>
