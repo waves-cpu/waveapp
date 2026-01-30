@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useMemo, useEffect, useRef } from 'react';
@@ -78,7 +79,7 @@ export function ProductSelectionDialog({
 
     const now = new Date();
     
-    const isOnlineChannel = (ch: string) => ['online', 'shopee', 'tiktok', 'lazada'].includes(ch.toLowerCase());
+    const isOnlineChannel = (ch: string) => ['online', 'shopee', 'tiktok', 'lazada'].includes(ch?.toLowerCase() || '');
 
     discountGroups.forEach(group => {
         if(editingGroupId && group.id === editingGroupId) return;
@@ -94,10 +95,9 @@ export function ProductSelectionDialog({
         if (isFormChannelOnline && isGroupChannelOnline) {
             channelsConflict = true;
         } else if (!isFormChannelOnline && !isGroupChannelOnline) {
-            // e.g. pos vs pos, reseller vs reseller
-            channelsConflict = group.channel.toLowerCase() === formChannel.toLowerCase();
+            // Any offline channel conflicts with any other offline channel
+            channelsConflict = true;
         }
-        // if one is online and the other is not, channelsConflict is false
 
         if (isGroupActive && channelsConflict) {
             group.products.forEach(product => {
@@ -409,7 +409,7 @@ export function ProductSelectionDialog({
                         setCurrentPage(1)
                     }}
                     >
-                    <SelectTrigger className="h-8 w-[150px]">
+                    <SelectTrigger className="h-8 w-[200px]">
                         <SelectValue placeholder={itemsPerPage} />
                     </SelectTrigger>
                     <SelectContent side="top">
