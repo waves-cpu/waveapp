@@ -1,5 +1,3 @@
-
-
 'use client';
 
 import { useState, useMemo, useEffect, useRef } from 'react';
@@ -40,7 +38,7 @@ interface ProductSelectionDialogProps {
   editingGroupId?: number;
 }
 
-const ITEMS_PER_PAGE = 10;
+const ITEMS_PER_PAGE = 50;
 
 export function ProductSelectionDialog({ 
     open, 
@@ -79,6 +77,8 @@ export function ProductSelectionDialog({
     if (!discountGroups || !formChannel) return promoMap;
 
     const now = new Date();
+    
+    const isOnlineChannel = (ch: string) => ['online', 'shopee', 'tiktok', 'lazada'].includes(ch.toLowerCase());
 
     discountGroups.forEach(group => {
         if(editingGroupId && group.id === editingGroupId) return;
@@ -87,10 +87,17 @@ export function ProductSelectionDialog({
         const endDate = endOfDay(parseISO(group.endDate));
         const isGroupActive = isWithinInterval(now, { start: startDate, end: endDate });
 
-        const channelsConflict = 
-            group.channel === formChannel || 
-            group.channel.toLowerCase() === 'online' && ['shopee', 'tiktok', 'lazada'].includes(formChannel.toLowerCase()) || 
-            formChannel.toLowerCase() === 'online' && ['shopee', 'tiktok', 'lazada'].includes(group.channel.toLowerCase());
+        const isFormChannelOnline = isOnlineChannel(formChannel);
+        const isGroupChannelOnline = isOnlineChannel(group.channel);
+
+        let channelsConflict = false;
+        if (isFormChannelOnline && isGroupChannelOnline) {
+            channelsConflict = true;
+        } else if (!isFormChannelOnline && !isGroupChannelOnline) {
+            // e.g. pos vs pos, reseller vs reseller
+            channelsConflict = group.channel.toLowerCase() === formChannel.toLowerCase();
+        }
+        // if one is online and the other is not, channelsConflict is false
 
         if (isGroupActive && channelsConflict) {
             group.products.forEach(product => {
@@ -402,11 +409,11 @@ export function ProductSelectionDialog({
                         setCurrentPage(1)
                     }}
                     >
-                    <SelectTrigger className="h-8 w-[120px]">
+                    <SelectTrigger className="h-8 w-[150px]">
                         <SelectValue placeholder={itemsPerPage} />
                     </SelectTrigger>
                     <SelectContent side="top">
-                        {[10, 20, 50].map((pageSize) => (
+                        {[10, 20, 50, 100].map((pageSize) => (
                         <SelectItem key={pageSize} value={`${pageSize}`}>
                             {`${pageSize} / ${t.productSelectionDialog.page}`}
                         </SelectItem>
