@@ -402,7 +402,7 @@ export function ProductSelectionDialog({
                         setCurrentPage(1)
                     }}
                     >
-                    <SelectTrigger className="h-8 w-auto">
+                    <SelectTrigger className="h-8 w-[120px]">
                         <SelectValue placeholder={itemsPerPage} />
                     </SelectTrigger>
                     <SelectContent side="top">
