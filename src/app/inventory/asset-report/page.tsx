@@ -1,12 +1,10 @@
 
 'use client';
 
-import React, { useMemo, useState, useCallback, useEffect } from 'react';
+import React, { useMemo, useState, useCallback, useEffect, useDeferredValue } from 'react';
 import { AppLayout } from '@/app/components/app-layout';
 import { SidebarTrigger } from '@/components/ui/sidebar';
-import { useInventory } from '@/hooks/use-inventory';
-import { useLanguage } from '@/hooks/use-language';
-import { translations } from '@/types/language';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -15,15 +13,13 @@ import { Flame, TrendingUp, Anchor, Activity, DollarSign, Package, Eye, Search, 
 import Image from 'next/image';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { categories as allCategories, type InventoryItem, type InventoryItemVariant } from '@/types';
 import { Input } from '@/components/ui/input';
 import { Pagination } from '@/components/ui/pagination';
-import { VariantDisplayDialog } from '@/app/components/variant-display-dialog';
-import { BulkEditVariantsDialog } from '@/app/components/bulk-edit-variants-dialog';
 import { cn } from '@/lib/utils';
+import { useInventory } from '@/hooks/use-inventory';
 
 
 type VariantPerformance = {
@@ -299,17 +295,12 @@ function ViewAllDialog({
 
 
 export default function AssetReportPage() {
-    const { language } = useLanguage();
-    const t = translations[language];
     const { items, allSales, loading } = useInventory();
     const [daysFilter, setDaysFilter] = useState<number>(30);
     const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
 
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [dialogContent, setDialogContent] = useState<{title: string, products: ProductPerformance[]}>({ title: '', products: [] });
-    
-    const [selectedPerfItem, setSelectedPerfItem] = useState<ProductPerformance | null>(null);
-    const [isBulkEditDialogOpen, setBulkEditDialogOpen] = useState(false);
 
     const { 
         bestSellers, 
@@ -526,5 +517,3 @@ export default function AssetReportPage() {
         </AppLayout>
     );
 }
-
-    
