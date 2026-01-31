@@ -12,7 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-import { Calendar as CalendarIcon, Package, ArrowDownRight, DollarSign, BarChart2, Star, TrendingUp, Eye, ChevronDown, FileDown, Loader2, Search } from 'lucide-react';
+import { Calendar as CalendarIcon, Package, ArrowDownRight, DollarSign, BarChart2, Star, TrendingUp, Eye, ChevronDown, FileDown, Loader2, Search, TrendingDown } from 'lucide-react';
 import { DateRange } from 'react-day-picker';
 import { subDays, startOfMonth, endOfMonth, startOfYear, endOfYear, isWithinInterval, parseISO, startOfDay, endOfDay, subMonths, isSameDay } from 'date-fns';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -219,6 +219,34 @@ function AllBestsellersDialog({ open, onOpenChange, products, filters }: { open:
     );
 }
 
+function ComparisonBadge({ current, previous, label }: { current: number; previous: number; label: string }) {
+    if (previous === 0) {
+        if (current > 0) {
+            return (
+                <p className="text-xs text-green-600 flex items-center gap-1">
+                    <TrendingUp className="h-4 w-4" />
+                    <span>vs {label}</span>
+                </p>
+            );
+        }
+        return <p className="text-xs text-muted-foreground h-4"></p>;
+    }
+
+    const percentChange = ((current - previous) / previous) * 100;
+    if (Math.abs(percentChange) < 0.1) return <p className="text-xs text-muted-foreground h-4"></p>;
+
+    const isIncrease = percentChange > 0;
+    const colorClass = isIncrease ? 'text-green-600' : 'text-red-600';
+    const Icon = isIncrease ? TrendingUp : TrendingDown;
+
+    return (
+        <p className={cn("text-xs flex items-center gap-1", colorClass)}>
+            <Icon className="h-4 w-4" />
+            {isIncrease ? '+' : ''}{percentChange.toFixed(1).replace('.0', '')}% vs {label}
+        </p>
+    );
+}
+
 export default function StatementsPage() {
     const { language } = useLanguage();
     const t = translations[language].finance.statementsPage;
@@ -250,146 +278,161 @@ export default function StatementsPage() {
         bestsellers,
         topCategories,
         topSizes,
+        grossRevenuePrev,
+        grossProfitPrev,
+        netRevenuePrev,
+        netProfitPrev,
+        unitsSoldPrev,
+        comparisonLabel,
     } = useMemo(() => {
-        if (!date?.from || !financeSettingsLoaded) return { grossRevenue: 0, grossProfit: 0, netRevenue: 0, netProfit: 0, totalMarketplaceCut: 0, unitsSold: 0, cancelledSales: { count: 0, value: 0 }, returnedSales: { count: 0, value: 0 }, bestsellers: [], topCategories: [], topSizes: [] };
+        const initialState = {
+            grossRevenue: 0, grossProfit: 0, netRevenue: 0, netProfit: 0, totalMarketplaceCut: 0, unitsSold: 0,
+            cancelledSales: { count: 0, value: 0 }, returnedSales: { count: 0, value: 0 },
+            bestsellers: [], topCategories: [], topSizes: [],
+            grossRevenuePrev: 0, grossProfitPrev: 0, netRevenuePrev: 0, netProfitPrev: 0, unitsSoldPrev: 0,
+            comparisonLabel: 'periode lalu'
+        };
+        
+        if (!date?.from || !financeSettingsLoaded) return initialState;
         
         const toDate = date.to || date.from;
 
-        const salesInDateRange = allSales.filter(sale => {
-            const saleDate = parseISO(sale.saleDate);
-            return isWithinInterval(saleDate, { start: startOfDay(date.from!), end: endOfDay(toDate) });
-        });
-        
-        const filteredSales = salesInDateRange.filter(sale => {
-            if (sale.accessoryId) {
-                return false;
-            }
-            const categoryMatch = !categoryFilter || sale.productCategory === categoryFilter;
-            const channelMatch = !channelFilter || sale.channel === channelFilter;
-            return categoryMatch && channelMatch;
-        });
+        const calculateMetricsForPeriod = (salesInPeriod: Sale[]) => {
+            const filtered = salesInPeriod.filter(sale => {
+                if (sale.accessoryId) return false;
+                const categoryMatch = !categoryFilter || sale.productCategory === categoryFilter;
+                const channelMatch = !channelFilter || sale.channel === channelFilter;
+                return categoryMatch && channelMatch;
+            });
 
-        let revenue = 0;
-        let profit = 0;
-        let marketplaceCutTotal = 0;
-        let units = 0;
-        let cancelled = { count: 0, value: 0 };
-        let returned = { count: 0, value: 0 };
-        const productAggregation = new Map<string, AggregatedProduct>();
-        const categoryAggregation = new Map<string, number>();
-        const sizeAggregation = new Map<string, number>();
-        const isOnlineSale = (channel: string) => ['shopee', 'tiktok', 'lazada'].some(c => channel.toLowerCase().includes(c));
+            let revenue = 0;
+            let profit = 0;
+            let marketplaceCutTotal = 0;
+            let units = 0;
+            let cancelled = { count: 0, value: 0 };
+            let returned = { count: 0, value: 0 };
+            const productAggregation = new Map<string, AggregatedProduct>();
+            const categoryAggregation = new Map<string, number>();
+            const sizeAggregation = new Map<string, number>();
+            const isOnlineSale = (channel: string) => ['shopee', 'tiktok', 'lazada'].some(c => channel.toLowerCase().includes(c));
 
-        filteredSales.forEach(sale => {
-            const salePrice = sale.priceAtSale * sale.quantity;
-            const cogs = (sale.cogsAtSale ?? 0) * sale.quantity;
-            const saleGrossProfit = salePrice - cogs;
+            filtered.forEach(sale => {
+                const salePrice = sale.priceAtSale * sale.quantity;
+                const cogs = (sale.cogsAtSale ?? 0) * sale.quantity;
+                const saleGrossProfit = salePrice - cogs;
+                
+                const saleMarketplaceCut = isOnlineSale(sale.channel) 
+                    ? salePrice * (financeSettings.marketplaceFee / 100)
+                    : 0;
+                const saleNetProfit = saleGrossProfit - saleMarketplaceCut;
+
+                if (sale.status === 'Cancelled' || sale.status === 'Dibatalkan') {
+                    cancelled.count++;
+                    cancelled.value += salePrice;
+                    return;
+                }
+                if (sale.status === 'Return' || sale.status === 'Return Selesai') {
+                    returned.count++;
+                    returned.value += salePrice;
+                    return;
+                }
+
+                if (['Completed', 'Siap Kirim', 'Selesai', 'Terproses', 'Diantar'].includes(sale.status || '')) {
+                    revenue += salePrice;
+                    units += sale.quantity;
+                    profit += saleGrossProfit;
+                    marketplaceCutTotal += saleMarketplaceCut;
+
+                    const productId = sale.productId;
+                    if (productId) {
+                        if (!productAggregation.has(productId)) {
+                            productAggregation.set(productId, {
+                                productId: productId, name: sale.productName, sku: sale.parentSku, category: sale.productCategory,
+                                imageUrl: sale.parentImageUrl, releaseDate: sale.releaseDate, unitsSold: 0, revenue: 0,
+                                profit: 0, marketplaceCut: 0, netProfit: 0, variants: [],
+                            });
+                        }
+                        const productAgg = productAggregation.get(productId)!;
+                        productAgg.unitsSold += sale.quantity;
+                        productAgg.revenue += salePrice;
+                        productAgg.profit += saleGrossProfit;
+                        productAgg.marketplaceCut += saleMarketplaceCut;
+                        productAgg.netProfit += saleNetProfit;
+
+                        const variantId = sale.variantId || null;
+                        let variantAgg = productAgg.variants.find(v => v.variantId === variantId);
+                        if (!variantAgg) {
+                            variantAgg = { variantId, name: sale.variantName || sale.productName, sku: sale.sku, units: 0,
+                                revenue: 0, profit: 0, marketplaceCut: 0, netProfit: 0,
+                            };
+                            productAgg.variants.push(variantAgg);
+                        }
+                        variantAgg.units += sale.quantity;
+                        variantAgg.revenue += salePrice;
+                        variantAgg.profit += saleGrossProfit;
+                        variantAgg.marketplaceCut += saleMarketplaceCut;
+                        variantAgg.netProfit += saleNetProfit;
+                    }
+
+                    if (sale.productCategory) {
+                        categoryAggregation.set(sale.productCategory, (categoryAggregation.get(sale.productCategory) || 0) + sale.quantity);
+                    }
+                    if (sale.variantName) {
+                        sizeAggregation.set(sale.variantName, (sizeAggregation.get(sale.variantName) || 0) + sale.quantity);
+                    }
+                }
+            });
             
-            const saleMarketplaceCut = isOnlineSale(sale.channel) 
-                ? salePrice * (financeSettings.marketplaceFee / 100)
-                : 0;
-            const saleNetProfit = saleGrossProfit - saleMarketplaceCut;
+            productAggregation.forEach(p => p.variants.sort((a,b) => b.units - a.units));
 
-            if (sale.status === 'Cancelled' || sale.status === 'Dibatalkan') {
-                cancelled.count++;
-                cancelled.value += salePrice;
-                return;
-            }
-             if (sale.status === 'Return' || sale.status === 'Return Selesai') {
-                returned.count++;
-                returned.value += salePrice;
-                return;
-            }
-
-            // Consider only "finalized" sales for main metrics
-            if (['Completed', 'Siap Kirim', 'Selesai', 'Terproses', 'Diantar'].includes(sale.status || '')) {
-                revenue += salePrice;
-                units += sale.quantity;
-                profit += saleGrossProfit;
-                marketplaceCutTotal += saleMarketplaceCut;
-
-                const productId = sale.productId;
-                if (productId) {
-                    if (!productAggregation.has(productId)) {
-                        productAggregation.set(productId, {
-                            productId: productId,
-                            name: sale.productName,
-                            sku: sale.parentSku,
-                            category: sale.productCategory,
-                            imageUrl: sale.parentImageUrl,
-                            releaseDate: sale.releaseDate,
-                            unitsSold: 0,
-                            revenue: 0,
-                            profit: 0,
-                            marketplaceCut: 0,
-                            netProfit: 0,
-                            variants: [],
-                        });
-                    }
-                    const productAgg = productAggregation.get(productId)!;
-                    productAgg.unitsSold += sale.quantity;
-                    productAgg.revenue += salePrice;
-                    productAgg.profit += saleGrossProfit;
-                    productAgg.marketplaceCut += saleMarketplaceCut;
-                    productAgg.netProfit += saleNetProfit;
-
-                    const variantId = sale.variantId || null;
-                    let variantAgg = productAgg.variants.find(v => v.variantId === variantId);
-                    if (!variantAgg) {
-                        variantAgg = {
-                            variantId,
-                            name: sale.variantName || sale.productName,
-                            sku: sale.sku,
-                            units: 0,
-                            revenue: 0,
-                            profit: 0,
-                            marketplaceCut: 0,
-                            netProfit: 0,
-                        };
-                        productAgg.variants.push(variantAgg);
-                    }
-                    variantAgg.units += sale.quantity;
-                    variantAgg.revenue += salePrice;
-                    variantAgg.profit += saleGrossProfit;
-                    variantAgg.marketplaceCut += saleMarketplaceCut;
-                    variantAgg.netProfit += saleNetProfit;
-                }
-
-                if (sale.productCategory) {
-                    categoryAggregation.set(sale.productCategory, (categoryAggregation.get(sale.productCategory) || 0) + sale.quantity);
-                }
-
-                if (sale.variantName) {
-                    sizeAggregation.set(sale.variantName, (sizeAggregation.get(sale.variantName) || 0) + sale.quantity);
-                }
-            }
-        });
-        
-        productAggregation.forEach(p => {
-            p.variants.sort((a,b) => b.units - a.units);
-        });
-        const sortedBestsellers = Array.from(productAggregation.values()).sort((a, b) => b.unitsSold - a.unitsSold);
-        const sortedCategories = Array.from(categoryAggregation.entries()).map(([name, units]) => ({ name, units })).sort((a,b) => b.units - a.units);
-        const sortedSizes = Array.from(sizeAggregation.entries()).map(([name, units]) => ({ name, units })).sort((a,b) => b.units - a.units);
-
-        return {
-            grossRevenue: revenue,
-            grossProfit: profit,
-            netRevenue: revenue - marketplaceCutTotal,
-            netProfit: profit - marketplaceCutTotal,
-            totalMarketplaceCut: marketplaceCutTotal,
-            unitsSold: units,
-            cancelledSales: cancelled,
-            returnedSales: returned,
-            bestsellers: sortedBestsellers,
-            topCategories: sortedCategories,
-            topSizes: sortedSizes,
+            return {
+                grossRevenue: revenue,
+                grossProfit: profit,
+                netRevenue: revenue - marketplaceCutTotal,
+                netProfit: profit - marketplaceCutTotal,
+                totalMarketplaceCut: marketplaceCutTotal,
+                unitsSold: units,
+                cancelledSales: cancelled,
+                returnedSales: returned,
+                bestsellers: Array.from(productAggregation.values()).sort((a, b) => b.unitsSold - a.unitsSold),
+                topCategories: Array.from(categoryAggregation.entries()).map(([name, units]) => ({ name, units })).sort((a,b) => b.units - a.units),
+                topSizes: Array.from(sizeAggregation.entries()).map(([name, units]) => ({ name, units })).sort((a,b) => b.units - a.units),
+            };
         };
+
+        // --- Current Period ---
+        const salesInDateRange = allSales.filter(sale => isWithinInterval(parseISO(sale.saleDate), { start: startOfDay(date.from!), end: endOfDay(toDate) }));
+        const currentMetrics = calculateMetricsForPeriod(salesInDateRange);
+        
+        // --- Previous Period ---
+        const diff = toDate.getTime() - date.from.getTime();
+        const prevTo = subDays(date.from, 1);
+        const prevFrom = new Date(prevTo.getTime() - diff);
+        
+        const salesInPrevDateRange = allSales.filter(sale => isWithinInterval(parseISO(sale.saleDate), { start: startOfDay(prevFrom), end: endOfDay(prevTo) }));
+        const previousMetrics = calculateMetricsForPeriod(salesInPrevDateRange);
+        
+        let label = 'periode lalu';
+        if (isSameDay(date.from, startOfMonth(date.from)) && isSameDay(toDate, endOfMonth(date.from))) {
+            label = 'bulan lalu';
+        } else if (isSameDay(date.from, startOfYear(date.from)) && isSameDay(toDate, endOfYear(date.from))) {
+            label = 'tahun lalu';
+        }
+        
+        return {
+            ...currentMetrics,
+            grossRevenuePrev: previousMetrics.grossRevenue,
+            grossProfitPrev: previousMetrics.grossProfit,
+            netRevenuePrev: previousMetrics.netRevenue,
+            netProfitPrev: previousMetrics.netProfit,
+            unitsSoldPrev: previousMetrics.unitsSold,
+            comparisonLabel: label,
+        };
+
     }, [allSales, date, categoryFilter, channelFilter, financeSettings.marketplaceFee, financeSettingsLoaded]);
 
     const datePresets = [
         { label: "Hari Ini", range: { from: new Date(), to: new Date() } },
-        { label: "Kemarin", range: { from: subDays(new Date(), 1), to: subDays(new Date(), 1) } },
         { label: "Bulan Ini", range: { from: startOfMonth(new Date()), to: endOfMonth(new Date()) } },
         { label: "Bulan Lalu", range: { from: startOfMonth(subMonths(new Date(), 1)), to: endOfMonth(subMonths(new Date(), 1)) } },
         { label: "Tahun Ini", range: { from: startOfYear(new Date()), to: endOfYear(new Date()) } },
@@ -559,6 +602,7 @@ export default function StatementsPage() {
                         </CardHeader>
                         <CardContent>
                             <div className="text-2xl font-bold">{formatCurrency(netRevenue)}</div>
+                            <ComparisonBadge current={netRevenue} previous={netRevenuePrev} label={comparisonLabel} />
                         </CardContent>
                     </Card>
                      <Card>
@@ -568,6 +612,7 @@ export default function StatementsPage() {
                         </CardHeader>
                         <CardContent>
                             <div className="text-2xl font-bold">{formatCurrency(netProfit)}</div>
+                             <ComparisonBadge current={netProfit} previous={netProfitPrev} label={comparisonLabel} />
                         </CardContent>
                     </Card>
                     <Card>
@@ -577,6 +622,7 @@ export default function StatementsPage() {
                         </CardHeader>
                         <CardContent>
                             <div className="text-2xl font-bold">{formatCurrency(grossRevenue)}</div>
+                            <ComparisonBadge current={grossRevenue} previous={grossRevenuePrev} label={comparisonLabel} />
                         </CardContent>
                     </Card>
                     <Card>
@@ -586,6 +632,7 @@ export default function StatementsPage() {
                         </CardHeader>
                         <CardContent>
                             <div className="text-2xl font-bold">{formatCurrency(grossProfit)}</div>
+                             <ComparisonBadge current={grossProfit} previous={grossProfitPrev} label={comparisonLabel} />
                         </CardContent>
                     </Card>
                     <Card>
@@ -595,6 +642,7 @@ export default function StatementsPage() {
                         </CardHeader>
                         <CardContent>
                             <div className="text-2xl font-bold">{unitsSold.toLocaleString('id-ID')}</div>
+                            <ComparisonBadge current={unitsSold} previous={unitsSoldPrev} label={comparisonLabel} />
                         </CardContent>
                     </Card>
                     <Card>
