@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
@@ -735,8 +734,7 @@ export default function StatementsPage() {
                 <div className="grid gap-6 mt-6 md:grid-cols-1">
                     <Card>
                         <CardHeader>
-                            <CardTitle>Grafik Tren Penjualan</CardTitle>
-                            <CardDescription>Menampilkan tren omzet dan laba kotor selama periode yang dipilih.</CardDescription>
+                            <CardTitle className="text-base">Grafik Tren Penjualan</CardTitle>
                         </CardHeader>
                         <CardContent>
                             {chartData && chartData.length > 1 ? (
