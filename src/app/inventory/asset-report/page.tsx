@@ -9,13 +9,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { subDays, parseISO, isAfter } from 'date-fns';
-import { Flame, TrendingUp, Anchor, Activity, DollarSign, Package, Eye, Search, ChevronDown, Edit } from 'lucide-react';
+import { Flame, TrendingUp, Anchor, DollarSign, Package, Eye, Search, ChevronDown, Edit } from 'lucide-react';
 import Image from 'next/image';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { categories as allCategories, type InventoryItem, type InventoryItemVariant } from '@/types';
+import { allCategories, type InventoryItem, type InventoryItemVariant } from '@/types';
 import { Input } from '@/components/ui/input';
 import { Pagination } from '@/components/ui/pagination';
 import { cn } from '@/lib/utils';
@@ -52,10 +52,10 @@ const formatCurrency = (amount: number) => {
 };
 
 const BEST_SELLER_THRESHOLD = 50;
-const DISPLAY_LIMIT = 20;
+const DISPLAY_LIMIT = 10;
 const DIALOG_ITEMS_PER_PAGE = 50;
 
-function PerformanceTable({ title, products, icon, onViewAll }: { title: string; products: ProductPerformance[]; icon: React.ReactNode; onViewAll: () => void; }) {
+function PerformanceTable({ title, description, products, icon, onViewAll }: { title: string; description: string; products: ProductPerformance[]; icon: React.ReactNode; onViewAll: () => void; }) {
     const totalAssetValue = useMemo(() => products.reduce((sum, p) => sum + p.totalAssetValue, 0), [products]);
     const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
 
@@ -73,18 +73,21 @@ function PerformanceTable({ title, products, icon, onViewAll }: { title: string;
 
     return (
         <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-                <div className="flex items-center gap-3">
-                    {icon}
-                    <CardTitle>{title}</CardTitle>
-                    <Badge variant="secondary">{products.length} Produk</Badge>
+            <CardHeader>
+                <div className="flex flex-row items-center justify-between">
+                    <div className="flex items-center gap-3">
+                        {icon}
+                        <CardTitle>{title}</CardTitle>
+                        <Badge variant="secondary">{products.length} Produk</Badge>
+                    </div>
+                     {products.length > DISPLAY_LIMIT && (
+                        <Button variant="outline" size="sm" onClick={onViewAll}>
+                            <Eye className="mr-2 h-4 w-4" />
+                            Lihat Semua
+                        </Button>
+                    )}
                 </div>
-                 {products.length > DISPLAY_LIMIT && (
-                    <Button variant="outline" size="sm" onClick={onViewAll}>
-                        <Eye className="mr-2 h-4 w-4" />
-                        Lihat Semua
-                    </Button>
-                )}
+                <CardDescription>{description}</CardDescription>
             </CardHeader>
             <CardContent>
                 <Table>
@@ -101,7 +104,7 @@ function PerformanceTable({ title, products, icon, onViewAll }: { title: string;
                            <React.Fragment key={p.id}>
                                 <TableRow 
                                     onClick={() => p.variants.length > 0 && toggleRow(p.id)} 
-                                    className={cn(p.variants.length > 0 && "cursor-pointer", "border-b-0")}
+                                    className={cn(p.variants.length > 0 && "cursor-pointer hover:bg-muted/50")}
                                 >
                                     <TableCell>
                                         <div className="flex items-center gap-3">
@@ -122,7 +125,7 @@ function PerformanceTable({ title, products, icon, onViewAll }: { title: string;
                                     <TableCell className="text-right">{formatCurrency(p.totalAssetValue)}</TableCell>
                                 </TableRow>
                                 {expandedRows.has(p.id) && p.variants.map(v => (
-                                    <TableRow key={v.id} className="bg-muted/30 hover:bg-muted/50 border-b-0">
+                                    <TableRow key={v.id} className="bg-muted/30 hover:bg-muted/50">
                                         <TableCell className="pl-16 py-2">
                                             <div>
                                                 <p className="font-medium text-sm">{v.name}</p>
@@ -134,7 +137,6 @@ function PerformanceTable({ title, products, icon, onViewAll }: { title: string;
                                         <TableCell className="text-right py-2">{formatCurrency(v.assetValue)}</TableCell>
                                     </TableRow>
                                 ))}
-                                 <TableRow className="border-b"><TableCell colSpan={4} className="p-0"></TableCell></TableRow>
                             </React.Fragment>
                         )) : (
                             <TableRow>
@@ -144,12 +146,14 @@ function PerformanceTable({ title, products, icon, onViewAll }: { title: string;
                     </TableBody>
                 </Table>
             </CardContent>
-            <CardFooter className="bg-muted/50 p-4">
-                 <div className="flex justify-between w-full text-sm font-medium">
-                     <span>Total Aset Kategori Ini:</span>
-                     <span>{formatCurrency(totalAssetValue)}</span>
-                 </div>
-            </CardFooter>
+            {products.length > 0 && (
+                <CardFooter className="bg-muted/50 p-4">
+                    <div className="flex justify-between w-full text-sm font-medium">
+                        <span>Total Aset Kategori Ini:</span>
+                        <span>{formatCurrency(totalAssetValue)}</span>
+                    </div>
+                </CardFooter>
+            )}
         </Card>
     );
 }
@@ -242,7 +246,7 @@ function ViewAllDialog({
                                 <React.Fragment key={p.id}>
                                     <TableRow 
                                         onClick={() => p.variants.length > 0 && toggleRow(p.id)} 
-                                        className={cn(p.variants.length > 0 && "cursor-pointer", "border-b-0")}
+                                        className={cn(p.variants.length > 0 && "cursor-pointer hover:bg-muted/50")}
                                     >
                                         <TableCell>
                                             <div className="flex items-center gap-3">
@@ -263,7 +267,7 @@ function ViewAllDialog({
                                         <TableCell className="text-right">{formatCurrency(p.totalAssetValue)}</TableCell>
                                     </TableRow>
                                     {expandedRows.has(p.id) && p.variants.map(v => (
-                                        <TableRow key={v.id} className="bg-muted/30 hover:bg-muted/50 border-b-0">
+                                        <TableRow key={v.id} className="bg-muted/30 hover:bg-muted/50">
                                             <TableCell className="pl-16 py-2">
                                                 <div>
                                                     <p className="font-medium text-sm">{v.name}</p>
@@ -275,13 +279,12 @@ function ViewAllDialog({
                                             <TableCell className="text-right py-2">{formatCurrency(v.assetValue)}</TableCell>
                                         </TableRow>
                                     ))}
-                                     <TableRow className="border-b"><TableCell colSpan={4} className="p-0"></TableCell></TableRow>
                                 </React.Fragment>
                             ))}
                         </TableBody>
                     </Table>
                 </ScrollArea>
-                 <DialogFooter className="pt-4">
+                 <DialogFooter className="pt-4 border-t">
                     <Pagination
                         totalPages={totalPages}
                         currentPage={currentPage}
@@ -290,6 +293,53 @@ function ViewAllDialog({
                  </DialogFooter>
             </DialogContent>
         </Dialog>
+    );
+}
+
+function AssetReportSkeleton() {
+    return (
+        <div className="space-y-6">
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                {[...Array(4)].map((_, i) => (
+                     <Card key={i}>
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><Skeleton className="h-5 w-3/4" /></CardHeader>
+                        <CardContent><Skeleton className="h-7 w-1/2" /><Skeleton className="h-4 w-full mt-2" /></CardContent>
+                    </Card>
+                ))}
+            </div>
+            {[...Array(3)].map((_, i) => (
+                <Card key={i}>
+                    <CardHeader>
+                        <div className="flex justify-between items-start">
+                            <div className="space-y-2">
+                                <Skeleton className="h-8 w-48" />
+                                <Skeleton className="h-4 w-64" />
+                            </div>
+                            <Skeleton className="h-9 w-28" />
+                        </div>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="divide-y">
+                            {[...Array(3)].map((_, j) => (
+                                <div key={j} className="flex justify-between items-center py-4">
+                                    <div className="flex items-center gap-3">
+                                        <Skeleton className="h-8 w-8" />
+                                        <div className="space-y-1">
+                                            <Skeleton className="h-4 w-32" />
+                                            <Skeleton className="h-3 w-24" />
+                                        </div>
+                                    </div>
+                                    <Skeleton className="h-5 w-12" />
+                                    <Skeleton className="h-5 w-12" />
+                                    <Skeleton className="h-5 w-20" />
+                                </div>
+                            ))}
+                        </div>
+                    </CardContent>
+                    <CardFooter><Skeleton className="h-6 w-1/4" /></CardFooter>
+                </Card>
+            ))}
+        </div>
     );
 }
 
@@ -391,6 +441,7 @@ export default function AssetReportPage() {
 
     }, [items, allSales, loading, daysFilter, categoryFilter]);
 
+
     const openDialog = (title: string, products: ProductPerformance[]) => {
         setDialogContent({ title, products });
         setIsDialogOpen(true);
@@ -403,19 +454,20 @@ export default function AssetReportPage() {
                      <div className="flex items-center justify-between mb-6">
                         <h1 className="text-lg font-bold">Laporan Aset Produk</h1>
                     </div>
-                    <Skeleton className="h-24 w-full" />
-                    <Skeleton className="h-64 w-full" />
-                    <Skeleton className="h-64 w-full" />
-                    <Skeleton className="h-64 w-full" />
+                    <AssetReportSkeleton />
                 </main>
             </AppLayout>
         )
     }
     
-    const bestSellerTitle = `Best Seller (> ${Math.round(BEST_SELLER_THRESHOLD * (daysFilter/30))} Terjual)`;
-    const normalMoversTitle = "Penjualan Normal";
-    const slowMoversTitle = "Slow Moving (Tidak Terjual)";
-
+    const thresholdValue = Math.round(BEST_SELLER_THRESHOLD * (daysFilter/30));
+    const bestSellerDesc = `Produk yang terjual lebih dari ${thresholdValue} unit dalam ${daysFilter} hari terakhir.`;
+    const normalMoversDesc = `Produk dengan penjualan stabil (1 - ${thresholdValue} unit) dalam ${daysFilter} hari terakhir.`;
+    const slowMoversDesc = `Produk yang tidak memiliki catatan penjualan dalam ${daysFilter} hari terakhir.`;
+    
+    const bestSellerAssetPercentage = totalAssetValue > 0 ? (bestSellersAssetValue / totalAssetValue) * 100 : 0;
+    const normalMoversAssetPercentage = totalAssetValue > 0 ? (normalMoversAssetValue / totalAssetValue) * 100 : 0;
+    const slowMoversAssetPercentage = totalAssetValue > 0 ? (slowMoversAssetValue / totalAssetValue) * 100 : 0;
 
     return (
         <AppLayout>
@@ -427,7 +479,7 @@ export default function AssetReportPage() {
                     </div>
                      <div className="flex items-center gap-2">
                          <Select value={categoryFilter || 'all'} onValueChange={(value) => setCategoryFilter(value === 'all' ? null : value)}>
-                             <SelectTrigger className="w-[180px]">
+                             <SelectTrigger className="w-[180px] h-9">
                                 <SelectValue placeholder="Semua Kategori" />
                             </SelectTrigger>
                             <SelectContent>
@@ -436,7 +488,7 @@ export default function AssetReportPage() {
                             </SelectContent>
                         </Select>
                          <Select value={daysFilter.toString()} onValueChange={(value) => setDaysFilter(Number(value))}>
-                            <SelectTrigger className="w-[180px]">
+                            <SelectTrigger className="w-[180px] h-9">
                                 <SelectValue placeholder="Pilih Periode" />
                             </SelectTrigger>
                             <SelectContent>
@@ -456,6 +508,7 @@ export default function AssetReportPage() {
                         </CardHeader>
                         <CardContent>
                             <div className="text-2xl font-bold">{formatCurrency(totalAssetValue)}</div>
+                            <p className="text-xs text-muted-foreground">Total nilai HPP dari semua stok produk.</p>
                         </CardContent>
                     </Card>
                      <Card>
@@ -465,6 +518,7 @@ export default function AssetReportPage() {
                         </CardHeader>
                         <CardContent>
                             <div className="text-2xl font-bold">{formatCurrency(bestSellersAssetValue)}</div>
+                            <p className="text-xs text-muted-foreground">{bestSellerAssetPercentage.toFixed(1)}% dari total aset</p>
                         </CardContent>
                     </Card>
                      <Card>
@@ -474,37 +528,42 @@ export default function AssetReportPage() {
                         </CardHeader>
                         <CardContent>
                             <div className="text-2xl font-bold">{formatCurrency(normalMoversAssetValue)}</div>
+                             <p className="text-xs text-muted-foreground">{normalMoversAssetPercentage.toFixed(1)}% dari total aset</p>
                         </CardContent>
                     </Card>
                      <Card>
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">Aset Tidak Terjual</CardTitle>
+                            <CardTitle className="text-sm font-medium">Aset Slow Moving</CardTitle>
                             <Anchor className="h-4 w-4 text-blue-500" />
                         </CardHeader>
                         <CardContent>
                             <div className="text-2xl font-bold">{formatCurrency(slowMoversAssetValue)}</div>
+                             <p className="text-xs text-muted-foreground">{slowMoversAssetPercentage.toFixed(1)}% dari total aset</p>
                         </CardContent>
                     </Card>
                 </div>
 
                 <div className="space-y-6">
                     <PerformanceTable 
-                        title={bestSellerTitle}
+                        title="Best Seller"
+                        description={bestSellerDesc}
                         products={bestSellers} 
                         icon={<Flame className="h-6 w-6 text-red-500"/>} 
-                        onViewAll={() => openDialog(bestSellerTitle, bestSellers)}
+                        onViewAll={() => openDialog(`Best Seller`, bestSellers)}
                     />
                     <PerformanceTable 
-                        title={normalMoversTitle} 
+                        title="Penjualan Normal"
+                        description={normalMoversDesc}
                         products={normalMovers} 
                         icon={<TrendingUp className="h-6 w-6 text-green-500"/>}
-                        onViewAll={() => openDialog(normalMoversTitle, normalMovers)}
+                        onViewAll={() => openDialog(`Penjualan Normal`, normalMovers)}
                     />
                     <PerformanceTable 
-                        title={slowMoversTitle} 
+                        title="Slow Moving"
+                        description={slowMoversDesc}
                         products={slowMovers}
                         icon={<Anchor className="h-6 w-6 text-blue-500"/>}
-                        onViewAll={() => openDialog(slowMoversTitle, slowMovers)}
+                        onViewAll={() => openDialog(`Slow Moving`, slowMovers)}
                     />
                 </div>
             </main>
