@@ -7,7 +7,7 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/componen
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
-import { X, Printer, Save, Tag, CheckCircle, Users } from 'lucide-react';
+import { X, Printer, Save, Tag, CheckCircle, Users, Loader2 } from 'lucide-react';
 import { useLanguage } from '@/hooks/use-language';
 import { translations } from '@/types/language';
 import {
@@ -55,7 +55,7 @@ type PaymentMethod = 'Cash' | 'Qris' | 'Transfer' | 'Debit';
 export function PosOrderSummary({ cart, onSaleComplete, clearCart, channel, pendingTransactionId, onVoucherApplied, activeVoucher, selectedReseller, onResellerChange }: PosOrderSummaryProps) {
     const { language } = useLanguage();
     const t = translations[language];
-    const { cancelSaleTransaction, resellers } = useInventory();
+    const { cancelSaleTransaction, resellers, loading: inventoryLoading } = useInventory();
     const { toast } = useToast();
     const router = useRouter();
     const [manualDiscount, setManualDiscount] = useState(0);
@@ -369,14 +369,14 @@ export function PosOrderSummary({ cart, onSaleComplete, clearCart, channel, pend
                     </div>
                  )}
                 <div className="w-full grid grid-cols-1 gap-2 mt-4">
-                    <Button size="lg" onClick={() => handleSale('Completed')} disabled={cart.length === 0 || (paymentMethod === 'Cash' && change < 0 && !isAccessoryOnlyTx) || isSubmitting}>
-                        <Printer className="mr-2 h-4 w-4" />
-                        {isSubmitting ? 'Memproses...' : (isAccessoryOnlyTx ? 'Cetak Voucher' : 'Proses Pembayaran')}
+                    <Button size="lg" onClick={() => handleSale('Completed')} disabled={cart.length === 0 || (paymentMethod === 'Cash' && change < 0 && !isAccessoryOnlyTx) || isSubmitting || inventoryLoading}>
+                        {inventoryLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Printer className="mr-2 h-4 w-4" />}
+                        {inventoryLoading ? 'Memuat Stok...' : isSubmitting ? 'Memproses...' : (isAccessoryOnlyTx ? 'Cetak Voucher' : 'Proses Pembayaran')}
                     </Button>
                     <div className="flex gap-2">
                         <AlertDialog>
                              <AlertDialogTrigger asChild>
-                                <Button variant="outline" size="lg" className="w-1/2" disabled={cart.length === 0 || isSubmitting}>
+                                <Button variant="outline" size="lg" className="w-1/2" disabled={cart.length === 0 || isSubmitting || inventoryLoading}>
                                     <X className="mr-2 h-4 w-4"/>
                                     {t.pos.cancel}
                                 </Button>
@@ -396,7 +396,7 @@ export function PosOrderSummary({ cart, onSaleComplete, clearCart, channel, pend
                                 </AlertDialogFooter>
                              </AlertDialogContent>
                         </AlertDialog>
-                        <Button variant="secondary" size="lg" className="w-1/2" onClick={() => handleSale('Pending')} disabled={cart.length === 0 || isSubmitting}>
+                        <Button variant="secondary" size="lg" className="w-1/2" onClick={() => handleSale('Pending')} disabled={cart.length === 0 || isSubmitting || inventoryLoading}>
                             <Save className="mr-2 h-4 w-4" />
                             Simpan Transaksi
                         </Button>
