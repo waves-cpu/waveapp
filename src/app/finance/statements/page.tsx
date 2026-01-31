@@ -14,7 +14,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { Calendar as CalendarIcon, Package, ArrowDownRight, DollarSign, BarChart2, Star, TrendingUp, Eye, ChevronDown, FileDown, Loader2, Search, TrendingDown } from 'lucide-react';
 import { DateRange } from 'react-day-picker';
-import { subDays, startOfMonth, endOfMonth, startOfYear, endOfYear, isWithinInterval, parseISO, startOfDay, endOfDay, subMonths, isSameDay, eachDayOfInterval } from 'date-fns';
+import { subDays, startOfMonth, endOfMonth, startOfYear, endOfYear, isWithinInterval, parseISO, startOfDay, endOfDay, subMonths, isSameDay, eachDayOfInterval, startOfWeek, endOfWeek, subWeeks } from 'date-fns';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -235,7 +235,7 @@ function ComparisonBadge({ current, previous, label }: { current: number; previo
             return (
                 <p className="text-xs text-green-600 flex items-center gap-1 mt-1">
                     <TrendingUp className="h-4 w-4" />
-                    <span>vs {label}</span>
+                    <span> vs {label}</span>
                 </p>
             );
         }
@@ -256,7 +256,7 @@ function ComparisonBadge({ current, previous, label }: { current: number; previo
     return (
         <p className={cn("text-xs flex items-center gap-1 mt-1", colorClass)}>
             <Icon className="h-4 w-4" />
-            {isIncrease && '+'}{displayPercent}% vs {label}
+            <span>{isIncrease && '+'}{displayPercent}% vs {label}</span>
         </p>
     );
 }
@@ -481,6 +481,9 @@ export default function StatementsPage() {
 
     const datePresets = [
         { label: "Hari Ini", range: { from: new Date(), to: new Date() } },
+        { label: "Kemarin", range: { from: subDays(new Date(), 1), to: subDays(new Date(), 1) } },
+        { label: "Minggu Ini", range: { from: startOfWeek(new Date(), { locale: localeId }), to: endOfWeek(new Date(), { locale: localeId }) } },
+        { label: "Minggu Lalu", range: { from: startOfWeek(subWeeks(new Date(), 1), { locale: localeId }), to: endOfWeek(subWeeks(new Date(), 1), { locale: localeId }) } },
         { label: "Bulan Ini", range: { from: startOfMonth(new Date()), to: endOfMonth(new Date()) } },
         { label: "Bulan Lalu", range: { from: startOfMonth(subMonths(new Date(), 1)), to: endOfMonth(subMonths(new Date(), 1)) } },
         { label: "Tahun Ini", range: { from: startOfYear(new Date()), to: endOfYear(new Date()) } },
@@ -701,7 +704,7 @@ export default function StatementsPage() {
                         <CardContent>
                             <div className="text-2xl font-bold">{formatCurrency(totalMarketplaceCut)}</div>
                             {financeSettingsLoaded ? (
-                                <p className="text-xs text-muted-foreground">{financeSettings.marketplaceFee}% dari omzet</p>
+                                <p className="text-xs text-muted-foreground mt-1">{financeSettings.marketplaceFee}% dari omzet</p>
                             ) : (
                                 <Skeleton className="h-4 w-20 mt-1" />
                             )}
@@ -714,7 +717,7 @@ export default function StatementsPage() {
                         </CardHeader>
                         <CardContent>
                             <div className="text-2xl font-bold">{formatCurrency(cancelledSales.value)}</div>
-                            <p className="text-xs text-muted-foreground">{cancelledSales.count} transaksi</p>
+                            <p className="text-xs text-muted-foreground mt-1">{cancelledSales.count} transaksi</p>
                         </CardContent>
                     </Card>
                     <Card>
@@ -724,7 +727,7 @@ export default function StatementsPage() {
                         </CardHeader>
                         <CardContent>
                             <div className="text-2xl font-bold">{formatCurrency(returnedSales.value)}</div>
-                             <p className="text-xs text-muted-foreground">{returnedSales.count} transaksi</p>
+                             <p className="text-xs text-muted-foreground mt-1">{returnedSales.count} transaksi</p>
                         </CardContent>
                     </Card>
                 </div>
