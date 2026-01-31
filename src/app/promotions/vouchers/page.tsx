@@ -57,7 +57,27 @@ export default function VouchersPage() {
         fetchDiscountGroups();
     }, [fetchDiscountGroups]);
 
-    const voucherGroups = discountGroups.filter(g => g.voucherCode);
+    const voucherGroups = discountGroups
+        .filter(g => g.voucherCode)
+        .sort((a, b) => {
+            const statusA = getStatus(a.startDate, a.endDate).text;
+            const statusB = getStatus(b.startDate, b.endDate).text;
+
+            const statusOrder = {
+                'Aktif': 1,
+                'Dijadwalkan': 2,
+                'Berakhir': 3
+            };
+
+            const orderA = statusOrder[statusA as keyof typeof statusOrder] || 99;
+            const orderB = statusOrder[statusB as keyof typeof statusOrder] || 99;
+
+            if (orderA !== orderB) {
+                return orderA - orderB;
+            }
+            
+            return a.name.localeCompare(b.name);
+        });
 
     const handleDelete = async () => {
         if (!groupToDelete) return;
