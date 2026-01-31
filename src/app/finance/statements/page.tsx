@@ -223,19 +223,19 @@ function ComparisonBadge({ current, previous, label }: { current: number; previo
     if (previous === 0) {
         if (current > 0) {
             return (
-                <p className="text-xs text-green-600 flex items-center gap-1">
+                <p className="text-xs text-green-600 flex items-center gap-1 mt-1">
                     <TrendingUp className="h-4 w-4" />
                     <span>vs {label}</span>
                 </p>
             );
         }
-        return <p className="text-xs text-muted-foreground h-5" />;
+        return <p className="text-xs text-muted-foreground h-5 mt-1" />;
     }
 
     const percentChange = ((current - previous) / previous) * 100;
 
     if (Math.abs(percentChange) < 0.1) {
-        return <p className="text-xs text-muted-foreground h-5" />;
+        return <p className="text-xs text-muted-foreground h-5 mt-1" />;
     }
 
     const isIncrease = percentChange > 0;
@@ -244,7 +244,7 @@ function ComparisonBadge({ current, previous, label }: { current: number; previo
     const displayPercent = percentChange.toFixed(1).replace(/\.0$/, '');
 
     return (
-        <p className={cn("text-xs flex items-center gap-1", colorClass)}>
+        <p className={cn("text-xs flex items-center gap-1 mt-1", colorClass)}>
             <Icon className="h-4 w-4" />
             {isIncrease && '+'}{displayPercent}% vs {label}
         </p>
