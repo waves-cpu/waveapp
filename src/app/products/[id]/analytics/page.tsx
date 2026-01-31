@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useMemo, useState } from 'react';
@@ -7,7 +6,7 @@ import { SidebarTrigger } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { ArrowLeft, BarChart2, DollarSign, Package, ShoppingCart, Calendar as CalendarIcon, ArrowUpCircle, ArrowDownCircle, Ban, Undo2 } from 'lucide-react';
+import { ArrowLeft, BarChart2, DollarSign, Package, ShoppingCart, Calendar as CalendarIcon, ArrowUpCircle, ArrowDownCircle, Ban, Undo2, TrendingUp, TrendingDown } from 'lucide-react';
 import { useParams, useRouter } from 'next/navigation';
 import { useInventory } from '@/hooks/use-inventory';
 import { useFinanceSettings } from '@/hooks/use-finance-settings';
@@ -22,7 +21,7 @@ import {
 } from "@/components/ui/chart"
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Tooltip as RechartsTooltip, Legend, Cell } from "recharts"
 import { DateRange } from 'react-day-picker';
-import { isWithinInterval, parseISO, startOfDay, endOfDay, startOfMonth, endOfMonth, subDays, startOfYear, endOfYear } from 'date-fns';
+import { isWithinInterval, parseISO, startOfDay, endOfDay, startOfMonth, endOfMonth, subDays, startOfYear, endOfYear, isSameDay } from 'date-fns';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { cn, formatToWIB } from '@/lib/utils';
@@ -68,6 +67,38 @@ const chartConfig = {
   },
 } satisfies ChartConfig
 
+function ComparisonBadge({ current, previous, label }: { current: number; previous: number; label: string }) {
+    if (previous === 0) {
+        if (current > 0) {
+            return (
+                <p className="text-xs text-green-600 flex items-center gap-1 mt-1">
+                    <TrendingUp className="h-4 w-4" />
+                    <span>vs {label}</span>
+                </p>
+            );
+        }
+        return <p className="text-xs text-muted-foreground h-5 mt-1" />;
+    }
+
+    const percentChange = ((current - previous) / previous) * 100;
+
+    if (Math.abs(percentChange) < 0.1) {
+        return <p className="text-xs text-muted-foreground h-5 mt-1" />;
+    }
+
+    const isIncrease = percentChange > 0;
+    const colorClass = isIncrease ? 'text-green-600' : 'text-red-600';
+    const Icon = isIncrease ? TrendingUp : TrendingDown;
+    const displayPercent = percentChange.toFixed(1).replace(/\.0$/, '');
+
+    return (
+        <p className={cn("text-xs flex items-center gap-1 mt-1", colorClass)}>
+            <Icon className="h-4 w-4" />
+            {isIncrease && '+'}{displayPercent}% vs {label}
+        </p>
+    );
+}
+
 function ProductAnalyticsPage() {
     const params = useParams();
     const router = useRouter();
@@ -109,132 +140,162 @@ function ProductAnalyticsPage() {
     }, [id, items, allSales, inventoryLoading, date]);
 
     const analytics = useMemo(() => {
-        if (!product || !financeSettingsLoaded) {
+        if (!product || !financeSettingsLoaded || !date?.from) {
             return null;
         }
-
-        const productSales = productAllSalesInDateRange.filter(sale =>
-            sale.status && ['Completed', 'Siap Kirim', 'Selesai', 'Terproses', 'Diantar'].includes(sale.status)
-        );
-
-        const cancelledSales = productAllSalesInDateRange.filter(sale =>
-            sale.status && ['Cancelled', 'Dibatalkan'].includes(sale.status)
-        );
-
-        const returnedSales = productAllSalesInDateRange.filter(sale =>
-            sale.status && ['Return', 'Return Selesai'].includes(sale.status)
-        );
-
-        const totalCancelledUnits = cancelledSales.reduce((sum, sale) => sum + sale.quantity, 0);
-        const totalReturnedUnits = returnedSales.reduce((sum, sale) => sum + sale.quantity, 0);
-
-        let totalUnitsSold = 0;
-        let totalRevenue = 0;
-        let totalGrossProfit = 0;
-        
-        const variantsPerformance: Record<string, { name: string; sku: string; unitsSold: number; revenue: number; grossProfit: number }> = {};
-        if (product.variants) {
-            product.variants.forEach(v => {
-                variantsPerformance[v.id] = { name: v.name, sku: v.sku || '', unitsSold: 0, revenue: 0, grossProfit: 0 };
+    
+        const toDate = date.to || date.from;
+    
+        const calculateMetrics = (sales: Sale[], currentProduct: InventoryItem, dateRange: {from: Date, to: Date}) => {
+            const productSales = sales.filter(sale =>
+                sale.status && ['Completed', 'Siap Kirim', 'Selesai', 'Terproses', 'Diantar'].includes(sale.status)
+            );
+    
+            const cancelledSales = sales.filter(sale =>
+                sale.status && ['Cancelled', 'Dibatalkan'].includes(sale.status)
+            );
+    
+            const returnedSales = sales.filter(sale =>
+                sale.status && ['Return', 'Return Selesai'].includes(sale.status)
+            );
+    
+            const totalCancelledUnits = cancelledSales.reduce((sum, sale) => sum + sale.quantity, 0);
+            const totalReturnedUnits = returnedSales.reduce((sum, sale) => sum + sale.quantity, 0);
+    
+            let totalUnitsSold = 0;
+            let totalRevenue = 0;
+            let totalGrossProfit = 0;
+            
+            const variantsPerformance: Record<string, { name: string; sku: string; unitsSold: number; revenue: number; grossProfit: number }> = {};
+            if (currentProduct.variants) {
+                currentProduct.variants.forEach(v => {
+                    variantsPerformance[v.id] = { name: v.name, sku: v.sku || '', unitsSold: 0, revenue: 0, grossProfit: 0 };
+                });
+            }
+    
+            const salesByChannel: Record<string, { unitsSold: number; revenue: number; }> = {};
+    
+            productSales.forEach(sale => {
+                totalUnitsSold += sale.quantity;
+                const saleRevenue = sale.priceAtSale * sale.quantity;
+                totalRevenue += saleRevenue;
+                const saleProfit = saleRevenue - ((sale.cogsAtSale ?? 0) * sale.quantity);
+                totalGrossProfit += saleProfit;
+    
+                const channel = sale.channel || 'Unknown';
+                if (!salesByChannel[channel]) {
+                    salesByChannel[channel] = { unitsSold: 0, revenue: 0 };
+                }
+                salesByChannel[channel].unitsSold += sale.quantity;
+                salesByChannel[channel].revenue += saleRevenue;
+    
+                if (sale.variantId && variantsPerformance[sale.variantId]) {
+                    variantsPerformance[sale.variantId].unitsSold += sale.quantity;
+                    variantsPerformance[sale.variantId].revenue += saleRevenue;
+                    variantsPerformance[sale.variantId].grossProfit += saleProfit;
+                }
             });
-        }
-
-        const salesByChannel: Record<string, { unitsSold: number; revenue: number; }> = {};
-
-        productSales.forEach(sale => {
-            totalUnitsSold += sale.quantity;
-            const saleRevenue = sale.priceAtSale * sale.quantity;
-            totalRevenue += saleRevenue;
-            const saleProfit = saleRevenue - ((sale.cogsAtSale ?? 0) * sale.quantity);
-            totalGrossProfit += saleProfit;
-
-            const channel = sale.channel || 'Unknown';
-            if (!salesByChannel[channel]) {
-                salesByChannel[channel] = { unitsSold: 0, revenue: 0 };
-            }
-            salesByChannel[channel].unitsSold += sale.quantity;
-            salesByChannel[channel].revenue += saleRevenue;
-
-            if (sale.variantId && variantsPerformance[sale.variantId]) {
-                variantsPerformance[sale.variantId].unitsSold += sale.quantity;
-                variantsPerformance[sale.variantId].revenue += saleRevenue;
-                variantsPerformance[sale.variantId].grossProfit += saleProfit;
-            }
-        });
-        
-        const onlineRevenue = Object.entries(salesByChannel).reduce((acc, [channel, data]) => {
-            if (isOnlineSale(channel)) {
-                return acc + data.revenue;
-            }
-            return acc;
-        }, 0);
-
-        const totalMarketplaceCut = onlineRevenue * (financeSettings.marketplaceFee / 100);
-        const netProfit = totalGrossProfit - totalMarketplaceCut;
-
-        const chartData = Object.entries(salesByChannel).map(([channel, data]) => ({
-            channel,
-            units: data.unitsSold,
-            revenue: data.revenue
-        }));
-
-        let totalStockIn = 0;
-        let totalStockOut = 0;
-        const manualAdjustments: (AdjustmentHistory & {itemName?: string, variantName?: string})[] = [];
-
-        const processHistory = (history: AdjustmentHistory[], parent: InventoryItem, variant?: InventoryItemVariant) => {
-            history.forEach(entry => {
-                const entryDate = parseISO(entry.date as any);
-                const toDate = date?.to || date?.from;
-                
-                if (date?.from && toDate && isWithinInterval(entryDate, { start: startOfDay(date.from), end: endOfDay(toDate) })) {
-                    const reason = entry.reason.toLowerCase();
-                    const isSaleRelated = reason.includes('sale') || reason.includes('pemakaian aksesoris') || reason.includes('penjualan') || reason.includes('cancelled');
+            
+            const onlineRevenue = Object.entries(salesByChannel).reduce((acc, [channel, data]) => {
+                if (isOnlineSale(channel)) {
+                    return acc + data.revenue;
+                }
+                return acc;
+            }, 0);
+    
+            const totalMarketplaceCut = onlineRevenue * (financeSettings.marketplaceFee / 100);
+            const netProfit = totalGrossProfit - totalMarketplaceCut;
+    
+            const chartData = Object.entries(salesByChannel).map(([channel, data]) => ({
+                channel,
+                units: data.unitsSold,
+                revenue: data.revenue
+            }));
+    
+            let totalStockIn = 0;
+            let totalStockOut = 0;
+            const manualAdjustments: (AdjustmentHistory & {itemName?: string, variantName?: string})[] = [];
+    
+            const processHistory = (history: AdjustmentHistory[], parent: InventoryItem, variant?: InventoryItemVariant) => {
+                history.forEach(entry => {
+                    const entryDate = parseISO(entry.date as any);
                     
-                    if (!isSaleRelated) {
-                        if (entry.change > 0) {
-                            totalStockIn += entry.change;
-                        } else if (entry.change < 0) {
-                            totalStockOut += Math.abs(entry.change);
+                    if (isWithinInterval(entryDate, { start: startOfDay(dateRange.from), end: endOfDay(dateRange.to) })) {
+                        const reason = entry.reason.toLowerCase();
+                        const isSaleRelated = reason.includes('sale') || reason.includes('pemakaian aksesoris') || reason.includes('penjualan') || reason.includes('cancelled');
+                        
+                        if (!isSaleRelated) {
+                            if (entry.change > 0) {
+                                totalStockIn += entry.change;
+                            } else if (entry.change < 0) {
+                                totalStockOut += Math.abs(entry.change);
+                            }
+                            manualAdjustments.push({
+                                ...entry,
+                                itemName: parent.name,
+                                variantName: variant?.name,
+                            });
                         }
-                        manualAdjustments.push({
-                            ...entry,
-                            itemName: parent.name,
-                            variantName: variant?.name,
-                        });
                     }
-                }
-            });
+                });
+            };
+    
+            if (currentProduct.variants && currentProduct.variants.length > 0) {
+                currentProduct.variants.forEach(variant => {
+                    if (variant.history) {
+                        processHistory(variant.history, currentProduct, variant);
+                    }
+                });
+            } else if (currentProduct.history) {
+                processHistory(currentProduct.history, currentProduct);
+            }
+            
+            manualAdjustments.sort((a, b) => new Date(b.date as any).getTime() - new Date(a.date as any).getTime());
+    
+            return {
+                totalUnitsSold,
+                totalRevenue,
+                totalGrossProfit,
+                netProfit,
+                variantsPerformance,
+                salesByChannel,
+                chartData,
+                totalCancelledUnits,
+                totalReturnedUnits,
+                totalStockIn,
+                totalStockOut,
+                manualAdjustments,
+            };
         };
-
-        if (product.variants && product.variants.length > 0) {
-            product.variants.forEach(variant => {
-                if (variant.history) {
-                    processHistory(variant.history, product, variant);
-                }
-            });
-        } else if (product.history) {
-            processHistory(product.history, product);
-        }
+    
+        const currentMetrics = calculateMetrics(productAllSalesInDateRange, product, { from: date.from, to: toDate });
+    
+        const diff = toDate.getTime() - date.from.getTime();
+        const prevTo = subDays(date.from, 1);
+        const prevFrom = new Date(prevTo.getTime() - diff);
         
-        manualAdjustments.sort((a, b) => new Date(b.date as any).getTime() - new Date(a.date as any).getTime());
-
+        const prevSales = allSales.filter(sale => {
+            const isProductMatch = sale.productId === id;
+            if (!isProductMatch) return false;
+            const saleDate = parseISO(sale.saleDate);
+            return isWithinInterval(saleDate, { start: startOfDay(prevFrom), end: endOfDay(prevTo) });
+        });
+    
+        const previousMetrics = calculateMetrics(prevSales, product, { from: prevFrom, to: prevTo });
+    
+        let label = 'periode lalu';
+        if (isSameDay(date.from, startOfMonth(date.from)) && isSameDay(toDate, endOfMonth(date.from))) {
+            label = 'bulan lalu';
+        } else if (isSameDay(date.from, startOfYear(date.from)) && isSameDay(toDate, endOfYear(date.from))) {
+            label = 'tahun lalu';
+        }
+    
         return {
-            totalUnitsSold,
-            totalRevenue,
-            totalGrossProfit,
-            netProfit,
-            variantsPerformance,
-            salesByChannel,
-            chartData,
-            totalCancelledUnits,
-            totalReturnedUnits,
-            totalStockIn,
-            totalStockOut,
-            manualAdjustments,
+            ...currentMetrics,
+            comparisonLabel: label,
+            previousMetrics
         };
-
-    }, [product, productAllSalesInDateRange, financeSettings, financeSettingsLoaded, date]);
+    }, [product, productAllSalesInDateRange, financeSettings, financeSettingsLoaded, date, allSales, id]);
 
      const datePresets = [
         { label: "Hari Ini", range: { from: new Date(), to: new Date() } },
@@ -355,49 +416,70 @@ function ProductAnalyticsPage() {
                                     <CardTitle className="text-sm font-medium">Omzet</CardTitle>
                                     <DollarSign className="h-4 w-4 text-muted-foreground" />
                                 </CardHeader>
-                                <CardContent><div className="text-2xl font-bold">{formatCurrency(analytics?.totalRevenue || 0)}</div></CardContent>
+                                <CardContent>
+                                    <div className="text-2xl font-bold">{formatCurrency(analytics?.totalRevenue || 0)}</div>
+                                    <ComparisonBadge current={analytics?.totalRevenue || 0} previous={analytics?.previousMetrics.totalRevenue || 0} label={analytics?.comparisonLabel || ''} />
+                                </CardContent>
                             </Card>
                             <Card>
                                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                                     <CardTitle className="text-sm font-medium">Laba Bersih</CardTitle>
                                     <BarChart2 className="h-4 w-4 text-muted-foreground" />
                                 </CardHeader>
-                                <CardContent><div className="text-2xl font-bold">{formatCurrency(analytics?.netProfit || 0)}</div></CardContent>
+                                <CardContent>
+                                    <div className="text-2xl font-bold">{formatCurrency(analytics?.netProfit || 0)}</div>
+                                    <ComparisonBadge current={analytics?.netProfit || 0} previous={analytics?.previousMetrics.netProfit || 0} label={analytics?.comparisonLabel || ''} />
+                                </CardContent>
                             </Card>
                             <Card>
                                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                                     <CardTitle className="text-sm font-medium">Unit Terjual</CardTitle>
                                     <Package className="h-4 w-4 text-muted-foreground" />
                                 </CardHeader>
-                                <CardContent><div className="text-2xl font-bold">{analytics?.totalUnitsSold.toLocaleString('id-ID') || 0}</div></CardContent>
+                                <CardContent>
+                                    <div className="text-2xl font-bold">{analytics?.totalUnitsSold.toLocaleString('id-ID') || 0}</div>
+                                    <ComparisonBadge current={analytics?.totalUnitsSold || 0} previous={analytics?.previousMetrics.totalUnitsSold || 0} label={analytics?.comparisonLabel || ''} />
+                                </CardContent>
                             </Card>
                             <Card>
                                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                                     <CardTitle className="text-sm font-medium">Diretur</CardTitle>
                                     <Undo2 className="h-4 w-4 text-orange-500" />
                                 </CardHeader>
-                                <CardContent><div className="text-2xl font-bold">{analytics?.totalReturnedUnits.toLocaleString('id-ID') || 0}</div></CardContent>
+                                <CardContent>
+                                    <div className="text-2xl font-bold">{analytics?.totalReturnedUnits.toLocaleString('id-ID') || 0}</div>
+                                    <p className="text-xs text-muted-foreground h-5 mt-1"></p>
+                                </CardContent>
                             </Card>
                              <Card>
                                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                                     <CardTitle className="text-sm font-medium">Dibatalkan</CardTitle>
                                     <Ban className="h-4 w-4 text-destructive" />
                                 </CardHeader>
-                                <CardContent><div className="text-2xl font-bold">{analytics?.totalCancelledUnits.toLocaleString('id-ID') || 0}</div></CardContent>
+                                <CardContent>
+                                    <div className="text-2xl font-bold">{analytics?.totalCancelledUnits.toLocaleString('id-ID') || 0}</div>
+                                     <p className="text-xs text-muted-foreground h-5 mt-1"></p>
+                                </CardContent>
                             </Card>
                              <Card>
                                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                                     <CardTitle className="text-sm font-medium">Stok Masuk</CardTitle>
                                     <ArrowUpCircle className="h-4 w-4 text-green-500" />
                                 </CardHeader>
-                                <CardContent><div className="text-2xl font-bold">{analytics?.totalStockIn.toLocaleString('id-ID') || 0}</div></CardContent>
+                                <CardContent>
+                                    <div className="text-2xl font-bold">{analytics?.totalStockIn.toLocaleString('id-ID') || 0}</div>
+                                     <p className="text-xs text-muted-foreground h-5 mt-1"></p>
+                                </CardContent>
                             </Card>
                              <Card>
                                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                                     <CardTitle className="text-sm font-medium">Stok Keluar</CardTitle>
                                     <ArrowDownCircle className="h-4 w-4 text-red-500" />
                                 </CardHeader>
-                                <CardContent><div className="text-2xl font-bold">{analytics?.totalStockOut.toLocaleString('id-ID') || 0}</div></CardContent>
+                                <CardContent>
+                                    <div className="text-2xl font-bold">{analytics?.totalStockOut.toLocaleString('id-ID') || 0}</div>
+                                     <p className="text-xs text-muted-foreground h-5 mt-1"></p>
+                                </CardContent>
                             </Card>
                         </div>
                         
