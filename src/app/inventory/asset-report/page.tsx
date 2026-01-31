@@ -15,7 +15,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { allCategories, type InventoryItem, type InventoryItemVariant } from '@/types';
+import { categories as allCategories, type InventoryItem, type InventoryItemVariant } from '@/types';
 import { Input } from '@/components/ui/input';
 import { Pagination } from '@/components/ui/pagination';
 import { cn } from '@/lib/utils';
@@ -576,3 +576,5 @@ export default function AssetReportPage() {
         </AppLayout>
     );
 }
+
+    
