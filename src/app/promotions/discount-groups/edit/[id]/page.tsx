@@ -46,11 +46,11 @@ export default function EditDiscountGroupPage() {
     return (
         <AppLayout>
             <main className="flex-1 p-4 md:p-10">
-                <div className="flex items-center gap-4 mb-6">
-                    <SidebarTrigger className="md:hidden" />
-                    <h1 className="text-lg font-bold">Ubah Grup Diskon</h1>
-                </div>
-                <div className="max-w-7xl mx-auto">
+                <div className="max-w-7xl mx-auto w-full">
+                    <div className="flex items-center gap-4 mb-6">
+                        <SidebarTrigger className="md:hidden" />
+                        <h1 className="text-lg font-bold">Ubah Grup Diskon</h1>
+                    </div>
                     {pageLoading ? (
                         <EditDiscountPageSkeleton />
                     ) : group ? (
