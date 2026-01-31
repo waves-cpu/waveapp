@@ -390,14 +390,31 @@ export async function addShippingReceipt(receipt: Omit<ShippingReceipt, 'id'>): 
 
 export async function deleteShippingReceipt(id: number) {
     const transaction = db.transaction(() => {
-        const receipt = db.prepare('SELECT transactionId FROM shipping_receipts WHERE id = ?').get(id) as { transactionId?: string };
+        const receipt = db.prepare('SELECT * FROM shipping_receipts WHERE id = ?').get(id) as ShippingReceipt | undefined;
 
         if (receipt && receipt.transactionId) {
-            // Delete associated sales records first to prevent duplicate entries on re-scan
+            // Find sales records to revert stock
+            const salesToRevert = db.prepare('SELECT * FROM sales WHERE transactionId = ?').all(receipt.transactionId) as Sale[];
+            
+            salesToRevert.forEach(sale => {
+                // Only revert stock if it's a processed sale that hasn't been completed or cancelled
+                if (sale.status && ['Terproses', 'Siap Kirim', 'Diantar'].includes(sale.status)) {
+                    const reason = `Deleted Receipt: ${receipt.awb}`;
+                    if (sale.variantId) {
+                        adjustStock(sale.variantId.toString(), sale.quantity, reason);
+                    } else if (sale.productId) {
+                        adjustStock(sale.productId.toString(), sale.quantity, reason);
+                    } else if (sale.accessoryId) {
+                        adjustAccessoryStock(sale.accessoryId.toString(), sale.quantity, reason);
+                    }
+                }
+            });
+
+            // After potentially reverting stock, delete the associated sales records
             db.prepare('DELETE FROM sales WHERE transactionId = ?').run(receipt.transactionId);
         }
         
-        // Then delete the receipt itself
+        // Finally, delete the receipt itself
         const result = db.prepare('DELETE FROM shipping_receipts WHERE id = ?').run(id);
         return result;
     });
@@ -1975,6 +1992,7 @@ export async function getVoucherUsageAnalytics(groupId: number) {
     
 
     
+
 
 
 

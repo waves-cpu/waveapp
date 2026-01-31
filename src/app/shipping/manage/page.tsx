@@ -86,7 +86,7 @@ const DropdownAction = ({ receipt, onAction }: { receipt: ShippingReceipt, onAct
                 <AlertDialogContent>
                     <AlertDialogHeader>
                         <AlertDialogTitle>Konfirmasi Hapus</AlertDialogTitle>
-                        <AlertDialogDescription>Menghapus resi tidak akan mengembalikan stok. Gunakan 'Batalkan' jika ingin stok kembali.</AlertDialogDescription>
+                        <AlertDialogDescription>Aksi ini akan menghapus resi. Jika resi belum selesai diproses (status 'Terproses' atau 'Siap Kirim'), stok akan dikembalikan secara otomatis. Lanjutkan?</AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                         <AlertDialogCancel>Batal</AlertDialogCancel>
