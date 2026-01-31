@@ -261,6 +261,9 @@ export default function StatementsPage() {
         });
         
         const filteredSales = salesInDateRange.filter(sale => {
+            if (sale.accessoryId) {
+                return false;
+            }
             const categoryMatch = !categoryFilter || sale.productCategory === categoryFilter;
             const channelMatch = !channelFilter || sale.channel === channelFilter;
             return categoryMatch && channelMatch;

@@ -1,5 +1,4 @@
 
-
 import { db as dbProxy } from './db';
 const db = dbProxy;
 import type { InventoryItem, AdjustmentHistory, InventoryItemVariant, Sale, Accessory, ShippingReceipt, BulkImportHistory, User, ReturnedItem, DiscountGroup, DiscountedProduct, PrintedReceiptCount, ShippingReceiptCounts, Reseller } from '@/types';
@@ -390,7 +389,20 @@ export async function addShippingReceipt(receipt: Omit<ShippingReceipt, 'id'>): 
 }
 
 export async function deleteShippingReceipt(id: number) {
-    return db.prepare('DELETE FROM shipping_receipts WHERE id = ?').run(id);
+    const transaction = db.transaction(() => {
+        const receipt = db.prepare('SELECT transactionId FROM shipping_receipts WHERE id = ?').get(id) as { transactionId?: string };
+
+        if (receipt && receipt.transactionId) {
+            // Delete associated sales records first to prevent duplicate entries on re-scan
+            db.prepare('DELETE FROM sales WHERE transactionId = ?').run(receipt.transactionId);
+        }
+        
+        // Then delete the receipt itself
+        const result = db.prepare('DELETE FROM shipping_receipts WHERE id = ?').run(id);
+        return result;
+    });
+    
+    return transaction();
 }
 
 export async function updateShippingReceiptsStatus(ids: number[], status: string) {
@@ -1963,6 +1975,7 @@ export async function getVoucherUsageAnalytics(groupId: number) {
     
 
     
+
 
 
 
