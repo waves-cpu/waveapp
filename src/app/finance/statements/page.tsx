@@ -8,13 +8,13 @@ import { useInventory } from '@/hooks/use-inventory';
 import { useLanguage } from '@/hooks/use-language';
 import { translations } from '@/types/language';
 import type { Sale } from '@/types';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { Calendar as CalendarIcon, Package, ArrowDownRight, DollarSign, BarChart2, Star, TrendingUp, Eye, ChevronDown, FileDown, Loader2, Search, TrendingDown } from 'lucide-react';
 import { DateRange } from 'react-day-picker';
-import { subDays, startOfMonth, endOfMonth, startOfYear, endOfYear, isWithinInterval, parseISO, startOfDay, endOfDay, subMonths, isSameDay } from 'date-fns';
+import { subDays, startOfMonth, endOfMonth, startOfYear, endOfYear, isWithinInterval, parseISO, startOfDay, endOfDay, subMonths, isSameDay, eachDayOfInterval } from 'date-fns';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -30,6 +30,16 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { id as localeId } from 'date-fns/locale';
 import { Separator } from '@/components/ui/separator';
 import { Input } from '@/components/ui/input';
+import {
+  ChartConfig,
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+  ChartLegend,
+  ChartLegendContent,
+} from "@/components/ui/chart"
+import { LineChart, Line, Bar, BarChart, CartesianGrid, XAxis, YAxis, Tooltip as RechartsTooltip, Legend, Cell } from "recharts"
+
 
 const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('id-ID', {
@@ -251,6 +261,17 @@ function ComparisonBadge({ current, previous, label }: { current: number; previo
     );
 }
 
+const chartConfig = {
+  Omzet: {
+    label: "Omzet",
+    color: "hsl(var(--chart-1))",
+  },
+  Laba: {
+    label: "Laba Kotor",
+    color: "hsl(var(--chart-2))",
+  },
+} satisfies ChartConfig
+
 export default function StatementsPage() {
     const { language } = useLanguage();
     const t = translations[language].finance.statementsPage;
@@ -288,11 +309,12 @@ export default function StatementsPage() {
         netProfitPrev,
         unitsSoldPrev,
         comparisonLabel,
+        chartData,
     } = useMemo(() => {
         const initialState = {
             grossRevenue: 0, grossProfit: 0, netRevenue: 0, netProfit: 0, totalMarketplaceCut: 0, unitsSold: 0,
             cancelledSales: { count: 0, value: 0 }, returnedSales: { count: 0, value: 0 },
-            bestsellers: [], topCategories: [], topSizes: [],
+            bestsellers: [], topCategories: [], topSizes: [], chartData: [],
             grossRevenuePrev: 0, grossProfitPrev: 0, netRevenuePrev: 0, netProfitPrev: 0, unitsSoldPrev: 0,
             comparisonLabel: 'periode lalu'
         };
@@ -301,7 +323,7 @@ export default function StatementsPage() {
         
         const toDate = date.to || date.from;
 
-        const calculateMetricsForPeriod = (salesInPeriod: Sale[]) => {
+        const calculateMetricsForPeriod = (salesInPeriod: Sale[], dateRange: { from: Date, to: Date }) => {
             const filtered = salesInPeriod.filter(sale => {
                 if (sale.accessoryId) return false;
                 const categoryMatch = !categoryFilter || sale.productCategory === categoryFilter;
@@ -319,6 +341,15 @@ export default function StatementsPage() {
             const categoryAggregation = new Map<string, number>();
             const sizeAggregation = new Map<string, number>();
             const isOnlineSale = (channel: string) => ['shopee', 'tiktok', 'lazada'].some(c => channel.toLowerCase().includes(c));
+
+            const dailySalesData: { [date: string]: { revenue: number, profit: number } } = {};
+            if (dateRange.from && dateRange.to) {
+                const daysInInterval = eachDayOfInterval({ start: dateRange.from, end: dateRange.to });
+                daysInInterval.forEach(day => {
+                    const dateKey = formatToWIB(day, 'yyyy-MM-dd');
+                    dailySalesData[dateKey] = { revenue: 0, profit: 0 };
+                });
+            }
 
             filtered.forEach(sale => {
                 const salePrice = sale.priceAtSale * sale.quantity;
@@ -346,6 +377,12 @@ export default function StatementsPage() {
                     units += sale.quantity;
                     profit += saleGrossProfit;
                     marketplaceCutTotal += saleMarketplaceCut;
+
+                    const dateKey = formatToWIB(parseISO(sale.saleDate), 'yyyy-MM-dd');
+                    if (dailySalesData[dateKey]) {
+                        dailySalesData[dateKey].revenue += salePrice;
+                        dailySalesData[dateKey].profit += saleGrossProfit;
+                    }
 
                     const productId = sale.productId;
                     if (productId) {
@@ -389,6 +426,12 @@ export default function StatementsPage() {
             
             productAggregation.forEach(p => p.variants.sort((a,b) => b.units - a.units));
 
+            const finalChartData = Object.entries(dailySalesData).map(([dateStr, data]) => ({
+                date: formatToWIB(parseISO(dateStr), 'd MMM'),
+                Omzet: data.revenue,
+                Laba: data.profit,
+            }));
+
             return {
                 grossRevenue: revenue,
                 grossProfit: profit,
@@ -401,12 +444,13 @@ export default function StatementsPage() {
                 bestsellers: Array.from(productAggregation.values()).sort((a, b) => b.unitsSold - a.unitsSold),
                 topCategories: Array.from(categoryAggregation.entries()).map(([name, units]) => ({ name, units })).sort((a,b) => b.units - a.units),
                 topSizes: Array.from(sizeAggregation.entries()).map(([name, units]) => ({ name, units })).sort((a,b) => b.units - a.units),
+                chartData: finalChartData,
             };
         };
 
         // --- Current Period ---
         const salesInDateRange = allSales.filter(sale => isWithinInterval(parseISO(sale.saleDate), { start: startOfDay(date.from!), end: endOfDay(toDate) }));
-        const currentMetrics = calculateMetricsForPeriod(salesInDateRange);
+        const currentMetrics = calculateMetricsForPeriod(salesInDateRange, { from: date.from!, to: toDate });
         
         // --- Previous Period ---
         const diff = toDate.getTime() - date.from.getTime();
@@ -414,7 +458,7 @@ export default function StatementsPage() {
         const prevFrom = new Date(prevTo.getTime() - diff);
         
         const salesInPrevDateRange = allSales.filter(sale => isWithinInterval(parseISO(sale.saleDate), { start: startOfDay(prevFrom), end: endOfDay(prevTo) }));
-        const previousMetrics = calculateMetricsForPeriod(salesInPrevDateRange);
+        const previousMetrics = calculateMetricsForPeriod(salesInPrevDateRange, { from: prevFrom, to: prevTo });
         
         let label = 'periode lalu';
         if (isSameDay(date.from, startOfMonth(date.from)) && isSameDay(toDate, endOfMonth(date.from))) {
@@ -681,6 +725,37 @@ export default function StatementsPage() {
                         <CardContent>
                             <div className="text-2xl font-bold">{formatCurrency(returnedSales.value)}</div>
                              <p className="text-xs text-muted-foreground">{returnedSales.count} transaksi</p>
+                        </CardContent>
+                    </Card>
+                </div>
+
+                <div className="grid gap-6 mt-6 md:grid-cols-1">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Grafik Tren Penjualan</CardTitle>
+                            <CardDescription>Menampilkan tren omzet dan laba kotor selama periode yang dipilih.</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            {chartData && chartData.length > 1 ? (
+                                <ChartContainer config={chartConfig} className="h-[250px] w-full">
+                                    <LineChart data={chartData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
+                                        <CartesianGrid vertical={false} />
+                                        <XAxis dataKey="date" tickLine={false} axisLine={false} tickMargin={8} fontSize={12} />
+                                        <YAxis tickFormatter={(value) => new Intl.NumberFormat('id-ID', { notation: 'compact' }).format(value as number)} />
+                                        <ChartTooltip 
+                                            cursor={false} 
+                                            content={<ChartTooltipContent indicator="dot" formatter={(value) => formatCurrency(value as number)} />} 
+                                        />
+                                        <Legend />
+                                        <Line type="monotone" dataKey="Omzet" stroke="var(--color-Omzet)" strokeWidth={2} dot={false} />
+                                        <Line type="monotone" dataKey="Laba" stroke="var(--color-Laba)" strokeWidth={2} dot={false} />
+                                    </LineChart>
+                                </ChartContainer>
+                            ) : (
+                                <div className="h-[250px] flex items-center justify-center text-muted-foreground">
+                                    <p>Tidak cukup data untuk menampilkan grafik.</p>
+                                </div>
+                            )}
                         </CardContent>
                     </Card>
                 </div>
