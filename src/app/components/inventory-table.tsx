@@ -125,16 +125,13 @@ function AccessoryStockDisplay({ item, onUpdateClick }: { item: Accessory; onUpd
         : null;
 
     return (
-        <div className="flex items-center gap-2 group">
+        <div className="flex items-center gap-2 group cursor-pointer" onClick={onUpdateClick}>
             <div>
                 <p className="font-medium text-sm">{item.stock.toLocaleString('id-ID')} {item.unit}</p>
                 {totalPcs !== null && (
                     <p className="text-xs text-muted-foreground">({totalPcs.toLocaleString('id-ID')} Pcs)</p>
                 )}
             </div>
-            <Button variant="ghost" size="icon" onClick={onUpdateClick} className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity" aria-label="Update Stock">
-                <Edit className="h-3 w-3 text-foreground/80" />
-            </Button>
         </div>
     );
 }
@@ -155,14 +152,11 @@ function StockBar({ stock, onUpdateClick, item }: { stock: number; onUpdateClick
     const progressValue = Math.min(stock, maxProgressValue);
 
     return (
-        <div className="relative w-36 group">
+        <div className="relative w-36 group cursor-pointer" onClick={onUpdateClick}>
             <Progress value={progressValue} className="h-6" indicatorClassName={getStockColor(stock)} />
             <div className="absolute inset-0 flex items-center justify-start px-2">
                 <div className="flex items-center gap-1">
                     <span className="font-medium text-xs text-foreground">{stock.toLocaleString('id-ID')}</span>
-                    <Button variant="ghost" size="icon" onClick={onUpdateClick} className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity" aria-label={t.inventoryTable.updateStock}>
-                        <Edit className="h-3 w-3 text-foreground/80" />
-                    </Button>
                 </div>
             </div>
         </div>
