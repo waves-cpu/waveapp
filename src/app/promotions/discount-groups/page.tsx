@@ -40,6 +40,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { formatToWIB } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 function getStatus(startDate: string, endDate: string): { text: string; variant: 'default' | 'secondary' | 'outline' } {
     const now = new Date();
@@ -63,6 +64,7 @@ export default function DiscountGroupPage() {
     const [groupToDelete, setGroupToDelete] = useState<DiscountGroup | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [viewMode, setViewMode] = useState<'card' | 'list'>('card');
+    const [channelFilter, setChannelFilter] = useState<string | null>(null);
 
     useEffect(() => {
         fetchDiscountGroups();
@@ -71,6 +73,7 @@ export default function DiscountGroupPage() {
     const filteredDiscountGroups = discountGroups
         .filter(g => !g.voucherCode)
         .filter(g => g.name.toLowerCase().includes(searchTerm.toLowerCase()))
+        .filter(g => !channelFilter || g.channel === channelFilter)
         .sort((a, b) => {
             const statusA = getStatus(a.startDate, a.endDate).text;
             const statusB = getStatus(b.startDate, b.endDate).text;
@@ -147,9 +150,20 @@ export default function DiscountGroupPage() {
                                 placeholder="Cari grup diskon..."
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
-                                className="pl-8 sm:w-[200px] md:w-[300px] h-9"
+                                className="pl-8 sm:w-[200px] md:w-[250px] h-9"
                             />
                         </div>
+                        <Select value={channelFilter || 'all'} onValueChange={value => setChannelFilter(value === 'all' ? null : value)}>
+                            <SelectTrigger className="w-[150px] h-9">
+                                <SelectValue placeholder="Semua Kanal" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">Semua Kanal</SelectItem>
+                                <SelectItem value="online">Online</SelectItem>
+                                <SelectItem value="pos">POS</SelectItem>
+                                <SelectItem value="reseller">Reseller</SelectItem>
+                            </SelectContent>
+                        </Select>
                          <div className="flex items-center gap-1 rounded-md bg-muted p-1">
                             <Button
                                 variant={viewMode === 'card' ? 'secondary' : 'ghost'}
