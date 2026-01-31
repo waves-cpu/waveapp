@@ -229,20 +229,24 @@ function ComparisonBadge({ current, previous, label }: { current: number; previo
                 </p>
             );
         }
-        return <p className="text-xs text-muted-foreground h-4"></p>;
+        return <p className="text-xs text-muted-foreground h-5" />;
     }
 
     const percentChange = ((current - previous) / previous) * 100;
-    if (Math.abs(percentChange) < 0.1) return <p className="text-xs text-muted-foreground h-4"></p>;
+
+    if (Math.abs(percentChange) < 0.1) {
+        return <p className="text-xs text-muted-foreground h-5" />;
+    }
 
     const isIncrease = percentChange > 0;
     const colorClass = isIncrease ? 'text-green-600' : 'text-red-600';
     const Icon = isIncrease ? TrendingUp : TrendingDown;
+    const displayPercent = percentChange.toFixed(1).replace(/\.0$/, '');
 
     return (
         <p className={cn("text-xs flex items-center gap-1", colorClass)}>
             <Icon className="h-4 w-4" />
-            {isIncrease ? '+' : ''}{percentChange.toFixed(1).replace('.0', '')}% vs {label}
+            {isIncrease && '+'}{displayPercent}% vs {label}
         </p>
     );
 }
