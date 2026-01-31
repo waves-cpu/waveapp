@@ -112,29 +112,7 @@ export default function DiscountGroupPage() {
             setGroupToDelete(null);
         }
     };
-
-    const renderActions = (group: DiscountGroup) => (
-        <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0">
-                    <MoreVertical className="h-4 w-4" />
-                </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-                 <DropdownMenuItem asChild>
-                     <Link href={`/promotions/discount-groups/edit/${group.id}`}>
-                        <Edit className="mr-2 h-4 w-4" />
-                        Ubah
-                     </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem className="text-destructive" onClick={() => setGroupToDelete(group)}>
-                    <Trash2 className="mr-2 h-4 w-4" />
-                    Hapus
-                </DropdownMenuItem>
-            </DropdownMenuContent>
-        </DropdownMenu>
-    );
-
+    
     return (
         <AppLayout>
             <main className="flex-1 p-4 md:p-10">
@@ -221,7 +199,25 @@ export default function DiscountGroupPage() {
                                             </CardDescription>
                                             <div className="text-sm font-semibold pt-1">{group.productCount || 0} SKU</div>
                                         </div>
-                                        {renderActions(group)}
+                                        <DropdownMenu>
+                                            <DropdownMenuTrigger asChild>
+                                                <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0">
+                                                    <MoreVertical className="h-4 w-4" />
+                                                </Button>
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent align="end">
+                                                <DropdownMenuItem asChild>
+                                                    <Link href={`/promotions/discount-groups/edit/${group.id}`}>
+                                                        <Edit className="mr-2 h-4 w-4" />
+                                                        Ubah
+                                                    </Link>
+                                                </DropdownMenuItem>
+                                                <DropdownMenuItem className="text-destructive" onClick={() => setGroupToDelete(group)}>
+                                                    <Trash2 className="mr-2 h-4 w-4" />
+                                                    Hapus
+                                                </DropdownMenuItem>
+                                            </DropdownMenuContent>
+                                        </DropdownMenu>
                                     </CardHeader>
                                     <CardContent className="flex-grow">
                                         <div className="text-sm text-muted-foreground flex items-center gap-2">
@@ -267,7 +263,25 @@ export default function DiscountGroupPage() {
                                                 <Badge variant={status.variant}>{status.text}</Badge>
                                             </TableCell>
                                             <TableCell className="text-right">
-                                                {renderActions(group)}
+                                                <DropdownMenu>
+                                                    <DropdownMenuTrigger asChild>
+                                                        <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0">
+                                                            <MoreVertical className="h-4 w-4" />
+                                                        </Button>
+                                                    </DropdownMenuTrigger>
+                                                    <DropdownMenuContent align="end">
+                                                        <DropdownMenuItem asChild>
+                                                            <Link href={`/promotions/discount-groups/edit/${group.id}`}>
+                                                                <Edit className="mr-2 h-4 w-4" />
+                                                                Ubah
+                                                            </Link>
+                                                        </DropdownMenuItem>
+                                                        <DropdownMenuItem className="text-destructive" onClick={() => setGroupToDelete(group)}>
+                                                            <Trash2 className="mr-2 h-4 w-4" />
+                                                            Hapus
+                                                        </DropdownMenuItem>
+                                                    </DropdownMenuContent>
+                                                </DropdownMenu>
                                             </TableCell>
                                         </TableRow>
                                     );
