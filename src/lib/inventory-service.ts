@@ -1,7 +1,7 @@
 
 import { db as dbProxy } from './db';
 const db = dbProxy;
-import type { InventoryItem, AdjustmentHistory, InventoryItemVariant, Sale, Accessory, ShippingReceipt, BulkImportHistory, User, ReturnedItem, DiscountGroup, DiscountedProduct, PrintedReceiptCount, ShippingReceiptCounts, Reseller } from '@/types';
+import type { InventoryItem, AdjustmentHistory, InventoryItemVariant, Sale, Accessory, ShippingReceipt, BulkImportHistory, User, ReturnedItem, DiscountGroup, DiscountedProduct, PrintedReceiptCount, ShippingReceiptCounts, Reseller, Employee } from '@/types';
 import { categories as allCategories } from '@/types';
 import { format as formatDate, parseISO, startOfDay, endOfDay, subDays } from 'date-fns';
 import { formatToWIB } from './utils';
@@ -29,6 +29,118 @@ export async function addUser(username: string, password: string): Promise<User>
 export async function fetchAllUsers(): Promise<Omit<User, 'password'>[]> {
     const users = db.prepare('SELECT id, username, role FROM users').all() as Omit<User, 'password'>[];
     return users;
+}
+
+// Employee Functions
+export async function fetchAllEmployees(): Promise<Employee[]> {
+    const employees = db.prepare(`
+        SELECT 
+            e.id, e.userId, e.nikKependudukan, e.nikPekerja, e.fullName, e.division, e.position, e.address, e.startDate,
+            u.username, u.role
+        FROM employees e
+        JOIN users u ON e.userId = u.id
+        ORDER BY e.fullName
+    `).all() as Employee[];
+    return employees;
+}
+
+export async function addEmployee(employee: Omit<Employee, 'id' | 'userId' | 'username' | 'role'> & { username: string, password?: string }): Promise<Employee> {
+    const transaction = db.transaction(() => {
+        if (!employee.password) {
+            throw new Error('Password is required for new employees.');
+        }
+
+        const existingUser = db.prepare('SELECT id FROM users WHERE username = ?').get(employee.username);
+        if (existingUser) {
+            throw new Error('Username already exists.');
+        }
+        
+        const hashedPassword = bcrypt.hashSync(employee.password, 10);
+        const userResult = db.prepare('INSERT INTO users (username, password, role) VALUES (?, ?, ?)')
+            .run(employee.username, hashedPassword, 'user');
+        const userId = userResult.lastInsertRowid;
+
+        const employeeResult = db.prepare(`
+            INSERT INTO employees (userId, fullName, nikKependudukan, nikPekerja, division, position, address, startDate)
+            VALUES (@userId, @fullName, @nikKependudukan, @nikPekerja, @division, @position, @address, @startDate)
+        `).run({
+            userId,
+            fullName: employee.fullName,
+            nikKependudukan: employee.nikKependudukan,
+            nikPekerja: employee.nikPekerja,
+            division: employee.division,
+            position: employee.position,
+            address: employee.address,
+            startDate: employee.startDate
+        });
+
+        const newEmployeeId = employeeResult.lastInsertRowid;
+        const newEmployee = db.prepare(`
+            SELECT 
+                e.id, e.userId, e.nikKependudukan, e.nikPekerja, e.fullName, e.division, e.position, e.address, e.startDate,
+                u.username, u.role
+            FROM employees e
+            JOIN users u ON e.userId = u.id
+            WHERE e.id = ?
+        `).get(newEmployeeId) as Employee;
+
+        return newEmployee;
+    });
+
+    return transaction();
+}
+
+export async function updateEmployee(id: number, employee: Partial<Omit<Employee, 'id' | 'userId' | 'username' | 'role'>>): Promise<Employee> {
+    const updateStmt = db.prepare(`
+        UPDATE employees SET
+            fullName = @fullName,
+            nikKependudukan = @nikKependudukan,
+            nikPekerja = @nikPekerja,
+            division = @division,
+            position = @position,
+            address = @address,
+            startDate = @startDate
+        WHERE id = @id
+    `);
+
+    updateStmt.run({
+        id,
+        fullName: employee.fullName,
+        nikKependudukan: employee.nikKependudukan,
+        nikPekerja: employee.nikPekerja,
+        division: employee.division,
+        position: employee.position,
+        address: employee.address,
+        startDate: employee.startDate
+    });
+    
+    const updatedEmployee = db.prepare(`
+        SELECT 
+            e.id, e.userId, e.nikKependudukan, e.nikPekerja, e.fullName, e.division, e.position, e.address, e.startDate,
+            u.username, u.role
+        FROM employees e
+        JOIN users u ON e.userId = u.id
+        WHERE e.id = ?
+    `).get(id) as Employee;
+
+    if (!updatedEmployee) {
+        throw new Error('Failed to update or find employee.');
+    }
+    return updatedEmployee;
+}
+
+
+export async function deleteEmployee(id: number): Promise<void> {
+    const transaction = db.transaction(() => {
+        const employee = db.prepare('SELECT userId FROM employees WHERE id = ?').get(id) as { userId: number } | undefined;
+        if (employee) {
+            db.prepare('DELETE FROM employees WHERE id = ?').run(id);
+            db.prepare('DELETE FROM users WHERE id = ?').run(employee.userId);
+        } else {
+            throw new Error('Employee not found.');
+        }
+    });
+    transaction();
 }
 
 // Reseller Functions
@@ -1992,6 +2104,7 @@ export async function getVoucherUsageAnalytics(groupId: number) {
     
 
     
+
 
 
 

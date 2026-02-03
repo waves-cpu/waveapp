@@ -1,7 +1,8 @@
+
 'use client';
 
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback, useMemo } from 'react';
-import type { InventoryItem, AdjustmentHistory, InventoryItemVariant, Sale, Accessory, ShippingReceipt, BulkImportHistory, User, ReturnedItem, DiscountGroup, DiscountedProduct, PrintedReceiptCount, ShippingReceiptCounts, Reseller } from '@/types';
+import type { InventoryItem, AdjustmentHistory, InventoryItemVariant, Sale, Accessory, ShippingReceipt, BulkImportHistory, User, ReturnedItem, DiscountGroup, DiscountedProduct, PrintedReceiptCount, ShippingReceiptCounts, Reseller, Employee } from '@/types';
 import { categories as allCategories } from '@/types';
 import { useToast } from './use-toast';
 import { apiFetch } from '@/lib/api';
@@ -72,6 +73,11 @@ interface InventoryContextType {
   updateReseller: (id: number, reseller: Partial<Omit<Reseller, 'id' | 'createdAt'>>) => Promise<Reseller>;
   deleteReseller: (id: number) => Promise<void>;
   getResellerById: (id: number) => Promise<Reseller | null>;
+  // Employees
+  employees: Employee[];
+  addEmployee: (employee: Omit<Employee, 'id' | 'userId' | 'username' | 'role'> & { username: string, password?: string }) => Promise<Employee>;
+  updateEmployee: (id: number, employee: Partial<Omit<Employee, 'id'| 'userId' | 'username' | 'role'>>) => Promise<Employee>;
+  deleteEmployee: (id: number) => Promise<void>;
 }
 
 const InventoryContext = createContext<InventoryContextType | undefined>(undefined);
@@ -105,6 +111,11 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
         queryFn: () => apiFetch('/api/resellers'),
     });
 
+    const { data: employees, isLoading: isEmployeesLoading } = useQuery<Employee[]>({
+        queryKey: ['employees'],
+        queryFn: () => apiFetch('/api/employees'),
+    });
+
     const [pendingTransaction, setPendingTransaction] = useState<Sale[] | null>(null);
     useEffect(() => {
         const storedPending = sessionStorage.getItem('pendingTransaction');
@@ -113,7 +124,7 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
         }
     }, []);
 
-    const loading = isInventoryLoading || isSalesLoading || isReceiptsLoading || isDiscountsLoading || isResellersLoading;
+    const loading = isInventoryLoading || isSalesLoading || isReceiptsLoading || isDiscountsLoading || isResellersLoading || isEmployeesLoading;
 
     const useApiMutation = <TData, TVariables>(
         mutationFn: (variables: TVariables) => Promise<TData>,
@@ -128,7 +139,7 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
             onSuccess: () => {
                 const keysToInvalidate: (string | number)[][] = [
                     ['inventory'], ['sales'], 
-                    ['shippingReceipts'], ['discountGroups'], ['resellers'],
+                    ['shippingReceipts'], ['discountGroups'], ['resellers'], ['employees'],
                     ...(options.invalidateQueries || [])
                 ];
                 keysToInvalidate.forEach(key => queryClient.invalidateQueries({ queryKey: key }));
@@ -204,6 +215,9 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
     const addResellerMutation = useApiMutation((reseller: any) => apiFetch('/api/resellers', { method: 'POST', body: reseller }));
     const updateResellerMutation = useApiMutation((vars: { id: number, reseller: any }) => apiFetch(`/api/resellers/${vars.id}`, { method: 'PUT', body: vars.reseller }));
     const deleteResellerMutation = useApiMutation((id: number) => apiFetch(`/api/resellers/${id}`, { method: 'DELETE' }));
+    const addEmployeeMutation = useApiMutation((employee: Parameters<InventoryContextType['addEmployee']>[0]) => apiFetch('/api/employees', { method: 'POST', body: employee }));
+    const updateEmployeeMutation = useApiMutation((vars: { id: number, employee: Parameters<InventoryContextType['updateEmployee']>[1] }) => apiFetch(`/api/employees/${vars.id}`, { method: 'PUT', body: vars.employee }));
+    const deleteEmployeeMutation = useApiMutation((id: number) => apiFetch(`/api/employees/${id}`, { method: 'DELETE' }));
 
     const getHistory = useCallback(async (itemId: string) => (inventoryData?.products.find(i => i.id === itemId)?.history || []), [inventoryData]);
     const getItem = useCallback((itemId: string) => (inventoryData?.products || []).find(i => i.id === itemId), [inventoryData]);
@@ -235,6 +249,7 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
         allShippingReceipts: allShippingReceipts || [],
         discountGroups: discountGroups || [],
         resellers: resellers || [],
+        employees: employees || [],
         loading,
         categories,
         pendingTransaction, loadPendingTransaction, clearPendingTransaction, findProductBySku,
@@ -269,6 +284,9 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
         addReseller: (reseller: any) => addResellerMutation.mutateAsync(reseller),
         updateReseller: (id: number, reseller: any) => updateResellerMutation.mutateAsync({ id, reseller }),
         deleteReseller: (id: number) => deleteResellerMutation.mutateAsync(id),
+        addEmployee: (employee: any) => addEmployeeMutation.mutateAsync(employee),
+        updateEmployee: (id: number, employee: any) => updateEmployeeMutation.mutateAsync({ id, employee }),
+        deleteEmployee: (id: number) => deleteEmployeeMutation.mutateAsync(id),
         getResellerById,
         // Memoized functions
         getHistory,
