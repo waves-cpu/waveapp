@@ -27,14 +27,15 @@ import { useInventory } from '@/hooks/use-inventory';
 import { useToast } from '@/hooks/use-toast';
 import type { Employee } from '@/types';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { CalendarIcon } from 'lucide-react';
+import { CalendarIcon, User, IdCard, Briefcase, MapPin, Lock } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
 import { cn, formatToWIB } from '@/lib/utils';
+import { Separator } from '@/components/ui/separator';
 
 const formSchema = z.object({
   id: z.number().optional(),
   fullName: z.string().min(2, 'Nama lengkap harus diisi.'),
-  nikKependudukan: z.string().optional().default(''),
+  nikKependudukan: z.string().min(1, 'NIK Kependudukan wajib diisi'),
   nikPekerja: z.string().optional().default(''),
   division: z.string().optional().default(''),
   position: z.string().optional().default(''),
@@ -43,26 +44,15 @@ const formSchema = z.object({
   username: z.string().min(3, 'Username minimal 3 karakter.'),
   password: z.string().optional(),
 }).refine(data => {
-  // Logic: Password wajib untuk user baru, minimal 6 karakter jika diisi
-  if (!data.id && (!data.password || data.password.length < 6)) {
-    return false;
-  }
-  if (data.id && data.password && data.password.length > 0 && data.password.length < 6) {
-    return false;
-  }
+  if (!data.id && (!data.password || data.password.length < 6)) return false;
+  if (data.id && data.password && data.password.length > 0 && data.password.length < 6) return false;
   return true;
 }, {
   message: "Password minimal 6 karakter.",
   path: ["password"],
 });
 
-interface EmployeeFormDialogProps {
-  isOpen: boolean;
-  setIsOpen: (open: boolean) => void;
-  employee: Employee | null;
-}
-
-export function EmployeeFormDialog({ isOpen, setIsOpen, employee }: EmployeeFormDialogProps) {
+export function EmployeeFormDialog({ isOpen, setIsOpen, employee }: { isOpen: boolean; setIsOpen: (open: boolean) => void; employee: Employee | null }) {
   const { addEmployee, updateEmployee } = useInventory();
   const { toast } = useToast();
   const isEditMode = !!employee;
@@ -70,22 +60,13 @@ export function EmployeeFormDialog({ isOpen, setIsOpen, employee }: EmployeeForm
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      fullName: '',
-      username: '',
-      password: '',
-      nikKependudukan: '',
-      nikPekerja: '',
-      division: '',
-      position: '',
-      address: '',
+      fullName: '', username: '', password: '', nikKependudukan: '', nikPekerja: '', division: '', position: '', address: '',
     }
   });
 
-  const { reset } = form;
-
   useEffect(() => {
     if (isOpen) {
-      reset({
+      form.reset({
         id: employee?.id,
         fullName: employee?.fullName || '',
         nikKependudukan: employee?.nikKependudukan || '',
@@ -95,199 +76,158 @@ export function EmployeeFormDialog({ isOpen, setIsOpen, employee }: EmployeeForm
         address: employee?.address || '',
         startDate: employee?.startDate ? new Date(employee.startDate) : undefined,
         username: employee?.username || '',
-        password: '', // Selalu kosongkan field password saat buka dialog
+        password: '',
       });
     }
-  }, [isOpen, employee, reset]);
+  }, [isOpen, employee, form]);
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     try {
-      const payload: any = {
-        ...values,
-        startDate: values.startDate ? values.startDate.toISOString() : undefined,
-      };
-
-      // Hapus password jika kosong (khusus edit mode agar tidak nimpa password lama dengan string kosong)
-      if (isEditMode && !values.password) {
-        delete payload.password;
-      }
-
+      const payload = { ...values, startDate: values.startDate?.toISOString() };
+      if (isEditMode && !values.password) delete (payload as any).password;
+      
       if (isEditMode && values.id) {
         await updateEmployee(values.id, payload);
-        toast({ title: 'Berhasil', description: 'Data karyawan diperbarui' });
+        toast({ title: 'Berhasil', description: 'Data diperbarui' });
       } else {
-        await addEmployee(payload);
-        toast({ title: 'Berhasil', description: 'Karyawan baru ditambahkan' });
+        await addEmployee(payload as any);
+        toast({ title: 'Berhasil', description: 'Karyawan ditambahkan' });
       }
       setIsOpen(false);
-    } catch (error: any) {
-      toast({
-        variant: 'destructive',
-        title: 'Gagal Menyimpan',
-        description: error.message || 'Terjadi kesalahan sistem',
-      });
+    } catch (e: any) {
+      toast({ variant: 'destructive', title: 'Error', description: e.message });
     }
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogContent className="sm:max-w-2xl">
-        <DialogHeader>
-          <DialogTitle>{isEditMode ? 'Ubah Data Karyawan' : 'Tambah Karyawan Baru'}</DialogTitle>
-          <DialogDescription>Lengkapi detail karyawan di bawah ini.</DialogDescription>
+      <DialogContent className="sm:max-w-[700px] p-0 overflow-hidden flex flex-col max-h-[90vh]">
+        <DialogHeader className="p-6 pb-2">
+          <DialogTitle className="text-xl flex items-center gap-2">
+            {isEditMode ? <Briefcase className="h-5 w-5" /> : <User className="h-5 w-5" />}
+            {isEditMode ? 'Edit Profil Karyawan' : 'Registrasi Karyawan Baru'}
+          </DialogTitle>
+          <DialogDescription>
+            Isi formulir berikut untuk memanajemen data entitas karyawan.
+          </DialogDescription>
         </DialogHeader>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            <ScrollArea className="max-h-[60vh] pr-4">
-              <div className="space-y-4 py-2">
-                <FormField
-                  control={form.control}
-                  name="fullName"
-                  render={({ field }) => (
+          <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col flex-1 overflow-hidden">
+            <ScrollArea className="flex-1 px-6">
+              <div className="space-y-6 py-4">
+                {/* Section 1: Personal Info */}
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2 text-sm font-semibold text-primary">
+                    <IdCard className="h-4 w-4" /> Informasi Identitas
+                  </div>
+                  <FormField control={form.control} name="fullName" render={({ field }) => (
                     <FormItem>
                       <FormLabel>Nama Lengkap</FormLabel>
-                      <FormControl><Input placeholder="Contoh: Budi Santoso" {...field} /></FormControl>
+                      <FormControl><Input placeholder="Masukkan nama sesuai KTP" {...field} /></FormControl>
                       <FormMessage />
                     </FormItem>
-                  )}
-                />
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="nikKependudukan"
-                    render={({ field }) => (
+                  )}/>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField control={form.control} name="nikKependudukan" render={({ field }) => (
                       <FormItem>
-                        <FormLabel>NIK Kependudukan</FormLabel>
-                        <FormControl><Input {...field} /></FormControl>
+                        <FormLabel>NIK Kependudukan (KTP)</FormLabel>
+                        <FormControl><Input placeholder="16 digit NIK" {...field} /></FormControl>
                         <FormMessage />
                       </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="nikPekerja"
-                    render={({ field }) => (
+                    )}/>
+                    <FormField control={form.control} name="nikPekerja" render={({ field }) => (
                       <FormItem>
-                        <FormLabel>NIK Pekerja</FormLabel>
-                        <FormControl><Input {...field} /></FormControl>
+                        <FormLabel>NIK Pekerja (ID Perusahaan)</FormLabel>
+                        <FormControl><Input placeholder="Contoh: EMP-2024" {...field} /></FormControl>
                         <FormMessage />
                       </FormItem>
-                    )}
-                  />
+                    )}/>
+                  </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="division"
-                    render={({ field }) => (
+                <Separator />
+
+                {/* Section 2: Job Info */}
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2 text-sm font-semibold text-primary">
+                    <Briefcase className="h-4 w-4" /> Detail Pekerjaan
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField control={form.control} name="division" render={({ field }) => (
                       <FormItem>
                         <FormLabel>Divisi</FormLabel>
                         <FormControl><Input {...field} /></FormControl>
                         <FormMessage />
                       </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="position"
-                    render={({ field }) => (
+                    )}/>
+                    <FormField control={form.control} name="position" render={({ field }) => (
                       <FormItem>
                         <FormLabel>Jabatan</FormLabel>
                         <FormControl><Input {...field} /></FormControl>
                         <FormMessage />
                       </FormItem>
-                    )}
-                  />
-                </div>
-
-                <FormField
-                  control={form.control}
-                  name="address"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Alamat</FormLabel>
-                      <FormControl><Input {...field} /></FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="startDate"
-                  render={({ field }) => (
+                    )}/>
+                  </div>
+                  <FormField control={form.control} name="startDate" render={({ field }) => (
                     <FormItem className="flex flex-col">
-                      <FormLabel>Tanggal Masuk Kerja</FormLabel>
+                      <FormLabel>Tanggal Bergabung</FormLabel>
                       <Popover>
                         <PopoverTrigger asChild>
                           <FormControl>
-                            <Button
-                              variant="outline"
-                              className={cn("w-full pl-3 text-left font-normal", !field.value && "text-muted-foreground")}
-                            >
-                              {field.value ? formatToWIB(field.value, 'PPP') : <span>Pilih tanggal</span>}
+                            <Button variant="outline" className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
+                              {field.value ? formatToWIB(field.value, 'PPP') : "Pilih tanggal"}
                               <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                             </Button>
                           </FormControl>
                         </PopoverTrigger>
                         <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar 
-                            mode="single" 
-                            selected={field.value} 
-                            onSelect={field.onChange} 
-                            disabled={(date) => date > new Date() || date < new Date("1900-01-01")}
-                            initialFocus 
-                          />
+                          <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus />
                         </PopoverContent>
                       </Popover>
                       <FormMessage />
                     </FormItem>
-                  )}
-                />
+                  )}/>
+                  <FormField control={form.control} name="address" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Alamat Domisili</FormLabel>
+                      <FormControl><Input {...field} /></FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}/>
+                </div>
 
-                <div className="border-t pt-6 mt-6 space-y-4">
-                  <h3 className="text-sm font-semibold text-muted-foreground">Akun Pengguna</h3>
+                <Separator />
+
+                {/* Section 3: Account Info */}
+                <div className="space-y-4 bg-muted/30 p-4 rounded-lg border border-dashed">
+                  <div className="flex items-center gap-2 text-sm font-semibold text-primary">
+                    <Lock className="h-4 w-4" /> Kredensial Akun
+                  </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="username"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Username</FormLabel>
-                          <FormControl>
-                            <Input {...field} disabled={isEditMode} autoComplete="off" />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="password"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>{isEditMode ? 'Password Baru (Opsional)' : 'Password'}</FormLabel>
-                          <FormControl>
-                            <Input type="password" {...field} autoComplete="new-password" />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                    <FormField control={form.control} name="username" render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Username</FormLabel>
+                        <FormControl><Input {...field} disabled={isEditMode} /></FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}/>
+                    <FormField control={form.control} name="password" render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>{isEditMode ? 'Ganti Password' : 'Password'}</FormLabel>
+                        <FormControl><Input type="password" placeholder={isEditMode ? "Kosongkan jika tidak diubah" : "Minimal 6 karakter"} {...field} /></FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}/>
                   </div>
                 </div>
               </div>
             </ScrollArea>
 
-            <DialogFooter>
-              <Button type="button" variant="ghost" onClick={() => setIsOpen(false)}>
-                Batal
-              </Button>
+            <DialogFooter className="p-6 bg-muted/20 border-t gap-2 sm:gap-0">
+              <Button type="button" variant="outline" onClick={() => setIsOpen(false)}>Batal</Button>
               <Button type="submit" disabled={form.formState.isSubmitting}>
-                {form.formState.isSubmitting ? 'Menyimpan...' : 'Simpan'}
+                {form.formState.isSubmitting ? 'Proses...' : 'Simpan Data'}
               </Button>
             </DialogFooter>
           </form>
