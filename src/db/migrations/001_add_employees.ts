@@ -2,18 +2,6 @@
 import type { Database } from 'better-sqlite3';
 
 export function up(db: Database) {
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS employees (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        userId INTEGER NOT NULL,
-        nikKependudukan TEXT,
-        nikPekerja TEXT,
-        fullName TEXT NOT NULL,
-        division TEXT,
-        position TEXT,
-        address TEXT,
-        startDate TEXT,
-        FOREIGN KEY (userId) REFERENCES users(id) ON DELETE CASCADE
-    );
-  `);
+  // This migration has been moved into the main schema definition in `src/lib/db.ts`
+  // This file is kept for historical purposes but is no longer actively used by the application.
 }
