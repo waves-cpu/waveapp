@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useEffect } from "react";
@@ -108,7 +109,7 @@ function SettingsContent() {
                         </CardContent>
                     </Card>
 
-                    {user?.username === 'admin' && (
+                    {user?.role === 'admin' && (
                         <UserManagementCard />
                     )}
                 </div>

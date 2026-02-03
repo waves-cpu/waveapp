@@ -1,4 +1,5 @@
 
+
 export const categories = [
     "T-Shirt Oversize",
     "T-Shirt Boxy",
@@ -161,6 +162,20 @@ export interface User {
   id: number;
   username: string;
   role: 'admin' | 'user';
+}
+
+export interface Employee {
+  id: number;
+  userId: number;
+  username: string;
+  role: string;
+  nikKependudukan?: string;
+  nikPekerja?: string;
+  fullName: string;
+  division?: string;
+  position?: string;
+  address?: string;
+  startDate?: string;
 }
 
 export interface ReturnedItem {

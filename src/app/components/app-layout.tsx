@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useMemo } from 'react';
@@ -46,6 +47,7 @@ import {
   BadgePercent,
   Ticket,
   UserSquare,
+  Users2
 } from 'lucide-react';
 import { Logo } from './logo';
 import { Separator } from '@/components/ui/separator';
@@ -329,6 +331,32 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                         </SidebarMenu>
                     </CollapsibleContent>
                 </Collapsible>
+
+                {user?.role === 'admin' && (
+                    <Collapsible defaultOpen={true}>
+                        <SidebarMenuItem>
+                            <CollapsibleTrigger asChild>
+                                <SidebarMenuButton>
+                                    <Users2 />
+                                    <span className="flex-grow font-semibold">Manajemen</span>
+                                    <ChevronDown className="transition-transform" />
+                                </SidebarMenuButton>
+                            </CollapsibleTrigger>
+                        </SidebarMenuItem>
+                        <CollapsibleContent>
+                            <SidebarMenu className="ml-4 mt-2 border-l border-muted-foreground/20 pl-4 mb-4">
+                                <SidebarMenuItem>
+                                    <Link href="/settings/employees">
+                                        <SidebarMenuButton variant="ghost" size="sm" isActive={isActive('/settings/employees')}>
+                                            <Users />
+                                            Data Karyawan
+                                        </SidebarMenuButton>
+                                    </Link>
+                                </SidebarMenuItem>
+                            </SidebarMenu>
+                        </CollapsibleContent>
+                    </Collapsible>
+                )}
                   
               </SidebarMenu>
           </SidebarContent>
