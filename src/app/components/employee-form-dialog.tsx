@@ -34,8 +34,8 @@ import { cn, formatToWIB } from '@/lib/utils';
 const formSchema = z.object({
   id: z.number().optional(),
   fullName: z.string().min(2, 'Nama lengkap harus diisi.'),
-  nikPekerja: z.string().optional(),
   nikKependudukan: z.string().optional(),
+  nikPekerja: z.string().optional(),
   division: z.string().optional(),
   position: z.string().optional(),
   address: z.string().optional(),
@@ -43,9 +43,13 @@ const formSchema = z.object({
   username: z.string().min(3, 'Username minimal 3 karakter.'),
   password: z.string().optional(),
 }).refine(data => {
-    // If it's a new employee (no id), password is required
+    // If it's a new employee (no id), password is required and must be at least 6 chars
     if (!data.id) {
         return data.password && data.password.length >= 6;
+    }
+    // If it's an existing employee, password is optional, but if provided, must be at least 6 chars
+    if (data.id && data.password) {
+        return data.password.length >= 6;
     }
     return true;
 }, {
@@ -76,8 +80,8 @@ export function EmployeeFormDialog({ isOpen, setIsOpen, employee }: EmployeeForm
         reset({
             id: employee?.id,
             fullName: employee?.fullName || '',
-            nikPekerja: employee?.nikPekerja || '',
             nikKependudukan: employee?.nikKependudukan || '',
+            nikPekerja: employee?.nikPekerja || '',
             division: employee?.division || '',
             position: employee?.position || '',
             address: employee?.address || '',
@@ -90,17 +94,22 @@ export function EmployeeFormDialog({ isOpen, setIsOpen, employee }: EmployeeForm
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     try {
+      const dataToSend = { ...values };
+      if (!dataToSend.password) {
+        delete (dataToSend as any).password;
+      }
+      
       if (isEditMode) {
         await updateEmployee(values.id!, {
-            ...values,
+            ...dataToSend,
             startDate: values.startDate ? values.startDate.toISOString() : undefined,
         });
         toast({ title: 'Data Karyawan Diperbarui' });
       } else {
         await addEmployee({
-            ...values,
+            ...dataToSend,
             startDate: values.startDate ? values.startDate.toISOString() : undefined,
-        });
+        } as any); // Cast because password will be there.
         toast({ title: 'Karyawan Baru Ditambahkan' });
       }
       setIsOpen(false);
@@ -115,7 +124,7 @@ export function EmployeeFormDialog({ isOpen, setIsOpen, employee }: EmployeeForm
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogContent className="sm:max-w-2xl">
+      <DialogContent className="sm:max-w-2xl" onOpenAutoFocus={(e) => e.preventDefault()}>
         <DialogHeader>
           <DialogTitle>{isEditMode ? 'Ubah Data Karyawan' : 'Tambah Karyawan Baru'}</DialogTitle>
           <DialogDescription>
@@ -131,22 +140,22 @@ export function EmployeeFormDialog({ isOpen, setIsOpen, employee }: EmployeeForm
                 )}/>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <FormField control={form.control} name="nikKependudukan" render={({ field }) => (
-                        <FormItem><FormLabel>NIK Kependudukan</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                        <FormItem><FormLabel>NIK Kependudukan</FormLabel><FormControl><Input {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
                     )}/>
                     <FormField control={form.control} name="nikPekerja" render={({ field }) => (
-                        <FormItem><FormLabel>NIK Pekerja</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                        <FormItem><FormLabel>NIK Pekerja</FormLabel><FormControl><Input {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
                     )}/>
                 </div>
                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <FormField control={form.control} name="division" render={({ field }) => (
-                        <FormItem><FormLabel>Divisi</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                        <FormItem><FormLabel>Divisi</FormLabel><FormControl><Input {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
                     )}/>
                     <FormField control={form.control} name="position" render={({ field }) => (
-                        <FormItem><FormLabel>Jabatan</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                        <FormItem><FormLabel>Jabatan</FormLabel><FormControl><Input {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
                     )}/>
                 </div>
                 <FormField control={form.control} name="address" render={({ field }) => (
-                    <FormItem><FormLabel>Alamat</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                    <FormItem><FormLabel>Alamat</FormLabel><FormControl><Input {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
                 )}/>
                 <FormField control={form.control} name="startDate" render={({ field }) => (
                     <FormItem className="flex flex-col"><FormLabel>Tanggal Masuk Kerja</FormLabel>
@@ -170,17 +179,15 @@ export function EmployeeFormDialog({ isOpen, setIsOpen, employee }: EmployeeForm
                     <FormField control={form.control} name="username" render={({ field }) => (
                         <FormItem><FormLabel>Username</FormLabel><FormControl><Input {...field} disabled={isEditMode} autoComplete="new-password" /></FormControl><FormMessage /></FormItem>
                     )}/>
-                    {!isEditMode && (
-                        <FormField control={form.control} name="password" render={({ field }) => (
-                            <FormItem><FormLabel>Password</FormLabel><FormControl><Input type="password" {...field} autoComplete="new-password"/></FormControl><FormMessage /></FormItem>
-                        )}/>
-                    )}
+                    <FormField control={form.control} name="password" render={({ field }) => (
+                        <FormItem><FormLabel>{isEditMode ? 'Password Baru (Opsional)' : 'Password'}</FormLabel><FormControl><Input type="password" {...field} autoComplete="new-password"/></FormControl><FormMessage /></FormItem>
+                    )}/>
                 </div>
               </div>
             </ScrollArea>
             <DialogFooter className="pt-6 border-t mt-4">
               <Button type="button" variant="ghost" onClick={() => setIsOpen(false)} disabled={form.formState.isSubmitting}>Batal</Button>
-              <Button type="submit" disabled={form.formState.isSubmitting}>
+              <Button type="submit" disabled={form.formState.isSubmitting || (isEditMode && !form.formState.isDirty)}>
                 {form.formState.isSubmitting ? 'Menyimpan...' : 'Simpan'}
               </Button>
             </DialogFooter>
