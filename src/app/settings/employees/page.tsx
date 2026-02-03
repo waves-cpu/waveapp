@@ -97,10 +97,7 @@ function EmployeeManagementPage() {
         </div>
         
         <Card>
-            <CardHeader>
-                <CardTitle className="text-base">Daftar Karyawan</CardTitle>
-            </CardHeader>
-            <CardContent>
+            <CardContent className="pt-6">
                  <Table>
                     <TableHeader>
                         <TableRow>
