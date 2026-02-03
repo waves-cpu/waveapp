@@ -98,7 +98,7 @@ function EmployeeManagementPage() {
         
         <Card>
             <CardHeader>
-                <CardTitle>Daftar Karyawan</CardTitle>
+                <CardTitle className="text-lg">Daftar Karyawan</CardTitle>
                 <CardDescription>
                     Kelola data dan akses untuk semua karyawan di perusahaan Anda.
                 </CardDescription>
@@ -120,7 +120,7 @@ function EmployeeManagementPage() {
                             <TableRow>
                                 <TableCell colSpan={6} className="h-24 text-center">Memuat data karyawan...</TableCell>
                             </TableRow>
-                        ) : employees.length > 0 ? (
+                        ) : employees && employees.length > 0 ? (
                             employees.map(employee => (
                                 <TableRow key={employee.id}>
                                     <TableCell className="font-medium">{employee.fullName}</TableCell>
