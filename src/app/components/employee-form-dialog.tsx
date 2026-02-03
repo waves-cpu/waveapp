@@ -1,7 +1,6 @@
-
 'use client';
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -43,7 +42,17 @@ const formSchema = z.object({
   startDate: z.date().optional(),
   username: z.string().min(3, 'Username minimal 3 karakter.'),
   password: z.string().optional(),
+}).refine(data => {
+    // If it's a new employee (no id), password is required
+    if (!data.id) {
+        return data.password && data.password.length >= 6;
+    }
+    return true;
+}, {
+    message: "Password baru minimal 6 karakter.",
+    path: ["password"],
 });
+
 
 interface EmployeeFormDialogProps {
   isOpen: boolean;
@@ -59,10 +68,12 @@ export function EmployeeFormDialog({ isOpen, setIsOpen, employee }: EmployeeForm
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
   });
+  
+  const { reset } = form; // Destructuring for stable dependency
 
   useEffect(() => {
     if (isOpen) {
-        form.reset({
+        reset({
             id: employee?.id,
             fullName: employee?.fullName || '',
             nikPekerja: employee?.nikPekerja || '',
@@ -75,7 +86,7 @@ export function EmployeeFormDialog({ isOpen, setIsOpen, employee }: EmployeeForm
             password: '',
         });
     }
-  }, [isOpen, employee, form]);
+  }, [isOpen, employee, reset]);
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     try {
@@ -86,10 +97,6 @@ export function EmployeeFormDialog({ isOpen, setIsOpen, employee }: EmployeeForm
         });
         toast({ title: 'Data Karyawan Diperbarui' });
       } else {
-        if (!values.password || values.password.length < 6) {
-          form.setError('password', { message: 'Password minimal 6 karakter.' });
-          return;
-        }
         await addEmployee({
             ...values,
             startDate: values.startDate ? values.startDate.toISOString() : undefined,
@@ -146,7 +153,7 @@ export function EmployeeFormDialog({ isOpen, setIsOpen, employee }: EmployeeForm
                         <Popover>
                             <PopoverTrigger asChild><FormControl><Button
                                 variant={"outline"}
-                                className={cn("w-[240px] pl-3 text-left font-normal", !field.value && "text-muted-foreground")}
+                                className={cn("w-full pl-3 text-left font-normal", !field.value && "text-muted-foreground")}
                             >
                                 {field.value ? formatToWIB(field.value, 'PPP') : <span>Pilih tanggal</span>}
                                 <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
@@ -158,21 +165,21 @@ export function EmployeeFormDialog({ isOpen, setIsOpen, employee }: EmployeeForm
                         <FormMessage/>
                     </FormItem>
                 )}/>
-                <div className="border-t pt-4 space-y-4">
-                     <h3 className="text-sm font-medium text-muted-foreground">Akun Pengguna</h3>
+                <div className="border-t pt-6 mt-6 space-y-4">
+                     <h3 className="text-sm font-semibold text-muted-foreground">Akun Pengguna</h3>
                     <FormField control={form.control} name="username" render={({ field }) => (
-                        <FormItem><FormLabel>Username</FormLabel><FormControl><Input {...field} disabled={isEditMode} /></FormControl><FormMessage /></FormItem>
+                        <FormItem><FormLabel>Username</FormLabel><FormControl><Input {...field} disabled={isEditMode} autoComplete="new-password" /></FormControl><FormMessage /></FormItem>
                     )}/>
                     {!isEditMode && (
                         <FormField control={form.control} name="password" render={({ field }) => (
-                            <FormItem><FormLabel>Password</FormLabel><FormControl><Input type="password" {...field} /></FormControl><FormMessage /></FormItem>
+                            <FormItem><FormLabel>Password</FormLabel><FormControl><Input type="password" {...field} autoComplete="new-password"/></FormControl><FormMessage /></FormItem>
                         )}/>
                     )}
                 </div>
               </div>
             </ScrollArea>
-            <DialogFooter className="pt-4">
-              <Button type="button" variant="ghost" onClick={() => setIsOpen(false)}>Batal</Button>
+            <DialogFooter className="pt-6 border-t mt-4">
+              <Button type="button" variant="ghost" onClick={() => setIsOpen(false)} disabled={form.formState.isSubmitting}>Batal</Button>
               <Button type="submit" disabled={form.formState.isSubmitting}>
                 {form.formState.isSubmitting ? 'Menyimpan...' : 'Simpan'}
               </Button>
