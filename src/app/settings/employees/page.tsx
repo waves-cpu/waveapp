@@ -98,10 +98,7 @@ function EmployeeManagementPage() {
         
         <Card>
             <CardHeader>
-                <CardTitle className="text-lg">Daftar Karyawan</CardTitle>
-                <CardDescription>
-                    Kelola data dan akses untuk semua karyawan di perusahaan Anda.
-                </CardDescription>
+                <CardTitle className="text-base">Daftar Karyawan</CardTitle>
             </CardHeader>
             <CardContent>
                  <Table>
