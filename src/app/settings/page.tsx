@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import { useState, useEffect } from "react";
@@ -28,9 +27,74 @@ import { AppLayout } from "../components/app-layout";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
-import { Palette, Languages, Users, UserPlus } from 'lucide-react';
+import { Palette, Languages, KeyRound } from 'lucide-react';
 import { UserManagementCard } from "../components/user-management-card";
+import { useToast } from "@/hooks/use-toast";
 
+function ChangePasswordCard() {
+    const { user, updateUserPassword } = useAuth();
+    const [newPassword, setNewPassword] = useState('');
+    const [confirmPassword, setConfirmPassword] = useState('');
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const { toast } = useToast();
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (newPassword.length < 6) {
+            toast({ variant: 'destructive', title: 'Password Terlalu Pendek', description: 'Password minimal harus 6 karakter.' });
+            return;
+        }
+        if (newPassword !== confirmPassword) {
+            toast({ variant: 'destructive', title: 'Password Tidak Cocok', description: 'Pastikan kedua kolom password sama persis.' });
+            return;
+        }
+        if (!user) return;
+
+        setIsSubmitting(true);
+        try {
+            await updateUserPassword(user.id, newPassword);
+            toast({ title: 'Password Berhasil Diubah' });
+            setNewPassword('');
+            setConfirmPassword('');
+        } catch (error: any) {
+            toast({ variant: 'destructive', title: 'Gagal Mengubah Password', description: error.message });
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    return (
+        <Card>
+            <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-base"><KeyRound /> Pengaturan Akun</CardTitle>
+                <CardDescription>
+                    Ubah kata sandi Anda.
+                </CardDescription>
+            </CardHeader>
+            <form onSubmit={handleSubmit}>
+                <CardContent className="space-y-4">
+                     <div className="space-y-2">
+                        <Label htmlFor="username">Username</Label>
+                        <Input id="username" value={user?.username || ''} disabled />
+                    </div>
+                     <div className="space-y-2">
+                        <Label htmlFor="newPassword">Kata Sandi Baru</Label>
+                        <Input id="newPassword" type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} required disabled={isSubmitting}/>
+                    </div>
+                     <div className="space-y-2">
+                        <Label htmlFor="confirmPassword">Konfirmasi Kata Sandi Baru</Label>
+                        <Input id="confirmPassword" type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required disabled={isSubmitting}/>
+                    </div>
+                </CardContent>
+                <CardFooter>
+                    <Button type="submit" disabled={isSubmitting || !newPassword || !confirmPassword || newPassword !== confirmPassword}>
+                        {isSubmitting ? 'Menyimpan...' : 'Ubah Kata Sandi'}
+                    </Button>
+                </CardFooter>
+            </form>
+        </Card>
+    );
+}
 
 function SettingsContent() {
     const { theme, setTheme } = useTheme();
@@ -55,6 +119,7 @@ function SettingsContent() {
             </div>
             <div className="mx-auto grid w-full max-w-6xl items-start gap-6">
                 <div className="grid gap-6">
+                    <ChangePasswordCard />
                     <Card>
                         <CardHeader>
                             <CardTitle className="flex items-center gap-2 text-base"><Palette /> {t.settings.appearance}</CardTitle>

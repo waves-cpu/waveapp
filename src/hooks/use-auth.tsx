@@ -1,12 +1,11 @@
 
-
 'use client';
 
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
 import type { User } from '@/types';
 import { useToast } from './use-toast';
 import { apiFetch } from '@/lib/api';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 
 interface AuthContextType {
@@ -17,6 +16,7 @@ interface AuthContextType {
     loading: boolean;
     users: User[];
     createUser: (username: string, password: string) => Promise<User>;
+    updateUserPassword: (userId: number, newPassword: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -89,6 +89,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             throw error;
         }
     });
+    
+    const updateUserPasswordMutation = useMutation<void, Error, { userId: number; newPassword: string }>({
+        mutationFn: ({ userId, newPassword }) =>
+            apiFetch(`/api/users/${userId}/password`, {
+                method: 'PUT',
+                body: { password: newPassword },
+            }),
+        onError: (error: any) => {
+            throw error;
+        },
+    });
 
     const login = async (username: string, password: string): Promise<boolean> => {
         try {
@@ -110,6 +121,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return createUserMutation.mutateAsync({ username, password });
     }
 
+    const updateUserPassword = async (userId: number, newPassword: string) => {
+        await updateUserPasswordMutation.mutateAsync({ userId, newPassword });
+    };
+
     return (
         <AuthContext.Provider value={{ 
             isAuthenticated: !!user, 
@@ -118,7 +133,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             login, 
             logout, 
             users, 
-            createUser 
+            createUser,
+            updateUserPassword
         }}>
             {children}
         </AuthContext.Provider>
@@ -132,4 +148,3 @@ export const useAuth = () => {
     }
     return context;
 };
-

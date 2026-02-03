@@ -78,6 +78,7 @@ interface InventoryContextType {
   addEmployee: (employee: Omit<Employee, 'id' | 'userId' | 'username' | 'role'> & { username: string, password?: string }) => Promise<Employee>;
   updateEmployee: (id: number, employee: Partial<Omit<Employee, 'id'| 'userId' | 'username' | 'role'>>) => Promise<Employee>;
   deleteEmployee: (id: number) => Promise<void>;
+  updateUserPassword: (userId: number, newPassword: string) => Promise<void>;
 }
 
 const InventoryContext = createContext<InventoryContextType | undefined>(undefined);
@@ -218,6 +219,8 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
     const addEmployeeMutation = useApiMutation((employee: Parameters<InventoryContextType['addEmployee']>[0]) => apiFetch('/api/employees', { method: 'POST', body: employee }));
     const updateEmployeeMutation = useApiMutation((vars: { id: number, employee: Parameters<InventoryContextType['updateEmployee']>[1] }) => apiFetch(`/api/employees/${vars.id}`, { method: 'PUT', body: vars.employee }));
     const deleteEmployeeMutation = useApiMutation((id: number) => apiFetch(`/api/employees/${id}`, { method: 'DELETE' }));
+    const updateUserPasswordMutation = useApiMutation((vars: {userId: number, newPassword: string}) => apiFetch(`/api/users/${vars.userId}/password`, {method: 'PUT', body: {password: vars.newPassword}}));
+
 
     const getHistory = useCallback(async (itemId: string) => (inventoryData?.products.find(i => i.id === itemId)?.history || []), [inventoryData]);
     const getItem = useCallback((itemId: string) => (inventoryData?.products || []).find(i => i.id === itemId), [inventoryData]);
@@ -287,6 +290,7 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
         addEmployee: (employee: any) => addEmployeeMutation.mutateAsync(employee),
         updateEmployee: (id: number, employee: any) => updateEmployeeMutation.mutateAsync({ id, employee }),
         deleteEmployee: (id: number) => deleteEmployeeMutation.mutateAsync(id),
+        updateUserPassword: (userId: number, newPassword: string) => updateUserPasswordMutation.mutateAsync({userId, newPassword}),
         getResellerById,
         // Memoized functions
         getHistory,

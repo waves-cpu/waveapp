@@ -31,6 +31,15 @@ export async function fetchAllUsers(): Promise<Omit<User, 'password'>[]> {
     return users;
 }
 
+export async function updateUserPassword(userId: number, newPassword: string): Promise<void> {
+    const hashedPassword = bcrypt.hashSync(newPassword, 10);
+    const result = db.prepare('UPDATE users SET password = ? WHERE id = ?').run(hashedPassword, userId);
+    
+    if (result.changes === 0) {
+        throw new Error('User not found or password could not be updated.');
+    }
+}
+
 // Employee Functions
 export async function fetchAllEmployees(): Promise<Employee[]> {
     const employees = db.prepare(`
@@ -2104,6 +2113,7 @@ export async function getVoucherUsageAnalytics(groupId: number) {
     
 
     
+
 
 
 
