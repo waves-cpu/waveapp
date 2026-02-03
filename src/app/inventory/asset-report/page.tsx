@@ -299,8 +299,8 @@ function ViewAllDialog({
 function AssetReportSkeleton() {
     return (
         <div className="space-y-6">
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                {[...Array(4)].map((_, i) => (
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+                {[...Array(5)].map((_, i) => (
                      <Card key={i}>
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><Skeleton className="h-5 w-3/4" /></CardHeader>
                         <CardContent><Skeleton className="h-7 w-1/2" /><Skeleton className="h-4 w-full mt-2" /></CardContent>
@@ -360,10 +360,12 @@ export default function AssetReportPage() {
         normalMoversAssetValue,
         slowMoversAssetValue,
         totalAssetValue,
+        totalStock,
     } = useMemo(() => {
         if (loading) return { 
             bestSellers: [], normalMovers: [], slowMovers: [],
-            bestSellersAssetValue: 0, normalMoversAssetValue: 0, slowMoversAssetValue: 0, totalAssetValue: 0
+            bestSellersAssetValue: 0, normalMoversAssetValue: 0, slowMoversAssetValue: 0, totalAssetValue: 0,
+            totalStock: 0,
         };
 
         const dateFrom = subDays(new Date(), daysFilter);
@@ -420,6 +422,8 @@ export default function AssetReportPage() {
                     variants: performanceVariants,
                 };
             });
+        
+        const totalStock = allProducts.reduce((sum, p) => sum + p.totalStock, 0);
 
         const threshold = BEST_SELLER_THRESHOLD * (daysFilter / 30);
         
@@ -436,7 +440,8 @@ export default function AssetReportPage() {
             bestSellersAssetValue,
             normalMoversAssetValue,
             slowMoversAssetValue,
-            totalAssetValue: bestSellersAssetValue + normalMoversAssetValue + slowMoversAssetValue
+            totalAssetValue: bestSellersAssetValue + normalMoversAssetValue + slowMoversAssetValue,
+            totalStock,
         };
 
     }, [items, allSales, loading, daysFilter, categoryFilter]);
@@ -500,7 +505,7 @@ export default function AssetReportPage() {
                     </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
                     <Card>
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                             <CardTitle className="text-sm font-medium">Total Nilai Aset</CardTitle>
@@ -509,6 +514,16 @@ export default function AssetReportPage() {
                         <CardContent>
                             <div className="text-2xl font-bold">{formatCurrency(totalAssetValue)}</div>
                             <p className="text-xs text-muted-foreground">Total nilai HPP dari semua stok produk.</p>
+                        </CardContent>
+                    </Card>
+                    <Card>
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-sm font-medium">Total Stok Produk</CardTitle>
+                            <Package className="h-4 w-4 text-muted-foreground" />
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-2xl font-bold">{(totalStock || 0).toLocaleString('id-ID')}</div>
+                            <p className="text-xs text-muted-foreground">Jumlah unit dari semua produk.</p>
                         </CardContent>
                     </Card>
                      <Card>
@@ -576,5 +591,7 @@ export default function AssetReportPage() {
         </AppLayout>
     );
 }
+
+    
 
     
