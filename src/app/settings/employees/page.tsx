@@ -1,5 +1,3 @@
-
-
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -42,25 +40,19 @@ import {
 import { useInventory } from '@/hooks/use-inventory';
 import type { Employee } from '@/types';
 import { useToast } from '@/hooks/use-toast';
-import { EmployeeFormDialog } from '@/app/components/employee-form-dialog';
 import { formatToWIB } from '@/lib/utils';
 import { parseISO } from 'date-fns';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 function EmployeeManagementPage() {
   const { employees, deleteEmployee, loading } = useInventory();
   const { toast } = useToast();
-  const [isFormOpen, setIsFormOpen] = useState(false);
-  const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
+  const router = useRouter();
   const [employeeToDelete, setEmployeeToDelete] = useState<Employee | null>(null);
 
-  const handleAdd = () => {
-    setSelectedEmployee(null);
-    setIsFormOpen(true);
-  };
-
   const handleEdit = (employee: Employee) => {
-    setSelectedEmployee(employee);
-    setIsFormOpen(true);
+    router.push(`/settings/employees/edit/${employee.id}`);
   };
 
   const handleDelete = async () => {
@@ -90,9 +82,11 @@ function EmployeeManagementPage() {
                 <SidebarTrigger className="md:hidden" />
                 <h1 className="text-lg font-bold">Manajemen Karyawan</h1>
             </div>
-            <Button onClick={handleAdd}>
-                <PlusCircle className="mr-2 h-4 w-4" />
-                Tambah Karyawan
+            <Button asChild>
+                <Link href="/settings/employees/new">
+                    <PlusCircle className="mr-2 h-4 w-4" />
+                    Tambah Karyawan
+                </Link>
             </Button>
         </div>
         
@@ -152,12 +146,6 @@ function EmployeeManagementPage() {
         </Card>
       </main>
 
-      <EmployeeFormDialog
-        isOpen={isFormOpen}
-        setIsOpen={setIsFormOpen}
-        employee={selectedEmployee}
-      />
-      
       <AlertDialog open={!!employeeToDelete} onOpenChange={(open) => !open && setEmployeeToDelete(null)}>
         <AlertDialogContent>
             <AlertDialogHeader>
