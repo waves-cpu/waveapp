@@ -10,7 +10,7 @@ import { formatToWIB } from '@/lib/utils';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { receipt, sales } = body;
+    const { receipt, sales, userId, username } = body;
 
     // Validate receipt data
     if (!receipt || !receipt.awb || !receipt.salesChannel || !receipt.channel) {
@@ -29,6 +29,8 @@ export async function POST(request: NextRequest) {
         date: formatToWIB(new Date(), "yyyy-MM-dd HH:mm:ss"),
         status: 'Terproses',
         transactionId: receipt.awb, // Use AWB as transactionId
+        userId,
+        username,
     };
 
     const salesData: Omit<Sale, 'id'>[] = sales.map((sale: any) => ({
@@ -43,7 +45,7 @@ export async function POST(request: NextRequest) {
         variantId: sale.variantId,
     }));
     
-    await recordSaleWithReceipt(receiptData, salesData);
+    await recordSaleWithReceipt(receiptData, salesData, userId, username);
 
     // Notify clients about the new receipt
     sseChannel.postMessage({ type: 'new-receipt', channel: receipt.channel, salesChannel: receipt.salesChannel });

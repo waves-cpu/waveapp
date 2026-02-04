@@ -1,4 +1,5 @@
 
+
 import { findShippingReceiptByAwb, updateShippingReceiptStatus } from '@/lib/inventory-service';
 import { NextRequest, NextResponse } from 'next/server';
 import { sseChannel } from '@/lib/sse-channel';
@@ -6,7 +7,7 @@ import { sseChannel } from '@/lib/sse-channel';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { awb, channel } = body;
+    const { awb, channel, userId, username } = body;
 
     if (!awb || !channel) {
         return NextResponse.json({ message: 'AWB and channel are required' }, { status: 400 });
@@ -29,7 +30,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ message: `Status resi saat ini adalah "${receipt.status}", tidak bisa diubah.` }, { status: 400 });
     }
 
-    await updateShippingReceiptStatus(receipt.id, 'Siap Kirim');
+    await updateShippingReceiptStatus(receipt.id, 'Siap Kirim', userId, username);
     sseChannel.postMessage({ type: 'receipt-update' });
     
     const updatedReceipt = { ...receipt, status: 'Siap Kirim' };

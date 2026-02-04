@@ -198,7 +198,9 @@ const createSchema = () => {
         channel TEXT NOT NULL,
         salesChannel TEXT,
         status TEXT NOT NULL,
-        transactionId TEXT
+        transactionId TEXT,
+        userId INTEGER,
+        username TEXT
     );
 
     CREATE TABLE IF NOT EXISTS printed_receipt_counts (
@@ -344,6 +346,10 @@ const runMigrations = () => {
     addColumn('discount_groups', 'discountValue', 'REAL');
     addColumn('discount_groups', 'maxUses', 'INTEGER');
     addColumn('discount_groups', 'minPurchase', 'REAL');
+
+    // Shipping Receipt Migrations
+    addColumn('shipping_receipts', 'userId', 'INTEGER');
+    addColumn('shipping_receipts', 'username', 'TEXT');
     
     try {
         db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_discount_groups_voucher_code_unique ON discount_groups(voucherCode) WHERE voucherCode IS NOT NULL;');

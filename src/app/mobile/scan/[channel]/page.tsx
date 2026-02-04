@@ -15,6 +15,7 @@ import { Badge } from '@/components/ui/badge';
 import { useParams, useRouter } from 'next/navigation';
 import { formatToWIB } from '@/lib/utils';
 import { apiFetch } from '@/lib/api';
+import { useAuth } from '@/hooks/use-auth';
 
 interface ProcessedItem extends Partial<ShippingReceipt> {
     id: number | string;
@@ -30,6 +31,7 @@ export default function MobileScanShipmentPage() {
     const router = useRouter();
     const params = useParams();
     const channel = typeof params.channel === 'string' ? decodeURIComponent(params.channel).toUpperCase() : '';
+    const { user } = useAuth();
 
 
     const [awb, setAwb] = useState('');
@@ -58,7 +60,7 @@ export default function MobileScanShipmentPage() {
         try {
             const result = await apiFetch('/api/shipping/scan', {
                 method: 'POST',
-                body: JSON.stringify({ awb: trimmedAwb, channel }),
+                body: JSON.stringify({ awb: trimmedAwb, channel, userId: user?.id, username: user?.username }),
             });
             
             playSuccessSound();
@@ -83,7 +85,7 @@ export default function MobileScanShipmentPage() {
                  inputRef.current?.focus();
             }
         }
-    }, [isSubmitting, channel, playSuccessSound, playErrorSound, toast, isCameraOpen]);
+    }, [isSubmitting, channel, playSuccessSound, playErrorSound, toast, isCameraOpen, user]);
 
 
     const handleFormSubmit = (e: React.FormEvent) => {

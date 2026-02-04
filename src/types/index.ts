@@ -128,6 +128,8 @@ export interface ShippingReceipt {
     salesChannel?: string; // Sales channel (e.g., Shopee, Tiktok)
     status: string;
     transactionId?: string;
+    userId?: number;
+    username?: string;
 }
 
 export interface ShippingReceiptCounts {
