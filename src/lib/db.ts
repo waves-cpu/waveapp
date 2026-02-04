@@ -180,6 +180,8 @@ const createSchema = () => {
         saleDate TEXT NOT NULL,
         status TEXT DEFAULT 'Completed',
         voucherCode TEXT,
+        userId INTEGER,
+        username TEXT,
         FOREIGN KEY (productId) REFERENCES products(id) ON DELETE CASCADE,
         FOREIGN KEY (variantId) REFERENCES variants(id) ON DELETE CASCADE,
         FOREIGN KEY (accessoryId) REFERENCES accessories(id) ON DELETE CASCADE,
@@ -318,6 +320,8 @@ const runMigrations = () => {
     addColumn('sales', 'voucherCode', 'TEXT');
     addColumn('sales', 'resellerId', 'INTEGER');
     addColumn('sales', 'resellerName', 'TEXT');
+    addColumn('sales', 'userId', 'INTEGER');
+    addColumn('sales', 'username', 'TEXT');
 
 
     // Product Migrations

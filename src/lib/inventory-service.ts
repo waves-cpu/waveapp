@@ -99,7 +99,7 @@ export async function addEmployee(employee: Omit<Employee, 'id' | 'userId' | 'us
     return transaction();
 }
 
-export async function updateEmployee(id: number, employee: Partial<Omit<Employee, 'id' | 'userId' | 'username' | 'role'>>): Promise<Employee> {
+export async function updateEmployee(id: number, employee: Partial<Omit<Employee, 'id'| 'userId' | 'username' | 'role'>>): Promise<Employee> {
     const updateStmt = db.prepare(`
         UPDATE employees SET
             fullName = @fullName,
@@ -460,7 +460,6 @@ export async function fetchShippingReceiptCounts(filters: {
         shippingChannelsBySalesChannel: getShippingBySales(),
     };
 }
-
 
 export async function getReceiptCountByStatus(status: string): Promise<Record<string, number>> {
     const query = db.prepare(`
@@ -1101,6 +1100,8 @@ export async function performSale(
         voucherCode?: string;
         resellerId?: number;
         resellerName?: string;
+        userId?: number;
+        username?: string;
     }
 ): Promise<{ newSale: Sale, updatedItem?: InventoryItem, updatedAccessory?: Accessory }[]> {
     const { sales, ...saleOptions } = options;
@@ -1181,8 +1182,8 @@ export async function performSale(
             }
 
             const saleResult = db.prepare(`
-                INSERT INTO sales (transactionId, paymentMethod, productId, variantId, accessoryId, channel, quantity, priceAtSale, cogsAtSale, saleDate, status, parentSku, productCategory, parentImageUrl, voucherCode, resellerId, resellerName)
-                VALUES (@transactionId, @paymentMethod, @productId, @variantId, @accessoryId, @channel, @quantity, @priceAtSale, @cogsAtSale, @saleDate, @status, @parentSku, @productCategory, @parentImageUrl, @voucherCode, @resellerId, @resellerName)
+                INSERT INTO sales (transactionId, paymentMethod, productId, variantId, accessoryId, channel, quantity, priceAtSale, cogsAtSale, saleDate, status, parentSku, productCategory, parentImageUrl, voucherCode, resellerId, resellerName, userId, username)
+                VALUES (@transactionId, @paymentMethod, @productId, @variantId, @accessoryId, @channel, @quantity, @priceAtSale, @cogsAtSale, @saleDate, @status, @parentSku, @productCategory, @parentImageUrl, @voucherCode, @resellerId, @resellerName, @userId, @username)
             `).run({
                 transactionId: saleOptions?.transactionId || `tx-${Date.now()}`, 
                 paymentMethod: saleOptions?.paymentMethod, 
@@ -1201,12 +1202,14 @@ export async function performSale(
                 voucherCode: saleOptions.voucherCode || null,
                 resellerId: saleOptions.resellerId || null,
                 resellerName: saleOptions.resellerName || null,
+                userId: saleOptions.userId || null,
+                username: saleOptions.username || null,
             });
             
             const newSaleId = saleResult.lastInsertRowid;
             const newSale = db.prepare(`
                 SELECT 
-                    s.id, s.transactionId, s.paymentMethod, s.productId, s.variantId, s.accessoryId, s.channel, s.quantity, s.priceAtSale, s.cogsAtSale, s.saleDate, s.voucherCode, s.resellerId, s.resellerName,
+                    s.id, s.transactionId, s.paymentMethod, s.productId, s.variantId, s.accessoryId, s.channel, s.quantity, s.priceAtSale, s.cogsAtSale, s.saleDate, s.voucherCode, s.resellerId, s.resellerName, s.username,
                     COALESCE(p.name, a.name) as productName,
                     p.releaseDate as releaseDate,
                     COALESCE(p.category, a.category) as productCategory,
@@ -1338,7 +1341,7 @@ export async function fetchSingleAccessory(accessoryId: string): Promise<Accesso
 export async function fetchAllSales(): Promise<Sale[]> {
      const salesQuery = db.prepare(`
         SELECT 
-            s.id, s.transactionId, s.paymentMethod, s.productId, s.variantId, s.accessoryId, s.channel, s.quantity, s.priceAtSale, s.cogsAtSale, s.saleDate, s.voucherCode, s.resellerId, s.resellerName,
+            s.id, s.transactionId, s.paymentMethod, s.productId, s.variantId, s.accessoryId, s.channel, s.quantity, s.priceAtSale, s.cogsAtSale, s.saleDate, s.voucherCode, s.resellerId, s.resellerName, s.username,
             COALESCE(p.name, a.name) as productName,
             p.releaseDate as releaseDate,
             COALESCE(p.category, a.category) as productCategory,
@@ -1369,7 +1372,7 @@ export async function getPosSalesByDate(date: Date): Promise<Sale[]> {
     const dateString = formatToWIB(date, 'yyyy-MM-dd');
     const salesQuery = db.prepare(`
         SELECT 
-            s.id, s.transactionId, s.paymentMethod, s.productId, s.variantId, s.accessoryId, s.channel, s.quantity, s.priceAtSale, s.cogsAtSale, s.saleDate, s.resellerId, s.resellerName,
+            s.id, s.transactionId, s.paymentMethod, s.productId, s.variantId, s.accessoryId, s.channel, s.quantity, s.priceAtSale, s.cogsAtSale, s.saleDate, s.resellerId, s.resellerName, s.username,
             COALESCE(p.name, a.name) as productName,
             COALESCE(p.category, a.category) as productCategory,
             p.imageUrl as parentImageUrl,
@@ -1397,7 +1400,7 @@ export async function getPosSalesByDate(date: Date): Promise<Sale[]> {
 export async function getSalesByTransactionId(transactionId: string): Promise<Sale[]> {
     const salesQuery = db.prepare(`
         SELECT 
-            s.id, s.transactionId, s.paymentMethod, s.productId, s.variantId, s.accessoryId, s.channel, s.quantity, s.priceAtSale, s.cogsAtSale, s.saleDate, s.resellerId, s.resellerName,
+            s.id, s.transactionId, s.paymentMethod, s.productId, s.variantId, s.accessoryId, s.channel, s.quantity, s.priceAtSale, s.cogsAtSale, s.saleDate, s.resellerId, s.resellerName, s.username,
             COALESCE(p.name, a.name) as productName,
             COALESCE(p.category, a.category) as productCategory,
             p.imageUrl as parentImageUrl,
@@ -2134,6 +2137,7 @@ export async function getVoucherUsageAnalytics(groupId: number) {
     
 
     
+
 
 
 
