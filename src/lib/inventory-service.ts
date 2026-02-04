@@ -482,8 +482,8 @@ export async function getReceiptCountByStatus(status: string): Promise<Record<st
 export async function addShippingReceipt(receipt: Omit<ShippingReceipt, 'id'>): Promise<ShippingReceipt> {
     try {
         const stmt = db.prepare(`
-            INSERT INTO shipping_receipts (awb, channel, salesChannel, status, date, transactionId)
-            VALUES (?, ?, ?, ?, ?, ?)
+            INSERT INTO shipping_receipts (awb, channel, salesChannel, status, date, transactionId, userId, username)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         `);
         
         const result = stmt.run(
@@ -492,7 +492,9 @@ export async function addShippingReceipt(receipt: Omit<ShippingReceipt, 'id'>): 
             receipt.salesChannel,
             receipt.status,
             receipt.date,
-            receipt.transactionId
+            receipt.transactionId,
+            receipt.userId,
+            receipt.username
         );
 
         return { id: result.lastInsertRowid as number, ...receipt };
@@ -550,9 +552,20 @@ export async function updateShippingReceiptsStatus(ids: number[], status: string
     stmt.run(status, ...ids);
 }
 
-export async function updateShippingReceiptStatus(id: number, status: string) {
-    const stmt = db.prepare(`UPDATE shipping_receipts SET status = ? WHERE id = ?`);
-    stmt.run(status, id);
+export async function updateShippingReceiptStatus(id: number, status: string, userId?: number, username?: string) {
+    let query = `UPDATE shipping_receipts SET status = ?`;
+    const params: (string | number | null)[] = [status];
+
+    if (userId && username) {
+        query += ', userId = ?, username = ?';
+        params.push(userId, username);
+    }
+    
+    query += ' WHERE id = ?';
+    params.push(id);
+    
+    const stmt = db.prepare(query);
+    stmt.run(...params);
 }
 
 
@@ -2106,14 +2119,10 @@ export async function getVoucherUsageAnalytics(groupId: number) {
     
 
 
-
-
-    
-
-
     
 
     
+
 
 
 
