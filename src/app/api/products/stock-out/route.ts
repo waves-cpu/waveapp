@@ -5,7 +5,7 @@ import { NextRequest, NextResponse } from 'next/server';
 export async function POST(request: NextRequest) {
     try {
         const body = await request.json();
-        const { items, reason } = body;
+        const { items, reason, userId, username } = body;
 
         if (!Array.isArray(items) || items.length === 0 || !reason) {
             return NextResponse.json({ message: 'Invalid request body, requires "items" (array) and "reason" (string).' }, { status: 400 });
@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
             quantity: -Math.abs(item.quantity)
         }));
 
-        await bulkAdjustStock(updates, reason);
+        await bulkAdjustStock(updates, reason, userId, username);
 
         return NextResponse.json({ 
             message: 'Stock updated successfully'

@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -12,6 +13,7 @@ import { ConfirmTransactionDialog } from '../components/confirm-stock-in-dialog'
 import { useInventory } from '@/hooks/use-inventory';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
+import { useAuth } from '@/hooks/use-auth';
 
 export default function StockOutPage() {
     const { language } = useLanguage();
@@ -19,6 +21,7 @@ export default function StockOutPage() {
     const TStockOut = t.stockOutForm;
     const { toast } = useToast();
     const router = useRouter();
+    const { user } = useAuth();
 
     const [isBulkQuantityOpen, setBulkQuantityOpen] = useState(false);
     const [isProductSelectionOpen, setProductSelectionOpen] = useState(false);
@@ -60,7 +63,12 @@ export default function StockOutPage() {
                     'Content-Type': 'application/json',
                     'X-API-Key': process.env.NEXT_PUBLIC_API_KEY || 'secret-api-key-for-waveapp',
                 },
-                body: JSON.stringify({ items: transactionData.transactionItems, reason })
+                body: JSON.stringify({ 
+                    items: transactionData.transactionItems, 
+                    reason,
+                    userId: user?.id,
+                    username: user?.username,
+                })
             });
 
             if (!response.ok) {

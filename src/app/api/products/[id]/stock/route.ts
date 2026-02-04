@@ -14,17 +14,17 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
             return NextResponse.json({ message: 'Item ID is required' }, { status: 400 });
         }
 
-        const { change, reason, type } = await request.json();
+        const { change, reason, type, userId, username } = await request.json();
         
         if (typeof change !== 'number' || !reason) {
             return NextResponse.json({ message: 'Invalid request body, requires "change" (number) and "reason" (string).' }, { status: 400 });
         }
 
         if (type === 'accessory') {
-            await adjustAccessoryStock(id, change, reason);
+            await adjustAccessoryStock(id, change, reason, userId, username);
             return NextResponse.json({ message: 'Accessory stock adjusted successfully' });
         } else {
-            await adjustStock(id, change, reason);
+            await adjustStock(id, change, reason, userId, username);
             return NextResponse.json({ message: 'Product stock adjusted successfully' });
         }
 

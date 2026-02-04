@@ -1030,7 +1030,7 @@ export async function editVariantsBulk(itemId: string, variants: InventoryItemVa
     })();
 }
 
-export async function adjustStock(itemId: string, change: number, reason: string) {
+export async function adjustStock(itemId: string, change: number, reason: string, userId?: number, username?: string) {
     if (change === 0 && !reason.toLowerCase().includes('penyesuaian modal')) return;
 
     db.transaction(() => {
@@ -1040,27 +1040,27 @@ export async function adjustStock(itemId: string, change: number, reason: string
             const newStockLevel = variant.stock + change;
             db.prepare('UPDATE variants SET stock = ? WHERE id = ?').run(newStockLevel, itemId);
             db.prepare(`
-                INSERT INTO history (productId, variantId, change, reason, newStockLevel, date)
-                VALUES (?, ?, ?, ?, ?, ?)
-            `).run(variant.productId, itemId, change, reason, newStockLevel, formatToWIB(new Date(), "yyyy-MM-dd HH:mm:ss"));
+                INSERT INTO history (productId, variantId, change, reason, newStockLevel, date, userId, username)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            `).run(variant.productId, itemId, change, reason, newStockLevel, formatToWIB(new Date(), "yyyy-MM-dd HH:mm:ss"), userId, username);
         } else {
             const item = db.prepare('SELECT * FROM products WHERE id = ?').get(itemId) as (InventoryItem & {id: number}) | undefined;
             if (item && typeof item.stock === 'number') {
                 const newStockLevel = item.stock + change;
                 db.prepare('UPDATE products SET stock = ? WHERE id = ?').run(newStockLevel, itemId);
                 db.prepare(`
-                    INSERT INTO history (productId, variantId, change, reason, newStockLevel, date)
-                    VALUES (?, ?, ?, ?, ?, ?)
-                `).run(itemId, null, change, reason, newStockLevel, formatToWIB(new Date(), "yyyy-MM-dd HH:mm:ss"));
+                    INSERT INTO history (productId, variantId, change, reason, newStockLevel, date, userId, username)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                `).run(itemId, null, change, reason, newStockLevel, formatToWIB(new Date(), "yyyy-MM-dd HH:mm:ss"), userId, username);
             }
         }
     })();
 }
 
-export async function bulkAdjustStock(updates: { itemId: string, quantity: number }[], reason: string) {
+export async function bulkAdjustStock(updates: { itemId: string, quantity: number }[], reason: string, userId?: number, username?: string) {
     const transaction = db.transaction(() => {
         for (const update of updates) {
-            adjustStock(update.itemId, update.quantity, reason);
+            adjustStock(update.itemId, update.quantity, reason, userId, username);
         }
     });
     transaction();
@@ -1184,6 +1184,7 @@ export async function performSale(
                 SELECT 
                     s.id, s.transactionId, s.paymentMethod, s.productId, s.variantId, s.accessoryId, s.channel, s.quantity, s.priceAtSale, s.cogsAtSale, s.saleDate, s.voucherCode, s.resellerId, s.resellerName,
                     COALESCE(p.name, a.name) as productName,
+                    p.releaseDate as releaseDate,
                     COALESCE(p.category, a.category) as productCategory,
                     p.imageUrl as parentImageUrl,
                     COALESCE(v.sku, p.sku, a.sku) as sku,
@@ -1953,22 +1954,22 @@ export async function updateAccessory(accessoryId: string, data: Omit<Accessory,
     })();
 }
 
-export async function adjustAccessoryStock(accessoryId: string, change: number, reason: string) {
+export async function adjustAccessoryStock(accessoryId: string, change: number, reason: string, userId?: number, username?: string) {
     if (change === 0) return;
 
     db.transaction(() => {
         const getStmt = db.prepare('SELECT stock FROM accessories WHERE id = ?');
         const updateStmt = db.prepare('UPDATE accessories SET stock = ? WHERE id = ?');
         const historyStmt = db.prepare(`
-            INSERT INTO accessory_history (accessoryId, date, change, reason, newStockLevel)
-            VALUES (?, ?, ?, ?, ?)
+            INSERT INTO accessory_history (accessoryId, date, change, reason, newStockLevel, userId, username)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
         `);
 
         const accessory = getStmt.get(accessoryId) as { stock: number } | undefined;
         if (accessory) {
             const newStockLevel = accessory.stock + change;
             updateStmt.run(newStockLevel, accessoryId);
-            historyStmt.run(accessoryId, formatToWIB(new Date(), "yyyy-MM-dd HH:mm:ss"), change, reason, newStockLevel);
+            historyStmt.run(accessoryId, formatToWIB(new Date(), "yyyy-MM-dd HH:mm:ss"), change, reason, newStockLevel, userId, username);
         }
     })();
 }
@@ -2113,6 +2114,7 @@ export async function getVoucherUsageAnalytics(groupId: number) {
     
 
     
+
 
 
 

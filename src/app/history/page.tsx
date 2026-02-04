@@ -55,6 +55,7 @@ type AdjustmentEntry = {
     newStockLevel?: number;
     imageUrl?: string;
     itemCategory?: string;
+    username?: string;
 };
 
 type AggregatedSalesEntry = {
@@ -134,6 +135,7 @@ export default function HistoryPage() {
                     variantName: variant?.name,
                     variantSku: variant?.sku,
                     imageUrl: parentItem.imageUrl,
+                    username: entry.username,
                 });
             }
         });
@@ -312,7 +314,7 @@ export default function HistoryPage() {
     const { id, update } = toast({ title: 'Memulai unduhan', description: 'Laporan Excel sedang disiapkan...' });
     
     setTimeout(() => {
-        const headers = ['Tanggal', 'Nama Produk', 'Varian', 'SKU', 'Kategori', 'Alasan', 'Perubahan', 'Stok Akhir'];
+        const headers = ['Tanggal', 'Nama Produk', 'Varian', 'SKU', 'Kategori', 'Alasan', 'Perubahan', 'Stok Akhir', 'Oleh'];
         
         const data: (string | number)[][] = [];
 
@@ -327,7 +329,8 @@ export default function HistoryPage() {
                         sale.productCategory || '',
                         `Penjualan ${sale.channel}`,
                         -sale.quantity,
-                        'N/A' // Cannot determine final stock level accurately here
+                        'N/A', // Cannot determine final stock level accurately here
+                        'Sistem'
                     ]);
                 });
             } else { // 'adjustment'
@@ -339,7 +342,8 @@ export default function HistoryPage() {
                     entry.itemCategory || '',
                     entry.reason,
                     entry.change,
-                    entry.newStockLevel ?? 'N/A'
+                    entry.newStockLevel ?? 'N/A',
+                    entry.username || 'Sistem'
                 ]);
             }
         });
@@ -485,11 +489,9 @@ export default function HistoryPage() {
                 ) : paginatedHistory.length > 0 ? (
                      <div className="relative pl-6">
                          {paginatedHistory.map((entry, index) => {
-                            const isFirst = index === 0;
                             const isLast = index === paginatedHistory.length - 1;
                             const isSale = entry.type === 'sales';
                             const isStockIn = !isSale && entry.change > 0;
-                            const isStockOut = !isSale && entry.change < 0;
 
                             const Icon = isSale ? ShoppingCart : (isStockIn ? ArrowUpCircle : ArrowDownCircle);
                             const iconColor = isSale ? 'text-blue-500' : (isStockIn ? 'text-green-500' : 'text-red-500');
@@ -510,6 +512,7 @@ export default function HistoryPage() {
                                                     <div>
                                                         <p className="font-medium text-sm">{entry.itemName} {entry.variantName && <span className="text-muted-foreground">({entry.variantName})</span>}</p>
                                                         <p className="text-xs text-muted-foreground">{entry.reason}</p>
+                                                        {entry.username && <p className="text-xs text-muted-foreground">oleh: <span className="font-medium">{entry.username}</span></p>}
                                                     </div>
                                                 </div>
                                                 <div className="text-right">

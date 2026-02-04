@@ -7,6 +7,7 @@ import { categories as allCategories } from '@/types';
 import { useToast } from './use-toast';
 import { apiFetch } from '@/lib/api';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useAuth } from './use-auth';
 
 
 interface InventoryContextType {
@@ -86,6 +87,7 @@ const InventoryContext = createContext<InventoryContextType | undefined>(undefin
 export const InventoryProvider = ({ children }: { children: ReactNode }) => {
     const queryClient = useQueryClient();
     const { toast } = useToast();
+    const { user } = useAuth();
 
     const { data: inventoryData, isLoading: isInventoryLoading } = useQuery({
         queryKey: ['inventory'],
@@ -192,12 +194,12 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
     const bulkUpdateProductsMutation = useApiMutation((vars: { products: any[] }) => apiFetch('/api/products/bulk-update', { method: 'POST', body: vars }));
     const updateItemMutation = useApiMutation((vars: { itemId: string, itemData: any }) => apiFetch(`/api/products/${vars.itemId}`, { method: 'PUT', body: vars.itemData }));
     const bulkUpdateVariantsMutation = useApiMutation((vars: { itemId: string, variants: InventoryItemVariant[], reason: string }) => apiFetch(`/api/products/${vars.itemId}/variants-bulk-update`, { method: 'POST', body: { variants: vars.variants, reason: vars.reason } }));
-    const updateStockMutation = useApiMutation((vars: { itemId: string, change: number, reason: string }) => apiFetch(`/api/products/${vars.itemId}/stock`, { method: 'POST', body: vars }));
+    const updateStockMutation = useApiMutation((vars: { itemId: string, change: number, reason: string }) => apiFetch(`/api/products/${vars.itemId}/stock`, { method: 'POST', body: {...vars, userId: user?.id, username: user?.username} }));
     const archiveProductMutation = useApiMutation((vars: { itemId: string, isArchived: boolean }) => apiFetch(`/api/products/${vars.itemId}`, { method: 'PUT', body: { isArchived: vars.isArchived } }));
     const deleteProductPermanentlyMutation = useApiMutation((itemId: string) => apiFetch(`/api/products/${itemId}`, { method: 'DELETE' }));
     const addAccessoryMutation = useApiMutation((accessory: Omit<Accessory, 'id' | 'history'>) => apiFetch('/api/products', { method: 'POST', body: { ...accessory, type: 'accessory' } }));
     const updateAccessoryMutation = useApiMutation((vars: { accessoryId: string, accessoryData: any }) => apiFetch(`/api/products/${vars.accessoryId}`, { method: 'PUT', body: { ...vars.accessoryData, type: 'accessory' } }));
-    const adjustAccessoryStockMutation = useApiMutation((vars: { accessoryId: string, change: number, reason: string }) => apiFetch(`/api/products/${vars.accessoryId}/stock`, { method: 'POST', body: { ...vars, type: 'accessory' } }));
+    const adjustAccessoryStockMutation = useApiMutation((vars: { accessoryId: string, change: number, reason: string }) => apiFetch(`/api/products/${vars.accessoryId}/stock`, { method: 'POST', body: { ...vars, type: 'accessory', userId: user?.id, username: user?.username } }));
     const recordSaleMutation = useApiMutation((vars: any) => apiFetch('/api/sales', { method: 'POST', body: vars }));
     const recordSaleWithReceiptMutation = useApiMutation((vars: any) => apiFetch('/api/sales/online', { method: 'POST', body: vars }));
     const cancelSaleTransactionMutation = useApiMutation((transactionId: string) => apiFetch(`/api/sales/transaction/${transactionId}`, { method: 'DELETE' }));
