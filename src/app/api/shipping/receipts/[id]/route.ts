@@ -36,12 +36,12 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
             return NextResponse.json({ message: 'Invalid receipt ID' }, { status: 400 });
         }
         const body = await request.json();
-        const { status } = body;
+        const { status, userId, username } = body;
         if (!status) {
             return NextResponse.json({ message: 'Status is required' }, { status: 400 });
         }
 
-        await updateShippingReceiptStatus(id, status);
+        await updateShippingReceiptStatus(id, status, userId, username);
         sseChannel.postMessage({ type: 'receipt-update' });
 
         return NextResponse.json({ message: 'Receipt status updated successfully' });

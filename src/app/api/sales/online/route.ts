@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
         variantId: sale.variantId,
     }));
     
-    await recordSaleWithReceipt(receiptData, salesData, userId, username);
+    await recordSaleWithReceipt(receiptData, salesData);
 
     // Notify clients about the new receipt
     sseChannel.postMessage({ type: 'new-receipt', channel: receipt.channel, salesChannel: receipt.salesChannel });

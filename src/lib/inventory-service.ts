@@ -545,11 +545,22 @@ export async function deleteShippingReceipt(id: number) {
     return transaction();
 }
 
-export async function updateShippingReceiptsStatus(ids: number[], status: string) {
+export async function updateShippingReceiptsStatus(ids: number[], status: string, userId?: number, username?: string) {
     if (ids.length === 0) return;
-    const placeholders = ids.map(() => '?').join(',');
-    const stmt = db.prepare(`UPDATE shipping_receipts SET status = ? WHERE id IN (${placeholders})`);
-    stmt.run(status, ...ids);
+    
+    let query = 'UPDATE shipping_receipts SET status = ?';
+    const params: (string | number | null)[] = [status];
+
+    if (userId && username) {
+        query += ', userId = ?, username = ?';
+        params.push(userId, username);
+    }
+    
+    query += ` WHERE id IN (${ids.map(() => '?').join(',')})`;
+    params.push(...ids);
+
+    const stmt = db.prepare(query);
+    stmt.run(...params);
 }
 
 export async function updateShippingReceiptStatus(id: number, status: string, userId?: number, username?: string) {
@@ -1221,10 +1232,11 @@ export async function performSale(
 }
 
 export async function recordSaleWithReceipt(receiptData: Omit<ShippingReceipt, 'id'>, salesData: Omit<Sale, 'id'>[]) {
-    const { awb } = receiptData;
+    const { awb, userId, username } = receiptData;
 
     const transaction = db.transaction(() => {
-        addShippingReceipt(receiptData);
+        // Pass userId and username to addShippingReceipt
+        addShippingReceipt({ ...receiptData, userId, username });
 
         salesData.forEach(sale => {
             if (!sale.sku) {
@@ -1250,13 +1262,13 @@ export async function recordSaleWithReceipt(receiptData: Omit<ShippingReceipt, '
                 variantId = variant.id;
                 if (variant.stock < sale.quantity) throw new Error(`Insufficient stock for variant SKU: ${sale.sku}.`);
                 cogsAtSale = variant.costPrice;
-                adjustStock(variant.id.toString(), -sale.quantity, saleReason);
+                adjustStock(variant.id.toString(), -sale.quantity, saleReason, userId, username);
             } else if (product) {
                 parentProduct = product;
                 productId = product.id;
                 if (product.stock! < sale.quantity) throw new Error(`Insufficient stock for product SKU: ${sale.sku}.`);
                 cogsAtSale = product.costPrice;
-                adjustStock(product.id.toString(), -sale.quantity, saleReason);
+                adjustStock(product.id.toString(), -sale.quantity, saleReason, userId, username);
             } else {
                 throw new Error(`SKU not found for sale item: ${sale.sku}.`);
             }
@@ -2122,6 +2134,7 @@ export async function getVoucherUsageAnalytics(groupId: number) {
     
 
     
+
 
 
 

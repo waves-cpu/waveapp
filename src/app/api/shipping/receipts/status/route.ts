@@ -6,11 +6,11 @@ import { sseChannel } from '@/lib/sse-channel';
 // UPDATE status for multiple receipts
 export async function PUT(request: NextRequest) {
     try {
-        const { ids, status } = await request.json();
+        const { ids, status, userId, username } = await request.json();
         if (!Array.isArray(ids) || ids.length === 0 || !status) {
             return NextResponse.json({ message: 'Invalid request body, requires "ids" (array) and "status" (string).' }, { status: 400 });
         }
-        await updateShippingReceiptsStatus(ids, status);
+        await updateShippingReceiptsStatus(ids, status, userId, username);
         sseChannel.postMessage({ type: 'receipt-update' });
         return NextResponse.json({ message: `Successfully updated ${ids.length} receipts to "${status}".` });
     } catch (error) {

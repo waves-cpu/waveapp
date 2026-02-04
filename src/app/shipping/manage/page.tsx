@@ -30,6 +30,7 @@ import { DateRange } from 'react-day-picker';
 import { Separator } from '@/components/ui/separator';
 import { CancelShipmentDialog } from '@/app/components/cancel-shipment-dialog';
 import { DailySalesDetailDialog } from '@/app/components/daily-sales-detail-dialog';
+import { useAuth } from '@/hooks/use-auth';
 
 const SHIPPING_CHANNEL_OPTIONS = ['Semua Jasa Kirim', 'SPX', 'J&T', 'JNE', 'INSTANT', 'CARGO'];
 
@@ -241,6 +242,7 @@ const ReceiptTable = ({
 export default function ManageReceiptsPage() {
     const { allShippingReceipts, updateShippingReceiptStatus, updateShippingReceiptsStatus, deleteShippingReceipt, returnSaleTransaction, cancelSaleTransaction, loading, allSales } = useInventory();
     const { toast } = useToast();
+    const { user } = useAuth();
     const [receiptToProcess, setReceiptToProcess] = useState<ShippingReceipt | null>(null);
     const [receiptToCancel, setReceiptToCancel] = useState<ShippingReceipt | null>(null);
     const [isProcessing, setIsProcessing] = useState(false);
@@ -289,26 +291,26 @@ export default function ManageReceiptsPage() {
             }
         } else {
             try {
-                await updateShippingReceiptStatus(receipt.id, newStatus);
+                await updateShippingReceiptStatus(receipt.id, newStatus, user?.id, user?.username);
                 toast({ title: 'Status Diperbarui', description: `Status untuk resi ${receipt.awb} telah diubah.` });
             } catch (error) {
                 toast({ variant: 'destructive', title: 'Gagal Memperbarui Status' });
             }
         }
-    }, [updateShippingReceiptStatus, deleteShippingReceipt, toast, allSales]);
+    }, [updateShippingReceiptStatus, deleteShippingReceipt, toast, allSales, user]);
     
     const handleBulkAction = useCallback(async (ids: number[], newStatus: string) => {
         setIsProcessing(true);
         const toastRef = toast({ title: 'Memproses...', description: `Memproses ${ids.length} resi...` });
         try {
-          await updateShippingReceiptsStatus(ids, newStatus);
+          await updateShippingReceiptsStatus(ids, newStatus, user?.id, user?.username);
           toastRef.update({ id: toastRef.id, title: 'Berhasil', description: `Status untuk ${ids.length} resi berhasil diubah.` });
         } catch (error) {
           toastRef.update({ id: toastRef.id, title: 'Gagal', description: 'Terjadi kesalahan saat memperbarui status.', variant: 'destructive' });
         } finally {
           setIsProcessing(false);
         }
-    }, [updateShippingReceiptsStatus, toast]);
+    }, [updateShippingReceiptsStatus, toast, user]);
 
     const handleProcessReturn = async (transactionId: string, items: ReturnedItem[]) => {
         if (!receiptToProcess) return;
@@ -316,7 +318,7 @@ export default function ManageReceiptsPage() {
             await returnSaleTransaction(transactionId, items);
             
             const finalStatus = receiptToProcess.status === 'Dibatalkan' ? 'Selesai' : 'Return Selesai';
-            await updateShippingReceiptStatus(receiptToProcess.id, finalStatus);
+            await updateShippingReceiptStatus(receiptToProcess.id, finalStatus, user?.id, user?.username);
 
             toast({ title: 'Return Diproses', description: `Stok untuk transaksi ${transactionId} telah dikembalikan.` });
             setReceiptToProcess(null); // Close dialog
@@ -331,7 +333,7 @@ export default function ManageReceiptsPage() {
         try {
             await cancelSaleTransaction(transactionId);
             toast({ title: 'Transaksi Dibatalkan', description: `Stok untuk transaksi ${transactionId} telah dikembalikan.` });
-            await updateShippingReceiptStatus(receiptToCancel.id, 'Dibatalkan');
+            await updateShippingReceiptStatus(receiptToCancel.id, 'Dibatalkan', user?.id, user?.username);
         } catch (error) {
             toast({ variant: 'destructive', title: 'Gagal Membatalkan', description: error instanceof Error ? error.message : 'Terjadi kesalahan.' });
             throw error;

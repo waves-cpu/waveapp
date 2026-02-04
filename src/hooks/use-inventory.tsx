@@ -44,8 +44,8 @@ interface InventoryContextType {
   findShippingReceiptByAwb: (awb: string) => Promise<ShippingReceipt | null>;
   addShippingReceipt: (receipt: Omit<ShippingReceipt, 'id'>) => Promise<ShippingReceipt>;
   deleteShippingReceipt: (id: number) => Promise<void>;
-  updateShippingReceiptsStatus: (ids: number[], status: string) => Promise<void>;
-  updateShippingReceiptStatus: (id: number, status: string) => Promise<void>;
+  updateShippingReceiptsStatus: (ids: number[], status: string, userId?: number, username?: string) => Promise<void>;
+  updateShippingReceiptStatus: (id: number, status: string, userId?: number, username?: string) => Promise<void>;
   fetchShippingReceiptCounts: (filters: { dateString?: string; salesChannel?: string; shippingChannel?: string; status?: string[]; }) => Promise<{ salesChannels: Record<string, Record<string, number>>; shippingChannels: Record<string, number>; statuses: Record<string, number>; shippingChannelsBySalesChannel: Record<string, Record<string, number>>; }>;
   getReceiptCountByStatus: (status: string) => Promise<Record<string, number>>;
   getPendingReceiptsBeforeDate: (date: Date) => Promise<number>;
@@ -201,15 +201,15 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
     const updateAccessoryMutation = useApiMutation((vars: { accessoryId: string, accessoryData: any }) => apiFetch(`/api/products/${vars.accessoryId}`, { method: 'PUT', body: { ...vars.accessoryData, type: 'accessory' } }));
     const adjustAccessoryStockMutation = useApiMutation((vars: { accessoryId: string, change: number, reason: string }) => apiFetch(`/api/products/${vars.accessoryId}/stock`, { method: 'POST', body: { ...vars, type: 'accessory', userId: user?.id, username: user?.username } }));
     const recordSaleMutation = useApiMutation((vars: any) => apiFetch('/api/sales', { method: 'POST', body: vars }));
-    const recordSaleWithReceiptMutation = useApiMutation((vars: any) => apiFetch('/api/sales/online', { method: 'POST', body: vars }));
+    const recordSaleWithReceiptMutation = useApiMutation((vars: any) => apiFetch('/api/sales/online', { method: 'POST', body: { ...vars, userId: user?.id, username: user?.username } }));
     const cancelSaleTransactionMutation = useApiMutation((transactionId: string) => apiFetch(`/api/sales/transaction/${transactionId}`, { method: 'DELETE' }));
     const returnSaleTransactionMutation = useApiMutation((vars: { transactionId: string, items?: ReturnedItem[] }) => apiFetch(`/api/sales/transaction/${vars.transactionId}/return`, { method: 'POST', body: { items: vars.items || [] } }));
     const revertSaleItemMutation = useApiMutation((vars: { transactionId: string, sku: string }) => apiFetch(`/api/sales/transaction/${vars.transactionId}/revert`, { method: 'POST', body: { sku: vars.sku } }));
     const clearPosTransactionsMutation = useApiMutation((date: Date) => apiFetch(`/api/sales/pos-history?date=${date.toISOString()}`, { method: 'DELETE' }));
     const addShippingReceiptMutation = useApiMutation((receipt: Omit<ShippingReceipt, 'id'>) => apiFetch('/api/shipping/receipts', { method: 'POST', body: receipt }));
     const deleteShippingReceiptMutation = useApiMutation((id: number) => apiFetch(`/api/shipping/receipts/${id}`, { method: 'DELETE' }));
-    const updateShippingReceiptsStatusMutation = useApiMutation((vars: { ids: number[], status: string }) => apiFetch('/api/shipping/receipts/status', { method: 'PUT', body: vars }));
-    const updateShippingReceiptStatusMutation = useApiMutation((vars: { id: number, status: string }) => apiFetch(`/api/shipping/receipts/${vars.id}`, { method: 'PUT', body: { status: vars.status } }));
+    const updateShippingReceiptsStatusMutation = useApiMutation((vars: { ids: number[], status: string, userId?: number, username?: string }) => apiFetch('/api/shipping/receipts/status', { method: 'PUT', body: vars }));
+    const updateShippingReceiptStatusMutation = useApiMutation((vars: { id: number, status: string, userId?: number, username?: string }) => apiFetch(`/api/shipping/receipts/${vars.id}`, { method: 'PUT', body: { status: vars.status, userId: vars.userId, username: vars.username } }));
     const addPrintedReceiptsMutation = useApiMutation((vars: { date: string, salesChannel: string, shippingChannel: string, count: number }) => apiFetch('/api/shipping/printed-receipts', { method: 'POST', body: vars }));
     const deleteImportHistoryMutation = useApiMutation((id: number) => apiFetch(`/api/products/bulk-add/${id}`, { method: 'DELETE' }), { invalidateQueries: [['bulkImportHistory']] });
     const addDiscountGroupMutation = useApiMutation((group: any) => apiFetch('/api/finance/discounts', { method: 'POST', body: group }));
@@ -279,8 +279,8 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
         clearPosTransactions: (date: Date) => clearPosTransactionsMutation.mutateAsync(date),
         addShippingReceipt: (receipt: any) => addShippingReceiptMutation.mutateAsync(receipt),
         deleteShippingReceipt: (id: number) => deleteShippingReceiptMutation.mutateAsync(id),
-        updateShippingReceiptsStatus: (ids: number[], status: string) => updateShippingReceiptsStatusMutation.mutateAsync({ ids, status }),
-        updateShippingReceiptStatus: (id: number, status: string) => updateShippingReceiptStatusMutation.mutateAsync({ id, status }),
+        updateShippingReceiptsStatus: (ids: number[], status: string, userId?: number, username?: string) => updateShippingReceiptsStatusMutation.mutateAsync({ ids, status, userId, username }),
+        updateShippingReceiptStatus: (id: number, status: string, userId?: number, username?: string) => updateShippingReceiptStatusMutation.mutateAsync({ id, status, userId, username }),
         addPrintedReceipts: (date: string, salesChannel: string, shippingChannel: string, count: number) => addPrintedReceiptsMutation.mutateAsync({ date, salesChannel, shippingChannel, count }),
         deleteImportHistory: (id: number) => deleteImportHistoryMutation.mutateAsync(id),
         addDiscountGroup: (group: any) => addDiscountGroupMutation.mutateAsync(group),
