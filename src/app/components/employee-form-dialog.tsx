@@ -101,7 +101,7 @@ export function EmployeeFormDialog({ isOpen, setIsOpen, employee }: { isOpen: bo
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogContent className="sm:max-w-[700px] p-0 overflow-hidden flex flex-col max-h-[90vh]">
+      <DialogContent className="sm:max-w-[700px] p-0 flex flex-col max-h-[90vh]">
         <DialogHeader className="p-6 pb-2">
           <DialogTitle className="text-xl flex items-center gap-2">
             {isEditMode ? <Briefcase className="h-5 w-5" /> : <User className="h-5 w-5" />}
@@ -114,8 +114,8 @@ export function EmployeeFormDialog({ isOpen, setIsOpen, employee }: { isOpen: bo
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col flex-1 overflow-hidden">
-            <ScrollArea className="flex-1 px-6">
-              <div className="space-y-6 py-4">
+            <ScrollArea className="flex-1 px-1">
+              <div className="space-y-6 py-4 px-5">
                 {/* Section 1: Personal Info */}
                 <div className="space-y-4">
                   <div className="flex items-center gap-2 text-sm font-semibold text-primary">
@@ -124,7 +124,7 @@ export function EmployeeFormDialog({ isOpen, setIsOpen, employee }: { isOpen: bo
                   <FormField control={form.control} name="fullName" render={({ field }) => (
                     <FormItem>
                       <FormLabel>Nama Lengkap</FormLabel>
-                      <FormControl><Input placeholder="Masukkan nama sesuai KTP" {...field} /></FormControl>
+                      <FormControl><Input placeholder="Masukkan nama sesuai KTP" {...field} autoFocus /></FormControl>
                       <FormMessage />
                     </FormItem>
                   )}/>
