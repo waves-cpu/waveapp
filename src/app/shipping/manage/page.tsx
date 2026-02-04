@@ -196,6 +196,7 @@ const ReceiptTable = ({
                             <TableHead>No. Resi</TableHead>
                             <TableHead>Tanggal</TableHead>
                             <TableHead>Kurir</TableHead>
+                            <TableHead>Diproses Oleh</TableHead>
                             <TableHead>Status</TableHead>
                             <TableHead className="text-right">Aksi</TableHead>
                         </TableRow>
@@ -207,6 +208,7 @@ const ReceiptTable = ({
                                 <TableCell className="font-mono font-medium">{receipt.awb}</TableCell>
                                 <TableCell className="whitespace-nowrap">{formatToWIB(parseISO(receipt.date), 'dd MMM yyyy')}</TableCell>
                                 <TableCell><Badge variant="outline">{receipt.channel}</Badge></TableCell>
+                                <TableCell>{receipt.username || '-'}</TableCell>
                                 <TableCell><Badge variant={getStatusVariant(receipt.status)}>{receipt.status}</Badge></TableCell>
                                 <TableCell className="text-right">
                                     <DropdownAction receipt={receipt} onAction={onAction} />
@@ -214,7 +216,7 @@ const ReceiptTable = ({
                             </TableRow>
                         )) : (
                             <TableRow>
-                                <TableCell colSpan={6} className="h-32 text-center text-muted-foreground">
+                                <TableCell colSpan={7} className="h-32 text-center text-muted-foreground">
                                     Data tidak ditemukan.
                                 </TableCell>
                             </TableRow>

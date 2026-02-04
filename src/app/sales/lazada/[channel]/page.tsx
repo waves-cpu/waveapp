@@ -1,8 +1,7 @@
 
-
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -82,6 +81,36 @@ function DatePickerClient({
   );
 }
 
+const TableSkeleton = () => (
+    <>
+        {Array.from({ length: 5 }).map((_, i) => (
+            <TableRow key={i}>
+                <TableCell><Skeleton className="h-4 w-[100px]" /></TableCell>
+                <TableCell><Skeleton className="h-4 w-[250px]" /></TableCell>
+                <TableCell><Skeleton className="h-4 w-[80px]" /></TableCell>
+                <TableCell><Skeleton className="h-4 w-[100px]" /></TableCell>
+                <TableCell><Skeleton className="h-6 w-[100px]" /></TableCell>
+            </TableRow>
+        ))}
+    </>
+);
+
+const EmptyState = ({ searchTerm }: { searchTerm: string }) => (
+     <TableRow>
+        <TableCell colSpan={5} className="h-48 text-center">
+            <div className="flex flex-col items-center justify-center gap-4 text-muted-foreground">
+                <ShoppingCart className="h-16 w-16" />
+                <div className="text-center">
+                    <p className="font-semibold">Tidak Ada Resi</p>
+                    <p className="text-sm">
+                         {searchTerm ? `Tidak ada resi yang cocok dengan pencarian "${searchTerm}".` : "Belum ada resi yang tercatat untuk hari ini."}
+                    </p>
+                </div>
+            </div>
+        </TableCell>
+    </TableRow>
+);
+
 
 export default function LazadaChannelPage() {
   const {
@@ -141,19 +170,13 @@ export default function LazadaChannelPage() {
                   <TableHead className="w-[200px]">Tanggal</TableHead>
                   <TableHead>No. Resi (AWB)</TableHead>
                   <TableHead>Produk</TableHead>
+                  <TableHead>Diproses Oleh</TableHead>
                   <TableHead>Status</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {loading ? (
-                  Array.from({ length: 5 }).map((_, i) => (
-                      <TableRow key={i}>
-                          <TableCell><Skeleton className="h-4 w-[100px]" /></TableCell>
-                          <TableCell><Skeleton className="h-4 w-[250px]" /></TableCell>
-                          <TableCell><Skeleton className="h-4 w-[80px]" /></TableCell>
-                          <TableCell><Skeleton className="h-6 w-[100px]" /></TableCell>
-                      </TableRow>
-                  ))
+                  <TableSkeleton />
                 ) : receipts.length > 0 ? (
                   receipts.map((receipt) => {
                     const isUnprocessed = receipt.status === 'Perlu Diproses';
@@ -168,6 +191,7 @@ export default function LazadaChannelPage() {
                                 <Eye className="ml-2 h-3 w-3" />
                             </Button>
                           </TableCell>
+                           <TableCell>{receipt.username || '-'}</TableCell>
                            <TableCell>
                                 <Badge variant={getStatusVariant(receipt.status)}>
                                     {receipt.status}
@@ -177,17 +201,7 @@ export default function LazadaChannelPage() {
                     )
                   })
                 ) : (
-                  <TableRow>
-                      <TableCell colSpan={5} className="h-48 text-center">
-                          <div className="flex flex-col items-center justify-center gap-4 text-muted-foreground">
-                              <ShoppingCart className="h-16 w-16" />
-                              <div className="text-center">
-                                  <p className="font-semibold">Tidak Ada Resi</p>
-                                  <p className="text-sm">Belum ada resi yang tercatat untuk hari ini.</p>
-                              </div>
-                          </div>
-                      </TableCell>
-                  </TableRow>
+                  <EmptyState searchTerm={searchTerm} />
                 )}
               </TableBody>
             </Table>

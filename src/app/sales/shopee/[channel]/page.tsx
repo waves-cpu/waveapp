@@ -13,11 +13,11 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { ScanLine, ShoppingCart, Search, Eye, ArrowLeft, MoreVertical, Calendar as CalendarIcon } from 'lucide-react';
-import { format, parseISO, startOfDay, endOfDay } from 'date-fns';
+import { format } from 'date-fns';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-import { cn, formatToWIB } from '@/lib/utils';
+import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AppLayout } from '@/app/components/app-layout';
 import { Pagination } from '@/components/ui/pagination';
@@ -73,7 +73,8 @@ const TableSkeleton = () => (
             <TableRow key={i}>
                 <TableCell><Skeleton className="h-4 w-[100px]" /></TableCell>
                 <TableCell><Skeleton className="h-4 w-[250px]" /></TableCell>
-                <TableCell><Skeleton className="h-8 w-[100px]" /></TableCell>
+                <TableCell><Skeleton className="h-4 w-[80px]" /></TableCell>
+                <TableCell><Skeleton className="h-4 w-[100px]" /></TableCell>
                 <TableCell><Skeleton className="h-6 w-[100px]" /></TableCell>
             </TableRow>
         ))}
@@ -82,7 +83,7 @@ const TableSkeleton = () => (
 
 const EmptyState = ({ searchTerm }: { searchTerm: string }) => (
      <TableRow>
-        <TableCell colSpan={4} className="h-48 text-center">
+        <TableCell colSpan={5} className="h-48 text-center">
             <div className="flex flex-col items-center justify-center gap-4 text-muted-foreground">
                 <ShoppingCart className="h-16 w-16" />
                 <div className="text-center">
@@ -169,6 +170,7 @@ export default function ShopeeChannelPage() {
                   <TableHead className="w-[200px]">Tanggal</TableHead>
                   <TableHead>No. Resi (AWB)</TableHead>
                   <TableHead>Produk</TableHead>
+                  <TableHead>Diproses Oleh</TableHead>
                   <TableHead>Status</TableHead>
                 </TableRow>
               </TableHeader>
@@ -187,6 +189,7 @@ export default function ShopeeChannelPage() {
                                 <Eye className="ml-2 h-3 w-3" />
                             </Button>
                           </TableCell>
+                          <TableCell>{receipt.username || '-'}</TableCell>
                            <TableCell>
                                 <Badge variant={getStatusVariant(receipt.status)}>
                                     {receipt.status}
