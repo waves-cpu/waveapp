@@ -1554,7 +1554,7 @@ export async function cancelSaleTransaction(transactionId: string) {
         salesToUpdate.forEach(sale => {
              const reason = `Cancelled Sale: ${sale.transactionId || `ID ${sale.id}`}`;
             // Only revert stock if the sale was in a state that deducted stock
-            if (sale.status && ['Completed', 'Siap Kirim', 'Terproses', 'Diantar', 'Pemakaian Aksesoris'].includes(sale.status)) {
+            if (sale.status && ['Completed', 'Pending', 'Siap Kirim', 'Terproses', 'Diantar', 'Pemakaian Aksesoris'].includes(sale.status)) {
                 if (sale.variantId) {
                     adjustStock(sale.variantId.toString(), sale.quantity, reason);
                 } else if (sale.productId) {
@@ -2137,6 +2137,7 @@ export async function getVoucherUsageAnalytics(groupId: number) {
     
 
     
+
 
 
 
