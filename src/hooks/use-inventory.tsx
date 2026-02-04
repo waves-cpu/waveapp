@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback, useMemo } from 'react';
@@ -200,7 +201,7 @@ export const InventoryProvider = ({ children }: { children: ReactNode }) => {
     const addAccessoryMutation = useApiMutation((accessory: Omit<Accessory, 'id' | 'history'>) => apiFetch('/api/products', { method: 'POST', body: { ...accessory, type: 'accessory' } }));
     const updateAccessoryMutation = useApiMutation((vars: { accessoryId: string, accessoryData: any }) => apiFetch(`/api/products/${vars.accessoryId}`, { method: 'PUT', body: { ...vars.accessoryData, type: 'accessory' } }));
     const adjustAccessoryStockMutation = useApiMutation((vars: { accessoryId: string, change: number, reason: string }) => apiFetch(`/api/products/${vars.accessoryId}/stock`, { method: 'POST', body: { ...vars, type: 'accessory', userId: user?.id, username: user?.username } }));
-    const recordSaleMutation = useApiMutation((vars: any) => apiFetch('/api/sales', { method: 'POST', body: vars }));
+    const recordSaleMutation = useApiMutation((vars: any) => apiFetch('/api/sales', { method: 'POST', body: {...vars, userId: user?.id, username: user?.username } }));
     const recordSaleWithReceiptMutation = useApiMutation((vars: any) => apiFetch('/api/sales/online', { method: 'POST', body: { ...vars, userId: user?.id, username: user?.username } }));
     const cancelSaleTransactionMutation = useApiMutation((transactionId: string) => apiFetch(`/api/sales/transaction/${transactionId}`, { method: 'DELETE' }));
     const returnSaleTransactionMutation = useApiMutation((vars: { transactionId: string, items?: ReturnedItem[] }) => apiFetch(`/api/sales/transaction/${vars.transactionId}/return`, { method: 'POST', body: { items: vars.items || [] } }));

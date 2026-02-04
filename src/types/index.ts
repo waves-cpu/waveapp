@@ -118,6 +118,7 @@ export interface Sale {
   sku?: string;
   status?: 'Completed' | 'Pending' | 'Cancelled' | 'Return' | 'Return Selesai' | 'Siap Kirim' | 'Tidak Sampai' | 'Dibatalkan';
   parentImageUrl?: string;
+  username?: string;
 }
 
 export interface ShippingReceipt {

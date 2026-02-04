@@ -1,4 +1,5 @@
 
+
 'use client'
 
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
@@ -53,6 +54,7 @@ type GroupedSale = {
     status?: string;
     resellerId?: number;
     resellerName?: string | null;
+    username?: string | null;
 }
 
 const getStatusVariant = (status?: string): "default" | "secondary" | "destructive" | "outline" | "success" | "warning" => {
@@ -127,6 +129,7 @@ export default function PosHistoryPage() {
                     isAccessoryUsage: false, // will be updated later
                     resellerId: sale.resellerId,
                     resellerName: sale.resellerName,
+                    username: sale.username,
                 });
             }
 
@@ -318,6 +321,7 @@ export default function PosHistoryPage() {
                                 <TableRow>
                                     <TableHead className="text-xs">Waktu</TableHead>
                                     <TableHead className="text-xs">Detail Transaksi</TableHead>
+                                    <TableHead className="text-xs">Diproses Oleh</TableHead>
                                     <TableHead className="text-xs">Metode Bayar</TableHead>
                                     <TableHead className="text-xs">Status</TableHead>
                                     <TableHead className="text-right text-xs">Total</TableHead>
@@ -330,6 +334,7 @@ export default function PosHistoryPage() {
                                         <TableRow key={i}>
                                             <TableCell><Skeleton className="h-4 w-20" /></TableCell>
                                             <TableCell><Skeleton className="h-4 w-48" /></TableCell>
+                                            <TableCell><Skeleton className="h-4 w-24" /></TableCell>
                                             <TableCell><Skeleton className="h-4 w-24" /></TableCell>
                                             <TableCell><Skeleton className="h-4 w-24" /></TableCell>
                                             <TableCell className="text-right"><Skeleton className="h-4 w-20 ml-auto" /></TableCell>
@@ -349,6 +354,9 @@ export default function PosHistoryPage() {
                                                 <div className="text-xs text-muted-foreground">
                                                     {group.totalItems} item
                                                 </div>
+                                            </TableCell>
+                                            <TableCell className="text-sm">
+                                                {group.username || '-'}
                                             </TableCell>
                                             <TableCell>
                                                 <Badge variant="outline">
@@ -393,7 +401,7 @@ export default function PosHistoryPage() {
                                     ))
                                 ) : (
                                      <TableRow>
-                                        <TableCell colSpan={6} className="h-48 text-center">
+                                        <TableCell colSpan={7} className="h-48 text-center">
                                             <div className="flex flex-col items-center justify-center gap-4 text-muted-foreground">
                                                 <HistoryIcon className="h-12 w-12" />
                                                 <p className="font-semibold text-sm">Tidak Ada Transaksi</p>
@@ -427,4 +435,3 @@ export default function PosHistoryPage() {
     );
 }
     
-

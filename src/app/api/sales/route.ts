@@ -1,4 +1,5 @@
 
+
 import { performSale, fetchAllSales } from '@/lib/inventory-service';
 import { NextRequest, NextResponse } from 'next/server';
 import { parseISO, isWithinInterval, startOfDay, endOfDay } from 'date-fns';
@@ -34,7 +35,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { sales, options } = body;
+    const { sales, options, userId, username } = body;
 
     if (!Array.isArray(sales) || sales.length === 0) {
       return NextResponse.json({ message: 'Sales data is required and must be an array.' }, { status: 400 });
@@ -47,6 +48,8 @@ export async function POST(request: NextRequest) {
         ...options,
         sales: sales, // Pass sales directly without re-mapping
         transactionId: transactionId,
+        userId,
+        username,
     });
 
     return NextResponse.json({ message: 'Sale recorded successfully', data: results }, { status: 201 });
