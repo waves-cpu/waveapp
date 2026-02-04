@@ -131,6 +131,8 @@ const createSchema = () => {
         change INTEGER NOT NULL,
         reason TEXT NOT NULL,
         newStockLevel INTEGER NOT NULL,
+        userId INTEGER,
+        username TEXT,
         FOREIGN KEY (accessoryId) REFERENCES accessories(id) ON DELETE CASCADE
     );
 
@@ -153,6 +155,8 @@ const createSchema = () => {
       change INTEGER NOT NULL,
       reason TEXT NOT NULL,
       newStockLevel INTEGER NOT NULL,
+      userId INTEGER,
+      username TEXT,
       FOREIGN KEY (productId) REFERENCES products(id) ON DELETE CASCADE,
       FOREIGN KEY (variantId) REFERENCES variants(id) ON DELETE CASCADE
     );
@@ -326,6 +330,12 @@ const runMigrations = () => {
     addColumn('accessories', 'category', 'TEXT');
     addColumn('accessories', 'unit', "TEXT NOT NULL DEFAULT 'Pcs'");
     addColumn('accessories', 'quantityPerUnit', 'INTEGER');
+    
+    // History Migrations
+    addColumn('history', 'userId', 'INTEGER');
+    addColumn('history', 'username', 'TEXT');
+    addColumn('accessory_history', 'userId', 'INTEGER');
+    addColumn('accessory_history', 'username', 'TEXT');
 
     // Discount Group Migrations
     addColumn('discount_groups', 'channel', 'TEXT');

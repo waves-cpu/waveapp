@@ -39,6 +39,8 @@ export interface AdjustmentHistory {
   change: number;
   reason: string;
   newStockLevel: number;
+  userId?: number;
+  username?: string;
 }
 
 export type AccessoryUnit = 'Box' | 'Pcs' | 'Pack' | 'Bundle';
