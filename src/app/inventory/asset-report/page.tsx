@@ -1,8 +1,6 @@
-
-
 'use client';
 
-import React, { useMemo, useState, useDeferredValue } from 'react';
+import React, { useMemo, useState, useDeferredValue, useCallback } from 'react';
 import { AppLayout } from '@/app/components/app-layout';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
@@ -11,7 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { subDays, parseISO, isWithinInterval, startOfDay, endOfDay, startOfMonth, endOfMonth, subMonths, isAfter, isSameDay, startOfWeek, endOfWeek, subWeeks } from 'date-fns';
 import { id as localeId } from 'date-fns/locale';
-import { Flame, TrendingUp, Anchor, DollarSign, Package, Eye, Search, ChevronDown, Edit, Calendar as CalendarIcon } from 'lucide-react';
+import { Flame, TrendingUp, Anchor, DollarSign, Package, Eye, Search, ChevronDown, Edit, Calendar as CalendarIcon, FileDown, Loader2 } from 'lucide-react';
 import Image from 'next/image';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -25,6 +23,9 @@ import { useInventory } from '@/hooks/use-inventory';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { DateRange } from 'react-day-picker';
+import { useToast } from '@/hooks/use-toast';
+import * as XLSX from 'xlsx';
+import { saveAs } from 'file-saver';
 
 type VariantPerformance = {
     id: string;
@@ -355,6 +356,8 @@ export default function AssetReportPage() {
 
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [dialogContent, setDialogContent] = useState<{title: string, products: ProductPerformance[]}>({ title: '', products: [] });
+    const [isDownloading, setIsDownloading] = useState(false);
+    const { toast } = useToast();
     
     const datePresets = [
         { label: "Hari Ini", range: { from: new Date(), to: new Date() } },
@@ -488,6 +491,61 @@ export default function AssetReportPage() {
         setIsDialogOpen(true);
     };
 
+    const downloadExcel = useCallback(() => {
+        setIsDownloading(true);
+        const { id, update } = toast({ title: 'Memulai unduhan', description: 'Laporan Aset Excel sedang disiapkan...' });
+
+        setTimeout(() => {
+            const createSheetData = (products: ProductPerformance[]) => {
+                const data: any[] = [];
+                products.forEach(p => {
+                    if (p.variants.length > 0) {
+                        p.variants.forEach(v => {
+                            data.push({
+                                "Nama Produk": p.name,
+                                "Varian": v.name,
+                                "SKU": v.sku,
+                                "Kategori": p.category,
+                                "Stok": v.stock,
+                                "Unit Terjual": v.unitsSold,
+                                "Nilai Aset": v.assetValue
+                            });
+                        });
+                    } else {
+                         data.push({
+                            "Nama Produk": p.name,
+                            "Varian": "-",
+                            "SKU": p.sku,
+                            "Kategori": p.category,
+                            "Stok": p.totalStock,
+                            "Unit Terjual": p.unitsSold,
+                            "Nilai Aset": p.totalAssetValue
+                        });
+                    }
+                });
+                return data;
+            };
+            
+            const bestSellerData = createSheetData(bestSellers);
+            const normalMoverData = createSheetData(normalMovers);
+            const slowMoverData = createSheetData(slowMovers);
+    
+            const wb = XLSX.utils.book_new();
+            if (bestSellerData.length > 0) XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(bestSellerData), 'Best Seller');
+            if (normalMoverData.length > 0) XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(normalMoverData), 'Normal Movers');
+            if (slowMoverData.length > 0) XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(slowMoverData), 'Slow Movers');
+    
+            const dateFrom = date?.from ? formatToWIB(date.from, 'dd-MM-yy') : 'start';
+            const dateTo = date?.to ? formatToWIB(date.to, 'dd-MM-yy') : 'end';
+            const fileName = `Laporan_Aset_${dateFrom}_sampai_${dateTo}.xlsx`;
+            
+            XLSX.writeFile(wb, fileName);
+    
+            update({ id, title: "Unduhan Siap", description: `File '${fileName}' telah diunduh.` });
+            setIsDownloading(false);
+        }, 500);
+    }, [bestSellers, normalMovers, slowMovers, date, toast]);
+
     if (loading) {
         return (
              <AppLayout>
@@ -555,20 +613,10 @@ export default function AssetReportPage() {
                                 </Button>
                             </PopoverTrigger>
                             <PopoverContent className="flex w-auto flex-row" align="end">
-                                 <div className="flex flex-col gap-1 pr-4 border-r">
-                                    {datePresets.map(preset => {
-                                        const isActive = date?.from && date.to && isSameDay(date.from, preset.range.from) && isSameDay(date.to, preset.range.to);
-                                        return (
-                                            <Button
-                                                key={preset.label}
-                                                variant={isActive ? "secondary" : "ghost"}
-                                                className="justify-start"
-                                                onClick={() => setDate(preset.range)}
-                                            >
-                                                {preset.label}
-                                            </Button>
-                                        );
-                                    })}
+                                 <div className="flex flex-col gap-1 pr-4 border-r py-2">
+                                    {datePresets.map(preset => (
+                                        <Button key={preset.label} variant="ghost" className="justify-start" onClick={() => setDate(preset.range)}>{preset.label}</Button>
+                                    ))}
                                 </div>
                                 <Calendar
                                     initialFocus
@@ -580,6 +628,10 @@ export default function AssetReportPage() {
                                 />
                             </PopoverContent>
                         </Popover>
+                         <Button onClick={downloadExcel} variant="outline" size="sm" disabled={isDownloading} className="h-9">
+                            {isDownloading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileDown className="mr-2 h-4 w-4" />}
+                            {isDownloading ? "Mengekspor..." : "Ekspor Excel"}
+                        </Button>
                     </div>
                 </div>
 
@@ -669,9 +721,3 @@ export default function AssetReportPage() {
         </AppLayout>
     );
 }
-
-    
-
-    
-
-
