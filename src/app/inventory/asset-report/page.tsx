@@ -1,15 +1,15 @@
 
 'use client';
 
-import React, { useMemo, useState, useCallback, useEffect, useDeferredValue } from 'react';
+import React, { useMemo, useState, useDeferredValue } from 'react';
 import { AppLayout } from '@/app/components/app-layout';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { subDays, parseISO, isAfter } from 'date-fns';
-import { Flame, TrendingUp, Anchor, DollarSign, Package, Eye, Search, ChevronDown, Edit } from 'lucide-react';
+import { subDays, parseISO, isWithinInterval, startOfDay, endOfDay, startOfMonth, endOfMonth, subMonths } from 'date-fns';
+import { Flame, TrendingUp, Anchor, DollarSign, Package, Eye, Search, ChevronDown, Edit, Calendar as CalendarIcon } from 'lucide-react';
 import Image from 'next/image';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -18,9 +18,11 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { categories as allCategories, type InventoryItem, type InventoryItemVariant } from '@/types';
 import { Input } from '@/components/ui/input';
 import { Pagination } from '@/components/ui/pagination';
-import { cn } from '@/lib/utils';
+import { cn, formatToWIB } from '@/lib/utils';
 import { useInventory } from '@/hooks/use-inventory';
-
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { DateRange } from 'react-day-picker';
 
 type VariantPerformance = {
     id: string;
@@ -173,7 +175,7 @@ function ViewAllDialog({
     const [currentPage, setCurrentPage] = useState(1);
     const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
 
-    useEffect(() => {
+    React.useEffect(() => {
         if (!open) {
             setSearchTerm('');
             setCurrentPage(1);
@@ -346,7 +348,7 @@ function AssetReportSkeleton() {
 
 export default function AssetReportPage() {
     const { items, allSales, loading } = useInventory();
-    const [daysFilter, setDaysFilter] = useState<number>(30);
+    const [date, setDate] = useState<DateRange | undefined>({ from: subDays(new Date(), 29), to: new Date() });
     const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
 
     const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -362,14 +364,14 @@ export default function AssetReportPage() {
         totalAssetValue,
         totalStock,
     } = useMemo(() => {
-        if (loading) return { 
+        if (loading || !date?.from) return { 
             bestSellers: [], normalMovers: [], slowMovers: [],
             bestSellersAssetValue: 0, normalMoversAssetValue: 0, slowMoversAssetValue: 0, totalAssetValue: 0,
             totalStock: 0,
         };
 
-        const dateFrom = subDays(new Date(), daysFilter);
-        const salesInDateRange = allSales.filter(sale => isAfter(parseISO(sale.saleDate), dateFrom));
+        const toDate = date.to || date.from;
+        const salesInDateRange = allSales.filter(sale => isWithinInterval(parseISO(sale.saleDate), { start: startOfDay(date.from!), end: endOfDay(toDate) }));
         
         const salesBySku = new Map<string, number>();
         salesInDateRange.forEach(sale => {
@@ -425,7 +427,9 @@ export default function AssetReportPage() {
         
         const totalStock = allProducts.reduce((sum, p) => sum + p.totalStock, 0);
 
-        const threshold = BEST_SELLER_THRESHOLD * (daysFilter / 30);
+        const diffTime = Math.abs((date.to || date.from).getTime() - date.from.getTime());
+        const diffDays = Math.max(1, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
+        const threshold = BEST_SELLER_THRESHOLD * (diffDays / 30);
         
         const bestSellers = allProducts.filter(p => p.unitsSold > threshold).sort((a,b) => b.unitsSold - a.unitsSold);
         const normalMovers = allProducts.filter(p => p.unitsSold > 0 && p.unitsSold <= threshold).sort((a,b) => b.unitsSold - a.unitsSold);
@@ -444,7 +448,7 @@ export default function AssetReportPage() {
             totalStock,
         };
 
-    }, [items, allSales, loading, daysFilter, categoryFilter]);
+    }, [items, allSales, loading, date, categoryFilter]);
 
 
     const openDialog = (title: string, products: ProductPerformance[]) => {
@@ -465,10 +469,11 @@ export default function AssetReportPage() {
         )
     }
     
-    const thresholdValue = Math.round(BEST_SELLER_THRESHOLD * (daysFilter/30));
-    const bestSellerDesc = `Produk yang terjual lebih dari ${thresholdValue} unit dalam ${daysFilter} hari terakhir.`;
-    const normalMoversDesc = `Produk dengan penjualan stabil (1 - ${thresholdValue} unit) dalam ${daysFilter} hari terakhir.`;
-    const slowMoversDesc = `Produk yang tidak memiliki catatan penjualan dalam ${daysFilter} hari terakhir.`;
+    const diffDays = date?.from && date?.to ? Math.ceil(Math.abs(date.to.getTime() - date.from.getTime()) / (1000 * 60 * 60 * 24)) + 1 : 30;
+    const thresholdValue = Math.round(BEST_SELLER_THRESHOLD * (diffDays/30));
+    const bestSellerDesc = `Produk yang terjual lebih dari ${thresholdValue} unit dalam ${diffDays} hari terakhir.`;
+    const normalMoversDesc = `Produk dengan penjualan stabil (1 - ${thresholdValue} unit) dalam ${diffDays} hari terakhir.`;
+    const slowMoversDesc = `Produk yang tidak memiliki catatan penjualan dalam ${diffDays} hari terakhir.`;
     
     const bestSellerAssetPercentage = totalAssetValue > 0 ? (bestSellersAssetValue / totalAssetValue) * 100 : 0;
     const normalMoversAssetPercentage = totalAssetValue > 0 ? (normalMoversAssetValue / totalAssetValue) * 100 : 0;
@@ -492,16 +497,42 @@ export default function AssetReportPage() {
                                 {allCategories.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
                             </SelectContent>
                         </Select>
-                         <Select value={daysFilter.toString()} onValueChange={(value) => setDaysFilter(Number(value))}>
-                            <SelectTrigger className="w-[180px] h-9">
-                                <SelectValue placeholder="Pilih Periode" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="7">7 Hari Terakhir</SelectItem>
-                                <SelectItem value="30">30 Hari Terakhir</SelectItem>
-                                <SelectItem value="90">90 Hari Terakhir</SelectItem>
-                            </SelectContent>
-                        </Select>
+                        <Popover>
+                            <PopoverTrigger asChild>
+                                <Button
+                                    id="date"
+                                    variant={"outline"}
+                                    className={cn(
+                                        "w-[260px] justify-start text-left font-normal h-9",
+                                        !date && "text-muted-foreground"
+                                    )}
+                                >
+                                    <CalendarIcon className="mr-2 h-4 w-4" />
+                                    {date?.from ? (
+                                        date.to ? (
+                                            <>
+                                                {formatToWIB(date.from, "LLL dd, y")} -{" "}
+                                                {formatToWIB(date.to, "LLL dd, y")}
+                                            </>
+                                        ) : (
+                                            formatToWIB(date.from, "LLL dd, y")
+                                        )
+                                    ) : (
+                                        <span>Pilih rentang tanggal</span>
+                                    )}
+                                </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="end">
+                                <Calendar
+                                    initialFocus
+                                    mode="range"
+                                    defaultMonth={date?.from}
+                                    selected={date}
+                                    onSelect={setDate}
+                                    numberOfMonths={2}
+                                />
+                            </PopoverContent>
+                        </Popover>
                     </div>
                 </div>
 
