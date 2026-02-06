@@ -9,7 +9,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { subDays, parseISO, isWithinInterval, startOfDay, endOfDay, startOfMonth, endOfMonth, subMonths, isAfter, isSameDay } from 'date-fns';
+import { subDays, parseISO, isWithinInterval, startOfDay, endOfDay, startOfMonth, endOfMonth, subMonths, isAfter, isSameDay, startOfWeek, endOfWeek, subWeeks } from 'date-fns';
+import { id as localeId } from 'date-fns/locale';
 import { Flame, TrendingUp, Anchor, DollarSign, Package, Eye, Search, ChevronDown, Edit, Calendar as CalendarIcon } from 'lucide-react';
 import Image from 'next/image';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -349,11 +350,20 @@ function AssetReportSkeleton() {
 
 export default function AssetReportPage() {
     const { items, allSales, loading } = useInventory();
-    const [date, setDate] = useState<DateRange | undefined>({ from: subDays(new Date(), 29), to: new Date() });
+    const [date, setDate] = useState<DateRange | undefined>({ from: startOfMonth(new Date()), to: endOfMonth(new Date()) });
     const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
 
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [dialogContent, setDialogContent] = useState<{title: string, products: ProductPerformance[]}>({ title: '', products: [] });
+    
+    const datePresets = [
+        { label: "Hari Ini", range: { from: new Date(), to: new Date() } },
+        { label: "Kemarin", range: { from: subDays(new Date(), 1), to: subDays(new Date(), 1) } },
+        { label: "Minggu Ini", range: { from: startOfWeek(new Date(), { locale: localeId }), to: endOfWeek(new Date(), { locale: localeId }) } },
+        { label: "Minggu Lalu", range: { from: startOfWeek(subWeeks(new Date(), 1), { locale: localeId }), to: endOfWeek(subWeeks(new Date(), 1), { locale: localeId }) } },
+        { label: "Bulan Ini", range: { from: startOfMonth(new Date()), to: endOfMonth(new Date()) } },
+        { label: "Bulan Lalu", range: { from: startOfMonth(subMonths(new Date(), 1)), to: endOfMonth(subMonths(new Date(), 1)) } },
+    ];
 
     const { 
         bestSellers, 
@@ -544,14 +554,29 @@ export default function AssetReportPage() {
                                     )}
                                 </Button>
                             </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0" align="end">
+                            <PopoverContent className="flex w-auto flex-row" align="end">
+                                 <div className="flex flex-col gap-1 pr-4 border-r">
+                                    {datePresets.map(preset => {
+                                        const isActive = date?.from && date.to && isSameDay(date.from, preset.range.from) && isSameDay(date.to, preset.range.to);
+                                        return (
+                                            <Button
+                                                key={preset.label}
+                                                variant={isActive ? "secondary" : "ghost"}
+                                                className="justify-start"
+                                                onClick={() => setDate(preset.range)}
+                                            >
+                                                {preset.label}
+                                            </Button>
+                                        );
+                                    })}
+                                </div>
                                 <Calendar
                                     initialFocus
                                     mode="range"
                                     defaultMonth={date?.from}
                                     selected={date}
                                     onSelect={setDate}
-                                    numberOfMonths={2}
+                                    numberOfMonths={1}
                                 />
                             </PopoverContent>
                         </Popover>
@@ -648,4 +673,5 @@ export default function AssetReportPage() {
     
 
     
+
 
