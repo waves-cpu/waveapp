@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useMemo, useState, useDeferredValue } from 'react';
@@ -8,14 +9,14 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { subDays, parseISO, isWithinInterval, startOfDay, endOfDay, startOfMonth, endOfMonth, subMonths } from 'date-fns';
+import { subDays, parseISO, isWithinInterval, startOfDay, endOfDay, startOfMonth, endOfMonth, subMonths, isAfter, isSameDay } from 'date-fns';
 import { Flame, TrendingUp, Anchor, DollarSign, Package, Eye, Search, ChevronDown, Edit, Calendar as CalendarIcon } from 'lucide-react';
 import Image from 'next/image';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { categories as allCategories, type InventoryItem, type InventoryItemVariant } from '@/types';
+import { categories as allCategories, type InventoryItem, type InventoryItemVariant, type AdjustmentHistory } from '@/types';
 import { Input } from '@/components/ui/input';
 import { Pagination } from '@/components/ui/pagination';
 import { cn, formatToWIB } from '@/lib/utils';
@@ -115,7 +116,7 @@ function PerformanceTable({ title, description, products, icon, onViewAll }: { t
                                                     <ChevronDown className={cn("h-4 w-4 transition-transform", expandedRows.has(p.id) && "rotate-180")} />
                                                 )}
                                             </div>
-                                            <Image src={p.imageUrl || 'https://placehold.co/40x40.png'} alt={p.name} width={32} height={32} className="rounded-sm" data-ai-hint="product image"/>
+                                            <Image src={p.imageUrl || 'https://placehold.co/40x40.png'} alt={p.name} width={32} height={32} className="rounded-sm" data-ai-hint="product image" />
                                             <div>
                                                 <p className="font-medium text-sm">{p.name}</p>
                                                 <p className="text-xs text-muted-foreground">SKU: {p.sku || 'N/A'}</p>
@@ -373,6 +374,24 @@ export default function AssetReportPage() {
         const toDate = date.to || date.from;
         const salesInDateRange = allSales.filter(sale => isWithinInterval(parseISO(sale.saleDate), { start: startOfDay(date.from!), end: endOfDay(toDate) }));
         
+        const isHistorical = !isSameDay(endOfDay(toDate), endOfDay(new Date()));
+
+        const getHistoricalStock = (baseItem: { stock?: number, history?: AdjustmentHistory[] }) => {
+            if (!isHistorical) {
+                return baseItem.stock || 0;
+            }
+            if (!baseItem.history) {
+                return baseItem.stock || 0;
+            }
+
+            let currentStock = baseItem.stock || 0;
+            const changesAfterPeriod = baseItem.history
+                .filter(h => isAfter(parseISO(h.date as any), endOfDay(toDate)))
+                .reduce((sum, h) => sum + h.change, 0);
+            
+            return currentStock - changesAfterPeriod;
+        };
+        
         const salesBySku = new Map<string, number>();
         salesInDateRange.forEach(sale => {
             if (sale.sku && !['Cancelled', 'Return', 'Dibatalkan'].includes(sale.status || '')) {
@@ -388,25 +407,28 @@ export default function AssetReportPage() {
                 if (item.variants && item.variants.length > 0) {
                     performanceVariants = item.variants.map(v => {
                         const unitsSold = v.sku ? salesBySku.get(v.sku) || 0 : 0;
-                        const assetValue = v.stock * (v.costPrice || 0);
+                        const historicalStock = getHistoricalStock(v);
+                        const assetValue = historicalStock * (v.costPrice || 0);
                         return {
                             id: v.id,
                             name: v.name,
                             sku: v.sku,
-                            stock: v.stock,
+                            stock: historicalStock,
                             assetValue: assetValue,
                             unitsSold: unitsSold,
                         };
                     });
                 }
                 
+                const historicalStockSimple = getHistoricalStock(item);
+                
                 const totalStock = performanceVariants.length > 0
                     ? performanceVariants.reduce((sum, v) => sum + v.stock, 0)
-                    : (item.stock || 0);
+                    : historicalStockSimple;
                 
                 const totalAssetValue = performanceVariants.length > 0
                     ? performanceVariants.reduce((sum, v) => sum + v.assetValue, 0)
-                    : (item.stock || 0) * (item.costPrice || 0);
+                    : totalStock * (item.costPrice || 0);
                 
                 const unitsSold = performanceVariants.length > 0
                     ? performanceVariants.reduce((sum, v) => sum + v.unitsSold, 0)
@@ -425,7 +447,7 @@ export default function AssetReportPage() {
                 };
             });
         
-        const totalStock = allProducts.reduce((sum, p) => sum + p.totalStock, 0);
+        const totalStockValue = allProducts.reduce((sum, p) => sum + p.totalStock, 0);
 
         const diffTime = Math.abs((date.to || date.from).getTime() - date.from.getTime());
         const diffDays = Math.max(1, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
@@ -445,7 +467,7 @@ export default function AssetReportPage() {
             normalMoversAssetValue,
             slowMoversAssetValue,
             totalAssetValue: bestSellersAssetValue + normalMoversAssetValue + slowMoversAssetValue,
-            totalStock,
+            totalStock: totalStockValue,
         };
 
     }, [items, allSales, loading, date, categoryFilter]);
@@ -626,3 +648,4 @@ export default function AssetReportPage() {
     
 
     
+
