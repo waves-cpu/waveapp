@@ -537,14 +537,16 @@ export default function AssetReportPage() {
     
             const dateFrom = date?.from ? formatToWIB(date.from, 'dd-MM-yy') : 'start';
             const dateTo = date?.to ? formatToWIB(date.to, 'dd-MM-yy') : 'end';
-            const fileName = `Laporan_Aset_${dateFrom}_sampai_${dateTo}.xlsx`;
+            const category = categoryFilter || 'semua_kategori';
+            
+            const fileName = `Laporan_Aset_${category}_${dateFrom}_sampai_${dateTo}.xlsx`;
             
             XLSX.writeFile(wb, fileName);
     
             update({ id, title: "Unduhan Siap", description: `File '${fileName}' telah diunduh.` });
             setIsDownloading(false);
         }, 500);
-    }, [bestSellers, normalMovers, slowMovers, date, toast]);
+    }, [bestSellers, normalMovers, slowMovers, date, categoryFilter, toast]);
 
     if (loading) {
         return (
