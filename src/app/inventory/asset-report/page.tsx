@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useMemo, useState, useDeferredValue, useCallback } from 'react';
@@ -393,16 +394,22 @@ export default function AssetReportPage() {
             if (!isHistorical) {
                 return baseItem.stock || 0;
             }
-            if (!baseItem.history) {
-                return baseItem.stock || 0;
+            if (!baseItem.history || baseItem.history.length === 0) {
+                return 0;
             }
 
-            let currentStock = baseItem.stock || 0;
-            const changesAfterPeriod = baseItem.history
-                .filter(h => isAfter(parseISO(h.date as any), endOfDay(toDate)))
-                .reduce((sum, h) => sum + h.change, 0);
+            // The history is sorted DESC in the service, so we find the first entry
+            // that is not after the end of the selected period.
+            const lastEntryBeforeOrOnEndDate = baseItem.history.find(h => 
+                !isAfter(parseISO(h.date as any), endOfDay(toDate))
+            );
+
+            if (lastEntryBeforeOrOnEndDate) {
+                return lastEntryBeforeOrOnEndDate.newStockLevel;
+            }
             
-            return currentStock - changesAfterPeriod;
+            // If all history entries are after the selected period, it means the stock was 0 before the first entry.
+            return 0;
         };
         
         const salesBySku = new Map<string, number>();
@@ -461,6 +468,7 @@ export default function AssetReportPage() {
             });
         
         const totalStockValue = allProducts.reduce((sum, p) => sum + p.totalStock, 0);
+        const totalAssetValueValue = allProducts.reduce((sum, p) => sum + p.totalAssetValue, 0);
 
         const diffTime = Math.abs((date.to || date.from).getTime() - date.from.getTime());
         const diffDays = Math.max(1, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
@@ -479,7 +487,7 @@ export default function AssetReportPage() {
             bestSellersAssetValue,
             normalMoversAssetValue,
             slowMoversAssetValue,
-            totalAssetValue: bestSellersAssetValue + normalMoversAssetValue + slowMoversAssetValue,
+            totalAssetValue: totalAssetValueValue,
             totalStock: totalStockValue,
         };
 
