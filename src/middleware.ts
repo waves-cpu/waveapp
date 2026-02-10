@@ -2,7 +2,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-const API_KEY = process.env.API_KEY || 'secret-api-key-for-waveapp';
+const API_KEY = process.env.API_KEY;
 
 export function middleware(request: NextRequest) {
   // Hanya jalankan middleware untuk path /api/*

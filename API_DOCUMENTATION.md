@@ -7,15 +7,15 @@ Dokumen ini menjelaskan cara menggunakan API WaveApp untuk berinteraksi dengan d
 Setiap permintaan (request) ke API harus menyertakan sebuah *API Key* pada bagian *header* untuk otentikasi.
 
 - **Header**: `X-API-Key`
-- **Value**: `secret-api-key-for-waveapp`
+- **Value**: `process.env.NEXT_PUBLIC_API_KEY` (Gunakan variabel ini)
 
-**Penting:** Jaga kerahasiaan API Key ini. Di lingkungan produksi, Anda harus menggunakan *key* yang lebih kompleks dan menyimpannya dengan aman.
+**Penting:** Kunci API ini harus dirahasiakan. Di lingkungan produksi, atur ini sebagai *environment variable* yang aman.
 
 **Contoh Header:**
 ```
 GET /api/products
 Host: nama-domain-anda.com
-X-API-Key: secret-api-key-for-waveapp
+X-API-Key: [KUNCI_RAHASIA_ANDA]
 ```
 
 ---
@@ -26,7 +26,28 @@ Semua *endpoint* API diawali dengan `/api`. Jika aplikasi Anda di-hosting di `ht
 
 ---
 
-## 3. Endpoint API
+## 3. Pengembangan Lokal dari Perangkat Mobile (Android/iOS)
+
+Saat menjalankan aplikasi ini di komputer lokal (misalnya, dengan `npm run dev`), `localhost` tidak dapat diakses langsung dari perangkat mobile Anda (seperti HP Android) yang berada di jaringan yang sama. Ikuti langkah-langkah ini untuk menghubungkannya:
+
+1.  **Pastikan Terhubung ke Jaringan yang Sama**: Komputer dan perangkat mobile Anda harus terhubung ke jaringan Wi-Fi yang sama.
+
+2.  **Temukan Alamat IP Komputer Anda**:
+    *   **Di Windows**: Buka **Command Prompt** dan ketik `ipconfig`. Cari alamat "IPv4 Address" (contoh: `192.168.1.10`).
+    *   **Di macOS/Linux**: Buka **Terminal** dan ketik `ifconfig` atau `ip a`. Cari alamat "inet" di bawah `en0` atau `wlan0` (contoh: `192.168.1.10`).
+
+3.  **Gunakan Alamat IP di Aplikasi Mobile Anda**:
+    Di kode aplikasi mobile Anda, ganti `localhost:1999` dengan alamat IP komputer Anda diikuti port `1999`.
+
+    **Contoh:**
+    Jika alamat IP komputer Anda adalah `192.168.1.10`, maka URL API Anda menjadi:
+    `http://192.168.1.10:1999/api/products`
+
+    *Catatan: Skrip `dev` di `package.json` sudah dikonfigurasi (`-H 0.0.0.0`) untuk menerima koneksi dari perangkat lain di jaringan Anda.*
+
+---
+
+## 4. Endpoint API
 
 Berikut adalah daftar endpoint utama yang tersedia.
 
