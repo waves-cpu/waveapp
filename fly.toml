@@ -14,7 +14,7 @@ primary_region = 'sin'
   destination="/app/db"
 
 [processes]
-  app = "pm2-runtime start ecosystem.config.js"
+  app = "/app/start.sh"
 
 [http_service]
   internal_port = 8080

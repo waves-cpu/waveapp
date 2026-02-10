@@ -2,8 +2,8 @@ module.exports = {
   apps: [
     {
       name: 'waveapp',
-      script: 'npm',
-      args: 'run start',
+      script: 'next',
+      args: 'start -p 3000',
       exec_mode: 'cluster',
       instances: '1',
       autorestart: true,
