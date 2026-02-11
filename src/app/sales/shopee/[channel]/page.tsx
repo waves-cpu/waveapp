@@ -34,9 +34,9 @@ function DatePickerClient({
   selectedDate: Date | undefined,
   onDateChange: (date: Date | undefined) => void,
 }) {
-  const [isClient, setIsClient] = useState(false);
+  const [isClient, setIsClient] = React.useState(false);
 
-  useEffect(() => {
+  React.useEffect(() => {
     setIsClient(true);
   }, []);
 
