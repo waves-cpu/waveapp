@@ -451,7 +451,7 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
                                      </div>
                                 )}
                             </div>
-                            <div className="relative mb-4">
+                            <div className="relative mb-4 max-w-sm">
                                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                                 <Input
                                     placeholder="Cari produk dalam daftar ini..."
