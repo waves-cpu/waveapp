@@ -494,34 +494,39 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
                             <CardDescription>Atur harga diskon untuk produk dalam kategori '{selectedCategory || "..."}'.</CardDescription>
                         </CardHeader>
                         <CardContent>
-                             <div className="flex justify-between items-center flex-wrap gap-4 mb-6">
-                                <Button type="button" onClick={() => setProductSelectorOpen(true)} disabled={!selectedCategory}>
-                                    <PlusCircle className="mr-2 h-4 w-4" />
-                                    Pilih Produk
-                                </Button>
-                                <div className="flex items-center gap-4 w-full sm:w-auto">
-                                    <div className="relative flex-grow sm:flex-grow-0">
-                                        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                                        <Input
-                                            placeholder="Cari produk..."
-                                            value={productSearch}
-                                            onChange={(e) => setProductSearch(e.target.value)}
-                                            className="pl-8 h-9"
-                                        />
-                                    </div>
-                                    <div className="flex items-center gap-2">
+                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 items-end">
+                                <div>
+                                    <Button type="button" onClick={() => setProductSelectorOpen(true)} disabled={!selectedCategory}>
+                                        <PlusCircle className="mr-2 h-4 w-4" />
+                                        Pilih Produk
+                                    </Button>
+                                </div>
+                                <div className="relative md:col-span-1">
+                                    <Label htmlFor="product-search" className="sr-only">Cari produk</Label>
+                                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                                    <Input
+                                        id="product-search"
+                                        placeholder="Cari produk dalam daftar..."
+                                        value={productSearch}
+                                        onChange={(e) => setProductSearch(e.target.value)}
+                                        className="pl-8 h-9"
+                                    />
+                                </div>
+                                <div className="flex items-center gap-2 md:col-span-1">
+                                    <div className="flex-grow">
+                                        <Label htmlFor="global-bulk-price" className="sr-only">Ubah harga massal</Label>
                                         <Input
                                             id="global-bulk-price"
                                             type="number"
                                             placeholder="Ubah Harga"
-                                            className="h-9 w-32"
+                                            className="h-9"
                                             value={globalBulkPrice}
                                             onChange={(e) => setGlobalBulkPrice(e.target.value === '' ? '' : Number(e.target.value))}
                                         />
-                                        <Button type="button" size="sm" variant="secondary" onClick={applyGlobalBulkPrice}>
-                                            Terapkan ({bulkSelectedIds.size})
-                                        </Button>
                                     </div>
+                                    <Button type="button" size="sm" variant="secondary" onClick={applyGlobalBulkPrice} className="shrink-0">
+                                        Terapkan ({bulkSelectedIds.size})
+                                    </Button>
                                 </div>
                             </div>
                                <Table>
