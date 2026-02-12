@@ -8,7 +8,11 @@
     "build": "next build",
     "start": "next start -p ${PORT:-1999} -H 0.0.0.0",
     "lint": "next lint",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "pm2:start": "npm run build && pm2 start ecosystem.config.js",
+    "pm2:stop": "pm2 stop waveapp",
+    "pm2:restart": "pm2 restart waveapp",
+    "pm2:delete": "pm2 delete waveapp"
   },
   "dependencies": {
     "@ducanh2912/next-pwa": "^10.2.8",
