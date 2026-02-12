@@ -43,6 +43,8 @@ import { ProductSelectionDialog } from './product-selection-dialog';
 import { Separator } from '@/components/ui/separator';
 import { Pagination } from '@/components/ui/pagination';
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from '@/components/ui/checkbox';
+
 
 const formSchema = z.object({
   id: z.number().optional(),
@@ -85,6 +87,7 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
     const [globalBulkPrice, setGlobalBulkPrice] = useState<number | ''>('');
     const [masterPrices, setMasterPrices] = useState<Record<string, number | ''>>({});
     const [productSearch, setProductSearch] = useState('');
+    const [bulkSelectedIds, setBulkSelectedIds] = useState<Set<string>>(new Set());
 
 
     const getProductsForForm = useCallback((products: any[]): any[] => {
@@ -177,6 +180,10 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
     const selectedCategory = form.watch('category');
     const selectedChannel = form.watch('channel');
     
+    const getItemId = (product: { productId: number; variantId?: number }) => {
+        return product.variantId?.toString() || product.productId.toString();
+    };
+
     const handleSelectProducts = useCallback((selectedIds: string[]) => {
         const newProductList: (Omit<DiscountedProduct, 'originalPrice'> & { originalPrice: number | null, discountedPrice: number, productId: number })[] = [];
 
@@ -184,7 +191,7 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
         
         const existingFormProducts = new Map<string, any>();
         fields.forEach(field => {
-            const id = field.variantId ? field.variantId.toString() : field.productId.toString();
+            const id = getItemId(field);
             existingFormProducts.set(id, field);
         });
 
@@ -259,12 +266,28 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
     }
     
     const applyGlobalBulkPrice = () => {
+        if (bulkSelectedIds.size === 0) {
+            toast({
+                variant: "destructive",
+                title: "Tidak ada produk dipilih",
+                description: "Silakan pilih produk menggunakan checkbox untuk menerapkan harga massal."
+            });
+            return;
+        }
+
         const priceValue = typeof globalBulkPrice === 'string' ? parseFloat(globalBulkPrice) : globalBulkPrice;
         if (typeof priceValue === 'number' && priceValue >= 0) {
             fields.forEach((_, index) => {
-                form.setValue(`products.${index}.discountedPrice`, priceValue, { shouldDirty: true });
+                const field = form.getValues(`products.${index}`);
+                const fieldId = getItemId(field);
+
+                if (bulkSelectedIds.has(fieldId)) {
+                    form.setValue(`products.${index}.discountedPrice`, priceValue, { shouldDirty: true });
+                }
             });
-            toast({ title: 'Harga Massal Diterapkan' });
+            toast({ title: 'Harga Massal Diterapkan', description: `Harga baru telah diterapkan pada ${bulkSelectedIds.size} item.` });
+            setBulkSelectedIds(new Set());
+            setGlobalBulkPrice('');
         } else {
             toast({ variant: 'destructive', title: 'Harga Tidak Valid' });
         }
@@ -344,6 +367,45 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
         const indicesToRemove = group.variants.map(v => v.originalIndex).sort((a, b) => b - a);
         remove(indicesToRemove);
     };
+
+    const paginatedItemIds = useMemo(() => {
+        return paginatedGroups.flatMap(group => group.variants.map(v => getItemId(v)));
+    }, [paginatedGroups]);
+
+    const handleSelectAllOnPage = (checked: boolean) => {
+        const newSelectedIds = new Set(bulkSelectedIds);
+        if (checked) {
+            paginatedItemIds.forEach(id => newSelectedIds.add(id));
+        } else {
+            paginatedItemIds.forEach(id => newSelectedIds.delete(id));
+        }
+        setBulkSelectedIds(newSelectedIds);
+    };
+
+    const handleSelectGroup = (variants: any[], checked: boolean) => {
+        const newSelectedIds = new Set(bulkSelectedIds);
+        const idsToToggle = variants.map(v => getItemId(v));
+        if (checked) {
+            idsToToggle.forEach(id => newSelectedIds.add(id));
+        } else {
+            idsToToggle.forEach(id => newSelectedIds.delete(id));
+        }
+        setBulkSelectedIds(newSelectedIds);
+    };
+
+    const handleSelectOne = (itemId: string, checked: boolean) => {
+        const newSelectedIds = new Set(bulkSelectedIds);
+        if (checked) {
+            newSelectedIds.add(itemId);
+        } else {
+            newSelectedIds.delete(itemId);
+        }
+        setBulkSelectedIds(newSelectedIds);
+    };
+
+    const isPageAllSelected = paginatedItemIds.length > 0 && paginatedItemIds.every(id => bulkSelectedIds.has(id));
+    const isPagePartiallySelected = paginatedItemIds.some(id => bulkSelectedIds.has(id)) && !isPageAllSelected;
+
 
     return (
         <>
@@ -432,97 +494,69 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
                             <CardDescription>Atur harga diskon untuk produk dalam kategori '{selectedCategory || "..."}'.</CardDescription>
                         </CardHeader>
                         <CardContent>
-                             <div className="flex justify-between items-start flex-wrap gap-4 mb-6">
+                             <div className="flex justify-between items-center flex-wrap gap-4 mb-6">
                                 <Button type="button" onClick={() => setProductSelectorOpen(true)} disabled={!selectedCategory}>
                                     <PlusCircle className="mr-2 h-4 w-4" />
                                     Pilih Produk
                                 </Button>
-                                {groupedProducts.length > 1 && (
-                                     <div className="flex items-center gap-2 w-full sm:w-auto">
-                                         <Input
-                                             id="global-bulk-price"
-                                             type="number"
-                                             placeholder="Ubah Harga"
-                                             className="h-9 flex-grow min-w-0"
-                                             value={globalBulkPrice}
-                                             onChange={(e) => setGlobalBulkPrice(e.target.value === '' ? '' : Number(e.target.value))}
-                                         />
-                                         <Button type="button" size="sm" variant="secondary" onClick={applyGlobalBulkPrice}>Terapkan ke Semua</Button>
-                                     </div>
-                                )}
-                            </div>
-                            <div className="relative mb-4 max-w-sm">
-                                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                                <Input
-                                    placeholder="Cari produk dalam daftar ini..."
-                                    value={productSearch}
-                                    onChange={(e) => setProductSearch(e.target.value)}
-                                    className="pl-8"
-                                />
+                                <div className="flex items-center gap-4 w-full sm:w-auto">
+                                    <div className="relative flex-grow sm:flex-grow-0">
+                                        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                                        <Input
+                                            placeholder="Cari produk..."
+                                            value={productSearch}
+                                            onChange={(e) => setProductSearch(e.target.value)}
+                                            className="pl-8 h-9"
+                                        />
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <Input
+                                            id="global-bulk-price"
+                                            type="number"
+                                            placeholder="Ubah Harga"
+                                            className="h-9 w-32"
+                                            value={globalBulkPrice}
+                                            onChange={(e) => setGlobalBulkPrice(e.target.value === '' ? '' : Number(e.target.value))}
+                                        />
+                                        <Button type="button" size="sm" variant="secondary" onClick={applyGlobalBulkPrice}>
+                                            Terapkan ({bulkSelectedIds.size})
+                                        </Button>
+                                    </div>
+                                </div>
                             </div>
                                <Table>
                                    <TableHeader>
                                     <TableRow>
+                                        <TableHead className="w-[50px]">
+                                             <Checkbox
+                                                checked={isPageAllSelected ? true : isPagePartiallySelected ? 'indeterminate' : false}
+                                                onCheckedChange={(checked) => handleSelectAllOnPage(!!checked)}
+                                                aria-label="Select all on this page"
+                                            />
+                                        </TableHead>
                                         <TableHead className="w-[40%]">Produk</TableHead>
                                         <TableHead className="w-[15%]">Harga Asli</TableHead>
                                         <TableHead className="w-[15%]">Harga Diskon</TableHead>
                                         <TableHead className="w-[15%]">Diskon</TableHead>
-                                        <TableHead className="w-[15%] text-right">Aksi</TableHead>
+                                        <TableHead className="w-[10%] text-right">Aksi</TableHead>
                                     </TableRow>
                                    </TableHeader>
                                    <TableBody>
                                         {paginatedGroups.length > 0 ? paginatedGroups.map((group) => {
-                                            if (group.variants.length === 1 && !isEditMode) {
-                                                const field = group.variants[0];
-                                                const originalIndex = field.originalIndex;
-                                                const displayName = field.variantName ? `${field.productName} - ${field.variantName}` : field.productName;
-                                                const displaySku = field.sku || group.sku || 'N/A';
-                                                const displayImageUrl = field.imageUrl || group.imageUrl || 'https://placehold.co/40x40.png';
+                                            const variantIds = group.variants.map(v => getItemId(v));
+                                            const selectedCount = variantIds.filter(id => bulkSelectedIds.has(id)).length;
+                                            const isAllSelected = selectedCount > 0 && selectedCount === variantIds.length;
+                                            const isPartiallySelected = selectedCount > 0 && !isAllSelected;
 
-                                                return (
-                                                    <TableRow key={field.productId}>
-                                                        <TableCell>
-                                                            <div className="flex items-center gap-3">
-                                                                <Image src={displayImageUrl} alt={displayName} width={32} height={32} className="rounded-sm" />
-                                                                <div>
-                                                                    <p className="font-medium text-sm">{displayName}</p>
-                                                                    <p className="text-xs text-muted-foreground">SKU: {displaySku}</p>
-                                                                </div>
-                                                            </div>
-                                                        </TableCell>
-                                                        <TableCell>
-                                                            <p className="text-sm text-muted-foreground line-through">{field.originalPrice ? new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(field.originalPrice) : 'N/A'}</p>
-                                                        </TableCell>
-                                                        <TableCell>
-                                                            <FormField control={form.control} name={`products.${originalIndex}.discountedPrice`} render={({ field: formField }) => (
-                                                                <FormItem><FormControl><Input type="number" {...formField} onChange={e => formField.onChange(Number(e.target.value))} className="h-8 w-32" /></FormControl><FormMessage /></FormItem>
-                                                            )}/>
-                                                        </TableCell>
-                                                        <TableCell>
-                                                            {(() => {
-                                                                const discountedPriceValue = form.watch(`products.${originalIndex}.discountedPrice`);
-                                                                const discountedPrice = Number(discountedPriceValue);
-                                                                const originalPrice = field.originalPrice;
-                                                                if (originalPrice && originalPrice > 0 && !isNaN(discountedPrice) && discountedPrice < originalPrice) {
-                                                                    const discountPercentage = ((originalPrice - discountedPrice) / originalPrice) * 100;
-                                                                    if (discountPercentage > 0) {
-                                                                        return <Badge variant="destructive">{Math.round(discountPercentage)}%</Badge>;
-                                                                    }
-                                                                }
-                                                                return null;
-                                                            })()}
-                                                        </TableCell>
-                                                        <TableCell className="text-right">
-                                                            <Button type="button" variant="ghost" size="icon" className="text-destructive hover:text-destructive-foreground hover:bg-destructive" onClick={() => remove(originalIndex)}>
-                                                                <Trash2 className="h-4 w-4" />
-                                                            </Button>
-                                                        </TableCell>
-                                                    </TableRow>
-                                                );
-                                            }
                                             return (
                                                 <React.Fragment key={group.productId}>
                                                     <TableRow className="bg-muted/20 hover:bg-muted/40 font-semibold">
+                                                        <TableCell>
+                                                            <Checkbox
+                                                                checked={isAllSelected ? true : (isPartiallySelected ? 'indeterminate' : false)}
+                                                                onCheckedChange={(checked) => handleSelectGroup(group.variants, !!checked)}
+                                                            />
+                                                        </TableCell>
                                                          <TableCell>
                                                             <div className="flex items-center gap-3">
                                                                 <Image src={group.imageUrl || 'https://placehold.co/40x40.png'} alt={group.productName} width={32} height={32} className="rounded-sm" />
@@ -554,8 +588,15 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
                                                     </TableRow>
                                                     {group.variants.map((field) => {
                                                         const originalIndex = field.originalIndex;
+                                                        const fieldId = getItemId(field);
                                                         return (
                                                             <TableRow key={field.variantId}>
+                                                                 <TableCell>
+                                                                    <Checkbox
+                                                                        checked={bulkSelectedIds.has(fieldId)}
+                                                                        onCheckedChange={(checked) => handleSelectOne(fieldId, !!checked)}
+                                                                    />
+                                                                </TableCell>
                                                                 <TableCell>
                                                                     <div className="flex items-center gap-3 pl-1">
                                                                         <div className="flex h-8 w-8 items-center justify-center rounded-sm shrink-0">
@@ -599,7 +640,7 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
                                                     })}
                                                 </React.Fragment>
                                             );
-                                        }) : (<TableRow><TableCell colSpan={5} className="h-24 text-center">Pilih kategori untuk menambahkan produk.</TableCell></TableRow>)}
+                                        }) : (<TableRow><TableCell colSpan={6} className="h-24 text-center">Pilih kategori untuk menambahkan produk.</TableCell></TableRow>)}
                                    </TableBody>
                                </Table>
                         </CardContent>
@@ -626,7 +667,7 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
                 onOpenChange={setProductSelectorOpen}
                 onSelect={handleSelectProducts}
                 availableItems={availableItemsForSelection}
-                initialSelectedIds={new Set(fields.map(f => f.variantId?.toString() || f.productId.toString()))}
+                initialSelectedIds={new Set(fields.map(f => getItemId(f)))}
                 title="Pilih Produk untuk Diskon"
                 description={`Pilih produk dari kategori "${selectedCategory}" untuk ditambahkan ke grup diskon ini.`}
                 discountGroups={discountGroups || []}
