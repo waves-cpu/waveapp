@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useForm, useFieldArray } from 'react-hook-form';
@@ -77,6 +76,7 @@ interface DiscountGroupEditorProps {
     isVoucherForm: boolean;
 }
 
+// Moved getItemId to module scope to prevent ReferenceError
 const getItemId = (product: { productId: number; variantId?: number | undefined }) => {
     return product.variantId?.toString() || product.productId.toString();
 };
@@ -640,6 +640,11 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
 }
 
 const ProductTable = ({ paginatedGroups, bulkSelectedIds, masterPrices, form, handleSelectOne, handleSelectGroup, handleRemoveGroup, isPageAllSelected, isPagePartiallySelected, handleSelectAllOnPage, applyMasterPrice, setMasterPrices, remove }: any) => {
+    
+    const getItemId = (product: { productId: number; variantId?: number | undefined }) => {
+        return product.variantId?.toString() || product.productId.toString();
+    };
+
     return (
         <Table>
             <TableHeader>
@@ -762,5 +767,3 @@ const ProductTable = ({ paginatedGroups, bulkSelectedIds, masterPrices, form, ha
         </Table>
     )
 }
-
-    
