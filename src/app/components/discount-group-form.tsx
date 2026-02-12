@@ -26,7 +26,7 @@ import {
 import { useInventory } from '@/hooks/use-inventory';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
-import { CalendarIcon, PlusCircle, Pencil, Trash2, ChevronDown, Store } from 'lucide-react';
+import { CalendarIcon, PlusCircle, Pencil, Trash2, ChevronDown, Store, Search } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import type { DiscountGroup, DiscountedProduct, InventoryItem } from '@/types';
@@ -84,6 +84,7 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
     const isEditMode = !!existingGroup;
     const [globalBulkPrice, setGlobalBulkPrice] = useState<number | ''>('');
     const [masterPrices, setMasterPrices] = useState<Record<string, number | ''>>({});
+    const [productSearch, setProductSearch] = useState('');
 
 
     const getProductsForForm = useCallback((products: any[]): any[] => {
@@ -310,15 +311,34 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
         return Object.values(groups).sort((a,b) => a.productName.localeCompare(b.productName));
     }, [fields, items]);
     
+    const filteredGroupedProducts = useMemo(() => {
+        if (!productSearch) return groupedProducts;
+        const lowercasedSearch = productSearch.toLowerCase();
+        return groupedProducts.filter(group => {
+            const parentMatch = group.productName.toLowerCase().includes(lowercasedSearch) || (group.sku && group.sku.toLowerCase().includes(lowercasedSearch));
+            if (parentMatch) return true;
+            const variantMatch = group.variants.some(variant => 
+                variant.productName.toLowerCase().includes(lowercasedSearch) ||
+                (variant.variantName && variant.variantName.toLowerCase().includes(lowercasedSearch)) ||
+                (variant.sku && variant.sku.toLowerCase().includes(lowercasedSearch))
+            );
+            return variantMatch;
+        });
+    }, [groupedProducts, productSearch]);
+    
     const [currentPage, setCurrentPage] = useState(1);
     const itemsPerPage = 10;
 
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [productSearch]);
+
     const paginatedGroups = useMemo(() => {
         const startIndex = (currentPage - 1) * itemsPerPage;
-        return groupedProducts.slice(startIndex, startIndex + itemsPerPage);
-    }, [groupedProducts, currentPage, itemsPerPage]);
+        return filteredGroupedProducts.slice(startIndex, startIndex + itemsPerPage);
+    }, [filteredGroupedProducts, currentPage, itemsPerPage]);
 
-    const totalPages = Math.ceil(groupedProducts.length / itemsPerPage);
+    const totalPages = Math.ceil(filteredGroupedProducts.length / itemsPerPage);
 
     const handleRemoveGroup = (group: { variants: { originalIndex: number }[] }) => {
         const indicesToRemove = group.variants.map(v => v.originalIndex).sort((a, b) => b - a);
@@ -412,26 +432,33 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
                             <CardDescription>Atur harga diskon untuk produk dalam kategori '{selectedCategory || "..."}'.</CardDescription>
                         </CardHeader>
                         <CardContent>
-                             <div className="flex justify-between items-center mb-6">
+                             <div className="flex justify-between items-start flex-wrap gap-4 mb-6">
                                 <Button type="button" onClick={() => setProductSelectorOpen(true)} disabled={!selectedCategory}>
                                     <PlusCircle className="mr-2 h-4 w-4" />
                                     Pilih Produk
                                 </Button>
                                 {groupedProducts.length > 1 && (
-                                     <div className="flex items-center justify-center pt-4">
-                                         <div className="flex items-center gap-2 w-full max-w-sm">
-                                             <Input
-                                                 id="global-bulk-price"
-                                                 type="number"
-                                                 placeholder="Ubah Harga"
-                                                 className="h-9 flex-grow"
-                                                 value={globalBulkPrice}
-                                                 onChange={(e) => setGlobalBulkPrice(e.target.value === '' ? '' : Number(e.target.value))}
-                                             />
-                                             <Button type="button" size="sm" variant="secondary" onClick={applyGlobalBulkPrice}>Terapkan ke Semua</Button>
-                                         </div>
+                                     <div className="flex items-center gap-2 w-full sm:w-auto">
+                                         <Input
+                                             id="global-bulk-price"
+                                             type="number"
+                                             placeholder="Ubah Harga"
+                                             className="h-9 flex-grow min-w-0"
+                                             value={globalBulkPrice}
+                                             onChange={(e) => setGlobalBulkPrice(e.target.value === '' ? '' : Number(e.target.value))}
+                                         />
+                                         <Button type="button" size="sm" variant="secondary" onClick={applyGlobalBulkPrice}>Terapkan ke Semua</Button>
                                      </div>
                                 )}
+                            </div>
+                            <div className="relative mb-4">
+                                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                                <Input
+                                    placeholder="Cari produk dalam daftar ini..."
+                                    value={productSearch}
+                                    onChange={(e) => setProductSearch(e.target.value)}
+                                    className="pl-8"
+                                />
                             </div>
                                <Table>
                                    <TableHeader>
