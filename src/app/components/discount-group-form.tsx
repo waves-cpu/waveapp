@@ -26,7 +26,7 @@ import {
 import { useInventory } from '@/hooks/use-inventory';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
-import { CalendarIcon, PlusCircle, Pencil, Trash2, ChevronDown, Store, Search } from 'lucide-react';
+import { CalendarIcon, PlusCircle, Pencil, Trash2, ChevronDown, Store, Search, LayoutGrid, List } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import type { DiscountGroup, DiscountedProduct, InventoryItem } from '@/types';
@@ -44,6 +44,7 @@ import { Separator } from '@/components/ui/separator';
 import { Pagination } from '@/components/ui/pagination';
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from '@/components/ui/checkbox';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 
 const formSchema = z.object({
@@ -88,6 +89,8 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
     const [masterPrices, setMasterPrices] = useState<Record<string, number | ''>>({});
     const [productSearch, setProductSearch] = useState('');
     const [bulkSelectedIds, setBulkSelectedIds] = useState<Set<string>>(new Set());
+    const [activeTab, setActiveTab] = useState('unregistered');
+    const [initiallyRegisteredIds, setInitiallyRegisteredIds] = useState<Set<string>>(new Set());
 
 
     const getProductsForForm = useCallback((products: any[]): any[] => {
@@ -168,6 +171,12 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
     useEffect(() => {
         if (existingGroup) {
             form.reset(defaultDetails);
+            const initialIds = new Set(
+                (existingGroup.products || []).map(p => (p.variantId || p.productId).toString())
+            );
+            setInitiallyRegisteredIds(initialIds);
+        } else {
+            setInitiallyRegisteredIds(new Set());
         }
     }, [existingGroup, defaultDetails, form]);
 
@@ -180,7 +189,7 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
     const selectedCategory = form.watch('category');
     const selectedChannel = form.watch('channel');
     
-    const getItemId = (product: { productId: number; variantId?: number }) => {
+    const getItemId = (product: { productId: number; variantId?: number | undefined }) => {
         return product.variantId?.toString() || product.productId.toString();
     };
 
@@ -236,6 +245,8 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
         });
 
         replace(newProductList);
+        // Switch to the 'unregistered' tab after adding products
+        setActiveTab('unregistered');
     }, [items, fields, replace]);
 
 
@@ -308,13 +319,16 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
     const availableItemsForSelection = useMemo(() => items.filter(i => i.category === selectedCategory), [items, selectedCategory]);
 
     const groupedProducts = useMemo(() => {
-        const groups: Record<string, {
+        type ProductField = z.infer<typeof formSchema>['products'][number] & { id: string };
+        type GroupedProduct = {
             productId: number;
             productName: string;
             sku?: string;
             imageUrl?: string;
-            variants: (typeof fields[0] & { originalIndex: number })[];
-        }> = {};
+            variants: (ProductField & { originalIndex: number })[];
+        };
+
+        const groups: Record<string, GroupedProduct> = {};
 
         fields.forEach((field, index) => {
             const { productId } = field;
@@ -330,14 +344,43 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
             }
             groups[productId].variants.push({ ...field, originalIndex: index });
         });
-
-        return Object.values(groups).sort((a,b) => a.productName.localeCompare(b.productName));
+        
+        return Object.values(groups);
     }, [fields, items]);
     
+    const { registeredProducts, unregisteredProducts } = useMemo(() => {
+        const registered: any[] = [];
+        const unregistered: any[] = [];
+
+        groupedProducts.forEach(group => {
+            const registeredVariants = group.variants.filter(v => initiallyRegisteredIds.has(getItemId(v)));
+            const unregisteredVariants = group.variants.filter(v => !initiallyRegisteredIds.has(getItemId(v)));
+            
+            if (registeredVariants.length > 0) {
+                registered.push({ ...group, variants: registeredVariants });
+            }
+            if (unregisteredVariants.length > 0) {
+                unregistered.push({ ...group, variants: unregisteredVariants });
+            }
+        });
+        
+        return { registeredProducts: registered, unregisteredProducts: unregistered };
+    }, [groupedProducts, initiallyRegisteredIds]);
+    
+    
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 10;
+
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [productSearch]);
+    
+    const currentProducts = activeTab === 'registered' ? registeredProducts : unregisteredProducts;
+
     const filteredGroupedProducts = useMemo(() => {
-        if (!productSearch) return groupedProducts;
+        if (!productSearch) return currentProducts;
         const lowercasedSearch = productSearch.toLowerCase();
-        return groupedProducts.filter(group => {
+        return currentProducts.filter(group => {
             const parentMatch = group.productName.toLowerCase().includes(lowercasedSearch) || (group.sku && group.sku.toLowerCase().includes(lowercasedSearch));
             if (parentMatch) return true;
             const variantMatch = group.variants.some(variant => 
@@ -347,14 +390,7 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
             );
             return variantMatch;
         });
-    }, [groupedProducts, productSearch]);
-    
-    const [currentPage, setCurrentPage] = useState(1);
-    const itemsPerPage = 10;
-
-    useEffect(() => {
-        setCurrentPage(1);
-    }, [productSearch]);
+    }, [currentProducts, productSearch]);
 
     const paginatedGroups = useMemo(() => {
         const startIndex = (currentPage - 1) * itemsPerPage;
@@ -529,125 +565,46 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
                                     </Button>
                                 </div>
                             </div>
-                               <Table>
-                                   <TableHeader>
-                                    <TableRow>
-                                        <TableHead className="w-[50px]">
-                                             <Checkbox
-                                                checked={isPageAllSelected ? true : isPagePartiallySelected ? 'indeterminate' : false}
-                                                onCheckedChange={(checked) => handleSelectAllOnPage(!!checked)}
-                                                aria-label="Select all on this page"
-                                            />
-                                        </TableHead>
-                                        <TableHead className="w-[40%]">Produk</TableHead>
-                                        <TableHead className="w-[15%]">Harga Asli</TableHead>
-                                        <TableHead className="w-[15%]">Harga Diskon</TableHead>
-                                        <TableHead className="w-[15%]">Diskon</TableHead>
-                                        <TableHead className="w-[10%] text-right">Aksi</TableHead>
-                                    </TableRow>
-                                   </TableHeader>
-                                   <TableBody>
-                                        {paginatedGroups.length > 0 ? paginatedGroups.map((group) => {
-                                            const variantIds = group.variants.map(v => getItemId(v));
-                                            const selectedCount = variantIds.filter(id => bulkSelectedIds.has(id)).length;
-                                            const isAllSelected = selectedCount > 0 && selectedCount === variantIds.length;
-                                            const isPartiallySelected = selectedCount > 0 && !isAllSelected;
-
-                                            return (
-                                                <React.Fragment key={group.productId}>
-                                                    <TableRow className="bg-muted/20 hover:bg-muted/40 font-semibold">
-                                                        <TableCell>
-                                                            <Checkbox
-                                                                checked={isAllSelected ? true : (isPartiallySelected ? 'indeterminate' : false)}
-                                                                onCheckedChange={(checked) => handleSelectGroup(group.variants, !!checked)}
-                                                            />
-                                                        </TableCell>
-                                                         <TableCell>
-                                                            <div className="flex items-center gap-3">
-                                                                <Image src={group.imageUrl || 'https://placehold.co/40x40.png'} alt={group.productName} width={32} height={32} className="rounded-sm" />
-                                                                <div>
-                                                                    <p className="text-sm text-primary">{group.productName}</p>
-                                                                    <p className="text-xs text-muted-foreground font-normal">SKU: {group.sku}</p>
-                                                                </div>
-                                                            </div>
-                                                        </TableCell>
-                                                        <TableCell colSpan={2} className="py-1">
-                                                            <div className="flex items-center gap-2 w-full max-w-sm">
-                                                                <Input
-                                                                    type="number"
-                                                                    placeholder="Ubah harga"
-                                                                    className="h-9 flex-grow"
-                                                                    value={masterPrices[group.productId.toString()] ?? ''}
-                                                                    onChange={e => setMasterPrices(prev => ({...prev, [group.productId.toString()]: e.target.value === '' ? '' : Number(e.target.value)}))}
-                                                                />
-                                                            </div>
-                                                        </TableCell>
-                                                        <TableCell className="py-1">
-                                                             <Button type="button" size="sm" variant="secondary" onClick={() => applyMasterPrice(group.productId)}>Terapkan</Button>
-                                                        </TableCell>
-                                                        <TableCell className="py-1 text-right">
-                                                            <Button type="button" variant="ghost" size="icon" className="text-destructive hover:text-destructive-foreground hover:bg-destructive h-8 w-8" onClick={() => handleRemoveGroup(group)}>
-                                                                <Trash2 className="h-4 w-4" />
-                                                            </Button>
-                                                        </TableCell>
-                                                    </TableRow>
-                                                    {group.variants.map((field) => {
-                                                        const originalIndex = field.originalIndex;
-                                                        const fieldId = getItemId(field);
-                                                        return (
-                                                            <TableRow key={field.variantId}>
-                                                                 <TableCell>
-                                                                    <Checkbox
-                                                                        checked={bulkSelectedIds.has(fieldId)}
-                                                                        onCheckedChange={(checked) => handleSelectOne(fieldId, !!checked)}
-                                                                    />
-                                                                </TableCell>
-                                                                <TableCell>
-                                                                    <div className="flex items-center gap-3 pl-1">
-                                                                        <div className="flex h-8 w-8 items-center justify-center rounded-sm shrink-0">
-                                                                            <Store className="h-5 w-5 text-gray-400" />
-                                                                        </div>
-                                                                        <div>
-                                                                            <p className="font-medium text-sm">{field.variantName}</p>
-                                                                            <p className="text-xs text-muted-foreground">{field.sku}</p>
-                                                                        </div>
-                                                                    </div>
-                                                                </TableCell>
-                                                                <TableCell>
-                                                                    <p className="text-sm text-muted-foreground line-through">{field.originalPrice ? new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(field.originalPrice) : 'N/A'}</p>
-                                                                </TableCell>
-                                                                <TableCell>
-                                                                    <FormField control={form.control} name={`products.${originalIndex}.discountedPrice`} render={({ field: formField }) => (
-                                                                        <FormItem><FormControl><Input type="number" {...formField} onChange={e => formField.onChange(Number(e.target.value))} className="h-8 w-32" /></FormControl><FormMessage /></FormItem>
-                                                                    )}/>
-                                                                </TableCell>
-                                                                <TableCell>
-                                                                    {(() => {
-                                                                        const discountedPriceValue = form.watch(`products.${originalIndex}.discountedPrice`);
-                                                                        const discountedPrice = Number(discountedPriceValue);
-                                                                        const originalPrice = field.originalPrice;
-                                                                        if (originalPrice && originalPrice > 0 && !isNaN(discountedPrice) && discountedPrice < originalPrice) {
-                                                                            const discountPercentage = ((originalPrice - discountedPrice) / originalPrice) * 100;
-                                                                            if (discountPercentage > 0) {
-                                                                                return <Badge variant="destructive">{Math.round(discountPercentage)}%</Badge>;
-                                                                            }
-                                                                        }
-                                                                        return null;
-                                                                    })()}
-                                                                </TableCell>
-                                                                <TableCell className="text-right">
-                                                                    <Button type="button" variant="ghost" size="icon" className="text-destructive hover:text-destructive-foreground hover:bg-destructive" onClick={() => remove(originalIndex)}>
-                                                                        <Trash2 className="h-4 w-4" />
-                                                                    </Button>
-                                                                </TableCell>
-                                                            </TableRow>
-                                                        );
-                                                    })}
-                                                </React.Fragment>
-                                            );
-                                        }) : (<TableRow><TableCell colSpan={6} className="h-24 text-center">Pilih kategori untuk menambahkan produk.</TableCell></TableRow>)}
-                                   </TableBody>
-                               </Table>
+                             <Tabs value={activeTab} onValueChange={setActiveTab}>
+                                <TabsList>
+                                    <TabsTrigger value="unregistered">Belum Terdaftar <Badge className="ml-2">{unregisteredProducts.length}</Badge></TabsTrigger>
+                                    <TabsTrigger value="registered">Sudah Terdaftar <Badge className="ml-2">{registeredProducts.length}</Badge></TabsTrigger>
+                                </TabsList>
+                                <TabsContent value="unregistered" className="mt-4">
+                                     <ProductTable 
+                                        paginatedGroups={paginatedGroups}
+                                        bulkSelectedIds={bulkSelectedIds}
+                                        masterPrices={masterPrices}
+                                        form={form}
+                                        handleSelectOne={handleSelectOne}
+                                        handleSelectGroup={handleSelectGroup}
+                                        handleRemoveGroup={handleRemoveGroup}
+                                        isPageAllSelected={isPageAllSelected}
+                                        isPagePartiallySelected={isPagePartiallySelected}
+                                        handleSelectAllOnPage={handleSelectAllOnPage}
+                                        applyMasterPrice={applyMasterPrice}
+                                        setMasterPrices={setMasterPrices}
+                                        remove={remove}
+                                    />
+                                </TabsContent>
+                                <TabsContent value="registered" className="mt-4">
+                                    <ProductTable 
+                                        paginatedGroups={paginatedGroups}
+                                        bulkSelectedIds={bulkSelectedIds}
+                                        masterPrices={masterPrices}
+                                        form={form}
+                                        handleSelectOne={handleSelectOne}
+                                        handleSelectGroup={handleSelectGroup}
+                                        handleRemoveGroup={handleRemoveGroup}
+                                        isPageAllSelected={isPageAllSelected}
+                                        isPagePartiallySelected={isPagePartiallySelected}
+                                        handleSelectAllOnPage={handleSelectAllOnPage}
+                                        applyMasterPrice={applyMasterPrice}
+                                        setMasterPrices={setMasterPrices}
+                                        remove={remove}
+                                    />
+                                </TabsContent>
+                            </Tabs>
                         </CardContent>
                         {totalPages > 1 && (
                             <CardFooter>
@@ -681,4 +638,132 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
             />
         </>
     );
+}
+
+const ProductTable = ({ paginatedGroups, bulkSelectedIds, masterPrices, form, handleSelectOne, handleSelectGroup, handleRemoveGroup, isPageAllSelected, isPagePartiallySelected, handleSelectAllOnPage, applyMasterPrice, setMasterPrices, remove }: any) => {
+    return (
+        <Table>
+            <TableHeader>
+            <TableRow>
+                <TableHead className="w-[50px]">
+                        <Checkbox
+                        checked={isPageAllSelected ? true : isPagePartiallySelected ? 'indeterminate' : false}
+                        onCheckedChange={(checked) => handleSelectAllOnPage(!!checked)}
+                        aria-label="Select all on this page"
+                    />
+                </TableHead>
+                <TableHead className="w-[40%]">Produk</TableHead>
+                <TableHead className="w-[15%]">Harga Asli</TableHead>
+                <TableHead className="w-[15%]">Harga Diskon</TableHead>
+                <TableHead className="w-[15%]">Diskon</TableHead>
+                <TableHead className="w-[10%] text-right">Aksi</TableHead>
+            </TableRow>
+            </TableHeader>
+            <TableBody>
+                {paginatedGroups.length > 0 ? paginatedGroups.map((group: any) => {
+                    const variantIds = group.variants.map((v: any) => getItemId(v));
+                    const selectedCount = variantIds.filter((id: string) => bulkSelectedIds.has(id)).length;
+                    const isAllSelected = selectedCount > 0 && selectedCount === variantIds.length;
+                    const isPartiallySelected = selectedCount > 0 && !isAllSelected;
+
+                    const getItemId = (product: { productId: number; variantId?: number | undefined }) => {
+                        return product.variantId?.toString() || product.productId.toString();
+                    };
+
+                    return (
+                        <React.Fragment key={group.productId}>
+                            <TableRow className="bg-muted/20 hover:bg-muted/40 font-semibold">
+                                <TableCell>
+                                    <Checkbox
+                                        checked={isAllSelected ? true : (isPartiallySelected ? 'indeterminate' : false)}
+                                        onCheckedChange={(checked) => handleSelectGroup(group.variants, !!checked)}
+                                    />
+                                </TableCell>
+                                    <TableCell>
+                                    <div className="flex items-center gap-3">
+                                        <Image src={group.imageUrl || 'https://placehold.co/40x40.png'} alt={group.productName} width={32} height={32} className="rounded-sm" />
+                                        <div>
+                                            <p className="text-sm text-primary">{group.productName}</p>
+                                            <p className="text-xs text-muted-foreground font-normal">SKU: {group.sku}</p>
+                                        </div>
+                                    </div>
+                                </TableCell>
+                                <TableCell colSpan={2} className="py-1">
+                                    <div className="flex items-center gap-2 w-full max-w-sm">
+                                        <Input
+                                            type="number"
+                                            placeholder="Ubah harga"
+                                            className="h-9 flex-grow"
+                                            value={masterPrices[group.productId.toString()] ?? ''}
+                                            onChange={e => setMasterPrices((prev: any) => ({...prev, [group.productId.toString()]: e.target.value === '' ? '' : Number(e.target.value)}))}
+                                        />
+                                    </div>
+                                </TableCell>
+                                <TableCell className="py-1">
+                                        <Button type="button" size="sm" variant="secondary" onClick={() => applyMasterPrice(group.productId)}>Terapkan</Button>
+                                </TableCell>
+                                <TableCell className="py-1 text-right">
+                                    <Button type="button" variant="ghost" size="icon" className="text-destructive hover:text-destructive-foreground hover:bg-destructive h-8 w-8" onClick={() => handleRemoveGroup(group)}>
+                                        <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                </TableCell>
+                            </TableRow>
+                            {group.variants.map((field: any) => {
+                                const originalIndex = field.originalIndex;
+                                const fieldId = getItemId(field);
+                                return (
+                                    <TableRow key={field.variantId}>
+                                            <TableCell>
+                                            <Checkbox
+                                                checked={bulkSelectedIds.has(fieldId)}
+                                                onCheckedChange={(checked) => handleSelectOne(fieldId, !!checked)}
+                                            />
+                                        </TableCell>
+                                        <TableCell>
+                                            <div className="flex items-center gap-3 pl-1">
+                                                <div className="flex h-8 w-8 items-center justify-center rounded-sm shrink-0">
+                                                    <Store className="h-5 w-5 text-gray-400" />
+                                                </div>
+                                                <div>
+                                                    <p className="font-medium text-sm">{field.variantName}</p>
+                                                    <p className="text-xs text-muted-foreground">{field.sku}</p>
+                                                </div>
+                                            </div>
+                                        </TableCell>
+                                        <TableCell>
+                                            <p className="text-sm text-muted-foreground line-through">{field.originalPrice ? new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(field.originalPrice) : 'N/A'}</p>
+                                        </TableCell>
+                                        <TableCell>
+                                            <FormField control={form.control} name={`products.${originalIndex}.discountedPrice`} render={({ field: formField }) => (
+                                                <FormItem><FormControl><Input type="number" {...formField} onChange={e => formField.onChange(Number(e.target.value))} className="h-8 w-32" /></FormControl><FormMessage /></FormItem>
+                                            )}/>
+                                        </TableCell>
+                                        <TableCell>
+                                            {(() => {
+                                                const discountedPriceValue = form.watch(`products.${originalIndex}.discountedPrice`);
+                                                const discountedPrice = Number(discountedPriceValue);
+                                                const originalPrice = field.originalPrice;
+                                                if (originalPrice && originalPrice > 0 && !isNaN(discountedPrice) && discountedPrice < originalPrice) {
+                                                    const discountPercentage = ((originalPrice - discountedPrice) / originalPrice) * 100;
+                                                    if (discountPercentage > 0) {
+                                                        return <Badge variant="destructive">{Math.round(discountPercentage)}%</Badge>;
+                                                    }
+                                                }
+                                                return null;
+                                            })()}
+                                        </TableCell>
+                                        <TableCell className="text-right">
+                                            <Button type="button" variant="ghost" size="icon" className="text-destructive hover:text-destructive-foreground hover:bg-destructive" onClick={() => remove(originalIndex)}>
+                                                <Trash2 className="h-4 w-4" />
+                                            </Button>
+                                        </TableCell>
+                                    </TableRow>
+                                );
+                            })}
+                        </React.Fragment>
+                    );
+                }) : (<TableRow><TableCell colSpan={6} className="h-24 text-center">Pilih kategori untuk menambahkan produk.</TableCell></TableRow>)}
+            </TableBody>
+        </Table>
+    )
 }
