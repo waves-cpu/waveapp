@@ -446,7 +446,7 @@ export function PosCart({ onVoucherApplied, activeVoucher }: PosCartProps) {
         
         const { total, subtotal, discount } = receiptData;
         
-        const salesData = cart.map(item => {
+        const salesData = receiptData.items.map(item => {
             return {
                 sku: item.sku,
                 quantity: item.quantity,
