@@ -49,24 +49,63 @@ To do this, you need to find your computer's local IP address and use it instead
     *   On your other device, open a web browser and go to `http://<YOUR_IP_ADDRESS>:1999`.
     *   For example: `http://192.168.1.5:1999`.
 
-### Using PM2 for Local Deployment (Advanced)
+### Using PM2 for a Robust Local Server (Advanced)
 
-PM2 is a process manager that helps keep your application running continuously. If you want a more robust local deployment that automatically restarts on crashes, you can use PM2.
+PM2 is a process manager that helps keep your application running continuously, even if it crashes.
 
-1.  **Install PM2 globally (if you haven't already)**:
+**1. Starting the App with PM2**
+
+Use the following npm script to build and start your application with PM2. The app will run on `http://localhost:3000`.
+
+```bash
+npm run pm2:start
+```
+
+You can manage the app using these commands:
+- `npm run pm2:stop`: Stops the app.
+- `npm run pm2:restart`: Restarts the app.
+- `npm run pm2:delete`: Removes the app from PM2's list.
+
+### Running with Nginx Locally (Optional, Advanced)
+
+To mimic the production environment on your local machine, you can run the application behind an Nginx reverse proxy. This is completely optional for local development.
+
+**Prerequisites:**
+You must have Nginx installed on your computer. You can find installation instructions for your operating system (macOS, Windows, Linux) on the official Nginx website.
+
+**Step 1: Start the App with PM2**
+
+First, ensure your application is running under PM2 on port 3000:
+
+```bash
+npm run pm2:start
+```
+
+**Step 2: Start Nginx**
+
+Open a **new terminal window** and run Nginx using the configuration file from this project. You need to provide the absolute path to `nginx.conf`.
+
+*   **On macOS or Linux:**
     ```bash
-    npm install pm2 -g
+    # Make sure to replace /path/to/your/project with the actual full path
+    nginx -c /path/to/your/project/nginx.conf
+    ```
+    *Pro Tip: You can use `$(pwd)` to get the current directory path: `nginx -c "$(pwd)/nginx.conf"`*
+
+*   **On Windows (in Command Prompt or PowerShell):**
+    ```powershell
+    # Make sure to replace C:\path\to\your\project with the actual full path
+    # You might need to run this from the directory where nginx.exe is located
+    nginx.exe -c C:\path\to\your\project\nginx.conf
     ```
 
-2.  **Build the Application**:
-    ```bash
-    npm run build
-    ```
+**Step 3: Access Your App**
 
-3.  **Start with PM2**:
-    From your project directory, run:
-    ```bash
-    pm2 start ecosystem.config.js
-    ```
+Your application is now accessible through Nginx at `http://localhost:8080`.
 
-Your application will now be running in the background, managed by PM2. You can use commands like `pm2 list` to see its status or `pm2 stop waveapp` to stop it.
+**Managing Nginx**
+
+Here are some common commands to control Nginx (you may need `sudo` on macOS/Linux or run as Administrator on Windows):
+
+*   `nginx -s stop`: To quickly shut down Nginx.
+*   `nginx -s reload`: To reload the configuration without stopping the server.
