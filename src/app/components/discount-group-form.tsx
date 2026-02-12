@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import { useForm, useFieldArray } from 'react-hook-form';
@@ -77,6 +76,10 @@ interface DiscountGroupEditorProps {
     existingGroup?: DiscountGroup;
     isVoucherForm: boolean;
 }
+
+const getItemId = (product: { productId: number; variantId?: number | undefined }) => {
+    return product.variantId?.toString() || product.productId.toString();
+};
 
 export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGroupEditorProps) {
     const { toast } = useToast();
@@ -188,10 +191,6 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
 
     const selectedCategory = form.watch('category');
     const selectedChannel = form.watch('channel');
-    
-    const getItemId = (product: { productId: number; variantId?: number | undefined }) => {
-        return product.variantId?.toString() || product.productId.toString();
-    };
 
     const handleSelectProducts = useCallback((selectedIds: string[]) => {
         const newProductList: (Omit<DiscountedProduct, 'originalPrice'> & { originalPrice: number | null, discountedPrice: number, productId: number })[] = [];
@@ -666,10 +665,6 @@ const ProductTable = ({ paginatedGroups, bulkSelectedIds, masterPrices, form, ha
                     const isAllSelected = selectedCount > 0 && selectedCount === variantIds.length;
                     const isPartiallySelected = selectedCount > 0 && !isAllSelected;
 
-                    const getItemId = (product: { productId: number; variantId?: number | undefined }) => {
-                        return product.variantId?.toString() || product.productId.toString();
-                    };
-
                     return (
                         <React.Fragment key={group.productId}>
                             <TableRow className="bg-muted/20 hover:bg-muted/40 font-semibold">
@@ -767,3 +762,5 @@ const ProductTable = ({ paginatedGroups, bulkSelectedIds, masterPrices, form, ha
         </Table>
     )
 }
+
+    
