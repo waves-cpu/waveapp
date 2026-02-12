@@ -177,37 +177,47 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
     const selectedChannel = form.watch('channel');
     
     const handleSelectProducts = useCallback((selectedIds: string[]) => {
-        const productList: Omit<DiscountedProduct, 'originalPrice'> & { originalPrice: number | null, discountedPrice: number }[] = [];
+        const newProductList: (Omit<DiscountedProduct, 'originalPrice'> & { originalPrice: number | null, discountedPrice: number, productId: number })[] = [];
 
-        const currentProductAndVariantIds = new Set(fields.map(f => f.variantId ? f.variantId.toString() : f.productId.toString()));
-        const uniqueSelectedItemIds = Array.from(new Set(selectedIds));
+        const uniqueSelectedIds = new Set(selectedIds);
+        
+        const existingFormProducts = new Map<string, any>();
+        fields.forEach(field => {
+            const id = field.variantId ? field.variantId.toString() : field.productId.toString();
+            existingFormProducts.set(id, field);
+        });
 
-        uniqueSelectedItemIds.forEach(selectedId => {
-            if (currentProductAndVariantIds.has(selectedId)) return;
-
+        uniqueSelectedIds.forEach(selectedId => {
+            if (existingFormProducts.has(selectedId)) {
+                newProductList.push(existingFormProducts.get(selectedId));
+                return;
+            }
+            
             for (const product of items) {
-                 if (product.variants && product.variants.length > 0) {
+                if (product.variants && product.variants.length > 0) {
                     const variant = product.variants.find(v => v.id === selectedId);
                     if (variant) {
-                        productList.push({
+                        newProductList.push({
                             productId: Number(product.id),
-                            productName: product.name,
-                            sku: product.sku,
-                            imageUrl: product.imageUrl,
                             variantId: Number(variant.id),
+                            productName: product.name,
                             variantName: variant.name,
+                            sku: variant.sku || '',
+                            imageUrl: product.imageUrl || '',
                             originalPrice: variant.price,
                             discountedPrice: variant.price,
                         });
                         return;
                     }
                 } else if (product.id === selectedId) {
-                    if (product.price !== null && product.price !== undefined) {
-                         productList.push({
+                     if (product.price !== null && product.price !== undefined) {
+                        newProductList.push({
                             productId: Number(product.id),
+                            variantId: undefined,
                             productName: product.name,
+                            variantName: undefined,
                             sku: product.sku,
-                            imageUrl: product.imageUrl,
+                            imageUrl: product.imageUrl || '',
                             originalPrice: product.price,
                             discountedPrice: product.price,
                         });
@@ -217,10 +227,8 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
             }
         });
 
-        if (productList.length > 0) {
-            append(productList);
-        }
-    }, [items, fields, append]);
+        replace(newProductList);
+    }, [items, fields, replace]);
 
 
     async function onSubmit(values: z.infer<typeof formSchema>) {

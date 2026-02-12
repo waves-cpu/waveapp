@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useMemo, useEffect, useRef } from 'react';
@@ -114,7 +115,14 @@ export function ProductSelectionDialog({
 
   const filteredItems = useMemo(() => {
     return availableItems
-      .filter(item => !initialSelectedIds.has(item.id) && (!item.variants || item.variants.every(v => !initialSelectedIds.has(v.id))))
+      .filter(item => {
+        // For products with variants, show them if at least one variant is not already selected.
+        if (item.variants && item.variants.length > 0) {
+          return item.variants.some(v => !initialSelectedIds.has(v.id));
+        }
+        // For simple products, show them if they are not already selected.
+        return !initialSelectedIds.has(item.id);
+      })
       .filter((item) => (categoryFilter ? item.category === categoryFilter : true))
       .filter((item) =>
         item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -272,7 +280,7 @@ export function ProductSelectionDialog({
                                 <TableRow key={`product-${item.id}`} className="bg-muted/20 hover:bg-muted/40 font-semibold" data-state={isAllSelected ? "selected" : ""}>
                                     <TableCell>
                                         <Checkbox
-                                            checked={isAllSelected ? true : (isPartiallySelected ? 'indeterminate' : false)}
+                                            checked={isAllSelected ? true : (isPartiallySelected ? "indeterminate" : false)}
                                             onCheckedChange={(checked) => !isParentDisabled && handleSelectRow(item, !!checked)}
                                             aria-label={`Select ${item.name}`}
                                             disabled={isParentDisabled}
