@@ -193,9 +193,31 @@ export function PosOrderSummary({ cart, onSaleComplete, clearCart, channel, pend
 
     const handleSale = async (status: 'Completed' | 'Pending') => {
         setIsSubmitting(true);
+
+        const cartTotalAfterGroupDiscounts = subtotal - groupDiscount;
+        const extraDiscount = voucherDiscount + manualDiscount;
+        
+        const itemsWithFinalPrice = cart.map(item => {
+            const itemSubtotalAfterGroupDiscount = item.price * item.quantity;
+            let priceAtSale = item.price;
+
+            if (cartTotalAfterGroupDiscounts > 0 && extraDiscount > 0) {
+                const proportion = itemSubtotalAfterGroupDiscount / cartTotalAfterGroupDiscounts;
+                const itemDiscount = extraDiscount * proportion;
+                if (item.quantity > 0) {
+                    priceAtSale = item.price - (itemDiscount / item.quantity);
+                }
+            }
+            return {
+                ...item,
+                price: priceAtSale,
+                productName: item.productName, 
+                originalPrice: item.originalPrice
+            };
+        });
         
         const receiptData: ReceiptData = {
-            items: cart.map(item => ({...item, price: item.price, productName: item.productName, originalPrice: item.originalPrice })),
+            items: itemsWithFinalPrice,
             subtotal: subtotal,
             discount: totalDiscount,
             total: finalTotal,
