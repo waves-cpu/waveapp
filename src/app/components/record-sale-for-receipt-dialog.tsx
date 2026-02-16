@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
@@ -19,6 +18,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
+  TableFooter,
 } from '@/components/ui/table';
 import { Card, CardContent } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -80,6 +80,10 @@ export function RecordSaleForReceiptDialog({
         (item.variants && item.variants.some(v => v.sku?.toLowerCase().includes(lowercasedTerm))))
     ).slice(0, 10) as SearchableItem[];
 }, [debouncedSearchTerm, inventoryItems]);
+
+  const totalItems = useMemo(() => {
+    return cart.reduce((sum, item) => sum + item.quantity, 0);
+  }, [cart]);
 
 
   useEffect(() => {
@@ -346,6 +350,15 @@ export function RecordSaleForReceiptDialog({
                       </TableRow>
                     )}
                   </TableBody>
+                   {cart.length > 0 && (
+                      <TableFooter>
+                          <TableRow>
+                              <TableCell colSpan={2} className="font-medium">Total Item</TableCell>
+                              <TableCell className="text-center font-medium">{totalItems}</TableCell>
+                              <TableCell colSpan={2}></TableCell>
+                          </TableRow>
+                      </TableFooter>
+                  )}
                 </Table>
               </ScrollArea>
             </CardContent>
