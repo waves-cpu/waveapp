@@ -350,26 +350,26 @@ export function RecordSaleForReceiptDialog({
                       </TableRow>
                     )}
                   </TableBody>
-                   {cart.length > 0 && (
-                      <TableFooter>
-                          <TableRow>
-                              <TableCell colSpan={2} className="font-medium">Total Item</TableCell>
-                              <TableCell className="text-center font-medium">{totalItems}</TableCell>
-                              <TableCell colSpan={2}></TableCell>
-                          </TableRow>
-                      </TableFooter>
-                  )}
                 </Table>
               </ScrollArea>
             </CardContent>
           </Card>
         </div>
 
-        <DialogFooter>
-          <Button variant="ghost" onClick={() => onOpenChange(false)}>Batal</Button>
-          <Button onClick={handleFinalizeSale} disabled={cart.length === 0 || isSubmitting}>
-            {isSubmitting ? 'Menyimpan...' : 'Selesaikan Penjualan'}
-          </Button>
+        <DialogFooter className="sm:justify-between">
+          <div>
+            {cart.length > 0 && (
+              <div className="text-sm text-muted-foreground">
+                Total Item: <span className="font-bold text-foreground">{totalItems}</span>
+              </div>
+            )}
+          </div>
+          <div className="flex gap-2">
+            <Button variant="ghost" onClick={() => onOpenChange(false)}>Batal</Button>
+            <Button onClick={handleFinalizeSale} disabled={cart.length === 0 || isSubmitting}>
+              {isSubmitting ? 'Menyimpan...' : 'Selesaikan Penjualan'}
+            </Button>
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>
