@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { FileDown, Truck, PackageCheck, Undo2, Ban, History, Loader2, BarChart3, List, AlertCircle } from 'lucide-react';
 import { useInventory } from '@/hooks/use-inventory';
 import type { ShippingReceipt } from '@/types';
-import { parseISO, startOfMonth, endOfMonth, eachDayOfInterval } from 'date-fns';
+import { parseISO, startOfMonth, endOfMonth, eachDayOfInterval, endOfDay } from 'date-fns';
 import { id as localeId } from 'date-fns/locale';
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
@@ -85,7 +85,7 @@ export default function ReceiptReportPage() {
             // Correctly create a date in the local timezone for the start of the month
             const dateForMonth = new Date(selectedYear, selectedMonth, 1);
             const firstDay = startOfMonth(dateForMonth);
-            const lastDay = endOfMonth(dateForMonth);
+            const lastDay = endOfDay(endOfMonth(dateForMonth));
 
             const { receipts } = await fetchShippingReceipts({
                 page: 1,

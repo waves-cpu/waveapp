@@ -1,4 +1,5 @@
 
+
 import { db as dbProxy } from './db';
 const db = dbProxy;
 import type { InventoryItem, AdjustmentHistory, InventoryItemVariant, Sale, Accessory, ShippingReceipt, BulkImportHistory, User, ReturnedItem, DiscountGroup, DiscountedProduct, PrintedReceiptCount, ShippingReceiptCounts, Reseller, Employee } from '@/types';
@@ -295,8 +296,8 @@ export async function fetchShippingReceipts(options: {
         params.dateString = dateString;
     } else if (date_range) {
         whereClauses.push("date BETWEEN @startDate AND @endDate");
-        params.startDate = date_range.from.toISOString();
-        params.endDate = date_range.to.toISOString();
+        params.startDate = formatToWIB(date_range.from, 'yyyy-MM-dd HH:mm:ss');
+        params.endDate = formatToWIB(date_range.to, 'yyyy-MM-dd HH:mm:ss');
     }
     if (beforeDate) {
         whereClauses.push("date(date, 'localtime') < @beforeDate");
@@ -2137,6 +2138,7 @@ export async function getVoucherUsageAnalytics(groupId: number) {
     
 
     
+
 
 
 
