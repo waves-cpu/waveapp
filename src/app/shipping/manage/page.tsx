@@ -8,11 +8,11 @@ import { SidebarTrigger } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Undo2, Truck, CheckCircle, Package, Search, Send, Ban, History, MoreVertical, Trash2, Calendar as CalendarIcon, Eye } from 'lucide-react';
+import { Undo2, Truck, CheckCircle, Package, Search, Send, Ban, History, MoreVertical, Trash2, Calendar as CalendarIcon, Eye, FileDown, Loader2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { useInventory } from '@/hooks/use-inventory';
 import type { ShippingReceipt, ReturnedItem, Sale } from '@/types';
-import { parseISO, startOfDay, endOfDay, isWithinInterval, startOfMonth, endOfMonth, subDays, startOfYear, subMonths, endOfYear } from 'date-fns';
+import { parseISO, startOfDay, endOfDay, isWithinInterval, startOfMonth, endOfMonth, subDays, startOfYear, subMonths, endOfYear, isSameDay } from 'date-fns';
 import { id as localeId } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
 import { Pagination } from '@/components/ui/pagination';
@@ -23,7 +23,7 @@ import { formatToWIB, cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Checkbox } from '@/components/ui/checkbox';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { DateRange } from 'react-day-picker';
@@ -31,6 +31,7 @@ import { Separator } from '@/components/ui/separator';
 import { CancelShipmentDialog } from '@/app/components/cancel-shipment-dialog';
 import { DailySalesDetailDialog } from '@/app/components/daily-sales-detail-dialog';
 import { useAuth } from '@/hooks/use-auth';
+import * as XLSX from 'xlsx';
 
 const SHIPPING_CHANNEL_OPTIONS = ['Semua Jasa Kirim', 'SPX', 'J&T', 'JNE', 'INSTANT', 'CARGO'];
 
@@ -255,6 +256,7 @@ export default function ManageReceiptsPage() {
     });
     
     const [shippingChannel, setShippingChannel] = useState<string | null>(null);
+    const [isDownloading, setIsDownloading] = useState(false);
 
     const filteredReceipts = useMemo(() => {
         return allShippingReceipts.filter(receipt => {
@@ -341,6 +343,43 @@ export default function ManageReceiptsPage() {
              setReceiptToCancel(null);
         }
     };
+    
+    const downloadExcel = useCallback(() => {
+        setIsDownloading(true);
+        const { id, update } = toast({ title: 'Memulai unduhan', description: 'Laporan Excel sedang disiapkan...' });
+
+        setTimeout(() => {
+            const dataToExport = filteredReceipts.map(item => ({
+                'No. Resi': item.awb,
+                'Tanggal': formatToWIB(parseISO(item.date), 'dd MMM yyyy HH:mm'),
+                'Kanal Penjualan': item.salesChannel,
+                'Jasa Kirim': item.channel,
+                'Status': item.status,
+                'Diproses Oleh': item.username || '-'
+            }));
+            
+            const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, 'Laporan Resi');
+
+            const datePart = date?.from
+                ? date.to && !isSameDay(date.from, date.to)
+                    ? `${formatToWIB(date.from, 'ddMMyy')}-${formatToWIB(date.to, 'ddMMyy')}`
+                    : formatToWIB(date.from, 'ddMMyy')
+                : 'semua_waktu';
+            const channelPart = shippingChannel || 'semua_kurir';
+            const fileName = `Laporan_Resi_${channelPart}_${datePart}.xlsx`;
+            
+            XLSX.writeFile(workbook, fileName);
+
+            update({
+                id,
+                title: "Unduhan Siap",
+                description: `File '${fileName}' telah diunduh.`
+            });
+            setIsDownloading(false);
+        }, 500);
+    }, [filteredReceipts, date, shippingChannel, toast]);
 
     const groupedReceipts = useMemo(() => {
         const groups: Record<StatusTab, ShippingReceipt[]> = {
@@ -449,6 +488,10 @@ export default function ManageReceiptsPage() {
                                 {SHIPPING_CHANNEL_OPTIONS.slice(1).map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
                             </SelectContent>
                         </Select>
+                         <Button onClick={downloadExcel} variant="outline" size="sm" disabled={isDownloading} className="h-9">
+                            {isDownloading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileDown className="mr-2 h-4 w-4" />}
+                            {isDownloading ? "Mengekspor..." : "Download"}
+                        </Button>
                     </div>
                 </div>
 
