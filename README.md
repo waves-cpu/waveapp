@@ -34,9 +34,9 @@ npm run start
 
 Your application will now be running, optimized for production, at `http://localhost:1999`.
 
-### 3. Accessing from Other Devices
+## Accessing from Other Devices
 
-#### Accessing on the Same Network
+### Accessing on the Same Network
 
 When the server is running (either in dev or production mode), you can access it from other devices on the same Wi-Fi network. This is perfect for using a tablet as a POS or for checking inventory from your phone.
 
@@ -51,35 +51,62 @@ To do this, you need to find your computer's local IP address and use it instead
     *   On your other device, open a web browser and go to `http://<YOUR_IP_ADDRESS>:1999`.
     *   For example: `http://192.168.1.5:1999`.
 
-#### Accessing from the Public Internet (Advanced)
+### Public Internet Access Options
 
-If you have a **static public IP address** from your Internet Service Provider (ISP), you can configure your router to access the application from anywhere on the internet. This method is called **Port Forwarding**.
+Untuk mengakses aplikasi Anda dari internet, ada beberapa metode dengan tingkat keamanan dan kemudahan yang berbeda.
 
-**Penting:** Metode ini akan mengekspos aplikasi Anda langsung ke internet. Pastikan Anda memahami risiko keamanannya dan memiliki firewall yang aktif di komputer Anda.
+#### Metode 1: Layanan Tunnel (Paling Aman & Mudah)
 
-**Konsep Dasar:**
-Port forwarding memberi tahu router Anda: "Setiap permintaan yang masuk dari internet ke port `1999` harus diteruskan langsung ke komputer lokal saya di port `1999`."
+Layanan *tunnel* membuat koneksi keluar yang aman dari komputer Anda ke server mereka, sehingga Anda tidak perlu membuka port apa pun di router Anda. **Ini adalah metode yang paling direkomendasikan.**
 
-**Langkah-langkah Umum (Tampilan bisa berbeda-beda antar router):**
+1.  **Cloudflare Tunnel (Gratis & Paling Aman)**: Ini adalah solusi yang sangat kuat dan cocok untuk penggunaan jangka panjang, bahkan bisa dianggap setara produksi.
+    *   **Cara Kerja**: Anda menjalankan sebuah program kecil (`cloudflared`) di komputer Anda yang akan membuat koneksi aman ke jaringan Cloudflare. Tidak ada port yang dibuka di router Anda.
+    *   **Keuntungan**: Anda mendapatkan URL yang permanen, perlindungan DDoS dari Cloudflare, dan sertifikat SSL (HTTPS) secara otomatis, semuanya gratis.
+    *   **Langkah-langkah**: Ikuti panduan [Zero Trust / Tunnels](https://developers.cloudflare.com/zerotrust/get-started/get-started-tunnels/) di situs web Cloudflare. Anda akan menghubungkan domain Anda (atau subdomain gratis dari Cloudflare) ke aplikasi lokal Anda di `http://localhost:3000`.
 
-1.  **Temukan Alamat IP Lokal Komputer Anda**: Gunakan `ipconfig` (Windows) atau `ifconfig` (macOS/Linux) untuk menemukan alamat IP lokal komputer yang menjalankan aplikasi (contoh: `192.168.1.5`).
+2.  **ngrok (Untuk Pengembangan Cepat)**: `ngrok` sangat bagus untuk pengujian cepat dan sementara. URL publik akan berubah setiap kali Anda menjalankannya (pada versi gratis).
 
-2.  **Login ke Router Anda**: Buka browser dan masukkan alamat IP router Anda (biasanya `191.168.1.1` atau `192.168.0.1`). Login dengan username dan password admin router Anda.
+#### Metode 2: Port Forwarding dengan Nginx (Lanjutan, Memerlukan IP Statis)
 
-3.  **Cari Menu Port Forwarding**: Menu ini bisa bernama "Port Forwarding", "Virtual Server", "NAT Forwarding", atau "Application & Gaming".
+Jika Anda tetap ingin menggunakan IP publik statis Anda secara langsung, cara yang lebih aman adalah dengan tidak mengekspos aplikasi Next.js Anda, melainkan mengekspos Nginx sebagai *reverse proxy* dan melapisinya dengan enkripsi SSL (HTTPS).
 
-4.  **Buat Aturan Baru**:
-    *   **Application Name**: Beri nama aturan (misal: `WaveApp`).
-    *   **External Port / Start Port**: `1999`
-    *   **Internal Port / End Port**: `1999`
-    *   **Protocol**: `TCP`
-    *   **Device IP / Internal IP**: Masukkan alamat IP lokal komputer Anda dari langkah 1.
-    *   **Enable/Aktifkan** aturan ini.
+**Prasyarat:**
+*   Anda memiliki **IP Publik Statis**.
+*   Anda memiliki **nama domain** (misal: `toko-anda.com`).
+*   Anda telah mengarahkan domain Anda ke IP publik statis Anda melalui pengaturan DNS provider domain Anda.
 
-5.  **Simpan dan Akses**:
-    *   Simpan pengaturan dan restart router Anda jika diperlukan.
-    *   Sekarang, Anda dapat mengakses aplikasi dari perangkat mana pun di luar jaringan Anda menggunakan IP publik statis Anda:
-        `http://<IP_PUBLIK_STATIS_ANDA>:1999`
+**Konsep Keamanan:**
+Hanya Nginx yang akan bisa diakses dari internet (di port 80 dan 443). Nginx kemudian akan meneruskan permintaan secara internal ke aplikasi Next.js Anda (di port 3000).
+
+**Langkah-langkah Umum:**
+
+1.  **Jalankan Aplikasi dengan PM2**: Pastikan aplikasi Anda berjalan di port `3000`.
+    ```bash
+    npm run pm2:start
+    ```
+
+2.  **Konfigurasi Port Forwarding di Router**:
+    *   Login ke router Anda dan cari menu "Port Forwarding".
+    *   Buat dua aturan untuk meneruskan permintaan dari internet ke komputer lokal Anda (tempat Nginx akan berjalan):
+        *   **Aturan 1 (HTTP)**: Port Eksternal `80` -> Port Internal `8080` (TCP)
+        *   **Aturan 2 (HTTPS)**: Port Eksternal `443` -> Port Internal `8080` (TCP)
+    *   Simpan pengaturan router.
+
+3.  **Dapatkan Sertifikat SSL (HTTPS)**:
+    *   Cara termudah dan gratis adalah menggunakan **Let's Encrypt**.
+    *   Instal **Certbot** di komputer Anda sesuai instruksi di [situs web Certbot](https://certbot.eff.org/).
+    *   Jalankan Certbot untuk domain Anda. Certbot dapat secara otomatis mendeteksi Nginx, mendapatkan sertifikat, dan mengkonfigurasi `nginx.conf` Anda untuk menggunakan HTTPS.
+
+4.  **Jalankan Nginx**:
+    *   Setelah Certbot selesai, jalankan Nginx dengan konfigurasi yang sudah dimodifikasi.
+        ```bash
+        # Anda mungkin memerlukan 'sudo'
+        nginx -c /path/to/your/project/nginx.conf
+        ```
+
+5.  **Akses Aplikasi dengan Aman**:
+    *   Sekarang, aplikasi Anda dapat diakses dengan aman melalui nama domain Anda:
+        `https://toko-anda.com`
 
 ### Using PM2 for a Robust Local Server (Advanced)
 
@@ -141,4 +168,3 @@ Here are some common commands to control Nginx (you may need `sudo` on macOS/Lin
 
 *   `nginx -s stop`: To quickly shut down Nginx.
 *   `nginx -s reload`: To reload the configuration without stopping the server.
-```
