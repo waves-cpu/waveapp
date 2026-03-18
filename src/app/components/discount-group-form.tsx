@@ -522,99 +522,102 @@ export function DiscountGroupForm({ existingGroup, isVoucherForm }: DiscountGrou
                                )}
                           </CardContent>
                      </Card>
-
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="text-base">Pengaturan Harga Produk</CardTitle>
-                            <CardDescription>Atur harga diskon untuk produk dalam kategori '{selectedCategory || "..."}'.</CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 items-end">
-                                <div>
-                                    <Button type="button" onClick={() => setProductSelectorOpen(true)} disabled={!selectedCategory}>
-                                        <PlusCircle className="mr-2 h-4 w-4" />
-                                        Pilih Produk
-                                    </Button>
-                                </div>
-                                <div className="relative md:col-span-1">
-                                    <Label htmlFor="product-search" className="sr-only">Cari produk</Label>
-                                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                                    <Input
-                                        id="product-search"
-                                        placeholder="Cari produk dalam daftar..."
-                                        value={productSearch}
-                                        onChange={(e) => setProductSearch(e.target.value)}
-                                        className="pl-8 h-9"
-                                    />
-                                </div>
-                                <div className="flex items-center gap-2 md:col-span-1">
-                                    <div className="flex-grow">
-                                        <Label htmlFor="global-bulk-price" className="sr-only">Ubah harga massal</Label>
+                    
+                    {!isVoucherForm && (
+                        <Card>
+                            <CardHeader>
+                                <CardTitle className="text-base">Pengaturan Harga Produk</CardTitle>
+                                <CardDescription>Atur harga diskon untuk produk dalam kategori '{selectedCategory || "..."}'.</CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 items-end">
+                                    <div>
+                                        <Button type="button" onClick={() => setProductSelectorOpen(true)} disabled={!selectedCategory}>
+                                            <PlusCircle className="mr-2 h-4 w-4" />
+                                            Pilih Produk
+                                        </Button>
+                                    </div>
+                                    <div className="relative md:col-span-1">
+                                        <Label htmlFor="product-search" className="sr-only">Cari produk</Label>
+                                        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                                         <Input
-                                            id="global-bulk-price"
-                                            type="number"
-                                            placeholder="Ubah Harga"
-                                            className="h-9"
-                                            value={globalBulkPrice}
-                                            onChange={(e) => setGlobalBulkPrice(e.target.value === '' ? '' : Number(e.target.value))}
+                                            id="product-search"
+                                            placeholder="Cari produk dalam daftar..."
+                                            value={productSearch}
+                                            onChange={(e) => setProductSearch(e.target.value)}
+                                            className="pl-8 h-9"
                                         />
                                     </div>
-                                    <Button type="button" size="sm" variant="secondary" onClick={applyGlobalBulkPrice} className="shrink-0">
-                                        Terapkan ({bulkSelectedIds.size})
-                                    </Button>
+                                    <div className="flex items-center gap-2 md:col-span-1">
+                                        <div className="flex-grow">
+                                            <Label htmlFor="global-bulk-price" className="sr-only">Ubah harga massal</Label>
+                                            <Input
+                                                id="global-bulk-price"
+                                                type="number"
+                                                placeholder="Ubah Harga"
+                                                className="h-9"
+                                                value={globalBulkPrice}
+                                                onChange={(e) => setGlobalBulkPrice(e.target.value === '' ? '' : Number(e.target.value))}
+                                            />
+                                        </div>
+                                        <Button type="button" size="sm" variant="secondary" onClick={applyGlobalBulkPrice} className="shrink-0">
+                                            Terapkan ({bulkSelectedIds.size})
+                                        </Button>
+                                    </div>
                                 </div>
-                            </div>
-                             <Tabs value={activeTab} onValueChange={setActiveTab}>
-                                <TabsList>
-                                    <TabsTrigger value="unregistered">Belum Terdaftar <Badge className="ml-2">{unregisteredProducts.length}</Badge></TabsTrigger>
-                                    <TabsTrigger value="registered">Sudah Terdaftar <Badge className="ml-2">{registeredProducts.length}</Badge></TabsTrigger>
-                                </TabsList>
-                                <TabsContent value="unregistered" className="mt-4">
-                                     <ProductTable 
-                                        paginatedGroups={paginatedGroups}
-                                        bulkSelectedIds={bulkSelectedIds}
-                                        masterPrices={masterPrices}
-                                        form={form}
-                                        handleSelectOne={handleSelectOne}
-                                        handleSelectGroup={handleSelectGroup}
-                                        handleRemoveGroup={handleRemoveGroup}
-                                        isPageAllSelected={isPageAllSelected}
-                                        isPagePartiallySelected={isPagePartiallySelected}
-                                        handleSelectAllOnPage={handleSelectAllOnPage}
-                                        applyMasterPrice={applyMasterPrice}
-                                        setMasterPrices={setMasterPrices}
-                                        remove={remove}
+                                <Tabs value={activeTab} onValueChange={setActiveTab}>
+                                    <TabsList>
+                                        <TabsTrigger value="unregistered">Belum Terdaftar <Badge className="ml-2">{unregisteredProducts.length}</Badge></TabsTrigger>
+                                        <TabsTrigger value="registered">Sudah Terdaftar <Badge className="ml-2">{registeredProducts.length}</Badge></TabsTrigger>
+                                    </TabsList>
+                                    <TabsContent value="unregistered" className="mt-4">
+                                        <ProductTable 
+                                            paginatedGroups={paginatedGroups}
+                                            bulkSelectedIds={bulkSelectedIds}
+                                            masterPrices={masterPrices}
+                                            form={form}
+                                            handleSelectOne={handleSelectOne}
+                                            handleSelectGroup={handleSelectGroup}
+                                            handleRemoveGroup={handleRemoveGroup}
+                                            isPageAllSelected={isPageAllSelected}
+                                            isPagePartiallySelected={isPagePartiallySelected}
+                                            handleSelectAllOnPage={handleSelectAllOnPage}
+                                            applyMasterPrice={applyMasterPrice}
+                                            setMasterPrices={setMasterPrices}
+                                            remove={remove}
+                                        />
+                                    </TabsContent>
+                                    <TabsContent value="registered" className="mt-4">
+                                        <ProductTable 
+                                            paginatedGroups={paginatedGroups}
+                                            bulkSelectedIds={bulkSelectedIds}
+                                            masterPrices={masterPrices}
+                                            form={form}
+                                            handleSelectOne={handleSelectOne}
+                                            handleSelectGroup={handleSelectGroup}
+                                            handleRemoveGroup={handleRemoveGroup}
+                                            isPageAllSelected={isPageAllSelected}
+                                            isPagePartiallySelected={isPagePartiallySelected}
+                                            handleSelectAllOnPage={handleSelectAllOnPage}
+                                            applyMasterPrice={applyMasterPrice}
+                                            setMasterPrices={setMasterPrices}
+                                            remove={remove}
+                                        />
+                                    </TabsContent>
+                                </Tabs>
+                            </CardContent>
+                            {totalPages > 1 && (
+                                <CardFooter>
+                                    <Pagination
+                                        totalPages={totalPages}
+                                        currentPage={currentPage}
+                                        onPageChange={setCurrentPage}
                                     />
-                                </TabsContent>
-                                <TabsContent value="registered" className="mt-4">
-                                    <ProductTable 
-                                        paginatedGroups={paginatedGroups}
-                                        bulkSelectedIds={bulkSelectedIds}
-                                        masterPrices={masterPrices}
-                                        form={form}
-                                        handleSelectOne={handleSelectOne}
-                                        handleSelectGroup={handleSelectGroup}
-                                        handleRemoveGroup={handleRemoveGroup}
-                                        isPageAllSelected={isPageAllSelected}
-                                        isPagePartiallySelected={isPagePartiallySelected}
-                                        handleSelectAllOnPage={handleSelectAllOnPage}
-                                        applyMasterPrice={applyMasterPrice}
-                                        setMasterPrices={setMasterPrices}
-                                        remove={remove}
-                                    />
-                                </TabsContent>
-                            </Tabs>
-                        </CardContent>
-                        {totalPages > 1 && (
-                            <CardFooter>
-                                <Pagination
-                                    totalPages={totalPages}
-                                    currentPage={currentPage}
-                                    onPageChange={setCurrentPage}
-                                />
-                            </CardFooter>
-                        )}
-                    </Card>
+                                </CardFooter>
+                            )}
+                        </Card>
+                    )}
+
                     <div className="flex justify-end gap-2">
                         <Button type="button" variant="ghost" onClick={() => router.back()} disabled={isSaving}>Batal</Button>
                         <Button type="submit" disabled={isSaving}>
