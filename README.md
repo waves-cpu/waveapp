@@ -34,7 +34,9 @@ npm run start
 
 Your application will now be running, optimized for production, at `http://localhost:1999`.
 
-### 3. Accessing from Other Devices (e.g., Mobile Phones, Other Computers)
+### 3. Accessing from Other Devices
+
+#### Accessing on the Same Network
 
 When the server is running (either in dev or production mode), you can access it from other devices on the same Wi-Fi network. This is perfect for using a tablet as a POS or for checking inventory from your phone.
 
@@ -48,6 +50,36 @@ To do this, you need to find your computer's local IP address and use it instead
 2.  **Use the IP Address**:
     *   On your other device, open a web browser and go to `http://<YOUR_IP_ADDRESS>:1999`.
     *   For example: `http://192.168.1.5:1999`.
+
+#### Accessing from the Public Internet (Advanced)
+
+If you have a **static public IP address** from your Internet Service Provider (ISP), you can configure your router to access the application from anywhere on the internet. This method is called **Port Forwarding**.
+
+**Penting:** Metode ini akan mengekspos aplikasi Anda langsung ke internet. Pastikan Anda memahami risiko keamanannya dan memiliki firewall yang aktif di komputer Anda.
+
+**Konsep Dasar:**
+Port forwarding memberi tahu router Anda: "Setiap permintaan yang masuk dari internet ke port `1999` harus diteruskan langsung ke komputer lokal saya di port `1999`."
+
+**Langkah-langkah Umum (Tampilan bisa berbeda-beda antar router):**
+
+1.  **Temukan Alamat IP Lokal Komputer Anda**: Gunakan `ipconfig` (Windows) atau `ifconfig` (macOS/Linux) untuk menemukan alamat IP lokal komputer yang menjalankan aplikasi (contoh: `192.168.1.5`).
+
+2.  **Login ke Router Anda**: Buka browser dan masukkan alamat IP router Anda (biasanya `191.168.1.1` atau `192.168.0.1`). Login dengan username dan password admin router Anda.
+
+3.  **Cari Menu Port Forwarding**: Menu ini bisa bernama "Port Forwarding", "Virtual Server", "NAT Forwarding", atau "Application & Gaming".
+
+4.  **Buat Aturan Baru**:
+    *   **Application Name**: Beri nama aturan (misal: `WaveApp`).
+    *   **External Port / Start Port**: `1999`
+    *   **Internal Port / End Port**: `1999`
+    *   **Protocol**: `TCP`
+    *   **Device IP / Internal IP**: Masukkan alamat IP lokal komputer Anda dari langkah 1.
+    *   **Enable/Aktifkan** aturan ini.
+
+5.  **Simpan dan Akses**:
+    *   Simpan pengaturan dan restart router Anda jika diperlukan.
+    *   Sekarang, Anda dapat mengakses aplikasi dari perangkat mana pun di luar jaringan Anda menggunakan IP publik statis Anda:
+        `http://<IP_PUBLIK_STATIS_ANDA>:1999`
 
 ### Using PM2 for a Robust Local Server (Advanced)
 
@@ -109,3 +141,4 @@ Here are some common commands to control Nginx (you may need `sudo` on macOS/Lin
 
 *   `nginx -s stop`: To quickly shut down Nginx.
 *   `nginx -s reload`: To reload the configuration without stopping the server.
+```
