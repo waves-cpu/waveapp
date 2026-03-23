@@ -1,5 +1,3 @@
-
-
 'use client';
 
 import { useState, useMemo, useEffect, useRef } from 'react';
@@ -95,8 +93,7 @@ export function ProductSelectionDialog({
         let channelsConflict = false;
         if (isFormChannelOnline && isGroupChannelOnline) {
             channelsConflict = true;
-        } else if (!isFormChannelOnline && !isGroupChannelOnline) {
-            // Any offline channel conflicts with any other offline channel
+        } else if (formChannel === group.channel) {
             channelsConflict = true;
         }
 
