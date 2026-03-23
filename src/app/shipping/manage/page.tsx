@@ -13,6 +13,7 @@ import { Badge } from '@/components/ui/badge';
 import { useInventory } from '@/hooks/use-inventory';
 import type { ShippingReceipt, ReturnedItem, Sale } from '@/types';
 import { parseISO, startOfDay, endOfDay, isWithinInterval, startOfMonth, endOfMonth, subDays, startOfYear, subMonths, endOfYear, isSameDay } from 'date-fns';
+import { fromZonedTime } from 'date-fns-tz';
 import { id as localeId } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
 import { Pagination } from '@/components/ui/pagination';
@@ -260,7 +261,8 @@ export default function ManageReceiptsPage() {
 
     const filteredReceipts = useMemo(() => {
         return allShippingReceipts.filter(receipt => {
-            const dateMatch = !date || !date.from || isWithinInterval(parseISO(receipt.date), { start: startOfDay(date.from), end: endOfDay(date.to || date.from) });
+            const receiptDate = fromZonedTime(receipt.date, 'Asia/Jakarta');
+            const dateMatch = !date || !date.from || isWithinInterval(receiptDate, { start: startOfDay(date.from), end: endOfDay(date.to || date.from) });
             const channelMatch = !shippingChannel || receipt.channel === shippingChannel;
             return dateMatch && channelMatch;
         });

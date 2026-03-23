@@ -108,7 +108,7 @@ export default function ReceiptReportPage() {
             [...STATUS_KEYS, 'Total'].forEach(key => totals[key] = 0);
 
             receipts.forEach(receipt => {
-                const dateKey = formatToWIB(parseISO(receipt.date), 'yyyy-MM-dd');
+                const dateKey = receipt.date.substring(0, 10);
                 if (dailyData[dateKey] && receipt.status) {
                     const statusKey = receipt.status as keyof typeof dailyData[string];
                     if(statusKey in dailyData[dateKey]) {
