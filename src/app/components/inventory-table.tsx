@@ -58,8 +58,6 @@ import { cn } from '@/lib/utils';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { Pagination } from '@/components/ui/pagination';
-import { AppLayout } from '../app-layout';
-import Dashboard from './dashboard';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -72,9 +70,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { useToast } from '@/hooks/use-toast';
-import { UpdateStockDialogAccessories } from './update-stock-dialog-accessories';
-import { Checkbox } from '@/components/ui/checkbox';
-import { VariantDisplayDialog } from './variant-display-dialog';
+import { Separator } from '@/components/ui/separator';
 import { isWithinInterval, parseISO, endOfDay, format as formatDate, isBefore, isAfter } from 'date-fns';
 
 interface InventoryTableProps {
@@ -294,6 +290,7 @@ export function InventoryTable({ onUpdateStock, isAccessoryTable = false }: Inve
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
   const [stockFilter, setStockFilter] = useState<'all' | 'low' | 'empty'>('all');
+  const [sizeFilter, setSizeFilter] = useState<string | null>(null);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
   const { language } = useLanguage();
@@ -304,6 +301,18 @@ export function InventoryTable({ onUpdateStock, isAccessoryTable = false }: Inve
   const router = useRouter();
 
   const inventorySource = isAccessoryTable ? accessories : items;
+
+  const uniqueSizes = useMemo(() => {
+    const sizes = new Set<string>();
+    items.forEach(item => {
+        if (item.variants) {
+            item.variants.forEach(variant => {
+                if (variant.name) sizes.add(variant.name);
+            });
+        }
+    });
+    return Array.from(sizes).sort();
+  }, [items]);
 
   const handleArchive = async (itemId: string) => {
     try {
@@ -342,22 +351,29 @@ export function InventoryTable({ onUpdateStock, isAccessoryTable = false }: Inve
       })
       .map(item => {
         if (stockFilter === 'all') return item;
-        const totalStock = item.variants ? item.variants.reduce((sum, v) => sum + v.stock, 0) : (item.stock || 0);
-        
-        if (stockFilter === 'low') {
-            return totalStock > 0 && totalStock < 50 ? item : null;
+
+        if (sizeFilter) {
+            if (!item.variants || item.variants.length === 0) return null;
+            const variant = item.variants.find(v => v.name === sizeFilter);
+            if (!variant) return null;
+
+            const variantStock = variant.stock;
+            if (stockFilter === 'low') return variantStock > 0 && variantStock < 50 ? item : null;
+            if (stockFilter === 'empty') return variantStock === 0 ? item : null;
+            return null;
+        } else {
+            const totalStock = item.variants ? item.variants.reduce((sum, v) => sum + v.stock, 0) : (item.stock || 0);
+            if (stockFilter === 'low') return totalStock > 0 && totalStock < 50 ? item : null;
+            if (stockFilter === 'empty') return totalStock === 0 ? item : null;
+            return item;
         }
-        if (stockFilter === 'empty') {
-            return totalStock === 0 ? item : null;
-        }
-        return item;
       })
       .filter((item): item is InventoryItem => item !== null);
     
       setCurrentPage(1); // Reset to first page on filter change
       return filtered;
 
-  }, [inventorySource, categoryFilter, searchTerm, stockFilter, isAccessoryTable]);
+  }, [inventorySource, categoryFilter, searchTerm, stockFilter, sizeFilter, isAccessoryTable]);
 
   const totalPages = Math.ceil(filteredItems.length / itemsPerPage);
 
@@ -418,8 +434,8 @@ export function InventoryTable({ onUpdateStock, isAccessoryTable = false }: Inve
                 )}
             </div>
         </div>
-        <div className="px-4 py-2 flex items-center gap-2 border-b border-dashed">
-            <Button variant={stockFilter === 'all' ? 'secondary' : 'ghost'} size="sm" onClick={() => setStockFilter('all')}>
+        <div className="px-4 py-2 flex items-center gap-2 border-b border-dashed flex-wrap">
+            <Button variant={stockFilter === 'all' ? 'secondary' : 'ghost'} size="sm" onClick={() => { setStockFilter('all'); setSizeFilter(null); }}>
                 {t.inventoryTable.allStock} <Badge variant="secondary" className="ml-2">{stockFilterCounts.all}</Badge>
             </Button>
             <Button variant={stockFilter === 'low' ? 'secondary' : 'ghost'} size="sm" onClick={() => setStockFilter('low')}>
@@ -428,6 +444,24 @@ export function InventoryTable({ onUpdateStock, isAccessoryTable = false }: Inve
             <Button variant={stockFilter === 'empty' ? 'secondary' : 'ghost'} size="sm" onClick={() => setStockFilter('empty')}>
                 {t.inventoryTable.emptyStock} <Badge variant="secondary" className="ml-2">{stockFilterCounts.empty}</Badge>
             </Button>
+             {stockFilter !== 'all' && !isAccessoryTable && (
+                <>
+                    <Separator orientation="vertical" className="h-6 mx-2" />
+                    <Select onValueChange={(value) => setSizeFilter(value === 'all' ? null : value)} defaultValue="all">
+                        <SelectTrigger className="w-full md:w-[180px] h-8 text-xs">
+                            <SelectValue placeholder="Filter berdasarkan ukuran" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">Semua Ukuran</SelectItem>
+                            {uniqueSizes.map((size) => (
+                                <SelectItem key={size} value={size}>
+                                {size}
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                </>
+            )}
         </div>
       </div>
       <div>
