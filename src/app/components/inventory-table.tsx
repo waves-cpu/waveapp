@@ -1,5 +1,3 @@
-
-
 'use client';
 
 import React, { useState, useMemo, useEffect } from 'react';
@@ -303,8 +301,12 @@ export function InventoryTable({ onUpdateStock, isAccessoryTable = false }: Inve
   const inventorySource = isAccessoryTable ? accessories : items;
 
   const uniqueSizes = useMemo(() => {
+    const relevantItems = categoryFilter 
+        ? items.filter(item => item.category === categoryFilter) 
+        : items;
+
     const sizes = new Set<string>();
-    items.forEach(item => {
+    relevantItems.forEach(item => {
         if (item.variants) {
             item.variants.forEach(variant => {
                 if (variant.name) sizes.add(variant.name);
@@ -312,7 +314,7 @@ export function InventoryTable({ onUpdateStock, isAccessoryTable = false }: Inve
         }
     });
     return Array.from(sizes).sort();
-  }, [items]);
+  }, [items, categoryFilter]);
 
   const handleArchive = async (itemId: string) => {
     try {
