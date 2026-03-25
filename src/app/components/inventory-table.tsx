@@ -330,50 +330,57 @@ export function InventoryTable({ onUpdateStock, isAccessoryTable = false }: Inve
     }
   }
 
-  const filteredItems = useMemo(() => {
-    const activeItems = (inventorySource as InventoryItem[]).filter(item => !item.isArchived);
-    const filtered = activeItems
-      .filter((item) =>
-        isAccessoryTable ? true : (categoryFilter ? item.category === categoryFilter : true)
-      )
-      .filter((item) => {
-        const lowerSearchTerm = searchTerm.toLowerCase();
-        if (
-          item.name.toLowerCase().includes(lowerSearchTerm) ||
-          (item.sku && item.sku.toLowerCase().includes(lowerSearchTerm))
-        ) return true;
+ const filteredItems = useMemo(() => {
+    const activeItems = (inventorySource as (InventoryItem | Accessory)[]).filter(item => !(item as InventoryItem).isArchived);
 
-        if (item.variants?.some(v => v.name.toLowerCase().includes(lowerSearchTerm) || (v.sku && v.sku.toLowerCase().includes(lowerSearchTerm)))) {
-          return true;
-        }
+    const baseFiltered = activeItems
+        .filter(item => isAccessoryTable ? true : (categoryFilter ? (item as InventoryItem).category === categoryFilter : true))
+        .filter((item) => {
+            const lowerSearchTerm = searchTerm.toLowerCase();
+            if (!lowerSearchTerm) return true;
+            if (item.name.toLowerCase().includes(lowerSearchTerm) || (item.sku && item.sku.toLowerCase().includes(lowerSearchTerm))) return true;
+            if ('variants' in item && item.variants?.some(v => v.name.toLowerCase().includes(lowerSearchTerm) || (v.sku && v.sku.toLowerCase().includes(lowerSearchTerm)))) return true;
+            return false;
+        });
 
-        return false;
-      })
-      .map(item => {
-        if (stockFilter === 'all') return item;
-
+    if (stockFilter === 'all') {
+        return baseFiltered;
+    }
+    
+    const stockFiltered = baseFiltered.map(item => {
+        const productItem = item as InventoryItem;
         if (sizeFilter) {
-            if (!item.variants || item.variants.length === 0) return null;
-            const variant = item.variants.find(v => v.name === sizeFilter);
-            if (!variant) return null;
+            if (!productItem.variants || productItem.variants.length === 0) return null;
+            
+            const filteredVariants = productItem.variants.filter(v => {
+                const sizeMatch = v.name === sizeFilter;
+                if (!sizeMatch) return false;
 
-            const variantStock = variant.stock;
-            if (stockFilter === 'low') return variantStock > 0 && variantStock < 50 ? item : null;
-            if (stockFilter === 'empty') return variantStock === 0 ? item : null;
+                if (stockFilter === 'low') return v.stock > 0 && v.stock < 50;
+                if (stockFilter === 'empty') return v.stock === 0;
+                return false;
+            });
+
+            if (filteredVariants.length > 0) {
+                return { ...item, variants: filteredVariants, _isFilteredByVariant: true };
+            }
             return null;
         } else {
-            const totalStock = item.variants ? item.variants.reduce((sum, v) => sum + v.stock, 0) : (item.stock || 0);
+            const totalStock = productItem.variants ? productItem.variants.reduce((sum, v) => sum + v.stock, 0) : (productItem.stock || 0);
             if (stockFilter === 'low') return totalStock > 0 && totalStock < 50 ? item : null;
             if (stockFilter === 'empty') return totalStock === 0 ? item : null;
-            return item;
+            return null;
         }
-      })
-      .filter((item): item is InventoryItem => item !== null);
+    }).filter((item): item is (InventoryItem & { _isFilteredByVariant?: boolean }) => item !== null);
     
-      setCurrentPage(1); // Reset to first page on filter change
-      return filtered;
+    return stockFiltered;
 
   }, [inventorySource, categoryFilter, searchTerm, stockFilter, sizeFilter, isAccessoryTable]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filteredItems]);
+
 
   const totalPages = Math.ceil(filteredItems.length / itemsPerPage);
 
@@ -447,7 +454,7 @@ export function InventoryTable({ onUpdateStock, isAccessoryTable = false }: Inve
              {stockFilter !== 'all' && !isAccessoryTable && (
                 <>
                     <Separator orientation="vertical" className="h-6 mx-2" />
-                    <Select onValueChange={(value) => setSizeFilter(value === 'all' ? null : value)} defaultValue="all">
+                    <Select onValueChange={(value) => setSizeFilter(value === 'all' ? null : value)} value={sizeFilter || 'all'}>
                         <SelectTrigger className="w-full md:w-[180px] h-8 text-xs">
                             <SelectValue placeholder="Filter berdasarkan ukuran" />
                         </SelectTrigger>
@@ -476,7 +483,59 @@ export function InventoryTable({ onUpdateStock, isAccessoryTable = false }: Inve
           </TableHeader>
           <TableBody>
             {paginatedItems.length > 0 ? (
-              paginatedItems.flatMap((item) => {
+              paginatedItems.flatMap((item: InventoryItem & { _isFilteredByVariant?: boolean }) => {
+                 if (item._isFilteredByVariant) {
+                    return item.variants!.map((variant) => (
+                        <TableRow key={variant.id}>
+                            <TableCell>
+                                <div className="flex items-center gap-4 group">
+                                    <Image 
+                                        src={item.imageUrl || 'https://placehold.co/40x40.png'} 
+                                        alt={item.name} 
+                                        width={40} height={40} 
+                                        className="rounded-sm" 
+                                        data-ai-hint="product image"
+                                    />
+                                    <div>
+                                        <Link href={`/products/${item.id}/analytics`}>
+                                            <div className="font-medium text-primary text-sm hover:underline truncate max-w-xs">{item.name}</div>
+                                        </Link>
+                                        <div className="text-sm text-muted-foreground font-semibold">{variant.name}</div>
+                                        <div className="text-xs text-muted-foreground truncate">SKU: {variant.sku}</div>
+                                    </div>
+                                </div>
+                            </TableCell>
+                            <TableCell>
+                                <PriceDisplay item={{...variant, category: item.category}} discountGroups={discountGroups} />
+                            </TableCell>
+                            <TableCell>
+                                <StockBar stock={variant.stock} onUpdateClick={() => onUpdateStock(variant.id)} item={item} />
+                            </TableCell>
+                            <TableCell className="text-center">
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild><Button variant="ghost" size="icon"><MoreVertical className="h-4 w-4" /></Button></DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                        <DropdownMenuItem asChild><Link href={`/edit-product/${item.id}`}><Pencil className="mr-2 h-4 w-4" /><span>{t.inventoryTable.editProduct}</span></Link></DropdownMenuItem>
+                                        <AlertDialog>
+                                            <AlertDialogTrigger asChild><DropdownMenuItem onSelect={(e) => e.preventDefault()}><Archive className="mr-2 h-4 w-4" /><span>{TArchived.archiveButton}</span></DropdownMenuItem></AlertDialogTrigger>
+                                            <AlertDialogContent>
+                                                <AlertDialogHeader>
+                                                    <AlertDialogTitle>{TArchived.archiveDialogTitle}</AlertDialogTitle>
+                                                    <AlertDialogDescription>{TArchived.archiveDialogDesc}</AlertDialogDescription>
+                                                </AlertDialogHeader>
+                                                <AlertDialogFooter>
+                                                    <AlertDialogCancel>{t.common.cancel}</AlertDialogCancel>
+                                                    <AlertDialogAction onClick={() => handleArchive(item.id)}>{TArchived.archiveDialogConfirm}</AlertDialogAction>
+                                                </AlertDialogFooter>
+                                            </AlertDialogContent>
+                                        </AlertDialog>
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
+                            </TableCell>
+                        </TableRow>
+                    ));
+                }
+                
                 if (item.variants && item.variants.length > 0) {
                     const totalStock = item.variants.reduce((sum, v) => sum + v.stock, 0);
 
@@ -600,13 +659,13 @@ export function InventoryTable({ onUpdateStock, isAccessoryTable = false }: Inve
                                 </div>
                             </TableCell>
                              <TableCell>
-                                <PriceDisplay item={item} discountGroups={discountGroups} />
+                                <PriceDisplay item={item as InventoryItem} discountGroups={discountGroups} />
                              </TableCell>
                             <TableCell>
                                 {isAccessoryTable ? (
                                     <AccessoryStockDisplay item={item as Accessory} onUpdateClick={() => onUpdateStock(item.id)} />
                                 ) : (
-                                    <StockBar stock={item.stock ?? 0} onUpdateClick={() => onUpdateStock(item.id)} item={item} />
+                                    <StockBar stock={(item as InventoryItem).stock ?? 0} onUpdateClick={() => onUpdateStock(item.id)} item={item as InventoryItem} />
                                 )}
                             </TableCell>
                              <TableCell className="text-center">
